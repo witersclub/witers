@@ -13,6 +13,7 @@ const createSchema = z.object({
   ageRange: z.string().max(40).optional(),
   requiredText: z.string().max(500).optional(),
   brandColors: z.string().max(60).optional(),
+  promoPrice: z.string().max(80).optional(),
 });
 
 export const Route = createFileRoute("/api/requests")({
@@ -58,8 +59,8 @@ export const Route = createFileRoute("/api/requests")({
         await db()
           .prepare(
             `INSERT INTO design_requests
-               (id, user_id, title, brief, style, aspect_ratio, reference_key, audience, age_range, required_text, brand_colors)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`,
+               (id, user_id, title, brief, style, aspect_ratio, reference_key, audience, age_range, required_text, brand_colors, promo_price)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`,
           )
           .bind(
             id,
@@ -73,6 +74,7 @@ export const Route = createFileRoute("/api/requests")({
             parsed.data.ageRange ?? null,
             parsed.data.requiredText?.trim() ?? null,
             parsed.data.brandColors ?? null,
+            parsed.data.promoPrice?.trim() ?? null,
           )
           .run();
 

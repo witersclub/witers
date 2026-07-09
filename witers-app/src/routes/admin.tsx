@@ -35,6 +35,7 @@ type AdminRequest = {
   age_range: string | null;
   required_text: string | null;
   brand_colors: string | null;
+  promo_price: string | null;
   reference_key: string | null;
   status: string;
   admin_note: string | null;
@@ -394,7 +395,7 @@ function RequestCard({ row }: { row: AdminRequest }) {
 
       <p className="mt-3 whitespace-pre-wrap text-sm text-wit-gray">{row.brief}</p>
 
-      {row.audience || row.age_range || row.required_text || row.brand_colors ? (
+      {row.audience || row.age_range || row.required_text || row.brand_colors || row.promo_price ? (
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl bg-wit-ice p-4 text-sm sm:grid-cols-4">
           {row.audience ? (
             <div>
@@ -408,10 +409,18 @@ function RequestCard({ row }: { row: AdminRequest }) {
               <dd className="mt-0.5 text-wit-ink">{row.age_range}</dd>
             </div>
           ) : null}
+          {row.promo_price ? (
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
+                Precio/Descuento
+              </dt>
+              <dd className="mt-0.5 text-wit-ink">{row.promo_price}</dd>
+            </div>
+          ) : null}
           {row.required_text ? (
             <div className="col-span-2">
               <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
-                Texto requerido
+                Mensaje / dato extra del cliente
               </dt>
               <dd className="mt-0.5 text-wit-ink">{row.required_text}</dd>
             </div>
@@ -596,9 +605,10 @@ function buildPrompt(row: AdminRequest): string {
     : row.age_range
       ? ` Dirigido a personas de ${row.age_range} años.`
       : "";
-  const requiredText = row.required_text ? ` El texto debe incluir: "${row.required_text}".` : "";
+  const promo = row.promo_price ? ` Precio/descuento a destacar: ${row.promo_price}.` : "";
+  const requiredText = row.required_text ? ` Dato extra del cliente: "${row.required_text}".` : "";
   const colors = row.brand_colors ? ` Paleta de colores de marca: ${row.brand_colors}.` : "";
-  return `Creatividad publicitaria profesional de alta calidad. ${row.brief}${style}${audience}${requiredText}${colors} Composición limpia y premium, tipografía legible si lleva texto, colores de marca consistentes, luz de estudio.`;
+  return `Creatividad publicitaria profesional de alta calidad. ${row.brief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio.`;
 }
 
 /* ---------- users & payments ---------- */

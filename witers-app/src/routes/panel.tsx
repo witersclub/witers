@@ -25,6 +25,7 @@ type RequestRow = {
   age_range: string | null;
   required_text: string | null;
   brand_colors: string | null;
+  promo_price: string | null;
   status: string;
   admin_note: string | null;
   created_at: string;
@@ -217,6 +218,7 @@ const EMPTY_FORM = {
   style: "",
   aspectRatio: "1:1",
   audience: "",
+  promoPrice: "",
   requiredText: "",
 };
 
@@ -270,6 +272,7 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
           referenceKey,
           audience: form.audience || undefined,
           ageRange: ageRanges.length ? ageRanges.join(", ") : undefined,
+          promoPrice: form.promoPrice || undefined,
           requiredText: form.requiredText || undefined,
           brandColors: colors.length ? colors.join(",") : undefined,
         }),
@@ -314,7 +317,8 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
           <PreviewRow label="Negocio" value={form.brief} />
           {form.audience ? <PreviewRow label="Público objetivo" value={form.audience} /> : null}
           {ageRanges.length ? <PreviewRow label="Rango de edad" value={ageRanges.join(", ")} /> : null}
-          {form.requiredText ? <PreviewRow label="Texto que debe llevar" value={form.requiredText} /> : null}
+          {form.promoPrice ? <PreviewRow label="Precio o descuento" value={form.promoPrice} /> : null}
+          {form.requiredText ? <PreviewRow label="Mensaje o dato extra" value={form.requiredText} /> : null}
           <div>
             <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
               Colores de marca
@@ -434,8 +438,22 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
           </div>
         </div>
         <div>
+          <label htmlFor="rpromo" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Precio o descuento <span className="font-normal text-wit-gray">(opcional)</span>
+          </label>
+          <input
+            id="rpromo"
+            type="text"
+            maxLength={80}
+            value={form.promoPrice}
+            onChange={(e) => setForm({ ...form, promoPrice: e.target.value })}
+            className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+            placeholder="Ej. $500, 20% de descuento..."
+          />
+        </div>
+        <div>
           <label htmlFor="rreqtext" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Texto que debe llevar la imagen <span className="font-normal text-wit-gray">(opcional)</span>
+            Mensaje o dato extra <span className="font-normal text-wit-gray">(opcional)</span>
           </label>
           <input
             id="rreqtext"
@@ -444,8 +462,11 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
             value={form.requiredText}
             onChange={(e) => setForm({ ...form, requiredText: e.target.value })}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-            placeholder="Ej. 20% de descuento, agenda tu cita hoy..."
+            placeholder="Ej. válido hasta el 31 de julio, nombre de la promoción..."
           />
+          <p className="mt-1.5 text-xs text-wit-gray">
+            Si lo dejas vacío, nuestro equipo de diseño se encarga de la redacción.
+          </p>
         </div>
         <div>
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
