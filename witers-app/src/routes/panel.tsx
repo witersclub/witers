@@ -192,6 +192,24 @@ const RATIO_LABEL: Record<string, string> = {
   "3:4": "Vertical 3:4",
   "9:16": "Vertical 9:16 (stories)",
 };
+const RATIO_OPTIONS = [
+  { value: "1:1", w: 1, h: 1, label: "Feed" },
+  { value: "4:3", w: 4, h: 3, label: "Horizontal" },
+  { value: "16:9", w: 16, h: 9, label: "Banner" },
+  { value: "3:4", w: 3, h: 4, label: "Vertical" },
+  { value: "9:16", w: 9, h: 16, label: "Stories" },
+];
+
+function RatioSwatch({ w, h, active }: { w: number; h: number; active: boolean }) {
+  const box = 26;
+  const scale = box / Math.max(w, h);
+  return (
+    <span
+      className={`block rounded-[3px] border-2 ${active ? "border-wit-blue" : "border-wit-ink/40"}`}
+      style={{ width: Math.round(w * scale), height: Math.round(h * scale) }}
+    />
+  );
+}
 
 const EMPTY_FORM = {
   title: "",
@@ -508,21 +526,37 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
           />
         </div>
         <div>
-          <label htmlFor="rratio" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Formato
-          </label>
-          <select
-            id="rratio"
-            value={form.aspectRatio}
-            onChange={(e) => setForm({ ...form, aspectRatio: e.target.value })}
-            className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base outline-none focus:border-wit-blue"
-          >
-            {Object.entries(RATIO_LABEL).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
+          <p className="mb-1.5 text-sm font-semibold text-wit-ink">Formato</p>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {RATIO_OPTIONS.map((r) => (
+              <button
+                key={r.value}
+                type="button"
+                onClick={() => setForm({ ...form, aspectRatio: r.value })}
+                className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 transition-colors ${
+                  form.aspectRatio === r.value
+                    ? "border-wit-blue bg-wit-blue/5"
+                    : "border-wit-ink/15 hover:border-wit-blue"
+                }`}
+              >
+                <span className="flex h-7 w-7 items-center justify-center">
+                  <RatioSwatch
+                    w={r.w}
+                    h={r.h}
+                    active={form.aspectRatio === r.value}
+                  />
+                </span>
+                <span
+                  className={`font-wit-mono text-xs font-bold ${
+                    form.aspectRatio === r.value ? "text-wit-blue" : "text-wit-ink"
+                  }`}
+                >
+                  {r.value}
+                </span>
+                <span className="text-[10px] leading-none text-wit-gray">{r.label}</span>
+              </button>
             ))}
-          </select>
+          </div>
         </div>
         <div>
           <label htmlFor="rfile" className="mb-1.5 block text-sm font-semibold text-wit-ink">
