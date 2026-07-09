@@ -1,0 +1,228 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * WITERS standalone theme. Static token values (no external design-system
+ * package). shadcn-style semantic tokens map onto the WITERS palette so the
+ * ui/ components keep rendering.
+ */
+@theme {
+  --spacing: 0.25rem;
+
+  /* WITERS brand tokens */
+  --color-wit-blue: #0047ff;
+  --color-wit-blue-deep: #0034bd;
+  --color-wit-navy: #050d28;
+  --color-wit-navy-soft: #0b1740;
+  --color-wit-ice: #f7f8fa;
+  --color-wit-mist: #dce6ff;
+  --color-wit-ink: #0a1230;
+  --color-wit-gray: #5a6478;
+  --font-wit: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-wit-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  --color-chart-1: #0047ff;
+  --color-chart-2: #5c85ff;
+  --color-chart-3: #050d28;
+  --color-chart-4: #9fb4ff;
+  --color-chart-5: #dce6ff;
+
+  --color-sidebar: var(--card);
+  --color-sidebar-foreground: var(--foreground);
+  --color-sidebar-primary: var(--primary);
+  --color-sidebar-primary-foreground: var(--primary-foreground);
+  --color-sidebar-accent: var(--accent);
+  --color-sidebar-accent-foreground: var(--accent-foreground);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--ring);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  --background: #f7f8fa;
+  --foreground: #0a1230;
+  --card: #ffffff;
+  --card-foreground: #0a1230;
+  --popover: #ffffff;
+  --popover-foreground: #0a1230;
+  --primary: #0047ff;
+  --primary-foreground: #ffffff;
+  --secondary: #dce6ff;
+  --secondary-foreground: #0a1230;
+  --muted: #eef1f6;
+  --muted-foreground: #5a6478;
+  --accent: rgba(0, 71, 255, 0.08);
+  --accent-foreground: #0a1230;
+  --destructive: #d92d20;
+  --destructive-foreground: #ffffff;
+  --border: rgba(10, 18, 48, 0.12);
+  --input: rgba(10, 18, 48, 0.16);
+  --ring: #0047ff;
+}
+
+.dark {
+  --background: #050d28;
+  --foreground: #ffffff;
+  --card: #0b1740;
+  --card-foreground: #ffffff;
+  --popover: #0b1740;
+  --popover-foreground: #ffffff;
+  --primary: #0047ff;
+  --primary-foreground: #ffffff;
+  --secondary: #0b1740;
+  --secondary-foreground: #ffffff;
+  --muted: #0b1740;
+  --muted-foreground: #9fb4ff;
+  --accent: rgba(92, 133, 255, 0.14);
+  --accent-foreground: #ffffff;
+  --destructive: #f97066;
+  --destructive-foreground: #050d28;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.16);
+  --ring: #5c85ff;
+}
+
+/* ---------- WITERS helpers ---------- */
+.wit-page {
+  font-family: var(--font-wit);
+  background-color: var(--color-wit-ice);
+  color: var(--color-wit-ink);
+  color-scheme: light;
+}
+
+.wit-underline {
+  position: relative;
+  display: inline-block;
+}
+.wit-underline::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  bottom: -0.18em;
+  width: 2.2em;
+  height: 0.09em;
+  min-height: 4px;
+  background: var(--color-wit-blue);
+  border-radius: 2px;
+}
+
+.wit-navlink {
+  position: relative;
+}
+.wit-navlink::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 100%;
+  height: 2px;
+  background: var(--color-wit-blue);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease;
+}
+.wit-navlink:hover::after {
+  transform: scaleX(1);
+}
+
+@keyframes wit-rise {
+  from {
+    transform: translateY(26px);
+    opacity: 0.001;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.wit-rise {
+  animation: wit-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.wit-rise-d1 {
+  animation-delay: 0.08s;
+}
+.wit-rise-d2 {
+  animation-delay: 0.16s;
+}
+.wit-rise-d3 {
+  animation-delay: 0.26s;
+}
+
+@keyframes wit-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+.wit-float {
+  animation: wit-float 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wit-rise,
+  .wit-float {
+    animation: none;
+  }
+  .wit-navlink::after {
+    transition: none;
+  }
+}
+/* ---------- /WITERS ---------- */
+
+@layer base {
+  html {
+    background-color: var(--background);
+    color: var(--foreground);
+    color-scheme: light;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-wit);
+  }
+
+  * {
+    border-color: var(--border);
+  }
+}

@@ -1,0 +1,428 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+
+import { WitersLogo } from "../components/witers/brand";
+import { useMe } from "../lib/witers-client";
+
+export const Route = createFileRoute("/panel")({
+  head: () => ({
+    meta: [
+      { title: "Mi panel. WITERS" },
+      { name: "description", content: "Tu panel de solicitudes de diseño WITERS." },
+    ],
+  }),
+  component: Panel,
+});
+
+type RequestRow = {
+  id: string;
+  title: string;
+  brief: string;
+  style: string | null;
+  aspect_ratio: string;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+  results_json: string | null;
+};
+
+type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
+
+function parseResults(row: RequestRow): ResultItem[] {
+  if (!row.results_json) return [];
+  try {
+    const arr = JSON.parse(row.results_json) as ResultItem[];
+    return arr.filter((r) => r && (r.image_url || r.r2_key));
+  } catch {
+    return [];
+  }
+}
+
+const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
+  en_proceso: { label: "En proceso", cls: "bg-amber-50 text-amber-700" },
+  completada: { label: "Completada", cls: "bg-emerald-50 text-emerald-700" },
+  rechazada: { label: "Rechazada", cls: "bg-red-50 text-red-600" },
+};
+
+function Panel() {
+  const me = useMe();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+
+  const requests = useQuery({
+    queryKey: ["requests"],
+    queryFn: async () => {
+      const res = await fetch("/api/requests", { credentials: "include" });
+      if (!res.ok) return { ok: false, requests: [] as RequestRow[] };
+      return (await res.json()) as { ok: boolean; requests: RequestRow[] };
+    },
+    enabled: Boolean(me.data?.ok),
+    refetchInterval: 30_000,
+  });
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    await qc.invalidateQueries();
+    navigate({ to: "/" });
+  }
+
+  if (me.isLoading) {
+    return (
+      <div className="wit-page flex min-h-dvh items-center justify-center">
+        <div className="h-40 w-full max-w-md animate-pulse rounded-3xl bg-wit-mist/40" />
+      </div>
+    );
+  }
+
+  if (!me.data?.ok) {
+    return (
+      <div className="wit-page flex min-h-dvh flex-col items-center justify-center gap-5 px-5 text-center">
+        <WitersLogo />
+        <p className="max-w-sm text-base text-wit-gray">
+          Ingresa a tu cuenta para ver tu panel de solicitudes.
+        </p>
+        <Link
+          to="/ingresar"
+          className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
+        >
+          Ingresar
+        </Link>
+      </div>
+    );
+  }
+
+  const membership = me.data.membership;
+  const active = membership?.status === "active";
+  const remaining = membership ? membership.requests_quota - membership.requests_used : 0;
+
+  return (
+    <div className="wit-page min-h-dvh">
+      <header className="border-b border-wit-ink/10 bg-white">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+          <Link to="/">
+            <WitersLogo compact />
+          </Link>
+          <div className="flex items-center gap-5">
+            <span className="hidden text-sm text-wit-gray sm:block">{me.data.user?.name}</span>
+            <button
+              type="button"
+              onClick={logout}
+              className="wit-navlink text-sm font-medium text-wit-ink"
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-5 py-10">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
+              Hola, <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
+            </h1>
+            <p className="mt-2 text-base text-wit-gray">
+              Pide creatividades y da seguimiento a cada solicitud desde aquí.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4 rounded-2xl bg-white px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
+                Solicitudes disponibles
+              </p>
+              <p className="font-wit-mono text-3xl font-semibold text-wit-ink">
+                {active ? remaining : 0}
+                <span className="text-base text-wit-gray">/{membership?.requests_quota ?? 50}</span>
+              </p>
+            </div>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+            >
+              {active ? "Membresía activa" : "Sin membresía"}
+            </span>
+          </div>
+        </div>
+
+        {!active ? (
+          <div className="mt-8 flex flex-col items-start gap-4 rounded-3xl bg-wit-navy p-8 text-white md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xl font-bold">Activa tu membresía para empezar a crear.</p>
+              <p className="mt-1 text-sm text-white/70">
+                $5,999 MXN. Pago único. 50 solicitudes de diseño con IA incluidas.
+              </p>
+            </div>
+            <Link
+              to="/checkout"
+              className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:brightness-110"
+            >
+              Quiero mi membresía
+            </Link>
+          </div>
+        ) : null}
+
+        <div className="mt-10 grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+          <NewRequestForm
+            disabled={!active || remaining <= 0}
+            onCreated={() => {
+              void qc.invalidateQueries({ queryKey: ["requests"] });
+              void qc.invalidateQueries({ queryKey: ["me"] });
+            }}
+          />
+          <RequestList rows={requests.data?.requests ?? []} loading={requests.isLoading} />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/* ---------- new request form ---------- */
+
+function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated: () => void }) {
+  const [form, setForm] = useState({ title: "", brief: "", style: "", aspectRatio: "1:1" });
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setOkMsg(null);
+    setLoading(true);
+    try {
+      let referenceKey: string | undefined;
+      if (file) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const up = await fetch("/api/upload-reference", { method: "POST", body: fd });
+        const upData = (await up.json()) as { ok: boolean; key?: string };
+        if (!upData.ok) {
+          setError("No pudimos subir tu imagen de referencia (PNG, JPG o WebP, máx. 8 MB).");
+          return;
+        }
+        referenceKey = upData.key;
+      }
+
+      const res = await fetch("/api/requests", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: form.title,
+          brief: form.brief,
+          style: form.style || undefined,
+          aspectRatio: form.aspectRatio,
+          referenceKey,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setError(
+          data.error === "sin_saldo"
+            ? "Ya usaste todas tus solicitudes disponibles."
+            : data.error === "sin_membresia"
+              ? "Necesitas una membresía activa para enviar solicitudes."
+              : "Revisa los campos: título y descripción son obligatorios.",
+        );
+        return;
+      }
+      setForm({ title: "", brief: "", style: "", aspectRatio: "1:1" });
+      setFile(null);
+      setOkMsg("Solicitud enviada. El equipo WITERS ya está trabajando en ella.");
+      onCreated();
+    } catch {
+      setError("No pudimos enviar tu solicitud. Intenta de nuevo.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <section className="h-fit rounded-3xl bg-white p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      <h2 className="text-xl font-bold text-wit-ink">Nueva solicitud de diseño</h2>
+      <p className="mt-1 text-sm text-wit-gray">
+        Describe la creatividad publicitaria que necesitas y la generamos con IA.
+      </p>
+
+      <form onSubmit={submit} className="mt-6 space-y-4">
+        <div>
+          <label htmlFor="rtitle" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Título
+          </label>
+          <input
+            id="rtitle"
+            type="text"
+            required
+            minLength={3}
+            maxLength={120}
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+            placeholder="Anuncio de lanzamiento para Instagram"
+          />
+        </div>
+        <div>
+          <label htmlFor="rbrief" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Describe tu producto o marca
+          </label>
+          <textarea
+            id="rbrief"
+            required
+            minLength={10}
+            maxLength={4000}
+            rows={5}
+            value={form.brief}
+            onChange={(e) => setForm({ ...form, brief: e.target.value })}
+            className="w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+            placeholder="Qué vendes, a quién, qué texto debe llevar la imagen, colores de tu marca..."
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="rstyle" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+              Estilo deseado
+            </label>
+            <input
+              id="rstyle"
+              type="text"
+              maxLength={200}
+              value={form.style}
+              onChange={(e) => setForm({ ...form, style: e.target.value })}
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+              placeholder="Minimalista, premium..."
+            />
+          </div>
+          <div>
+            <label htmlFor="rratio" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+              Formato
+            </label>
+            <select
+              id="rratio"
+              value={form.aspectRatio}
+              onChange={(e) => setForm({ ...form, aspectRatio: e.target.value })}
+              className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base outline-none focus:border-wit-blue"
+            >
+              <option value="1:1">Cuadrado 1:1 (feed)</option>
+              <option value="4:3">Horizontal 4:3</option>
+              <option value="16:9">Horizontal 16:9 (banner)</option>
+              <option value="3:4">Vertical 3:4</option>
+              <option value="9:16">Vertical 9:16 (stories)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label htmlFor="rfile" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Referencia opcional (logo o producto)
+          </label>
+          <input
+            id="rfile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="w-full rounded-xl border border-dashed border-wit-ink/20 px-4 py-3 text-sm text-wit-gray file:mr-3 file:rounded-lg file:border-0 file:bg-wit-mist/60 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-wit-blue"
+          />
+        </div>
+
+        {error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p> : null}
+        {okMsg ? (
+          <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{okMsg}</p>
+        ) : null}
+
+        <button
+          type="submit"
+          disabled={disabled || loading}
+          className="w-full rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading ? "Enviando..." : "Enviar solicitud"}
+        </button>
+        {disabled ? (
+          <p className="text-center text-xs text-wit-gray">
+            Necesitas membresía activa y solicitudes disponibles.
+          </p>
+        ) : null}
+      </form>
+    </section>
+  );
+}
+
+/* ---------- request history ---------- */
+
+function RequestList({ rows, loading }: { rows: RequestRow[]; loading: boolean }) {
+  return (
+    <section>
+      <h2 className="text-xl font-bold text-wit-ink">Historial de solicitudes</h2>
+      {loading ? (
+        <div className="mt-5 space-y-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="mt-5 rounded-3xl border border-dashed border-wit-ink/15 bg-white/60 p-10 text-center">
+          <p className="text-base font-semibold text-wit-ink">Aún no tienes solicitudes.</p>
+          <p className="mt-1 text-sm text-wit-gray">
+            Envía tu primera solicitud y aparecerá aquí con su estado.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-5 space-y-4">
+          {rows.map((r) => {
+            const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.en_proceso;
+            const results = parseResults(r);
+            return (
+              <article key={r.id} className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-base font-bold text-wit-ink">{r.title}</h3>
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>{st.label}</span>
+                </div>
+                <p className="mt-2 line-clamp-2 text-sm text-wit-gray">{r.brief}</p>
+                <p className="mt-2 text-xs text-wit-gray">
+                  Formato {r.aspect_ratio}
+                  {r.style ? ` · ${r.style}` : ""} ·{" "}
+                  {new Date(r.created_at + "Z").toLocaleDateString("es-MX", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </p>
+                {r.admin_note ? (
+                  <p className="mt-3 rounded-xl bg-wit-mist/40 px-4 py-2.5 text-sm text-wit-ink">
+                    <strong>Nota del equipo:</strong> {r.admin_note}
+                  </p>
+                ) : null}
+                {results.length > 0 ? (
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {results.map((res) => {
+                      const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
+                      return (
+                        <a
+                          key={res.id}
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="group relative block overflow-hidden rounded-xl border border-wit-ink/10"
+                        >
+                          <img
+                            src={href}
+                            alt={`Resultado de ${r.title}`}
+                            className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                          <span className="absolute inset-x-0 bottom-0 bg-wit-navy/80 px-2 py-1.5 text-center text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                            Ver y descargar
+                          </span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+

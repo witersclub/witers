@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  // WITERS — standalone Cloudflare Workers config.
+  // Before the first deploy:
+  //   1. npx wrangler login
+  //   2. npx wrangler d1 create witers-db        → copy database_id below
+  //   3. npx wrangler r2 bucket create witers-assets
+  //   4. npx wrangler d1 migrations apply witers-db --remote
+  //   5. npx wrangler secret put GEMINI_API_KEY  (for AI generation, optional)
+  "name": "witers",
+
+  "main": "dist/server/server.js",
+  "compatibility_date": "2025-05-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // Static files in dist/client serve directly; any non-asset path — incl. "/"
+  // — falls through to the SSR Worker. Do NOT set run_worker_first:true.
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "none"
+  },
+
+  "vars": { "HF_ENV": "prod", "APP_SLUG": "witers" },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "witers-db",
+      // Replace with the id printed by `npx wrangler d1 create witers-db`:
+      "database_id": "REEMPLAZA-CON-TU-DATABASE-ID"
+    }
+  ],
+
+  "r2_buckets": [{ "binding": "STORAGE", "bucket_name": "witers-assets" }]
+}
