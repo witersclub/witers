@@ -91,7 +91,9 @@ export const Route = createFileRoute("/api/admin/generate")({
           return json({ ok: false, error: "sin_resultado" }, { status: 502 });
         }
 
-        // Store each image in R2 and record it; serve via the existing /api/file route.
+        // Store each image in R2 as a DRAFT — not shown to the client yet. An
+        // admin must approve it (with the approval code) via
+        // /api/admin/approve-result before it becomes visible in their panel.
         const keys: string[] = [];
         for (const part of images) {
           const mime = part.inlineData!.mimeType ?? "image/png";
@@ -106,18 +108,11 @@ export const Route = createFileRoute("/api/admin/generate")({
           await db()
             .prepare(
               `INSERT INTO request_results (id, request_id, kind, r2_key)
-               VALUES (?1, ?2, 'generated', ?3)`,
+               VALUES (?1, ?2, 'draft', ?3)`,
             )
             .bind(crypto.randomUUID(), parsed.data.requestId, key)
             .run();
         }
-
-        await db()
-          .prepare(
-            "UPDATE design_requests SET status = 'completada', updated_at = datetime('now') WHERE id = ?1",
-          )
-          .bind(parsed.data.requestId)
-          .run();
 
         return json({ ok: true, keys });
       },

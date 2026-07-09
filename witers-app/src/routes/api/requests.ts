@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/requests")({
           .prepare(
             `SELECT r.*,
                (SELECT json_group_array(json_object('id', res.id, 'kind', res.kind, 'image_url', res.image_url, 'r2_key', res.r2_key))
-                FROM request_results res WHERE res.request_id = r.id) AS results_json
+                FROM request_results res WHERE res.request_id = r.id AND res.kind != 'draft') AS results_json
              FROM design_requests r
              WHERE r.user_id = ?1
              ORDER BY r.created_at DESC`,

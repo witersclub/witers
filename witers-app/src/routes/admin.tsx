@@ -240,15 +240,19 @@ function RequestCard({ row }: { row: AdminRequest }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState(row.admin_note ?? "");
+  const [approveCode, setApproveCode] = useState("");
 
-  const results = (() => {
-    if (!row.results_json) return [] as { id: string; image_url: string | null; r2_key: string | null }[];
+  type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
+
+  const { drafts, results } = (() => {
+    if (!row.results_json) return { drafts: [] as ResultItem[], results: [] as ResultItem[] };
     try {
-      return (JSON.parse(row.results_json) as { id: string; image_url: string | null; r2_key: string | null }[]).filter(
+      const all = (JSON.parse(row.results_json) as ResultItem[]).filter(
         (x) => x && (x.image_url || x.r2_key),
       );
+      return { drafts: all.filter((x) => x.kind === "draft"), results: all.filter((x) => x.kind !== "draft") };
     } catch {
-      return [];
+      return { drafts: [] as ResultItem[], results: [] as ResultItem[] };
     }
   })();
 
@@ -268,12 +272,61 @@ function RequestCard({ row }: { row: AdminRequest }) {
       const data = (await res.json()) as { ok: boolean; error?: string };
       setMsg(
         data.ok
-          ? "Imagen generada y entregada al cliente."
+          ? "Imagen generada. Revísala abajo y apruébala con tu código para entregarla al cliente."
           : `La generación falló (${data.error ?? "error"}). Intenta de nuevo o entrega manualmente.`,
       );
       await refresh();
     } catch {
       setMsg("La generación falló. Intenta de nuevo.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function approve() {
+    if (!approveCode.trim()) {
+      setMsg("Escribe tu código de aprobación.");
+      return;
+    }
+    setBusy("approve");
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/approve-result", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId: row.id, code: approveCode }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      setMsg(
+        data.ok
+          ? "Aprobado y entregado al cliente."
+          : data.error === "codigo_incorrecto"
+            ? "Código incorrecto."
+            : "No pudimos aprobarlo. Intenta de nuevo.",
+      );
+      if (data.ok) setApproveCode("");
+      await refresh();
+    } catch {
+      setMsg("No pudimos aprobarlo. Intenta de nuevo.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function discard(resultId: string) {
+    setBusy(`discard-${resultId}`);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/discard-result", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ resultId }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      setMsg(data.ok ? "Borrador descartado." : "No pudimos descartarlo.");
+      await refresh();
+    } catch {
+      setMsg("No pudimos descartarlo.");
     } finally {
       setBusy(null);
     }
@@ -390,6 +443,51 @@ function RequestCard({ row }: { row: AdminRequest }) {
         >
           Ver referencia del cliente
         </a>
+      ) : null}
+
+      {drafts.length > 0 ? (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-700">
+            Pendiente de tu aprobación — el cliente todavía no la ve
+          </p>
+          <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
+            {drafts.map((res) => {
+              const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
+              return (
+                <div key={res.id} className="space-y-1.5">
+                  <a href={href} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-amber-300">
+                    <img src={href} alt="Borrador generado" className="aspect-square w-full object-cover" loading="lazy" />
+                  </a>
+                  <button
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => discard(res.id)}
+                    className="w-full rounded-lg border border-wit-ink/15 py-1 text-[11px] font-semibold text-wit-gray hover:border-red-300 hover:text-red-600 disabled:opacity-50"
+                  >
+                    {busy === `discard-${res.id}` ? "..." : "Descartar"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              type="password"
+              value={approveCode}
+              onChange={(e) => setApproveCode(e.target.value)}
+              placeholder="Tu código de aprobación"
+              className="min-w-0 flex-1 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+            />
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={approve}
+              className="rounded-full bg-wit-blue px-5 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+            >
+              {busy === "approve" ? "Aprobando..." : "Aprobar y enviar al cliente"}
+            </button>
+          </div>
+        </div>
       ) : null}
 
       {results.length > 0 ? (

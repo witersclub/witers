@@ -29,7 +29,9 @@ import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAdminUpdateRequestRouteImport } from './routes/api/admin/update-request'
 import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overview'
 import { Route as ApiAdminGenerateRouteImport } from './routes/api/admin/generate'
+import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
 import { Route as ApiAdminDeliverRouteImport } from './routes/api/admin/deliver'
+import { Route as ApiAdminApproveResultRouteImport } from './routes/api/admin/approve-result'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -131,9 +133,19 @@ const ApiAdminGenerateRoute = ApiAdminGenerateRouteImport.update({
   path: '/api/admin/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminDiscardResultRoute = ApiAdminDiscardResultRouteImport.update({
+  id: '/api/admin/discard-result',
+  path: '/api/admin/discard-result',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminDeliverRoute = ApiAdminDeliverRouteImport.update({
   id: '/api/admin/deliver',
   path: '/api/admin/deliver',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminApproveResultRoute = ApiAdminApproveResultRouteImport.update({
+  id: '/api/admin/approve-result',
+  path: '/api/admin/approve-result',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -151,7 +163,9 @@ export interface FileRoutesByFullPath {
   '/api/requests': typeof ApiRequestsRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
+  '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
@@ -174,7 +188,9 @@ export interface FileRoutesByTo {
   '/api/requests': typeof ApiRequestsRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
+  '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
@@ -198,7 +214,9 @@ export interface FileRoutesById {
   '/api/requests': typeof ApiRequestsRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
+  '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
@@ -223,7 +241,9 @@ export interface FileRouteTypes {
     | '/api/requests'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/admin/approve-result'
     | '/api/admin/deliver'
+    | '/api/admin/discard-result'
     | '/api/admin/generate'
     | '/api/admin/overview'
     | '/api/admin/update-request'
@@ -246,7 +266,9 @@ export interface FileRouteTypes {
     | '/api/requests'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/admin/approve-result'
     | '/api/admin/deliver'
+    | '/api/admin/discard-result'
     | '/api/admin/generate'
     | '/api/admin/overview'
     | '/api/admin/update-request'
@@ -269,7 +291,9 @@ export interface FileRouteTypes {
     | '/api/requests'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/admin/approve-result'
     | '/api/admin/deliver'
+    | '/api/admin/discard-result'
     | '/api/admin/generate'
     | '/api/admin/overview'
     | '/api/admin/update-request'
@@ -293,7 +317,9 @@ export interface RootRouteChildren {
   ApiRequestsRoute: typeof ApiRequestsRoute
   ApiUploadReferenceRoute: typeof ApiUploadReferenceRoute
   ApiUserRoute: typeof ApiUserRoute
+  ApiAdminApproveResultRoute: typeof ApiAdminApproveResultRoute
   ApiAdminDeliverRoute: typeof ApiAdminDeliverRoute
+  ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
   ApiAdminGenerateRoute: typeof ApiAdminGenerateRoute
   ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
   ApiAdminUpdateRequestRoute: typeof ApiAdminUpdateRequestRoute
@@ -445,11 +471,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminGenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/discard-result': {
+      id: '/api/admin/discard-result'
+      path: '/api/admin/discard-result'
+      fullPath: '/api/admin/discard-result'
+      preLoaderRoute: typeof ApiAdminDiscardResultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/deliver': {
       id: '/api/admin/deliver'
       path: '/api/admin/deliver'
       fullPath: '/api/admin/deliver'
       preLoaderRoute: typeof ApiAdminDeliverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/approve-result': {
+      id: '/api/admin/approve-result'
+      path: '/api/admin/approve-result'
+      fullPath: '/api/admin/approve-result'
+      preLoaderRoute: typeof ApiAdminApproveResultRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -469,7 +509,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiRequestsRoute: ApiRequestsRoute,
   ApiUploadReferenceRoute: ApiUploadReferenceRoute,
   ApiUserRoute: ApiUserRoute,
+  ApiAdminApproveResultRoute: ApiAdminApproveResultRoute,
   ApiAdminDeliverRoute: ApiAdminDeliverRoute,
+  ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
   ApiAdminGenerateRoute: ApiAdminGenerateRoute,
   ApiAdminOverviewRoute: ApiAdminOverviewRoute,
   ApiAdminUpdateRequestRoute: ApiAdminUpdateRequestRoute,
