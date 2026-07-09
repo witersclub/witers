@@ -199,13 +199,13 @@ const EMPTY_FORM = {
   style: "",
   aspectRatio: "1:1",
   audience: "",
-  ageRange: "",
   requiredText: "",
 };
 
 function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated: () => void }) {
   const [step, setStep] = useState<"form" | "preview">("form");
   const [form, setForm] = useState(EMPTY_FORM);
+  const [ageRanges, setAgeRanges] = useState<string[]>([]);
   const [colors, setColors] = useState<string[]>(["#2563EB"]);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -251,7 +251,7 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
           aspectRatio: form.aspectRatio,
           referenceKey,
           audience: form.audience || undefined,
-          ageRange: form.ageRange || undefined,
+          ageRange: ageRanges.length ? ageRanges.join(", ") : undefined,
           requiredText: form.requiredText || undefined,
           brandColors: colors.length ? colors.join(",") : undefined,
         }),
@@ -269,6 +269,7 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
         return;
       }
       setForm(EMPTY_FORM);
+      setAgeRanges([]);
       setColors(["#2563EB"]);
       setFile(null);
       setStep("form");
@@ -294,7 +295,7 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
           <PreviewRow label="Título" value={form.title} />
           <PreviewRow label="Negocio" value={form.brief} />
           {form.audience ? <PreviewRow label="Público objetivo" value={form.audience} /> : null}
-          {form.ageRange ? <PreviewRow label="Rango de edad" value={form.ageRange} /> : null}
+          {ageRanges.length ? <PreviewRow label="Rango de edad" value={ageRanges.join(", ")} /> : null}
           {form.requiredText ? <PreviewRow label="Texto que debe llevar" value={form.requiredText} /> : null}
           <div>
             <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
@@ -397,15 +398,19 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
         </div>
         <div>
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
-            Rango de edad <span className="font-normal text-wit-gray">(opcional)</span>
+            Rango de edad <span className="font-normal text-wit-gray">(opcional, elige uno o varios)</span>
           </p>
           <div className="flex flex-wrap gap-2">
             {AGE_CHIPS.map((a) => (
               <ChipButton
                 key={a}
                 label={a}
-                active={form.ageRange === a}
-                onClick={() => setForm({ ...form, ageRange: form.ageRange === a ? "" : a })}
+                active={ageRanges.includes(a)}
+                onClick={() =>
+                  setAgeRanges(
+                    ageRanges.includes(a) ? ageRanges.filter((x) => x !== a) : [...ageRanges, a],
+                  )
+                }
               />
             ))}
           </div>
@@ -428,18 +433,32 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
             Colores de marca <span className="font-normal text-wit-gray">(hasta 3, opcional)</span>
           </p>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             {colors.map((c, i) => (
-              <div key={i} className="relative">
+              <div key={i} className="relative flex items-center gap-1.5 rounded-xl border border-wit-ink/15 py-1 pl-1 pr-2">
                 <input
                   type="color"
+                  value={/^#[0-9A-Fa-f]{6}$/.test(c) ? c : "#000000"}
+                  onChange={(e) => {
+                    const next = [...colors];
+                    next[i] = e.target.value;
+                    setColors(next);
+                  }}
+                  className="h-8 w-8 cursor-pointer rounded-full border border-wit-ink/15 p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch-wrapper]:rounded-full [&::-webkit-color-swatch-wrapper]:p-0"
+                  aria-label={`Color ${i + 1}`}
+                />
+                <input
+                  type="text"
                   value={c}
                   onChange={(e) => {
                     const next = [...colors];
                     next[i] = e.target.value;
                     setColors(next);
                   }}
-                  className="h-10 w-10 cursor-pointer rounded-full border border-wit-ink/15 p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch-wrapper]:rounded-full [&::-webkit-color-swatch-wrapper]:p-0"
+                  maxLength={7}
+                  placeholder="#111827"
+                  className="w-20 bg-transparent text-sm font-wit-mono text-wit-ink outline-none"
+                  aria-label={`Código hexadecimal del color ${i + 1}`}
                 />
                 {colors.length > 1 ? (
                   <button
