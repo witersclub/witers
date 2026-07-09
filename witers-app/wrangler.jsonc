@@ -29,8 +29,7 @@
     {
       "binding": "DB",
       "database_name": "witers-db",
-      // Replace with the id printed by `npx wrangler d1 create witers-db`:
-      "database_id": "REEMPLAZA-CON-TU-DATABASE-ID"
+      "database_id": "1637cd44-7a20-4d8b-bc18-6c1214d52d9c"
     }
   ],
 
