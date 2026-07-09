@@ -22,7 +22,6 @@ import { Route as ApiUploadReferenceRouteImport } from './routes/api/upload-refe
 import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
-import { Route as ApiAiAutofillRouteImport } from './routes/api/ai-autofill'
 import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
@@ -97,11 +96,6 @@ const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   path: '/api/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAiAutofillRoute = ApiAiAutofillRouteImport.update({
-  id: '/api/ai-autofill',
-  path: '/api/ai-autofill',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiAuthRegisterRoute = ApiAuthRegisterRouteImport.update({
   id: '/api/auth/register',
   path: '/api/auth/register',
@@ -152,7 +146,6 @@ export interface FileRoutesByFullPath {
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/api/ai-autofill': typeof ApiAiAutofillRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/file': typeof ApiFileRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -176,7 +169,6 @@ export interface FileRoutesByTo {
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/api/ai-autofill': typeof ApiAiAutofillRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/file': typeof ApiFileRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -201,7 +193,6 @@ export interface FileRoutesById {
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/api/ai-autofill': typeof ApiAiAutofillRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/file': typeof ApiFileRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -227,7 +218,6 @@ export interface FileRouteTypes {
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
-    | '/api/ai-autofill'
     | '/api/checkout'
     | '/api/file'
     | '/api/requests'
@@ -251,7 +241,6 @@ export interface FileRouteTypes {
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
-    | '/api/ai-autofill'
     | '/api/checkout'
     | '/api/file'
     | '/api/requests'
@@ -275,7 +264,6 @@ export interface FileRouteTypes {
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
-    | '/api/ai-autofill'
     | '/api/checkout'
     | '/api/file'
     | '/api/requests'
@@ -300,7 +288,6 @@ export interface RootRouteChildren {
   RegistroRoute: typeof RegistroRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  ApiAiAutofillRoute: typeof ApiAiAutofillRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiFileRoute: typeof ApiFileRoute
   ApiRequestsRoute: typeof ApiRequestsRoute
@@ -409,13 +396,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/ai-autofill': {
-      id: '/api/ai-autofill'
-      path: '/api/ai-autofill'
-      fullPath: '/api/ai-autofill'
-      preLoaderRoute: typeof ApiAiAutofillRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/auth/register': {
       id: '/api/auth/register'
       path: '/api/auth/register'
@@ -484,7 +464,6 @@ const rootRouteChildren: RootRouteChildren = {
   RegistroRoute: RegistroRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  ApiAiAutofillRoute: ApiAiAutofillRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiFileRoute: ApiFileRoute,
   ApiRequestsRoute: ApiRequestsRoute,
