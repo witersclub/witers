@@ -12,7 +12,7 @@ const schema = z.object({
 // free-text description. Text-only Gemini call (cheap, unlike image
 // generation) — never used to produce the final deliverable, only to
 // pre-fill fields the client can still review and edit.
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-3.5-flash";
 
 const STYLE_OPTIONS = ["Minimalista", "Premium / Elegante", "Colorido", "Corporativo", "Divertido / Bold"];
 const AGE_OPTIONS = ["18-24", "25-34", "35-44", "45-54", "55+"];
