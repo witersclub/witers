@@ -229,6 +229,62 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [aiInput, setAiInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  type AiSuggestion = {
+    title: string;
+    brief: string;
+    audience: string;
+    ageRange: string;
+    style: string;
+    requiredText: string;
+    aspectRatio: string;
+  };
+
+  async function autofillWithAI() {
+    if (aiInput.trim().length < 5) {
+      setAiError("Escribe un poco más para que la IA pueda ayudarte.");
+      return;
+    }
+    setAiError(null);
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai-autofill", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ input: aiInput }),
+      });
+      const data = (await res.json()) as { ok: boolean; suggestion?: AiSuggestion };
+      if (!data.ok || !data.suggestion) {
+        setAiError("No pudimos autocompletar. Intenta escribir un poco más o llena el formulario a mano.");
+        return;
+      }
+      const s = data.suggestion;
+      setForm({
+        ...form,
+        title: s.title || form.title,
+        brief: s.brief || form.brief,
+        audience: s.audience || form.audience,
+        requiredText: s.requiredText || form.requiredText,
+        style: s.style || form.style,
+        aspectRatio: s.aspectRatio || form.aspectRatio,
+      });
+      if (s.ageRange) {
+        setAgeRanges(
+          s.ageRange
+            .split(",")
+            .map((a) => a.trim())
+            .filter(Boolean),
+        );
+      }
+    } catch {
+      setAiError("No pudimos autocompletar. Intenta de nuevo.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   function goToPreview(e: React.FormEvent) {
     e.preventDefault();
@@ -290,6 +346,7 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
       setAgeRanges([]);
       setColors(["#2563EB"]);
       setFile(null);
+      setAiInput("");
       setStep("form");
       setOkMsg("Solicitud enviada. El equipo WITERS ya está trabajando en ella.");
       onCreated();
@@ -368,6 +425,30 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
       </p>
 
       <form onSubmit={goToPreview} className="mt-6 space-y-4">
+        <div className="rounded-2xl border border-dashed border-wit-blue/30 bg-wit-ice p-4">
+          <label htmlFor="raiinput" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            ¿Te da flojera llenar todo? Cuéntanos en pocas palabras{" "}
+            <span className="font-normal text-wit-gray">(opcional)</span>
+          </label>
+          <textarea
+            id="raiinput"
+            rows={2}
+            maxLength={800}
+            value={aiInput}
+            onChange={(e) => setAiInput(e.target.value)}
+            className="w-full resize-y rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base outline-none focus:border-wit-blue"
+            placeholder="Ej. Tengo un consultorio de botox, quiero un anuncio para mujeres de 30 a 50 años con 20% de descuento este mes, colores azul y blanco..."
+          />
+          <button
+            type="button"
+            onClick={autofillWithAI}
+            disabled={aiLoading}
+            className="mt-2 rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-wit-blue-deep disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {aiLoading ? "Autocompletando..." : "✨ Autocompletar con IA"}
+          </button>
+          {aiError ? <p className="mt-2 text-sm text-red-600">{aiError}</p> : null}
+        </div>
         <div>
           <label htmlFor="rtitle" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             Título
