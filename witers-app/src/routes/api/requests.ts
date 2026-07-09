@@ -9,6 +9,10 @@ const createSchema = z.object({
   style: z.string().max(200).optional(),
   aspectRatio: z.enum(["1:1", "4:3", "3:4", "16:9", "9:16"]).default("1:1"),
   referenceKey: z.string().max(300).optional(),
+  audience: z.string().max(200).optional(),
+  ageRange: z.string().max(40).optional(),
+  requiredText: z.string().max(500).optional(),
+  brandColors: z.string().max(60).optional(),
 });
 
 export const Route = createFileRoute("/api/requests")({
@@ -53,8 +57,9 @@ export const Route = createFileRoute("/api/requests")({
         const id = crypto.randomUUID();
         await db()
           .prepare(
-            `INSERT INTO design_requests (id, user_id, title, brief, style, aspect_ratio, reference_key)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+            `INSERT INTO design_requests
+               (id, user_id, title, brief, style, aspect_ratio, reference_key, audience, age_range, required_text, brand_colors)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`,
           )
           .bind(
             id,
@@ -64,6 +69,10 @@ export const Route = createFileRoute("/api/requests")({
             parsed.data.style?.trim() ?? null,
             parsed.data.aspectRatio,
             parsed.data.referenceKey ?? null,
+            parsed.data.audience?.trim() ?? null,
+            parsed.data.ageRange ?? null,
+            parsed.data.requiredText?.trim() ?? null,
+            parsed.data.brandColors ?? null,
           )
           .run();
 

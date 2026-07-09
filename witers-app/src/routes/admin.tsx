@@ -31,6 +31,10 @@ type AdminRequest = {
   brief: string;
   style: string | null;
   aspect_ratio: string;
+  audience: string | null;
+  age_range: string | null;
+  required_text: string | null;
+  brand_colors: string | null;
   reference_key: string | null;
   status: string;
   admin_note: string | null;
@@ -337,6 +341,46 @@ function RequestCard({ row }: { row: AdminRequest }) {
 
       <p className="mt-3 whitespace-pre-wrap text-sm text-wit-gray">{row.brief}</p>
 
+      {row.audience || row.age_range || row.required_text || row.brand_colors ? (
+        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl bg-wit-ice p-4 text-sm sm:grid-cols-4">
+          {row.audience ? (
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">Público</dt>
+              <dd className="mt-0.5 text-wit-ink">{row.audience}</dd>
+            </div>
+          ) : null}
+          {row.age_range ? (
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">Edad</dt>
+              <dd className="mt-0.5 text-wit-ink">{row.age_range}</dd>
+            </div>
+          ) : null}
+          {row.required_text ? (
+            <div className="col-span-2">
+              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
+                Texto requerido
+              </dt>
+              <dd className="mt-0.5 text-wit-ink">{row.required_text}</dd>
+            </div>
+          ) : null}
+          {row.brand_colors ? (
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">Colores</dt>
+              <dd className="mt-1 flex gap-1.5">
+                {row.brand_colors.split(",").map((c) => (
+                  <span
+                    key={c}
+                    className="h-5 w-5 rounded-full border border-wit-ink/10"
+                    style={{ backgroundColor: c }}
+                    title={c}
+                  />
+                ))}
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
+
       {row.reference_key ? (
         <a
           href={`/api/file?key=${encodeURIComponent(row.reference_key)}`}
@@ -449,7 +493,14 @@ function RequestCard({ row }: { row: AdminRequest }) {
 
 function buildPrompt(row: AdminRequest): string {
   const style = row.style ? ` Estilo: ${row.style}.` : "";
-  return `Creatividad publicitaria profesional de alta calidad. ${row.brief}${style} Composición limpia y premium, tipografía legible si lleva texto, colores de marca consistentes, luz de estudio.`;
+  const audience = row.audience
+    ? ` Dirigido a: ${row.audience}${row.age_range ? ` (${row.age_range} años)` : ""}.`
+    : row.age_range
+      ? ` Dirigido a personas de ${row.age_range} años.`
+      : "";
+  const requiredText = row.required_text ? ` El texto debe incluir: "${row.required_text}".` : "";
+  const colors = row.brand_colors ? ` Paleta de colores de marca: ${row.brand_colors}.` : "";
+  return `Creatividad publicitaria profesional de alta calidad. ${row.brief}${style}${audience}${requiredText}${colors} Composición limpia y premium, tipografía legible si lleva texto, colores de marca consistentes, luz de estudio.`;
 }
 
 /* ---------- users & payments ---------- */

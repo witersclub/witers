@@ -21,6 +21,10 @@ type RequestRow = {
   brief: string;
   style: string | null;
   aspect_ratio: string;
+  audience: string | null;
+  age_range: string | null;
+  required_text: string | null;
+  brand_colors: string | null;
   status: string;
   admin_note: string | null;
   created_at: string;
@@ -179,15 +183,46 @@ function Panel() {
 
 /* ---------- new request form ---------- */
 
+const STYLE_CHIPS = ["Minimalista", "Premium / Elegante", "Colorido", "Corporativo", "Divertido / Bold"];
+const AGE_CHIPS = ["18-24", "25-34", "35-44", "45-54", "55+"];
+const RATIO_LABEL: Record<string, string> = {
+  "1:1": "Cuadrado 1:1 (feed)",
+  "4:3": "Horizontal 4:3",
+  "16:9": "Horizontal 16:9 (banner)",
+  "3:4": "Vertical 3:4",
+  "9:16": "Vertical 9:16 (stories)",
+};
+
+const EMPTY_FORM = {
+  title: "",
+  brief: "",
+  style: "",
+  aspectRatio: "1:1",
+  audience: "",
+  ageRange: "",
+  requiredText: "",
+};
+
 function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated: () => void }) {
-  const [form, setForm] = useState({ title: "", brief: "", style: "", aspectRatio: "1:1" });
+  const [step, setStep] = useState<"form" | "preview">("form");
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [colors, setColors] = useState<string[]>(["#2563EB"]);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function submit(e: React.FormEvent) {
+  function goToPreview(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
+    if (form.title.trim().length < 3 || form.brief.trim().length < 10) {
+      setError("Revisa los campos: título y descripción del negocio son obligatorios.");
+      return;
+    }
+    setStep("preview");
+  }
+
+  async function confirmSend() {
     setError(null);
     setOkMsg(null);
     setLoading(true);
@@ -200,6 +235,7 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
         const upData = (await up.json()) as { ok: boolean; key?: string };
         if (!upData.ok) {
           setError("No pudimos subir tu imagen de referencia (PNG, JPG o WebP, máx. 8 MB).");
+          setLoading(false);
           return;
         }
         referenceKey = upData.key;
@@ -214,6 +250,10 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
           style: form.style || undefined,
           aspectRatio: form.aspectRatio,
           referenceKey,
+          audience: form.audience || undefined,
+          ageRange: form.ageRange || undefined,
+          requiredText: form.requiredText || undefined,
+          brandColors: colors.length ? colors.join(",") : undefined,
         }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
@@ -225,27 +265,90 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
               ? "Necesitas una membresía activa para enviar solicitudes."
               : "Revisa los campos: título y descripción son obligatorios.",
         );
+        setStep("form");
         return;
       }
-      setForm({ title: "", brief: "", style: "", aspectRatio: "1:1" });
+      setForm(EMPTY_FORM);
+      setColors(["#2563EB"]);
       setFile(null);
+      setStep("form");
       setOkMsg("Solicitud enviada. El equipo WITERS ya está trabajando en ella.");
       onCreated();
     } catch {
       setError("No pudimos enviar tu solicitud. Intenta de nuevo.");
+      setStep("form");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (step === "preview") {
+    return (
+      <section className="h-fit rounded-3xl bg-white p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+        <h2 className="text-xl font-bold text-wit-ink">Revisa tu solicitud</h2>
+        <p className="mt-1 text-sm text-wit-gray">
+          Confirma que todo esté correcto antes de enviarla — usa una de tus solicitudes disponibles.
+        </p>
+
+        <dl className="mt-6 space-y-4">
+          <PreviewRow label="Título" value={form.title} />
+          <PreviewRow label="Negocio" value={form.brief} />
+          {form.audience ? <PreviewRow label="Público objetivo" value={form.audience} /> : null}
+          {form.ageRange ? <PreviewRow label="Rango de edad" value={form.ageRange} /> : null}
+          {form.requiredText ? <PreviewRow label="Texto que debe llevar" value={form.requiredText} /> : null}
+          <div>
+            <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+              Colores de marca
+            </dt>
+            <dd className="mt-1.5 flex gap-2">
+              {colors.map((c) => (
+                <span
+                  key={c}
+                  className="h-7 w-7 rounded-full border border-wit-ink/10"
+                  style={{ backgroundColor: c }}
+                  title={c}
+                />
+              ))}
+            </dd>
+          </div>
+          {form.style ? <PreviewRow label="Estilo" value={form.style} /> : null}
+          <PreviewRow label="Formato" value={RATIO_LABEL[form.aspectRatio] ?? form.aspectRatio} />
+          {file ? <PreviewRow label="Referencia" value={file.name} /> : null}
+        </dl>
+
+        {error ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p> : null}
+
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={() => setStep("form")}
+            disabled={loading}
+            className="flex-1 rounded-2xl border border-wit-ink/15 px-6 py-4 text-base font-bold text-wit-ink transition-colors hover:border-wit-blue disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            onClick={confirmSend}
+            disabled={disabled || loading}
+            className="flex-1 rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? "Enviando..." : "Confirmar y enviar"}
+          </button>
+        </div>
+      </section>
+    );
   }
 
   return (
     <section className="h-fit rounded-3xl bg-white p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
       <h2 className="text-xl font-bold text-wit-ink">Nueva solicitud de diseño</h2>
       <p className="mt-1 text-sm text-wit-gray">
-        Describe la creatividad publicitaria que necesitas y la generamos con IA.
+        Describe la creatividad publicitaria que necesitas y la generamos con IA. Tu solicitud se
+        entrega en un máximo de 3 días hábiles.
       </p>
 
-      <form onSubmit={submit} className="mt-6 space-y-4">
+      <form onSubmit={goToPreview} className="mt-6 space-y-4">
         <div>
           <label htmlFor="rtitle" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             Título
@@ -264,52 +367,143 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
         </div>
         <div>
           <label htmlFor="rbrief" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Describe tu producto o marca
+            Describe tu negocio en pocas palabras
           </label>
           <textarea
             id="rbrief"
             required
             minLength={10}
             maxLength={4000}
-            rows={5}
+            rows={4}
             value={form.brief}
             onChange={(e) => setForm({ ...form, brief: e.target.value })}
             className="w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-            placeholder="Qué vendes, a quién, qué texto debe llevar la imagen, colores de tu marca..."
+            placeholder="Qué vendes y qué te hace diferente..."
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="rstyle" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-              Estilo deseado
-            </label>
-            <input
-              id="rstyle"
-              type="text"
-              maxLength={200}
-              value={form.style}
-              onChange={(e) => setForm({ ...form, style: e.target.value })}
-              className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-              placeholder="Minimalista, premium..."
-            />
+        <div>
+          <label htmlFor="raudience" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Público objetivo <span className="font-normal text-wit-gray">(opcional)</span>
+          </label>
+          <input
+            id="raudience"
+            type="text"
+            maxLength={200}
+            value={form.audience}
+            onChange={(e) => setForm({ ...form, audience: e.target.value })}
+            className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+            placeholder="Ej. mujeres emprendedoras, dueños de restaurantes..."
+          />
+        </div>
+        <div>
+          <p className="mb-1.5 text-sm font-semibold text-wit-ink">
+            Rango de edad <span className="font-normal text-wit-gray">(opcional)</span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {AGE_CHIPS.map((a) => (
+              <ChipButton
+                key={a}
+                label={a}
+                active={form.ageRange === a}
+                onClick={() => setForm({ ...form, ageRange: form.ageRange === a ? "" : a })}
+              />
+            ))}
           </div>
-          <div>
-            <label htmlFor="rratio" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-              Formato
-            </label>
-            <select
-              id="rratio"
-              value={form.aspectRatio}
-              onChange={(e) => setForm({ ...form, aspectRatio: e.target.value })}
-              className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base outline-none focus:border-wit-blue"
-            >
-              <option value="1:1">Cuadrado 1:1 (feed)</option>
-              <option value="4:3">Horizontal 4:3</option>
-              <option value="16:9">Horizontal 16:9 (banner)</option>
-              <option value="3:4">Vertical 3:4</option>
-              <option value="9:16">Vertical 9:16 (stories)</option>
-            </select>
+        </div>
+        <div>
+          <label htmlFor="rreqtext" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Texto que debe llevar la imagen <span className="font-normal text-wit-gray">(opcional)</span>
+          </label>
+          <input
+            id="rreqtext"
+            type="text"
+            maxLength={500}
+            value={form.requiredText}
+            onChange={(e) => setForm({ ...form, requiredText: e.target.value })}
+            className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+            placeholder="Ej. 20% de descuento, agenda tu cita hoy..."
+          />
+        </div>
+        <div>
+          <p className="mb-1.5 text-sm font-semibold text-wit-ink">
+            Colores de marca <span className="font-normal text-wit-gray">(hasta 3, opcional)</span>
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {colors.map((c, i) => (
+              <div key={i} className="relative">
+                <input
+                  type="color"
+                  value={c}
+                  onChange={(e) => {
+                    const next = [...colors];
+                    next[i] = e.target.value;
+                    setColors(next);
+                  }}
+                  className="h-10 w-10 cursor-pointer rounded-full border border-wit-ink/15 p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch-wrapper]:rounded-full [&::-webkit-color-swatch-wrapper]:p-0"
+                />
+                {colors.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setColors(colors.filter((_, j) => j !== i))}
+                    className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-wit-ink text-[10px] leading-none text-white"
+                    aria-label="Quitar color"
+                  >
+                    ×
+                  </button>
+                ) : null}
+              </div>
+            ))}
+            {colors.length < 3 ? (
+              <button
+                type="button"
+                onClick={() => setColors([...colors, "#111827"])}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-dashed border-wit-ink/25 text-lg text-wit-gray hover:border-wit-blue hover:text-wit-blue"
+                aria-label="Agregar color"
+              >
+                +
+              </button>
+            ) : null}
           </div>
+        </div>
+        <div>
+          <p className="mb-1.5 text-sm font-semibold text-wit-ink">
+            Estilo deseado <span className="font-normal text-wit-gray">(opcional)</span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {STYLE_CHIPS.map((s) => (
+              <ChipButton
+                key={s}
+                label={s}
+                active={form.style === s}
+                onClick={() => setForm({ ...form, style: form.style === s ? "" : s })}
+              />
+            ))}
+          </div>
+          <input
+            type="text"
+            maxLength={200}
+            value={STYLE_CHIPS.includes(form.style) ? "" : form.style}
+            onChange={(e) => setForm({ ...form, style: e.target.value })}
+            className="mt-2 w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+            placeholder="U otro estilo en tus palabras..."
+          />
+        </div>
+        <div>
+          <label htmlFor="rratio" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Formato
+          </label>
+          <select
+            id="rratio"
+            value={form.aspectRatio}
+            onChange={(e) => setForm({ ...form, aspectRatio: e.target.value })}
+            className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base outline-none focus:border-wit-blue"
+          >
+            {Object.entries(RATIO_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label htmlFor="rfile" className="mb-1.5 block text-sm font-semibold text-wit-ink">
@@ -331,10 +525,10 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
 
         <button
           type="submit"
-          disabled={disabled || loading}
+          disabled={disabled}
           className="w-full rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Enviando..." : "Enviar solicitud"}
+          Continuar
         </button>
         {disabled ? (
           <p className="text-center text-xs text-wit-gray">
@@ -343,6 +537,31 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
         ) : null}
       </form>
     </section>
+  );
+}
+
+function ChipButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+        active
+          ? "border-wit-blue bg-wit-blue text-white"
+          : "border-wit-ink/15 text-wit-ink hover:border-wit-blue"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function PreviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">{label}</dt>
+      <dd className="mt-1 whitespace-pre-wrap text-sm text-wit-ink">{value}</dd>
+    </div>
   );
 }
 
@@ -379,13 +598,26 @@ function RequestList({ rows, loading }: { rows: RequestRow[]; loading: boolean }
                 <p className="mt-2 line-clamp-2 text-sm text-wit-gray">{r.brief}</p>
                 <p className="mt-2 text-xs text-wit-gray">
                   Formato {r.aspect_ratio}
-                  {r.style ? ` · ${r.style}` : ""} ·{" "}
+                  {r.style ? ` · ${r.style}` : ""}
+                  {r.age_range ? ` · ${r.age_range}` : ""} ·{" "}
                   {new Date(r.created_at + "Z").toLocaleDateString("es-MX", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
                   })}
                 </p>
+                {r.brand_colors ? (
+                  <div className="mt-2 flex gap-1.5">
+                    {r.brand_colors.split(",").map((c) => (
+                      <span
+                        key={c}
+                        className="h-4 w-4 rounded-full border border-wit-ink/10"
+                        style={{ backgroundColor: c }}
+                        title={c}
+                      />
+                    ))}
+                  </div>
+                ) : null}
                 {r.admin_note ? (
                   <p className="mt-3 rounded-xl bg-wit-mist/40 px-4 py-2.5 text-sm text-wit-ink">
                     <strong>Nota del equipo:</strong> {r.admin_note}
