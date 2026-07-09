@@ -99,6 +99,13 @@ function Hero() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 h-full w-full object-cover object-right"
       />
+      {/* Velo para que el texto se lea bien sobre el video: de arriba hacia abajo en
+          móvil (el texto ocupa todo el ancho), de izquierda a derecha en escritorio
+          (el texto queda a la izquierda). */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-gradient-to-b from-white via-white/85 to-white/20 md:bg-gradient-to-r md:from-white md:via-white/80 md:to-white/0"
+      />
       {/* Logo flotante en la esquina superior derecha */}
       <img
         src="/assets/witers-logo-full.png"
