@@ -1273,10 +1273,11 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
                 loading="lazy"
               />
             );
-            // Once cerrada the request already used its one download — the
-            // thumbnail stays as a friendly, locked reminder instead of
-            // vanishing from the client's history.
-            return r.status === "completada" ? (
+            // Once cerrada the request already used its one download, but
+            // the client can still open the last version to look at it —
+            // the lightbox itself hides the download button once it's no
+            // longer "completada" (see canDownload below).
+            return (
               <button
                 type="button"
                 onClick={() => setLightbox({ src: href, download: downloadHref })}
@@ -1284,16 +1285,14 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
               >
                 <span className="block transition-transform duration-300 group-hover:scale-105">{img}</span>
                 <span className="absolute inset-x-0 bottom-0 bg-wit-navy/80 px-2 py-1.5 text-center text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  Ver y descargar
+                  {r.status === "completada" ? "Ver y descargar" : "Ver imagen"}
                 </span>
+                {r.status !== "completada" ? (
+                  <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-wit-blue text-[10px] font-bold text-white">
+                    ✓
+                  </span>
+                ) : null}
               </button>
-            ) : (
-              <div className="relative block cursor-default overflow-hidden rounded-xl border border-wit-ink/10 opacity-90">
-                {img}
-                <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-wit-blue text-[10px] font-bold text-white">
-                  ✓
-                </span>
-              </div>
             );
           })()}
         </div>
