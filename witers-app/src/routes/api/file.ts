@@ -5,7 +5,7 @@ import {
   db,
   getSessionUser,
   json,
-  requireAdminUser,
+  requireStaffUser,
 } from "../../lib/witers-auth.server";
 
 // Serves R2 objects (member reference uploads + admin deliverables).
@@ -27,21 +27,35 @@ export const Route = createFileRoute("/api/file")({
           if (key.startsWith(`refs/${member.id}/`)) {
             allowed = true;
           } else if (key.startsWith("deliveries/")) {
+            // The owning client can only fetch a delivered file while it's
+            // still the current, undecided deliverable (status completada)
+            // and it's the latest one for that request — never an older,
+            // superseded version, and never once the request is closed.
+            // This is the actual enforcement of "one download per request";
+            // the UI hiding old thumbnails is not enough on its own since a
+            // client could otherwise hit this URL directly.
             const row = await db()
               .prepare(
-                `SELECT r.user_id FROM request_results res
+                `SELECT r.user_id, r.status,
+                   (res.id = (
+                     SELECT id FROM request_results
+                     WHERE request_id = r.id AND kind != 'draft'
+                     ORDER BY created_at DESC LIMIT 1
+                   )) AS is_latest
+                 FROM request_results res
                  JOIN design_requests r ON r.id = res.request_id
                  WHERE res.r2_key = ?1`,
               )
               .bind(key)
-              .first<{ user_id: string }>();
-            allowed = row?.user_id === member.id;
+              .first<{ user_id: string; status: string; is_latest: number }>();
+            allowed =
+              row?.user_id === member.id && row.status === "completada" && row.is_latest === 1;
           }
         }
 
         if (!allowed) {
-          const admin = await requireAdminUser(request);
-          allowed = admin.ok;
+          const staff = await requireStaffUser(request);
+          allowed = staff.ok;
         }
         if (!allowed) return json({ ok: false, error: "no_autorizado" }, { status: 403 });
 
