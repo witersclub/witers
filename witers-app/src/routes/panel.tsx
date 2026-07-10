@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 import { WitersLogo } from "../components/witers/brand";
 import { useMe } from "../lib/witers-client";
@@ -1364,26 +1365,32 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
         )
       ) : null}
 
-      {lightbox ? (
-        <ImageLightbox
-          src={lightbox.src}
-          alt={r.title}
-          willFinalize={r.status === "completada"}
-          downloading={downloading}
-          onDownload={() => downloadAndFinalize(lightbox.download)}
-          onClose={() => setLightbox(null)}
-        />
-      ) : null}
+      {lightbox
+        ? createPortal(
+            <ImageLightbox
+              src={lightbox.src}
+              alt={r.title}
+              willFinalize={r.status === "completada"}
+              downloading={downloading}
+              onDownload={() => downloadAndFinalize(lightbox.download)}
+              onClose={() => setLightbox(null)}
+            />,
+            document.body,
+          )
+        : null}
 
-      {showSurvey ? (
-        <SatisfactionSurvey
-          requestId={r.id}
-          onDone={async () => {
-            setShowSurvey(false);
-            await qc.invalidateQueries({ queryKey: ["requests"] });
-          }}
-        />
-      ) : null}
+      {showSurvey
+        ? createPortal(
+            <SatisfactionSurvey
+              requestId={r.id}
+              onDone={async () => {
+                setShowSurvey(false);
+                await qc.invalidateQueries({ queryKey: ["requests"] });
+              }}
+            />,
+            document.body,
+          )
+        : null}
     </article>
   );
 }
