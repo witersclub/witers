@@ -20,6 +20,7 @@ type RequestRow = {
   title: string;
   company_name: string | null;
   product_name: string | null;
+  logo_key: string | null;
   brief: string;
   piece_brief: string | null;
   style: string | null;
@@ -110,6 +111,9 @@ function Panel() {
   const remaining = membership ? membership.requests_quota - membership.requests_used : 0;
   const rows = requests.data?.requests ?? [];
   const [tab, setTab] = useState<"solicitudes" | "nueva">("solicitudes");
+  // Rows come back newest-first, so the first one with a logo is the most
+  // recent request that had one — offered as a shortcut on the new form.
+  const previousLogoKey = rows.find((row) => row.logo_key)?.logo_key ?? null;
 
   return (
     <div className="wit-page min-h-dvh">
@@ -195,6 +199,7 @@ function Panel() {
           {tab === "nueva" ? (
             <NewRequestForm
               disabled={!active || remaining <= 0}
+              previousLogoKey={previousLogoKey}
               onCreated={() => {
                 void qc.invalidateQueries({ queryKey: ["requests"] });
                 void qc.invalidateQueries({ queryKey: ["me"] });
@@ -290,17 +295,50 @@ const EMPTY_FORM = {
   requiredText: "",
 };
 
-function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated: () => void }) {
+function NewRequestForm({
+  disabled,
+  previousLogoKey,
+  onCreated,
+}: {
+  disabled: boolean;
+  previousLogoKey: string | null;
+  onCreated: () => void;
+}) {
   const [step, setStep] = useState<"form" | "preview">("form");
   const [form, setForm] = useState(EMPTY_FORM);
   const [ageRanges, setAgeRanges] = useState<string[]>([]);
   const [colors, setColors] = useState<string[]>(["#2563EB"]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [noLogo, setNoLogo] = useState(false);
+  const [useSameLogo, setUseSameLogo] = useState(false);
   const [productPhotoFile, setProductPhotoFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function selectLogoFile(f: File | null) {
+    setLogoFile(f);
+    if (f) {
+      setNoLogo(false);
+      setUseSameLogo(false);
+    }
+  }
+
+  function selectNoLogo(checked: boolean) {
+    setNoLogo(checked);
+    if (checked) {
+      setLogoFile(null);
+      setUseSameLogo(false);
+    }
+  }
+
+  function selectUseSameLogo(checked: boolean) {
+    setUseSameLogo(checked);
+    if (checked) {
+      setLogoFile(null);
+      setNoLogo(false);
+    }
+  }
 
   function goToPreview(e: React.FormEvent) {
     e.preventDefault();
@@ -314,8 +352,8 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
       setError("Revisa los campos obligatorios: título, empresa, a qué se dedica y qué quieres en la pieza.");
       return;
     }
-    if (!noLogo && !logoFile) {
-      setError("Sube tu logotipo, o marca 'No tengo logotipo'.");
+    if (!noLogo && !useSameLogo && !logoFile) {
+      setError("Sube tu logotipo, marca 'No tengo logotipo' o usa el de tu solicitud anterior.");
       return;
     }
     setStep("preview");
@@ -335,7 +373,9 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
       }
 
       let logoKey: string | undefined;
-      if (logoFile) {
+      if (useSameLogo && previousLogoKey) {
+        logoKey = previousLogoKey;
+      } else if (logoFile) {
         logoKey = await upload(logoFile);
         if (!logoKey) {
           setError("No pudimos subir tu logotipo (PNG, JPG o WebP, máx. 8 MB).");
@@ -392,6 +432,7 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
       setColors(["#2563EB"]);
       setLogoFile(null);
       setNoLogo(false);
+      setUseSameLogo(false);
       setProductPhotoFile(null);
       setStep("form");
       setOkMsg("Solicitud enviada. El equipo WITERS ya está trabajando en ella.");
@@ -439,7 +480,16 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
           </div>
           {form.style ? <PreviewRow label="Estilo" value={form.style} /> : null}
           <PreviewRow label="Formato" value={RATIO_LABEL[form.aspectRatio] ?? form.aspectRatio} />
-          <PreviewRow label="Logotipo" value={noLogo ? "No tiene logotipo" : (logoFile?.name ?? "")} />
+          <PreviewRow
+            label="Logotipo"
+            value={
+              noLogo
+                ? "No tiene logotipo"
+                : useSameLogo
+                  ? "Mismo logotipo de tu solicitud anterior"
+                  : (logoFile?.name ?? "")
+            }
+          />
           {productPhotoFile ? <PreviewRow label="Foto del producto" value={productPhotoFile.name} /> : null}
         </dl>
 
@@ -717,18 +767,31 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
             id="rlogo"
             type="file"
             accept="image/png,image/jpeg,image/webp"
-            disabled={noLogo}
-            onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+            disabled={noLogo || useSameLogo}
+            onChange={(e) => selectLogoFile(e.target.files?.[0] ?? null)}
             className="w-full rounded-xl border border-dashed border-wit-ink/20 px-4 py-3 text-sm text-wit-gray file:mr-3 file:rounded-lg file:border-0 file:bg-wit-mist/60 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-wit-blue disabled:opacity-40"
           />
+          {previousLogoKey ? (
+            <label className="mt-2 flex items-center gap-2 text-sm text-wit-ink">
+              <input
+                type="checkbox"
+                checked={useSameLogo}
+                onChange={(e) => selectUseSameLogo(e.target.checked)}
+                className="h-4 w-4 rounded border-wit-ink/30"
+              />
+              Utilizar el logotipo de la solicitud anterior
+              <img
+                src={`/api/file?key=${encodeURIComponent(previousLogoKey)}`}
+                alt=""
+                className="h-6 w-6 rounded border border-wit-ink/10 object-cover"
+              />
+            </label>
+          ) : null}
           <label className="mt-2 flex items-center gap-2 text-sm text-wit-ink">
             <input
               type="checkbox"
               checked={noLogo}
-              onChange={(e) => {
-                setNoLogo(e.target.checked);
-                if (e.target.checked) setLogoFile(null);
-              }}
+              onChange={(e) => selectNoLogo(e.target.checked)}
               className="h-4 w-4 rounded border-wit-ink/30"
             />
             No tengo logotipo
