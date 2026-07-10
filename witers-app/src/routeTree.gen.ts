@@ -9,12 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WiterRouteImport } from './routes/witer'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as PanelRouteImport } from './routes/panel'
 import { Route as IngresarRouteImport } from './routes/ingresar'
-import { Route as DisenadoresRouteImport } from './routes/disenadores'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -37,6 +37,11 @@ import { Route as ApiAdminDeliverRouteImport } from './routes/api/admin/deliver'
 import { Route as ApiAdminCreateDesignerRouteImport } from './routes/api/admin/create-designer'
 import { Route as ApiAdminApproveResultRouteImport } from './routes/api/admin/approve-result'
 
+const WiterRoute = WiterRouteImport.update({
+  id: '/witer',
+  path: '/witer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -60,11 +65,6 @@ const PanelRoute = PanelRouteImport.update({
 const IngresarRoute = IngresarRouteImport.update({
   id: '/ingresar',
   path: '/ingresar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DisenadoresRoute = DisenadoresRouteImport.update({
-  id: '/disenadores',
-  path: '/disenadores',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -177,12 +177,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/checkout': typeof CheckoutRoute
-  '/disenadores': typeof DisenadoresRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/witer': typeof WiterRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/file': typeof ApiFileRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -206,12 +206,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/checkout': typeof CheckoutRoute
-  '/disenadores': typeof DisenadoresRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/witer': typeof WiterRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/file': typeof ApiFileRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -236,12 +236,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/checkout': typeof CheckoutRoute
-  '/disenadores': typeof DisenadoresRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/witer': typeof WiterRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/file': typeof ApiFileRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -267,12 +267,12 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/checkout'
-    | '/disenadores'
     | '/ingresar'
     | '/panel'
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/witer'
     | '/api/checkout'
     | '/api/file'
     | '/api/requests'
@@ -296,12 +296,12 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/checkout'
-    | '/disenadores'
     | '/ingresar'
     | '/panel'
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/witer'
     | '/api/checkout'
     | '/api/file'
     | '/api/requests'
@@ -325,12 +325,12 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/checkout'
-    | '/disenadores'
     | '/ingresar'
     | '/panel'
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/witer'
     | '/api/checkout'
     | '/api/file'
     | '/api/requests'
@@ -355,12 +355,12 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   CheckoutRoute: typeof CheckoutRoute
-  DisenadoresRoute: typeof DisenadoresRoute
   IngresarRoute: typeof IngresarRoute
   PanelRoute: typeof PanelRoute
   RegistroRoute: typeof RegistroRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  WiterRoute: typeof WiterRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiFileRoute: typeof ApiFileRoute
   ApiRequestsRoute: typeof ApiRequestsRoute
@@ -383,6 +383,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/witer': {
+      id: '/witer'
+      path: '/witer'
+      fullPath: '/witer'
+      preLoaderRoute: typeof WiterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -416,13 +423,6 @@ declare module '@tanstack/react-router' {
       path: '/ingresar'
       fullPath: '/ingresar'
       preLoaderRoute: typeof IngresarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/disenadores': {
-      id: '/disenadores'
-      path: '/disenadores'
-      fullPath: '/disenadores'
-      preLoaderRoute: typeof DisenadoresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -579,12 +579,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   CheckoutRoute: CheckoutRoute,
-  DisenadoresRoute: DisenadoresRoute,
   IngresarRoute: IngresarRoute,
   PanelRoute: PanelRoute,
   RegistroRoute: RegistroRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  WiterRoute: WiterRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiFileRoute: ApiFileRoute,
   ApiRequestsRoute: ApiRequestsRoute,

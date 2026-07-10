@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { WitersLogo } from "../components/witers/brand";
 
-export const Route = createFileRoute("/disenadores")({
+export const Route = createFileRoute("/witer")({
   head: () => ({
     meta: [
       { title: "Diseñadores. WITERS" },

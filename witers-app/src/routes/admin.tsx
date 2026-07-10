@@ -146,7 +146,7 @@ function Admin() {
             </span>
           </div>
           <div className="flex items-center gap-5">
-            <Link to="/disenadores" className="wit-navlink text-sm font-medium text-wit-ink">
+            <Link to="/witer" className="wit-navlink text-sm font-medium text-wit-ink">
               Panel de diseñadores
             </Link>
             <button
