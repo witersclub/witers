@@ -195,8 +195,10 @@ function DesignerPanel() {
                     {shown.map((r) =>
                       tab === "finalizadas" ? (
                         <FinishedRequestCard key={r.id} row={r} me={data.me} />
-                      ) : (
+                      ) : r.claimed_by === data.me ? (
                         <DesignerRequestCard key={r.id} row={r} me={data.me} />
+                      ) : (
+                        <PendingCompactCard key={r.id} row={r} me={data.me} />
                       ),
                     )}
                   </div>
@@ -274,6 +276,72 @@ function FilePreview({ label, fileKey }: { label: string; fileKey: string }) {
           Descargar
         </a>
       </div>
+    </div>
+  );
+}
+
+// Collapsed row for a pending request not yet claimed by this designer —
+// title/format/date only, no client info, no copy-prompt button, to avoid
+// showing full detail on work nobody has picked up yet. The glowing ring
+// only appears while it's unclaimed (a nudge that it needs someone); once
+// claimed the parent swaps this out for the full DesignerRequestCard.
+function PendingCompactCard({ row, me }: { row: DesignerRequest; me: string }) {
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const claimed = Boolean(row.claimed_by);
+  const mine = row.claimed_by === me;
+
+  async function claim() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/designer/claim", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId: row.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) setMsg("Alguien más la acaba de tomar.");
+      await qc.invalidateQueries({ queryKey: ["designer-requests"] });
+    } catch {
+      setMsg("No pudimos tomarla. Intenta de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <div
+        className={`wit-glass flex items-center gap-4 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)] ${
+          !claimed ? "wit-pending-glow" : ""
+        }`}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-wit-ink">{row.title}</p>
+          <p className="mt-0.5 text-xs text-wit-gray">
+            {row.aspect_ratio}
+            {row.style ? ` · ${row.style}` : ""} ·{" "}
+            {new Date(row.created_at + "Z").toLocaleString("es-MX")}
+          </p>
+        </div>
+        {!claimed ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={claim}
+            className="shrink-0 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+          >
+            {busy ? "Tomando..." : "Tomar solicitud"}
+          </button>
+        ) : (
+          <span className="shrink-0 text-xs font-semibold text-wit-gray">
+            {mine ? "Tomada por ti" : `Tomada por ${row.claimed_by_name}`}
+          </span>
+        )}
+      </div>
+      {msg ? <p className="mt-1.5 text-xs text-red-600">{msg}</p> : null}
     </div>
   );
 }

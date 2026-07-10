@@ -178,6 +178,42 @@
   pointer-events: none;
 }
 
+/* Rotating light tracing an unclaimed request's border — a "this is
+   waiting for someone" nudge in the designer panel. Uses ::after (not
+   ::before, which .wit-glass already uses for its specular highlight) so
+   both can live on the same card. The mask trick keeps only a thin ring
+   visible instead of filling the whole card. */
+.wit-pending-glow {
+  position: relative;
+}
+.wit-pending-glow::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 250deg,
+    rgba(0, 71, 255, 0.9) 300deg,
+    rgba(120, 170, 255, 0.95) 330deg,
+    transparent 355deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: wit-orbit 3.2s linear infinite;
+  pointer-events: none;
+}
+@keyframes wit-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .wit-underline {
   position: relative;
   display: inline-block;
