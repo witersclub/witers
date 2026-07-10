@@ -63,6 +63,7 @@ function Panel() {
   const me = useMe();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [tab, setTab] = useState<"solicitudes" | "nueva">("solicitudes");
 
   const requests = useQuery({
     queryKey: ["requests"],
@@ -110,7 +111,6 @@ function Panel() {
   const active = membership?.status === "active";
   const remaining = membership ? membership.requests_quota - membership.requests_used : 0;
   const rows = requests.data?.requests ?? [];
-  const [tab, setTab] = useState<"solicitudes" | "nueva">("solicitudes");
   // Rows come back newest-first, so the first one with a logo is the most
   // recent request that had one — offered as a shortcut on the new form.
   const previousLogoKey = rows.find((row) => row.logo_key)?.logo_key ?? null;
