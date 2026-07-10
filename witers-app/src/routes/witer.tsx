@@ -241,7 +241,7 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
     }
   }
 
-  async function copyInfo() {
+  function buildBasePrompt(): string {
     const company = row.company_name
       ? ` La empresa se llama "${row.company_name}"${row.product_name ? ` y el producto "${row.product_name}"` : ""}, ambos deben aparecer en la pieza.`
       : "";
@@ -260,13 +260,25 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
     const reference = hasFiles
       ? " El cliente adjuntó logo y/o foto de producto — descárgalos abajo y súbelos junto con este prompt si tu herramienta de IA lo permite."
       : "";
-    const prompt = `Creatividad publicitaria profesional de alta calidad. ${row.brief}${company}${pieceBrief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio. Usa ${ratio}.${reference}`;
+    return `Creatividad publicitaria profesional de alta calidad. ${row.brief}${company}${pieceBrief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio. Usa ${ratio}.${reference}`;
+  }
+
+  async function copyText(text: string, okMsg: string) {
     try {
-      await navigator.clipboard.writeText(prompt);
-      setMsg("Prompt copiado al portapapeles.");
+      await navigator.clipboard.writeText(text);
+      setMsg(okMsg);
     } catch {
       setMsg("No pudimos copiar. Selecciona el texto manualmente.");
     }
+  }
+
+  async function copyInfo() {
+    await copyText(buildBasePrompt(), "Prompt copiado al portapapeles.");
+  }
+
+  async function copyRevisionPrompt(note: string, n: number) {
+    const prompt = `Ajusta la creatividad publicitaria anterior aplicando este cambio solicitado por el cliente: ${note}. Mantén todo lo demás igual a la versión anterior. Contexto original de la pieza: ${buildBasePrompt()}`;
+    await copyText(prompt, `Prompt del cambio ${n} copiado al portapapeles.`);
   }
 
   async function deliver() {
@@ -373,13 +385,31 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
       {row.revision_note_1 || row.revision_note_2 ? (
         <div className="mt-3 space-y-2">
           {row.revision_note_1 ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-wit-ink">
-              <strong>Cambio 1 solicitado por el cliente:</strong> {row.revision_note_1}
+            <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-wit-ink">
+              <p className="min-w-0 flex-1">
+                <strong>Cambio 1 solicitado por el cliente:</strong> {row.revision_note_1}
+              </p>
+              <button
+                type="button"
+                onClick={() => copyRevisionPrompt(row.revision_note_1!, 1)}
+                className="shrink-0 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+              >
+                Copiar prompt del cambio
+              </button>
             </div>
           ) : null}
           {row.revision_note_2 ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-wit-ink">
-              <strong>Cambio 2 solicitado por el cliente:</strong> {row.revision_note_2}
+            <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-wit-ink">
+              <p className="min-w-0 flex-1">
+                <strong>Cambio 2 solicitado por el cliente:</strong> {row.revision_note_2}
+              </p>
+              <button
+                type="button"
+                onClick={() => copyRevisionPrompt(row.revision_note_2!, 2)}
+                className="shrink-0 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+              >
+                Copiar prompt del cambio
+              </button>
             </div>
           ) : null}
         </div>

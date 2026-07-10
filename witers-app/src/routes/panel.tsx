@@ -799,6 +799,15 @@ function RequestList({ rows, loading }: { rows: RequestRow[]; loading: boolean }
   );
 }
 
+function Spinner({ cls = "border-wit-blue" }: { cls?: string }) {
+  return (
+    <span
+      className={`inline-block h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 ${cls} border-t-transparent`}
+      aria-hidden
+    />
+  );
+}
+
 function HistoryCard({ row: r }: { row: RequestRow }) {
   const qc = useQueryClient();
   const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.en_proceso;
@@ -807,8 +816,18 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
   const [showRevisionForm, setShowRevisionForm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [sentMsg, setSentMsg] = useState<string | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
   const [closing, setClosing] = useState(false);
   const revisionsLeft = 2 - r.revisions_used;
+
+  // Compact timeline: the original request plus each requested change. Only
+  // the last step carries the live status — earlier ones are done by definition.
+  const steps: { label: string; detail: string | null }[] = [
+    { label: "Solicitud enviada", detail: null },
+  ];
+  if (r.revision_note_1) steps.push({ label: "Cambio 1", detail: r.revision_note_1 });
+  if (r.revision_note_2) steps.push({ label: "Cambio 2", detail: r.revision_note_2 });
 
   async function finalize() {
     setClosing(true);
@@ -849,6 +868,7 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
       if (data.ok) {
         setRevisionText("");
         setShowRevisionForm(false);
+        setSentMsg("Tu solicitud de cambio ha sido enviada. El equipo ya está trabajando en ella.");
         await qc.invalidateQueries({ queryKey: ["requests"] });
       } else {
         setMsg("No pudimos enviar tu solicitud de cambio. Intenta de nuevo.");
@@ -864,31 +884,88 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
     <article className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base font-bold text-wit-ink">{r.title}</h3>
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>{st.label}</span>
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
+          {r.status === "en_proceso" ? <Spinner cls="border-amber-600" /> : null}
+          {st.label}
+        </span>
       </div>
-      <p className="mt-2 line-clamp-2 text-sm text-wit-gray">{r.brief}</p>
-      <p className="mt-2 text-xs text-wit-gray">
-        Formato {r.aspect_ratio}
-        {r.style ? ` · ${r.style}` : ""}
-        {r.age_range ? ` · ${r.age_range}` : ""} ·{" "}
+      <p className="mt-1.5 text-xs text-wit-gray">
+        Formato {r.aspect_ratio} ·{" "}
         {new Date(r.created_at + "Z").toLocaleDateString("es-MX", {
           day: "numeric",
           month: "short",
           year: "numeric",
         })}
       </p>
-      {r.brand_colors ? (
-        <div className="mt-2 flex gap-1.5">
-          {r.brand_colors.split(",").map((c) => (
-            <span
-              key={c}
-              className="h-4 w-4 rounded-full border border-wit-ink/10"
-              style={{ backgroundColor: c }}
-              title={c}
-            />
-          ))}
+
+      <div className="mt-4 space-y-2">
+        {steps.map((s, i) => {
+          const isLast = i === steps.length - 1;
+          return (
+            <div key={s.label} className="flex items-center gap-3 rounded-xl bg-wit-ice/60 px-4 py-2.5">
+              {isLast && r.status === "en_proceso" ? (
+                <Spinner />
+              ) : isLast && r.status === "rechazada" ? (
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold leading-none text-white">
+                  ✕
+                </span>
+              ) : (
+                <span
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold leading-none text-white ${
+                    isLast && r.status === "cerrada" ? "bg-wit-blue" : "bg-emerald-500"
+                  }`}
+                >
+                  ✓
+                </span>
+              )}
+              <span className="flex-1 text-sm font-semibold text-wit-ink">{s.label}</span>
+              <span
+                className={`text-xs font-bold ${
+                  isLast
+                    ? r.status === "en_proceso"
+                      ? "text-wit-blue"
+                      : r.status === "rechazada"
+                        ? "text-red-600"
+                        : r.status === "cerrada"
+                          ? "text-wit-blue"
+                          : "text-emerald-600"
+                    : "text-emerald-600"
+                }`}
+              >
+                {isLast ? st.label : "Listo"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowDetail(!showDetail)}
+        className="mt-3 text-xs font-semibold text-wit-gray underline-offset-2 hover:text-wit-blue hover:underline"
+      >
+        {showDetail ? "Ocultar detalle" : "Ver detalle"}
+      </button>
+      {showDetail ? (
+        <div className="mt-2 space-y-2 rounded-xl bg-wit-mist/30 p-4 text-sm text-wit-gray">
+          <p>
+            <strong className="text-wit-ink">Lo que pediste:</strong> {r.brief}
+          </p>
+          {r.piece_brief ? (
+            <p>
+              <strong className="text-wit-ink">Para esta pieza:</strong> {r.piece_brief}
+            </p>
+          ) : null}
+          {steps
+            .filter((s) => s.detail)
+            .map((s) => (
+              <p key={s.label}>
+                <strong className="text-wit-ink">{s.label}:</strong> {s.detail}
+              </p>
+            ))}
         </div>
       ) : null}
+
       {r.admin_note ? (
         <p className="mt-3 rounded-xl bg-wit-mist/40 px-4 py-2.5 text-sm text-wit-ink">
           <strong>Nota del equipo:</strong> {r.admin_note}
@@ -921,19 +998,10 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
         </div>
       ) : null}
 
-      {r.revision_note_1 || r.revision_note_2 ? (
-        <div className="mt-4 space-y-2">
-          {r.revision_note_1 ? (
-            <div className="rounded-xl bg-wit-ice px-4 py-2.5 text-sm text-wit-ink">
-              <strong>Cambio 1 solicitado:</strong> {r.revision_note_1}
-            </div>
-          ) : null}
-          {r.revision_note_2 ? (
-            <div className="rounded-xl bg-wit-ice px-4 py-2.5 text-sm text-wit-ink">
-              <strong>Cambio 2 solicitado:</strong> {r.revision_note_2}
-            </div>
-          ) : null}
-        </div>
+      {sentMsg ? (
+        <p className="mt-4 rounded-xl bg-wit-blue px-4 py-3 text-sm font-bold text-white">
+          ✓ {sentMsg}
+        </p>
       ) : null}
 
       {r.status === "completada" ? (
@@ -983,7 +1051,10 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
             {revisionsLeft > 0 ? (
               <button
                 type="button"
-                onClick={() => setShowRevisionForm(true)}
+                onClick={() => {
+                  setSentMsg(null);
+                  setShowRevisionForm(true);
+                }}
                 className="rounded-full border border-wit-ink/15 px-4 py-2 text-sm font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
               >
                 Solicitar cambio ({revisionsLeft} {revisionsLeft === 1 ? "disponible" : "disponibles"})
