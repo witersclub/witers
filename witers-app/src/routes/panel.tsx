@@ -114,6 +114,14 @@ function Panel() {
   // Rows come back newest-first, so the first one with a logo is the most
   // recent request that had one — offered as a shortcut on the new form.
   const previousLogoKey = rows.find((row) => row.logo_key)?.logo_key ?? null;
+  // Company identity (name + what the company does) rarely changes between
+  // requests — offer to reuse the most recent request's answers instead of
+  // retyping them every time.
+  const lastRow = rows[0];
+  const previousCompany =
+    lastRow && lastRow.company_name && lastRow.brief
+      ? { companyName: lastRow.company_name, brief: lastRow.brief }
+      : null;
 
   return (
     <div className="wit-page min-h-dvh">
@@ -200,6 +208,7 @@ function Panel() {
             <NewRequestForm
               disabled={!active || remaining <= 0}
               previousLogoKey={previousLogoKey}
+              previousCompany={previousCompany}
               onCreated={() => {
                 void qc.invalidateQueries({ queryKey: ["requests"] });
                 void qc.invalidateQueries({ queryKey: ["me"] });
@@ -298,10 +307,12 @@ const EMPTY_FORM = {
 function NewRequestForm({
   disabled,
   previousLogoKey,
+  previousCompany,
   onCreated,
 }: {
   disabled: boolean;
   previousLogoKey: string | null;
+  previousCompany: { companyName: string; brief: string } | null;
   onCreated: () => void;
 }) {
   const [step, setStep] = useState<"form" | "preview">("form");
@@ -315,6 +326,11 @@ function NewRequestForm({
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function fillFromPreviousCompany() {
+    if (!previousCompany) return;
+    setForm((f) => ({ ...f, companyName: previousCompany.companyName, brief: previousCompany.brief }));
+  }
 
   function selectLogoFile(f: File | null) {
     setLogoFile(f);
@@ -543,9 +559,20 @@ function NewRequestForm({
           />
         </div>
 
-        <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
-          Sobre tu empresa
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
+            Sobre tu empresa
+          </p>
+          {previousCompany ? (
+            <button
+              type="button"
+              onClick={fillFromPreviousCompany}
+              className="rounded-full border border-wit-ink/15 px-3 py-1 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+            >
+              Usar los datos de mi solicitud anterior
+            </button>
+          ) : null}
+        </div>
         <div>
           <label htmlFor="rcompany" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             Nombre comercial / de la empresa
