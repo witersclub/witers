@@ -891,6 +891,7 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
   const [showDetail, setShowDetail] = useState(false);
   const [closing, setClosing] = useState(false);
   const [lightbox, setLightbox] = useState<{ src: string; download: string } | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const revisionsLeft = 2 - r.revisions_used;
 
   // Compact timeline: the original request plus each requested change. Only
@@ -920,6 +921,28 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
       setMsg("No pudimos finalizar la solicitud. Intenta de nuevo.");
     } finally {
       setClosing(false);
+    }
+  }
+
+  // Downloading the final piece locks the request: with free revisions,
+  // clients could otherwise download every version and get 3 designs out
+  // of the quota for 1. The first real download finalizes it, same as
+  // clicking "finalizar solicitud".
+  async function downloadAndFinalize(downloadHref: string) {
+    setDownloading(true);
+    try {
+      if (r.status === "completada") {
+        await fetch("/api/close-request", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ requestId: r.id }),
+        }).catch(() => null);
+        await qc.invalidateQueries({ queryKey: ["requests"] });
+      }
+      window.location.href = downloadHref;
+    } finally {
+      setLightbox(null);
+      setDownloading(false);
     }
   }
 
@@ -1142,8 +1165,10 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
       {lightbox ? (
         <ImageLightbox
           src={lightbox.src}
-          downloadHref={lightbox.download}
           alt={r.title}
+          willFinalize={r.status === "completada"}
+          downloading={downloading}
+          onDownload={() => downloadAndFinalize(lightbox.download)}
           onClose={() => setLightbox(null)}
         />
       ) : null}
@@ -1153,13 +1178,17 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
 
 function ImageLightbox({
   src,
-  downloadHref,
   alt,
+  willFinalize,
+  downloading,
+  onDownload,
   onClose,
 }: {
   src: string;
-  downloadHref: string;
   alt: string;
+  willFinalize: boolean;
+  downloading: boolean;
+  onDownload: () => void;
   onClose: () => void;
 }) {
   return (
@@ -1174,12 +1203,14 @@ function ImageLightbox({
           className="max-h-[70vh] w-auto rounded-2xl object-contain shadow-2xl"
         />
         <div className="mt-5 flex items-center gap-3">
-          <a
-            href={downloadHref}
-            className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
+          <button
+            type="button"
+            disabled={downloading}
+            onClick={onDownload}
+            className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
           >
-            Descargar imagen
-          </a>
+            {downloading ? "Descargando..." : "Descargar imagen"}
+          </button>
           <button
             type="button"
             onClick={onClose}
@@ -1188,6 +1219,12 @@ function ImageLightbox({
             Cerrar
           </button>
         </div>
+        {willFinalize ? (
+          <p className="mt-3 max-w-xs text-center text-xs text-white/70">
+            Si descargas la imagen, tu solicitud se dará por finalizada. Solo puedes descargar una
+            versión.
+          </p>
+        ) : null}
       </div>
     </div>
   );
