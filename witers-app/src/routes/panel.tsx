@@ -326,11 +326,8 @@ function NewRequestForm({
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  function fillFromPreviousCompany() {
-    if (!previousCompany) return;
-    setForm((f) => ({ ...f, companyName: previousCompany.companyName, brief: previousCompany.brief }));
-  }
+  const [showCompanySuggestion, setShowCompanySuggestion] = useState(false);
+  const [showBriefSuggestion, setShowBriefSuggestion] = useState(false);
 
   function selectLogoFile(f: File | null) {
     setLogoFile(f);
@@ -559,21 +556,10 @@ function NewRequestForm({
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
-            Sobre tu empresa
-          </p>
-          {previousCompany ? (
-            <button
-              type="button"
-              onClick={fillFromPreviousCompany}
-              className="rounded-full border border-wit-ink/15 px-3 py-1 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
-            >
-              Usar los datos de mi solicitud anterior
-            </button>
-          ) : null}
-        </div>
-        <div>
+        <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
+          Sobre tu empresa
+        </p>
+        <div className="relative">
           <label htmlFor="rcompany" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             Nombre comercial / de la empresa
           </label>
@@ -585,11 +571,29 @@ function NewRequestForm({
             maxLength={120}
             value={form.companyName}
             onChange={(e) => setForm({ ...form, companyName: e.target.value })}
+            onFocus={() => setShowCompanySuggestion(Boolean(previousCompany))}
+            onBlur={() => setTimeout(() => setShowCompanySuggestion(false), 150)}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
             placeholder="El nombre que va impreso en la pieza"
           />
+          {showCompanySuggestion && previousCompany ? (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setForm((f) => ({ ...f, companyName: previousCompany.companyName }));
+                setShowCompanySuggestion(false);
+              }}
+              className="absolute z-10 mt-1 w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-2.5 text-left shadow-lg hover:bg-wit-mist/40"
+            >
+              <span className="block text-[10px] font-bold uppercase tracking-wide text-wit-gray">
+                Usaste antes
+              </span>
+              <span className="text-sm text-wit-ink">{previousCompany.companyName}</span>
+            </button>
+          ) : null}
         </div>
-        <div>
+        <div className="relative">
           <label htmlFor="rbrief" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             A qué se dedica la empresa
           </label>
@@ -601,9 +605,27 @@ function NewRequestForm({
             rows={3}
             value={form.brief}
             onChange={(e) => setForm({ ...form, brief: e.target.value })}
+            onFocus={() => setShowBriefSuggestion(Boolean(previousCompany))}
+            onBlur={() => setTimeout(() => setShowBriefSuggestion(false), 150)}
             className="w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
             placeholder="Qué vendes y qué te hace diferente..."
           />
+          {showBriefSuggestion && previousCompany ? (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setForm((f) => ({ ...f, brief: previousCompany.brief }));
+                setShowBriefSuggestion(false);
+              }}
+              className="absolute z-10 mt-1 w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-2.5 text-left shadow-lg hover:bg-wit-mist/40"
+            >
+              <span className="block text-[10px] font-bold uppercase tracking-wide text-wit-gray">
+                Usaste antes
+              </span>
+              <span className="line-clamp-2 text-sm text-wit-ink">{previousCompany.brief}</span>
+            </button>
+          ) : null}
         </div>
 
         <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
