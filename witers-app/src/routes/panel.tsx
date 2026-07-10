@@ -1362,26 +1362,30 @@ function RatingCircle({
     >
       <span className="relative flex h-11 w-11 items-center justify-center active:scale-90">
         <span
-          className="absolute inset-0 transition-[clip-path,background-color,transform] duration-500 ease-[cubic-bezier(.34,1.56,.64,1)]"
+          className="absolute inset-0"
           style={{
             clipPath: filled ? CIRCLE_CLIP : STAR_CLIP,
             backgroundColor: filled ? "#0047FF" : "#FACC15",
             transform: filled ? "rotate(0deg)" : "rotate(-14deg)",
+            transition:
+              "clip-path 550ms cubic-bezier(0.32,1.2,0.5,1), background-color 550ms ease, transform 550ms cubic-bezier(0.32,1.2,0.5,1)",
           }}
         />
         <img
           src="/assets/logo_w_white.png"
           alt=""
-          className="pointer-events-none relative h-4 w-auto transition-all duration-300"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-4 w-auto"
           style={{
             opacity: filled ? 1 : 0,
-            transform: filled ? "scale(1)" : "scale(0.4)",
-            transitionDelay: filled ? "200ms" : "0ms",
+            transform: filled ? "translate(-50%, -50%) scale(1)" : "translate(-50%, -50%) scale(0.4)",
+            transition: "opacity 300ms ease, transform 300ms ease",
+            transitionDelay: filled ? "280ms" : "0ms",
           }}
         />
       </span>
       <span
-        className={`text-xs font-bold transition-colors duration-500 ${filled ? "text-wit-blue" : "text-wit-gray"}`}
+        className="text-xs font-bold"
+        style={{ color: filled ? "#0047FF" : "#8a8f98", transition: "color 550ms ease" }}
       >
         {n}
       </span>
@@ -1389,13 +1393,14 @@ function RatingCircle({
   );
 }
 
-// Both shapes use 10 points in the same order so the browser morphs vertex
-// by vertex — a 5-point star unfurling into a circle (decagon) — instead of
-// just crossfading between two unrelated shapes.
+// Both shapes use the same 20 points in the same order (star edges get an
+// extra midpoint vertex, which doesn't change the star's silhouette) so the
+// browser morphs vertex by vertex into a proper-looking circle, instead of
+// stopping at a faceted decagon or just crossfading two unrelated shapes.
 const STAR_CLIP =
-  "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)";
+  "polygon(50% 0%, 55.5% 17.5%, 61% 35%, 79.5% 35%, 98% 35%, 83% 46%, 68% 57%, 73.5% 74%, 79% 91%, 64.5% 80.5%, 50% 70%, 35.5% 80.5%, 21% 91%, 26.5% 74%, 32% 57%, 17% 46%, 2% 35%, 20.5% 35%, 39% 35%, 44.5% 17.5%)";
 const CIRCLE_CLIP =
-  "polygon(50% 0%, 79.4% 9.5%, 97.6% 34.5%, 97.6% 65.5%, 79.4% 90.5%, 50% 100%, 20.6% 90.5%, 2.4% 65.5%, 2.4% 34.5%, 20.6% 9.5%)";
+  "polygon(50% 0%, 65.45% 2.45%, 79.39% 9.55%, 90.45% 20.61%, 97.55% 34.55%, 100% 50%, 97.55% 65.45%, 90.45% 79.39%, 79.39% 90.45%, 65.45% 97.55%, 50% 100%, 34.55% 97.55%, 20.61% 90.45%, 9.55% 79.39%, 2.45% 65.45%, 0% 50%, 2.45% 34.55%, 9.55% 20.61%, 20.61% 9.55%, 34.55% 2.45%)";
 
 function SatisfactionSurvey({
   requestId,
