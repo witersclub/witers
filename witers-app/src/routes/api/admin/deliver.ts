@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { bindings } from "../../../lib/bindings.server";
+import { requestCompletedEmail, sendMail } from "../../../lib/mail.server";
 import { db, json, requireStaffUser } from "../../../lib/witers-auth.server";
 
 const MAX_BYTES = 15 * 1024 * 1024;
@@ -67,6 +68,21 @@ export const Route = createFileRoute("/api/admin/deliver")({
           )
           .bind(requestId)
           .run();
+
+        const notifyRow = await db()
+          .prepare(
+            `SELECT r.title, u.email FROM design_requests r
+             JOIN users u ON u.id = r.user_id WHERE r.id = ?1`,
+          )
+          .bind(requestId)
+          .first<{ title: string; email: string }>();
+        if (notifyRow) {
+          const mail = requestCompletedEmail({
+            title: notifyRow.title,
+            requestUrl: "https://witers.com/panel",
+          });
+          await sendMail({ to: notifyRow.email, ...mail });
+        }
 
         return json({ ok: true, key });
       },
