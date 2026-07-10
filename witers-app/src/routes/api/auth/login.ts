@@ -25,13 +25,14 @@ export const Route = createFileRoute("/api/auth/login")({
         const emailNorm = parsed.data.email.trim().toLowerCase();
         const user = await db()
           .prepare(
-            "SELECT id, email, name, password_hash, password_salt FROM users WHERE email = ?1",
+            "SELECT id, email, name, role, password_hash, password_salt FROM users WHERE email = ?1",
           )
           .bind(emailNorm)
           .first<{
             id: string;
             email: string;
             name: string;
+            role: string;
             password_hash: string;
             password_salt: string;
           }>();
@@ -50,7 +51,7 @@ export const Route = createFileRoute("/api/auth/login")({
 
         const session = await createSession(user.id);
         return json(
-          { ok: true, user: { id: user.id, email: user.email, name: user.name } },
+          { ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } },
           { headers: { "set-cookie": sessionCookie(session.token, session.maxAge) } },
         );
       },

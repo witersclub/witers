@@ -11,7 +11,13 @@ export const Route = createFileRoute("/api/auth/me")({
         const membership = await getMembership(user.id);
         return json({
           ok: true,
-          user: { id: user.id, email: user.email, name: user.name, created_at: user.created_at },
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            created_at: user.created_at,
+          },
           membership,
         });
       },

@@ -120,6 +120,25 @@ function Panel() {
     );
   }
 
+  // A designer account has no business in the client panel (membership,
+  // checkout, request forms) — send them to their own work panel instead.
+  if (me.data.user?.role === "designer") {
+    return (
+      <div className="wit-page flex min-h-dvh flex-col items-center justify-center gap-5 px-5 text-center">
+        <WitersLogo />
+        <p className="max-w-sm text-base text-wit-gray">
+          Esta cuenta es de diseñador. Ve a tu panel de trabajo.
+        </p>
+        <Link
+          to="/witer"
+          className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
+        >
+          Ir a mi panel
+        </Link>
+      </div>
+    );
+  }
+
   const membership = me.data.membership;
   const active = membership?.status === "active";
   const remaining = membership ? membership.requests_quota - membership.requests_used : 0;

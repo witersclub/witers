@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 export type Me = {
   ok: boolean;
-  user?: { id: string; email: string; name: string; created_at: string };
+  user?: { id: string; email: string; name: string; role: string; created_at: string };
   membership?: {
     id: string;
     status: string;

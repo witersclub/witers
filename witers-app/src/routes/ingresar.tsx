@@ -31,13 +31,16 @@ function Ingresar() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(form),
       });
-      const data = (await res.json()) as { ok: boolean };
+      const data = (await res.json()) as { ok: boolean; user?: { role?: string } };
       if (!data.ok) {
         setError("Correo o contraseña incorrectos.");
         return;
       }
       await qc.invalidateQueries({ queryKey: ["me"] });
-      navigate({ to: "/panel" });
+      // Staff accounts land in their own work panel, not the client one —
+      // a designer login has no business seeing the membership/checkout UI.
+      const dest = data.user?.role === "designer" ? "/witer" : data.user?.role === "admin" ? "/admin" : "/panel";
+      navigate({ to: dest });
     } catch {
       setError("No pudimos iniciar sesión. Intenta de nuevo.");
     } finally {
