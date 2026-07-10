@@ -1092,7 +1092,7 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
                   loading="lazy"
                 />
                 <span className="absolute inset-x-0 bottom-0 bg-wit-navy/80 px-2 py-1.5 text-center text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  Ver y descargar
+                  {r.status === "completada" ? "Ver y descargar" : "Ver imagen"}
                 </span>
               </button>
             );
@@ -1171,7 +1171,7 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
         <ImageLightbox
           src={lightbox.src}
           alt={r.title}
-          willFinalize={r.status === "completada"}
+          canDownload={r.status === "completada"}
           downloading={downloading}
           onDownload={() => downloadAndFinalize(lightbox.download)}
           onClose={() => setLightbox(null)}
@@ -1194,14 +1194,14 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
 function ImageLightbox({
   src,
   alt,
-  willFinalize,
+  canDownload,
   downloading,
   onDownload,
   onClose,
 }: {
   src: string;
   alt: string;
-  willFinalize: boolean;
+  canDownload: boolean;
   downloading: boolean;
   onDownload: () => void;
   onClose: () => void;
@@ -1217,29 +1217,44 @@ function ImageLightbox({
           alt={alt}
           className="max-h-[70vh] w-auto rounded-2xl object-contain shadow-2xl"
         />
-        <div className="mt-5 flex items-center gap-3">
-          <button
-            type="button"
-            disabled={downloading}
-            onClick={onDownload}
-            className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
-          >
-            {downloading ? "Descargando..." : "Descargar imagen"}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white hover:bg-white/10"
-          >
-            Cerrar
-          </button>
-        </div>
-        {willFinalize ? (
-          <p className="mt-3 max-w-xs text-center text-xs text-white/70">
-            Si descargas la imagen, tu solicitud se dará por finalizada. Solo puedes descargar una
-            versión.
-          </p>
-        ) : null}
+        {canDownload ? (
+          <>
+            <div className="mt-5 flex items-center gap-3">
+              <button
+                type="button"
+                disabled={downloading}
+                onClick={onDownload}
+                className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
+              >
+                {downloading ? "Descargando..." : "Descargar imagen"}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white hover:bg-white/10"
+              >
+                Cerrar
+              </button>
+            </div>
+            <p className="mt-3 max-w-xs text-center text-xs text-white/70">
+              Si descargas la imagen, tu solicitud se dará por finalizada. Solo puedes descargar una
+              versión.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="mt-5 max-w-xs text-center text-sm text-white/80">
+              Esta solicitud ya fue finalizada — solo se permite descargar una versión por solicitud.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-4 rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white hover:bg-white/10"
+            >
+              Cerrar
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
