@@ -21,6 +21,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiUserRouteImport } from './routes/api/user'
 import { Route as ApiUploadReferenceRouteImport } from './routes/api/upload-reference'
 import { Route as ApiRequestsRouteImport } from './routes/api/requests'
+import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
 import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as ApiDesignerRequestsRouteImport } from './routes/api/designer/requests'
@@ -95,6 +96,11 @@ const ApiUploadReferenceRoute = ApiUploadReferenceRouteImport.update({
 const ApiRequestsRoute = ApiRequestsRouteImport.update({
   id: '/api/requests',
   path: '/api/requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRequestRevisionRoute = ApiRequestRevisionRouteImport.update({
+  id: '/api/request-revision',
+  path: '/api/request-revision',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFileRoute = ApiFileRouteImport.update({
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/witer': typeof WiterRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/file': typeof ApiFileRoute
+  '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
@@ -214,6 +221,7 @@ export interface FileRoutesByTo {
   '/witer': typeof WiterRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/file': typeof ApiFileRoute
+  '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/witer': typeof WiterRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/file': typeof ApiFileRoute
+  '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
@@ -275,6 +284,7 @@ export interface FileRouteTypes {
     | '/witer'
     | '/api/checkout'
     | '/api/file'
+    | '/api/request-revision'
     | '/api/requests'
     | '/api/upload-reference'
     | '/api/user'
@@ -304,6 +314,7 @@ export interface FileRouteTypes {
     | '/witer'
     | '/api/checkout'
     | '/api/file'
+    | '/api/request-revision'
     | '/api/requests'
     | '/api/upload-reference'
     | '/api/user'
@@ -333,6 +344,7 @@ export interface FileRouteTypes {
     | '/witer'
     | '/api/checkout'
     | '/api/file'
+    | '/api/request-revision'
     | '/api/requests'
     | '/api/upload-reference'
     | '/api/user'
@@ -363,6 +375,7 @@ export interface RootRouteChildren {
   WiterRoute: typeof WiterRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiFileRoute: typeof ApiFileRoute
+  ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
   ApiRequestsRoute: typeof ApiRequestsRoute
   ApiUploadReferenceRoute: typeof ApiUploadReferenceRoute
   ApiUserRoute: typeof ApiUserRoute
@@ -465,6 +478,13 @@ declare module '@tanstack/react-router' {
       path: '/api/requests'
       fullPath: '/api/requests'
       preLoaderRoute: typeof ApiRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/request-revision': {
+      id: '/api/request-revision'
+      path: '/api/request-revision'
+      fullPath: '/api/request-revision'
+      preLoaderRoute: typeof ApiRequestRevisionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/file': {
@@ -587,6 +607,7 @@ const rootRouteChildren: RootRouteChildren = {
   WiterRoute: WiterRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiFileRoute: ApiFileRoute,
+  ApiRequestRevisionRoute: ApiRequestRevisionRoute,
   ApiRequestsRoute: ApiRequestsRoute,
   ApiUploadReferenceRoute: ApiUploadReferenceRoute,
   ApiUserRoute: ApiUserRoute,

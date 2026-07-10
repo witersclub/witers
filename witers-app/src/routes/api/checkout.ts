@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
 const PRICE_MXN = 5999;
-const QUOTA = 50;
+const QUOTA = 30;
 
 const schema = z.object({
   // Card fields are accepted for UX completeness but NEVER stored. When a real

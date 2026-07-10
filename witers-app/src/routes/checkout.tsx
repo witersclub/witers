@@ -17,7 +17,7 @@ export const Route = createFileRoute("/checkout")({
 
 const BENEFICIOS = [
   "Acceso completo a la comunidad",
-  "50 solicitudes de diseño con IA",
+  "30 solicitudes de diseño con IA",
   "Panel personal de seguimiento",
   "Soporte y estrategia de marca",
 ];

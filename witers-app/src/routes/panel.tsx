@@ -31,6 +31,9 @@ type RequestRow = {
   promo_price: string | null;
   status: string;
   admin_note: string | null;
+  revisions_used: number;
+  revision_note_1: string | null;
+  revision_note_2: string | null;
   created_at: string;
   results_json: string | null;
 };
@@ -142,7 +145,7 @@ function Panel() {
               </p>
               <p className="font-wit-mono text-3xl font-semibold text-wit-ink">
                 {active ? remaining : 0}
-                <span className="text-base text-wit-gray">/{membership?.requests_quota ?? 50}</span>
+                <span className="text-base text-wit-gray">/{membership?.requests_quota ?? 30}</span>
               </p>
             </div>
             <span
@@ -158,7 +161,7 @@ function Panel() {
             <div>
               <p className="text-xl font-bold">Activa tu membresía para empezar a crear.</p>
               <p className="mt-1 text-sm text-white/70">
-                $5,999 MXN. Pago único. 50 solicitudes de diseño con IA incluidas.
+                $5,999 MXN. Pago único. 30 solicitudes de diseño con IA incluidas.
               </p>
             </div>
             <Link
@@ -786,75 +789,174 @@ function RequestList({ rows, loading }: { rows: RequestRow[]; loading: boolean }
         </div>
       ) : (
         <div className="mt-5 space-y-4">
-          {rows.map((r) => {
-            const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.en_proceso;
-            const results = parseResults(r);
-            return (
-              <article key={r.id} className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="text-base font-bold text-wit-ink">{r.title}</h3>
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>{st.label}</span>
-                </div>
-                <p className="mt-2 line-clamp-2 text-sm text-wit-gray">{r.brief}</p>
-                <p className="mt-2 text-xs text-wit-gray">
-                  Formato {r.aspect_ratio}
-                  {r.style ? ` · ${r.style}` : ""}
-                  {r.age_range ? ` · ${r.age_range}` : ""} ·{" "}
-                  {new Date(r.created_at + "Z").toLocaleDateString("es-MX", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </p>
-                {r.brand_colors ? (
-                  <div className="mt-2 flex gap-1.5">
-                    {r.brand_colors.split(",").map((c) => (
-                      <span
-                        key={c}
-                        className="h-4 w-4 rounded-full border border-wit-ink/10"
-                        style={{ backgroundColor: c }}
-                        title={c}
-                      />
-                    ))}
-                  </div>
-                ) : null}
-                {r.admin_note ? (
-                  <p className="mt-3 rounded-xl bg-wit-mist/40 px-4 py-2.5 text-sm text-wit-ink">
-                    <strong>Nota del equipo:</strong> {r.admin_note}
-                  </p>
-                ) : null}
-                {results.length > 0 ? (
-                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {results.map((res) => {
-                      const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
-                      return (
-                        <a
-                          key={res.id}
-                          href={href}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="group relative block overflow-hidden rounded-xl border border-wit-ink/10"
-                        >
-                          <img
-                            src={href}
-                            alt={`Resultado de ${r.title}`}
-                            className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            loading="lazy"
-                          />
-                          <span className="absolute inset-x-0 bottom-0 bg-wit-navy/80 px-2 py-1.5 text-center text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
-                            Ver y descargar
-                          </span>
-                        </a>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </article>
-            );
-          })}
+          {rows.map((r) => (
+            <HistoryCard key={r.id} row={r} />
+          ))}
         </div>
       )}
     </section>
+  );
+}
+
+function HistoryCard({ row: r }: { row: RequestRow }) {
+  const qc = useQueryClient();
+  const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.en_proceso;
+  const results = parseResults(r);
+  const [revisionText, setRevisionText] = useState("");
+  const [showRevisionForm, setShowRevisionForm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const revisionsLeft = 2 - r.revisions_used;
+
+  async function sendRevision() {
+    if (revisionText.trim().length < 5) {
+      setMsg("Cuéntanos con un poco más de detalle qué quieres ajustar.");
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/request-revision", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId: r.id, message: revisionText }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (data.ok) {
+        setRevisionText("");
+        setShowRevisionForm(false);
+        await qc.invalidateQueries({ queryKey: ["requests"] });
+      } else {
+        setMsg("No pudimos enviar tu solicitud de cambio. Intenta de nuevo.");
+      }
+    } catch {
+      setMsg("No pudimos enviar tu solicitud de cambio. Intenta de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <article className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-base font-bold text-wit-ink">{r.title}</h3>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>{st.label}</span>
+      </div>
+      <p className="mt-2 line-clamp-2 text-sm text-wit-gray">{r.brief}</p>
+      <p className="mt-2 text-xs text-wit-gray">
+        Formato {r.aspect_ratio}
+        {r.style ? ` · ${r.style}` : ""}
+        {r.age_range ? ` · ${r.age_range}` : ""} ·{" "}
+        {new Date(r.created_at + "Z").toLocaleDateString("es-MX", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })}
+      </p>
+      {r.brand_colors ? (
+        <div className="mt-2 flex gap-1.5">
+          {r.brand_colors.split(",").map((c) => (
+            <span
+              key={c}
+              className="h-4 w-4 rounded-full border border-wit-ink/10"
+              style={{ backgroundColor: c }}
+              title={c}
+            />
+          ))}
+        </div>
+      ) : null}
+      {r.admin_note ? (
+        <p className="mt-3 rounded-xl bg-wit-mist/40 px-4 py-2.5 text-sm text-wit-ink">
+          <strong>Nota del equipo:</strong> {r.admin_note}
+        </p>
+      ) : null}
+      {results.length > 0 ? (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {results.map((res) => {
+            const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
+            return (
+              <a
+                key={res.id}
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                className="group relative block overflow-hidden rounded-xl border border-wit-ink/10"
+              >
+                <img
+                  src={href}
+                  alt={`Resultado de ${r.title}`}
+                  className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <span className="absolute inset-x-0 bottom-0 bg-wit-navy/80 px-2 py-1.5 text-center text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  Ver y descargar
+                </span>
+              </a>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {r.revision_note_1 || r.revision_note_2 ? (
+        <div className="mt-4 space-y-2">
+          {r.revision_note_1 ? (
+            <div className="rounded-xl bg-wit-ice px-4 py-2.5 text-sm text-wit-ink">
+              <strong>Cambio 1 solicitado:</strong> {r.revision_note_1}
+            </div>
+          ) : null}
+          {r.revision_note_2 ? (
+            <div className="rounded-xl bg-wit-ice px-4 py-2.5 text-sm text-wit-ink">
+              <strong>Cambio 2 solicitado:</strong> {r.revision_note_2}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {r.status === "completada" && revisionsLeft > 0 ? (
+        showRevisionForm ? (
+          <div className="mt-4 rounded-xl bg-wit-ice p-4">
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+              Qué quieres que ajustemos ({revisionsLeft} {revisionsLeft === 1 ? "cambio disponible" : "cambios disponibles"})
+            </label>
+            <textarea
+              rows={3}
+              maxLength={1000}
+              value={revisionText}
+              onChange={(e) => setRevisionText(e.target.value)}
+              className="w-full resize-y rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+              placeholder="Ej. cambiar el color de fondo a azul, agrandar el texto..."
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={sendRevision}
+                className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+              >
+                {busy ? "Enviando..." : "Enviar solicitud de cambio"}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setShowRevisionForm(false)}
+                className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
+              >
+                Cancelar
+              </button>
+            </div>
+            {msg ? <p className="mt-2 text-sm text-red-600">{msg}</p> : null}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowRevisionForm(true)}
+            className="mt-4 rounded-full border border-wit-ink/15 px-4 py-2 text-sm font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+          >
+            Solicitar cambio ({revisionsLeft} {revisionsLeft === 1 ? "disponible" : "disponibles"})
+          </button>
+        )
+      ) : null}
+    </article>
   );
 }
 

@@ -35,6 +35,9 @@ type DesignerRequest = {
   product_photo_key: string | null;
   status: string;
   admin_note: string | null;
+  revisions_used: number;
+  revision_note_1: string | null;
+  revision_note_2: string | null;
   created_at: string;
   claimed_by: string | null;
   claimed_by_name: string | null;
@@ -362,6 +365,21 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
             Qué quiere el cliente en esta pieza
           </p>
           <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium text-wit-ink">{row.piece_brief}</p>
+        </div>
+      ) : null}
+
+      {row.revision_note_1 || row.revision_note_2 ? (
+        <div className="mt-3 space-y-2">
+          {row.revision_note_1 ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-wit-ink">
+              <strong>Cambio 1 solicitado por el cliente:</strong> {row.revision_note_1}
+            </div>
+          ) : null}
+          {row.revision_note_2 ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-wit-ink">
+              <strong>Cambio 2 solicitado por el cliente:</strong> {row.revision_note_2}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
