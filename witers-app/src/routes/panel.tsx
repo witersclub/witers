@@ -1266,21 +1266,24 @@ const STAR_PATH =
 function StarButton({
   n,
   filled,
+  disabled,
   onClick,
   onHover,
 }: {
   n: number;
   filled: boolean;
+  disabled: boolean;
   onClick: () => void;
   onHover: (n: number | null) => void;
 }) {
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={onClick}
       onMouseEnter={() => onHover(n)}
       onMouseLeave={() => onHover(null)}
-      className="flex flex-col items-center gap-1.5"
+      className="flex flex-col items-center gap-1.5 disabled:cursor-not-allowed"
     >
       <span className="relative flex h-11 w-11 items-center justify-center transition-transform active:scale-90">
         <svg viewBox="0 0 24 24" className="h-11 w-11">
@@ -1290,8 +1293,7 @@ function StarButton({
           <img
             src="/assets/logo_w_white.png"
             alt=""
-            className="pointer-events-none absolute h-3.5 w-auto"
-            style={{ marginTop: "2px" }}
+            className="pointer-events-none absolute left-1/2 top-1/2 h-3.5 w-auto -translate-x-1/2 -translate-y-1/2"
           />
         ) : null}
       </span>
@@ -1312,6 +1314,7 @@ function SatisfactionSurvey({
   const [hover, setHover] = useState<number | null>(null);
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [picking, setPicking] = useState(false);
   const shown = hover ?? rating;
 
   async function submit(n: number, fb?: string) {
@@ -1327,14 +1330,25 @@ function SatisfactionSurvey({
     }
   }
 
+  function wait(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   async function pick(n: number) {
+    setPicking(true);
     setRating(n);
+    setHover(null);
+    // Brief pause so the star actually shows filled-in-blue-with-logo before
+    // the screen moves on — otherwise the transition happens in the same
+    // paint and it looks like nothing happened.
+    await wait(450);
     if (n === 5) {
       await submit(n);
       setStep("done");
     } else {
       setStep("feedback");
     }
+    setPicking(false);
   }
 
   async function sendFeedback() {
@@ -1352,7 +1366,14 @@ function SatisfactionSurvey({
             </h3>
             <div className="mt-6 flex justify-center gap-2.5">
               {[1, 2, 3, 4, 5].map((n) => (
-                <StarButton key={n} n={n} filled={n <= shown} onClick={() => pick(n)} onHover={setHover} />
+                <StarButton
+                  key={n}
+                  n={n}
+                  filled={n <= shown}
+                  disabled={picking}
+                  onClick={() => pick(n)}
+                  onHover={setHover}
+                />
               ))}
             </div>
             <button
