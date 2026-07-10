@@ -842,6 +842,24 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  async function deactivate(d: AdminDesigner) {
+    if (!window.confirm(`¿Dar de baja a ${d.name}? Ya no podrá iniciar sesión como diseñador.`)) {
+      return;
+    }
+    setRemovingId(d.id);
+    try {
+      await fetch("/api/admin/deactivate-designer", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: d.id }),
+      });
+      await qc.invalidateQueries({ queryKey: ["admin-overview"] });
+    } finally {
+      setRemovingId(null);
+    }
+  }
 
   async function createDesigner(e: React.FormEvent) {
     e.preventDefault();
@@ -928,6 +946,7 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
               <th className="px-5 py-3.5">Tomadas</th>
               <th className="px-5 py-3.5">Entregadas</th>
               <th className="px-5 py-3.5">Alta</th>
+              <th className="px-5 py-3.5" />
             </tr>
           </thead>
           <tbody>
@@ -941,6 +960,30 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
                 <td className="px-5 py-3.5 font-wit-mono">{d.completed_count}</td>
                 <td className="px-5 py-3.5 text-xs text-wit-gray">
                   {new Date(d.created_at + "Z").toLocaleDateString("es-MX")}
+                </td>
+                <td className="px-5 py-3.5 text-right">
+                  <button
+                    type="button"
+                    disabled={removingId === d.id}
+                    onClick={() => deactivate(d)}
+                    aria-label={`Dar de baja a ${d.name}`}
+                    title="Dar de baja"
+                    className="rounded-lg p-2 text-wit-gray transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" />
+                      <path d="M10 11v6M14 11v6" />
+                    </svg>
+                  </button>
                 </td>
               </tr>
             ))}

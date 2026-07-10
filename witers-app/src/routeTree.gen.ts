@@ -37,6 +37,7 @@ import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overvie
 import { Route as ApiAdminGenerateRouteImport } from './routes/api/admin/generate'
 import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
 import { Route as ApiAdminDeliverRouteImport } from './routes/api/admin/deliver'
+import { Route as ApiAdminDeactivateDesignerRouteImport } from './routes/api/admin/deactivate-designer'
 import { Route as ApiAdminCreateDesignerRouteImport } from './routes/api/admin/create-designer'
 import { Route as ApiAdminApproveResultRouteImport } from './routes/api/admin/approve-result'
 
@@ -180,6 +181,12 @@ const ApiAdminDeliverRoute = ApiAdminDeliverRouteImport.update({
   path: '/api/admin/deliver',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminDeactivateDesignerRoute =
+  ApiAdminDeactivateDesignerRouteImport.update({
+    id: '/api/admin/deactivate-designer',
+    path: '/api/admin/deactivate-designer',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminCreateDesignerRoute = ApiAdminCreateDesignerRouteImport.update({
   id: '/api/admin/create-designer',
   path: '/api/admin/create-designer',
@@ -211,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/api/user': typeof ApiUserRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
+  '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
@@ -243,6 +251,7 @@ export interface FileRoutesByTo {
   '/api/user': typeof ApiUserRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
+  '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
@@ -276,6 +285,7 @@ export interface FileRoutesById {
   '/api/user': typeof ApiUserRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
+  '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
@@ -310,6 +320,7 @@ export interface FileRouteTypes {
     | '/api/user'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
+    | '/api/admin/deactivate-designer'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
     | '/api/admin/generate'
@@ -342,6 +353,7 @@ export interface FileRouteTypes {
     | '/api/user'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
+    | '/api/admin/deactivate-designer'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
     | '/api/admin/generate'
@@ -374,6 +386,7 @@ export interface FileRouteTypes {
     | '/api/user'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
+    | '/api/admin/deactivate-designer'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
     | '/api/admin/generate'
@@ -407,6 +420,7 @@ export interface RootRouteChildren {
   ApiUserRoute: typeof ApiUserRoute
   ApiAdminApproveResultRoute: typeof ApiAdminApproveResultRoute
   ApiAdminCreateDesignerRoute: typeof ApiAdminCreateDesignerRoute
+  ApiAdminDeactivateDesignerRoute: typeof ApiAdminDeactivateDesignerRoute
   ApiAdminDeliverRoute: typeof ApiAdminDeliverRoute
   ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
   ApiAdminGenerateRoute: typeof ApiAdminGenerateRoute
@@ -618,6 +632,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminDeliverRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/deactivate-designer': {
+      id: '/api/admin/deactivate-designer'
+      path: '/api/admin/deactivate-designer'
+      fullPath: '/api/admin/deactivate-designer'
+      preLoaderRoute: typeof ApiAdminDeactivateDesignerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/create-designer': {
       id: '/api/admin/create-designer'
       path: '/api/admin/create-designer'
@@ -655,6 +676,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUserRoute: ApiUserRoute,
   ApiAdminApproveResultRoute: ApiAdminApproveResultRoute,
   ApiAdminCreateDesignerRoute: ApiAdminCreateDesignerRoute,
+  ApiAdminDeactivateDesignerRoute: ApiAdminDeactivateDesignerRoute,
   ApiAdminDeliverRoute: ApiAdminDeliverRoute,
   ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
   ApiAdminGenerateRoute: ApiAdminGenerateRoute,

@@ -31,9 +31,13 @@ function Ingresar() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(form),
       });
-      const data = (await res.json()) as { ok: boolean; user?: { role?: string } };
+      const data = (await res.json()) as { ok: boolean; error?: string; user?: { role?: string } };
       if (!data.ok) {
-        setError("Correo o contraseña incorrectos.");
+        setError(
+          data.error === "cuenta_dada_de_baja"
+            ? "Esta cuenta fue dada de baja. Contacta a WITERS si crees que es un error."
+            : "Correo o contraseña incorrectos.",
+        );
         return;
       }
       await qc.invalidateQueries({ queryKey: ["me"] });

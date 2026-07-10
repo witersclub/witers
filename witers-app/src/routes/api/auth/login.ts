@@ -25,7 +25,7 @@ export const Route = createFileRoute("/api/auth/login")({
         const emailNorm = parsed.data.email.trim().toLowerCase();
         const user = await db()
           .prepare(
-            "SELECT id, email, name, role, password_hash, password_salt FROM users WHERE email = ?1",
+            "SELECT id, email, name, role, active, password_hash, password_salt FROM users WHERE email = ?1",
           )
           .bind(emailNorm)
           .first<{
@@ -33,6 +33,7 @@ export const Route = createFileRoute("/api/auth/login")({
             email: string;
             name: string;
             role: string;
+            active: number;
             password_hash: string;
             password_salt: string;
           }>();
@@ -47,6 +48,9 @@ export const Route = createFileRoute("/api/auth/login")({
         );
         if (!valid) {
           return json({ ok: false, error: "credenciales" }, { status: 401 });
+        }
+        if (!user.active) {
+          return json({ ok: false, error: "cuenta_dada_de_baja" }, { status: 403 });
         }
 
         const session = await createSession(user.id);

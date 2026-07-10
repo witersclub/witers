@@ -48,7 +48,7 @@ export const Route = createFileRoute("/api/admin/overview")({
                     (SELECT COUNT(*) FROM design_requests r WHERE r.claimed_by = u.id) AS claimed_count,
                     (SELECT COUNT(*) FROM design_requests r WHERE r.claimed_by = u.id AND r.status = 'completada') AS completed_count
              FROM users u
-             WHERE u.role = 'designer'
+             WHERE u.role = 'designer' AND u.active = 1
              ORDER BY u.created_at DESC`,
           )
           .all();
