@@ -33,6 +33,7 @@ import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAdminUpdateRequestRouteImport } from './routes/api/admin/update-request'
+import { Route as ApiAdminUpdateDesignerRouteImport } from './routes/api/admin/update-designer'
 import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overview'
 import { Route as ApiAdminGenerateRouteImport } from './routes/api/admin/generate'
 import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
@@ -161,6 +162,11 @@ const ApiAdminUpdateRequestRoute = ApiAdminUpdateRequestRouteImport.update({
   path: '/api/admin/update-request',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminUpdateDesignerRoute = ApiAdminUpdateDesignerRouteImport.update({
+  id: '/api/admin/update-designer',
+  path: '/api/admin/update-designer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminOverviewRoute = ApiAdminOverviewRouteImport.update({
   id: '/api/admin/overview',
   path: '/api/admin/overview',
@@ -223,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByTo {
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
@@ -290,6 +298,7 @@ export interface FileRoutesById {
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
@@ -325,6 +334,7 @@ export interface FileRouteTypes {
     | '/api/admin/discard-result'
     | '/api/admin/generate'
     | '/api/admin/overview'
+    | '/api/admin/update-designer'
     | '/api/admin/update-request'
     | '/api/auth/login'
     | '/api/auth/logout'
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/api/admin/discard-result'
     | '/api/admin/generate'
     | '/api/admin/overview'
+    | '/api/admin/update-designer'
     | '/api/admin/update-request'
     | '/api/auth/login'
     | '/api/auth/logout'
@@ -391,6 +402,7 @@ export interface FileRouteTypes {
     | '/api/admin/discard-result'
     | '/api/admin/generate'
     | '/api/admin/overview'
+    | '/api/admin/update-designer'
     | '/api/admin/update-request'
     | '/api/auth/login'
     | '/api/auth/logout'
@@ -425,6 +437,7 @@ export interface RootRouteChildren {
   ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
   ApiAdminGenerateRoute: typeof ApiAdminGenerateRoute
   ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
+  ApiAdminUpdateDesignerRoute: typeof ApiAdminUpdateDesignerRoute
   ApiAdminUpdateRequestRoute: typeof ApiAdminUpdateRequestRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
@@ -604,6 +617,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminUpdateRequestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/update-designer': {
+      id: '/api/admin/update-designer'
+      path: '/api/admin/update-designer'
+      fullPath: '/api/admin/update-designer'
+      preLoaderRoute: typeof ApiAdminUpdateDesignerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/overview': {
       id: '/api/admin/overview'
       path: '/api/admin/overview'
@@ -681,6 +701,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
   ApiAdminGenerateRoute: ApiAdminGenerateRoute,
   ApiAdminOverviewRoute: ApiAdminOverviewRoute,
+  ApiAdminUpdateDesignerRoute: ApiAdminUpdateDesignerRoute,
   ApiAdminUpdateRequestRoute: ApiAdminUpdateRequestRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,

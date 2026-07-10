@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 
 import { WitersLogo } from "../components/witers/brand";
 
@@ -904,24 +905,7 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const [removingId, setRemovingId] = useState<string | null>(null);
-
-  async function deactivate(d: AdminDesigner) {
-    if (!window.confirm(`¿Dar de baja a ${d.name}? Ya no podrá iniciar sesión como diseñador.`)) {
-      return;
-    }
-    setRemovingId(d.id);
-    try {
-      await fetch("/api/admin/deactivate-designer", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ userId: d.id }),
-      });
-      await qc.invalidateQueries({ queryKey: ["admin-overview"] });
-    } finally {
-      setRemovingId(null);
-    }
-  }
+  const [editing, setEditing] = useState<AdminDesigner | null>(null);
 
   async function createDesigner(e: React.FormEvent) {
     e.preventDefault();
@@ -1026,11 +1010,10 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
                 <td className="px-5 py-3.5 text-right">
                   <button
                     type="button"
-                    disabled={removingId === d.id}
-                    onClick={() => deactivate(d)}
-                    aria-label={`Dar de baja a ${d.name}`}
-                    title="Dar de baja"
-                    className="rounded-lg p-2 text-wit-gray transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    onClick={() => setEditing(d)}
+                    aria-label={`Editar a ${d.name}`}
+                    title="Editar"
+                    className="rounded-lg p-2 text-wit-gray transition-colors hover:bg-wit-blue/10 hover:text-wit-blue"
                   >
                     <svg
                       width="16"
@@ -1042,8 +1025,8 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     >
-                      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" />
-                      <path d="M10 11v6M14 11v6" />
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
                     </svg>
                   </button>
                 </td>
@@ -1054,6 +1037,187 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
         {rows.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-wit-gray">Aún no tienes diseñadores.</p>
         ) : null}
+      </div>
+
+      {editing
+        ? createPortal(
+            <EditDesignerModal
+              designer={editing}
+              onClose={() => setEditing(null)}
+              onSaved={async () => {
+                setEditing(null);
+                await qc.invalidateQueries({ queryKey: ["admin-overview"] });
+              }}
+              onDeactivated={async () => {
+                setEditing(null);
+                await qc.invalidateQueries({ queryKey: ["admin-overview"] });
+              }}
+            />,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+function EditDesignerModal({
+  designer,
+  onClose,
+  onSaved,
+  onDeactivated,
+}: {
+  designer: AdminDesigner;
+  onClose: () => void;
+  onSaved: () => void;
+  onDeactivated: () => void;
+}) {
+  const [name, setName] = useState(designer.name);
+  const [email, setEmail] = useState(designer.email);
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"designer" | "admin">("designer");
+  const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/update-designer", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: designer.id, name, email, password, role }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setMsg(
+          data.error === "correo_registrado"
+            ? "Ese correo ya está registrado por otra cuenta."
+            : "Revisa los campos e intenta de nuevo.",
+        );
+        return;
+      }
+      onSaved();
+    } catch {
+      setMsg("No pudimos guardar los cambios. Intenta de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deactivate() {
+    if (!window.confirm(`¿Dar de baja a ${designer.name}? Ya no podrá iniciar sesión como diseñador.`)) {
+      return;
+    }
+    setRemoving(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/deactivate-designer", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: designer.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) {
+        setMsg("No pudimos dar de baja a este diseñador. Intenta de nuevo.");
+        return;
+      }
+      onDeactivated();
+    } catch {
+      setMsg("No pudimos dar de baja a este diseñador. Intenta de nuevo.");
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-wit-navy/90 p-5"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-base font-bold text-wit-ink">Editar diseñador</h2>
+        <form onSubmit={save} className="mt-4 space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">Nombre</label>
+            <input
+              type="text"
+              required
+              minLength={2}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">Correo</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">
+              Nueva contraseña (opcional)
+            </label>
+            <input
+              type="text"
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Dejar en blanco para no cambiarla"
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">Rol</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as "designer" | "admin")}
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+            >
+              <option value="designer">Diseñador</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+
+          {msg ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{msg}</p> : null}
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-xl bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+            >
+              {busy ? "Guardando..." : "Guardar cambios"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-wit-ink/15 px-5 py-2.5 text-sm font-semibold text-wit-ink hover:border-wit-ink/30"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+
+        <div className="mt-6 border-t border-wit-ink/10 pt-4">
+          <button
+            type="button"
+            disabled={removing}
+            onClick={deactivate}
+            className="text-sm font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+          >
+            {removing ? "Dando de baja..." : "Dar de baja a este diseñador"}
+          </button>
+        </div>
       </div>
     </div>
   );
