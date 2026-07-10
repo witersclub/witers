@@ -311,36 +311,35 @@ function PendingCompactCard({ row, me }: { row: DesignerRequest; me: string }) {
     }
   }
 
+  const card = (
+    <div className="wit-glass flex items-center gap-4 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-wit-ink">{row.title}</p>
+        <p className="mt-0.5 text-xs text-wit-gray">
+          {row.aspect_ratio}
+          {row.style ? ` · ${row.style}` : ""} · {new Date(row.created_at + "Z").toLocaleString("es-MX")}
+        </p>
+      </div>
+      {!claimed ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={claim}
+          className="shrink-0 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+        >
+          {busy ? "Tomando..." : "Tomar solicitud"}
+        </button>
+      ) : (
+        <span className="shrink-0 text-xs font-semibold text-wit-gray">
+          {mine ? "Tomada por ti" : `Tomada por ${row.claimed_by_name}`}
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <div>
-      <div
-        className={`wit-glass flex items-center gap-4 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)] ${
-          !claimed ? "wit-pending-glow" : ""
-        }`}
-      >
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-wit-ink">{row.title}</p>
-          <p className="mt-0.5 text-xs text-wit-gray">
-            {row.aspect_ratio}
-            {row.style ? ` · ${row.style}` : ""} ·{" "}
-            {new Date(row.created_at + "Z").toLocaleString("es-MX")}
-          </p>
-        </div>
-        {!claimed ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={claim}
-            className="shrink-0 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
-          >
-            {busy ? "Tomando..." : "Tomar solicitud"}
-          </button>
-        ) : (
-          <span className="shrink-0 text-xs font-semibold text-wit-gray">
-            {mine ? "Tomada por ti" : `Tomada por ${row.claimed_by_name}`}
-          </span>
-        )}
-      </div>
+      {!claimed ? <div className="wit-pending-glow">{card}</div> : card}
       {msg ? <p className="mt-1.5 text-xs text-red-600">{msg}</p> : null}
     </div>
   );

@@ -179,38 +179,38 @@
 }
 
 /* Rotating light tracing an unclaimed request's border — a "this is
-   waiting for someone" nudge in the designer panel. Uses ::after (not
-   ::before, which .wit-glass already uses for its specular highlight) so
-   both can live on the same card. The mask trick keeps only a thin ring
-   visible instead of filling the whole card. */
-.wit-pending-glow {
-  position: relative;
+   waiting for someone" nudge in the designer panel. Wraps the card in a
+   thin (2px) padded box whose OWN background is the rotating
+   conic-gradient; the actual card sits inside and covers everything
+   except that 2px ring. Animates a registered custom property (not
+   transform:rotate on the box) so only the light sweeps around — the
+   card and its content stay perfectly upright the whole time. (An
+   earlier version used a mask-composite trick on a pseudo-element,
+   which rendered as a broken, oversized, disconnected shape instead of
+   a ring — verified in a real browser before landing this version.) */
+@property --wit-glow-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
 }
-.wit-pending-glow::after {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: inherit;
+.wit-pending-glow {
+  --wit-glow-angle: 0deg;
+  display: block;
+  border-radius: 1rem;
   padding: 2px;
   background: conic-gradient(
-    from 0deg,
+    from var(--wit-glow-angle),
     transparent 0deg,
     transparent 250deg,
-    rgba(0, 71, 255, 0.9) 300deg,
-    rgba(120, 170, 255, 0.95) 330deg,
-    transparent 355deg
+    rgba(0, 71, 255, 0.95) 300deg,
+    rgba(140, 180, 255, 1) 330deg,
+    transparent 360deg
   );
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: wit-orbit 3.2s linear infinite;
-  pointer-events: none;
+  animation: wit-glow-spin 3.2s linear infinite;
 }
-@keyframes wit-orbit {
+@keyframes wit-glow-spin {
   to {
-    transform: rotate(360deg);
+    --wit-glow-angle: 360deg;
   }
 }
 
