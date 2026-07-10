@@ -140,9 +140,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {/* Swap this file's contents (public/assets/bg-current.jpg) to try a
-            new background candidate — no other change needed. */}
-        <img className="wit-bg-fixed" src="/assets/bg-current.jpg" alt="" aria-hidden="true" />
+        <div className="wit-bg-fixed" aria-hidden="true" />
         {children}
         <Scripts />
       </body>
