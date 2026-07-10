@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 // Set right before we auto-reload once for a stale-chunk error, cleared as
@@ -133,30 +133,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
-// Fixed, looping, slow-motion background video — muted + playsInline are
-// required for autoplay to actually work on iOS Safari.
-function BackgroundVideo() {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  useEffect(() => {
-    if (videoRef.current) videoRef.current.playbackRate = 0.5;
-  }, []);
-
-  return (
-    <video
-      ref={videoRef}
-      className="wit-bg-fixed"
-      src="/assets/bg-video.mp4"
-      autoPlay
-      loop
-      muted
-      playsInline
-      preload="auto"
-      aria-hidden="true"
-    />
-  );
-}
-
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
@@ -164,7 +140,9 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <BackgroundVideo />
+        {/* Swap this file's contents (public/assets/bg-current.jpg) to try a
+            new background candidate — no other change needed. */}
+        <img className="wit-bg-fixed" src="/assets/bg-current.jpg" alt="" aria-hidden="true" />
         {children}
         <Scripts />
       </body>
