@@ -27,15 +27,14 @@ export const Route = createFileRoute("/api/file")({
           if (key.startsWith(`refs/${member.id}/`)) {
             allowed = true;
           } else if (key.startsWith("deliveries/")) {
-            // The owning client can only ever see the latest delivery for a
-            // request — never an older, superseded version. That thumbnail
-            // stays visible after the request is closed (so the client's
-            // history doesn't go blank), but the forced-attachment download
-            // only works while still "completada" — once closed they already
-            // got their one official download, this is the actual
-            // enforcement of "one download per request" (the UI hiding old
-            // thumbnails alone isn't enough — a client could otherwise hit
-            // this URL directly).
+            // The owning client can only ever reach the latest delivery for
+            // a request — never an older, superseded version (those are
+            // dropped from both the API response and here). That's the
+            // actual "one final design per request" enforcement; once it's
+            // the current delivery, the client can view and download it as
+            // many times as they want, whether the request is still
+            // "completada" or already "cerrada" — it's the same single file
+            // either way.
             const row = await db()
               .prepare(
                 `SELECT r.user_id, r.status,
@@ -50,12 +49,10 @@ export const Route = createFileRoute("/api/file")({
               )
               .bind(key)
               .first<{ user_id: string; status: string; is_latest: number }>();
-            const canView =
+            allowed =
               row?.user_id === member.id &&
               row.is_latest === 1 &&
               (row.status === "completada" || row.status === "cerrada");
-            const isForceDownload = url.searchParams.get("download") === "1";
-            allowed = Boolean(canView) && (!isForceDownload || row!.status === "completada");
           }
         }
 

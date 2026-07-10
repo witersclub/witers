@@ -1273,10 +1273,9 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
                 loading="lazy"
               />
             );
-            // Once cerrada the request already used its one download, but
-            // the client can still open the last version to look at it —
-            // the lightbox itself hides the download button once it's no
-            // longer "completada" (see canDownload below).
+            // Once cerrada it's still the single, final deliverable (older
+            // versions were already dropped from view/access), so the
+            // client can keep opening and downloading this exact file.
             return (
               <button
                 type="button"
@@ -1369,7 +1368,7 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
         <ImageLightbox
           src={lightbox.src}
           alt={r.title}
-          canDownload={r.status === "completada"}
+          willFinalize={r.status === "completada"}
           downloading={downloading}
           onDownload={() => downloadAndFinalize(lightbox.download)}
           onClose={() => setLightbox(null)}
@@ -1392,14 +1391,14 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
 function ImageLightbox({
   src,
   alt,
-  canDownload,
+  willFinalize,
   downloading,
   onDownload,
   onClose,
 }: {
   src: string;
   alt: string;
-  canDownload: boolean;
+  willFinalize: boolean;
   downloading: boolean;
   onDownload: () => void;
   onClose: () => void;
@@ -1415,44 +1414,29 @@ function ImageLightbox({
           alt={alt}
           className="max-h-[70vh] w-auto rounded-2xl object-contain shadow-2xl"
         />
-        {canDownload ? (
-          <>
-            <div className="mt-5 flex items-center gap-3">
-              <button
-                type="button"
-                disabled={downloading}
-                onClick={onDownload}
-                className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
-              >
-                {downloading ? "Descargando..." : "Descargar imagen"}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white hover:bg-white/10"
-              >
-                Cerrar
-              </button>
-            </div>
-            <p className="mt-3 max-w-xs text-center text-xs text-white/70">
-              Si descargas la imagen, tu solicitud se dará por finalizada. Solo puedes descargar una
-              versión.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="mt-5 max-w-xs text-center text-sm text-white/80">
-              Esta solicitud ya fue finalizada — solo se permite descargar una versión por solicitud.
-            </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-4 rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white hover:bg-white/10"
-            >
-              Cerrar
-            </button>
-          </>
-        )}
+        <div className="mt-5 flex items-center gap-3">
+          <button
+            type="button"
+            disabled={downloading}
+            onClick={onDownload}
+            className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
+          >
+            {downloading ? "Descargando..." : "Descargar imagen"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white hover:bg-white/10"
+          >
+            Cerrar
+          </button>
+        </div>
+        {willFinalize ? (
+          <p className="mt-3 max-w-xs text-center text-xs text-white/70">
+            Si descargas la imagen, tu solicitud se dará por finalizada. Solo puedes descargar una
+            versión.
+          </p>
+        ) : null}
       </div>
     </div>
   );
