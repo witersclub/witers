@@ -16,6 +16,7 @@ import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as PanelRouteImport } from './routes/panel'
 import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as AdminIaLabRouteImport } from './routes/admin-ia-lab'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiUserRouteImport } from './routes/api/user'
@@ -41,6 +42,7 @@ import { Route as ApiAdminDeliverRouteImport } from './routes/api/admin/deliver'
 import { Route as ApiAdminDeactivateDesignerRouteImport } from './routes/api/admin/deactivate-designer'
 import { Route as ApiAdminCreateDesignerRouteImport } from './routes/api/admin/create-designer'
 import { Route as ApiAdminApproveResultRouteImport } from './routes/api/admin/approve-result'
+import { Route as ApiAdminAiFillRouteImport } from './routes/api/admin/ai-fill'
 
 const WiterRoute = WiterRouteImport.update({
   id: '/witer',
@@ -75,6 +77,11 @@ const IngresarRoute = IngresarRouteImport.update({
 const CheckoutRoute = CheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIaLabRoute = AdminIaLabRouteImport.update({
+  id: '/admin-ia-lab',
+  path: '/admin-ia-lab',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -203,10 +210,16 @@ const ApiAdminApproveResultRoute = ApiAdminApproveResultRouteImport.update({
   path: '/api/admin/approve-result',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminAiFillRoute = ApiAdminAiFillRouteImport.update({
+  id: '/api/admin/ai-fill',
+  path: '/api/admin/ai-fill',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/admin-ia-lab': typeof AdminIaLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
@@ -222,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
@@ -241,6 +255,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/admin-ia-lab': typeof AdminIaLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
@@ -256,6 +271,7 @@ export interface FileRoutesByTo {
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
@@ -276,6 +292,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/admin-ia-lab': typeof AdminIaLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
@@ -291,6 +308,7 @@ export interface FileRoutesById {
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
@@ -312,6 +330,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/admin-ia-lab'
     | '/checkout'
     | '/ingresar'
     | '/panel'
@@ -327,6 +346,7 @@ export interface FileRouteTypes {
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
     | '/api/admin/deactivate-designer'
@@ -346,6 +366,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/admin-ia-lab'
     | '/checkout'
     | '/ingresar'
     | '/panel'
@@ -361,6 +382,7 @@ export interface FileRouteTypes {
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
     | '/api/admin/deactivate-designer'
@@ -380,6 +402,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/admin-ia-lab'
     | '/checkout'
     | '/ingresar'
     | '/panel'
@@ -395,6 +418,7 @@ export interface FileRouteTypes {
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
     | '/api/admin/deactivate-designer'
@@ -415,6 +439,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  AdminIaLabRoute: typeof AdminIaLabRoute
   CheckoutRoute: typeof CheckoutRoute
   IngresarRoute: typeof IngresarRoute
   PanelRoute: typeof PanelRoute
@@ -430,6 +455,7 @@ export interface RootRouteChildren {
   ApiSubmitSatisfactionRoute: typeof ApiSubmitSatisfactionRoute
   ApiUploadReferenceRoute: typeof ApiUploadReferenceRoute
   ApiUserRoute: typeof ApiUserRoute
+  ApiAdminAiFillRoute: typeof ApiAdminAiFillRoute
   ApiAdminApproveResultRoute: typeof ApiAdminApproveResultRoute
   ApiAdminCreateDesignerRoute: typeof ApiAdminCreateDesignerRoute
   ApiAdminDeactivateDesignerRoute: typeof ApiAdminDeactivateDesignerRoute
@@ -496,6 +522,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout'
       fullPath: '/checkout'
       preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-ia-lab': {
+      id: '/admin-ia-lab'
+      path: '/admin-ia-lab'
+      fullPath: '/admin-ia-lab'
+      preLoaderRoute: typeof AdminIaLabRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -673,12 +706,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminApproveResultRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/ai-fill': {
+      id: '/api/admin/ai-fill'
+      path: '/api/admin/ai-fill'
+      fullPath: '/api/admin/ai-fill'
+      preLoaderRoute: typeof ApiAdminAiFillRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  AdminIaLabRoute: AdminIaLabRoute,
   CheckoutRoute: CheckoutRoute,
   IngresarRoute: IngresarRoute,
   PanelRoute: PanelRoute,
@@ -694,6 +735,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSubmitSatisfactionRoute: ApiSubmitSatisfactionRoute,
   ApiUploadReferenceRoute: ApiUploadReferenceRoute,
   ApiUserRoute: ApiUserRoute,
+  ApiAdminAiFillRoute: ApiAdminAiFillRoute,
   ApiAdminApproveResultRoute: ApiAdminApproveResultRoute,
   ApiAdminCreateDesignerRoute: ApiAdminCreateDesignerRoute,
   ApiAdminDeactivateDesignerRoute: ApiAdminDeactivateDesignerRoute,
