@@ -128,28 +128,21 @@
 }
 
 /* Rendered once, fixed to the viewport, as the very first element in
-   <body> — the pattern stays put while page content (which follows it
-   in the DOM, so it naturally paints on top) scrolls over it. Deliberately
-   NOT z-index:-1: that would sink it below the page's own default white
-   canvas and hide it completely — plain DOM order is what actually works. */
+   <body>. Plain white for now — no pattern. */
 .wit-bg-fixed {
   position: fixed;
   inset: 0;
-  background-color: var(--color-wit-ice);
-  background-image: url("/assets/bg-pattern.svg");
-  background-repeat: repeat;
-  background-size: 820px 820px;
+  background-color: #ffffff;
   pointer-events: none;
 }
 
-/* Translucent "frosted glass" card — like iOS Control Center: no color
-   tint, just a blur so the background pattern reads through soft and
-   hazy (but still visibly there), with a faint white highlight for the
-   glass sheen. Kept the white wash very light — anything much stronger
-   just looks solid, since the pattern is subtle to begin with. */
+/* Fully transparent card — no fill at all, just a soft glass-edge outline.
+   Uses `outline` (not `border`/`box-shadow`) specifically so it never
+   collides with each card's own Tailwind border/shadow classes. */
 .wit-glass {
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 45%);
-  background-color: rgba(255, 255, 255, 0.01);
+  background: transparent;
+  outline: 1px solid rgba(255, 255, 255, 0.55);
+  outline-offset: -1px;
   -webkit-backdrop-filter: blur(20px) saturate(170%);
   backdrop-filter: blur(20px) saturate(170%);
 }
