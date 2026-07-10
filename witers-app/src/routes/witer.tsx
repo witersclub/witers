@@ -384,34 +384,47 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
 
       {row.revision_note_1 || row.revision_note_2 ? (
         <div className="mt-3 space-y-2">
-          {row.revision_note_1 ? (
-            <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-wit-ink">
-              <p className="min-w-0 flex-1">
-                <strong>Cambio 1 solicitado por el cliente:</strong> {row.revision_note_1}
-              </p>
-              <button
-                type="button"
-                onClick={() => copyRevisionPrompt(row.revision_note_1!, 1)}
-                className="shrink-0 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+          {[
+            { n: 1 as const, note: row.revision_note_1 },
+            { n: 2 as const, note: row.revision_note_2 },
+          ].map(({ n, note }) => {
+            if (!note) return null;
+            // Only the most recently requested change is still pending — once
+            // it's delivered (status back to completada/cerrada) or a newer
+            // change has been requested, it's already handled: lock it so the
+            // designer doesn't re-copy an old prompt by mistake.
+            const isActive = n === row.revisions_used && row.status === "en_proceso";
+            return (
+              <div
+                key={n}
+                className={`flex flex-wrap items-start justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm ${
+                  isActive
+                    ? "border-amber-200 bg-amber-50 text-wit-ink"
+                    : "border-wit-ink/10 bg-wit-mist/30 text-wit-gray"
+                }`}
               >
-                Copiar prompt del cambio
-              </button>
-            </div>
-          ) : null}
-          {row.revision_note_2 ? (
-            <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-wit-ink">
-              <p className="min-w-0 flex-1">
-                <strong>Cambio 2 solicitado por el cliente:</strong> {row.revision_note_2}
-              </p>
-              <button
-                type="button"
-                onClick={() => copyRevisionPrompt(row.revision_note_2!, 2)}
-                className="shrink-0 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
-              >
-                Copiar prompt del cambio
-              </button>
-            </div>
-          ) : null}
+                <p className="min-w-0 flex-1">
+                  <strong className={isActive ? "" : "text-wit-ink"}>
+                    Cambio {n} solicitado por el cliente:
+                  </strong>{" "}
+                  {note}
+                </p>
+                {isActive ? (
+                  <button
+                    type="button"
+                    onClick={() => copyRevisionPrompt(note, n)}
+                    className="shrink-0 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+                  >
+                    Copiar prompt del cambio
+                  </button>
+                ) : (
+                  <span className="shrink-0 rounded-full bg-wit-ink/5 px-3 py-1.5 text-xs font-semibold text-wit-gray">
+                    ✓ Ya entregado
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : null}
 
