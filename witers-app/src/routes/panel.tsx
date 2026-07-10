@@ -40,6 +40,18 @@ type RequestRow = {
   results_json: string | null;
 };
 
+type PreviousAnswers = {
+  title: string | null;
+  companyName: string | null;
+  brief: string | null;
+  productName: string | null;
+  pieceBrief: string | null;
+  audience: string | null;
+  promoPrice: string | null;
+  requiredText: string | null;
+  style: string | null;
+};
+
 type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
 
 function parseResults(row: RequestRow): ResultItem[] {
@@ -114,14 +126,23 @@ function Panel() {
   // Rows come back newest-first, so the first one with a logo is the most
   // recent request that had one — offered as a shortcut on the new form.
   const previousLogoKey = rows.find((row) => row.logo_key)?.logo_key ?? null;
-  // Company identity (name + what the company does) rarely changes between
-  // requests — offer to reuse the most recent request's answers instead of
-  // retyping them every time.
+  // Offer every text field as an autocomplete-style suggestion from the
+  // client's most recent request, so returning clients don't retype the
+  // same answers every time.
   const lastRow = rows[0];
-  const previousCompany =
-    lastRow && lastRow.company_name && lastRow.brief
-      ? { companyName: lastRow.company_name, brief: lastRow.brief }
-      : null;
+  const previousAnswers: PreviousAnswers | null = lastRow
+    ? {
+        title: lastRow.title || null,
+        companyName: lastRow.company_name,
+        brief: lastRow.brief || null,
+        productName: lastRow.product_name,
+        pieceBrief: lastRow.piece_brief,
+        audience: lastRow.audience,
+        promoPrice: lastRow.promo_price,
+        requiredText: lastRow.required_text,
+        style: lastRow.style,
+      }
+    : null;
 
   return (
     <div className="wit-page min-h-dvh">
@@ -208,7 +229,7 @@ function Panel() {
             <NewRequestForm
               disabled={!active || remaining <= 0}
               previousLogoKey={previousLogoKey}
-              previousCompany={previousCompany}
+              previousAnswers={previousAnswers}
               onCreated={() => {
                 void qc.invalidateQueries({ queryKey: ["requests"] });
                 void qc.invalidateQueries({ queryKey: ["me"] });
@@ -291,6 +312,26 @@ function RatioSwatch({ w, h, active }: { w: number; h: number; active: boolean }
   );
 }
 
+// Autocomplete-style suggestion shown below a field on focus, offering
+// what the client typed in that same field last time. Positioned with
+// inset-x-0 (not a fixed width) so it always lines up under the field
+// and never overflows sideways on narrow screens.
+function FieldSuggestion({ text, onPick }: { text: string; onPick: () => void }) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onPick}
+      className="absolute inset-x-0 top-full z-10 mt-1 rounded-xl border border-wit-ink/15 bg-white px-4 py-2.5 text-left shadow-lg hover:bg-wit-mist/40"
+    >
+      <span className="block text-[10px] font-bold uppercase tracking-wide text-wit-gray">
+        Usaste antes
+      </span>
+      <span className="line-clamp-2 text-sm text-wit-ink">{text}</span>
+    </button>
+  );
+}
+
 const EMPTY_FORM = {
   title: "",
   companyName: "",
@@ -307,12 +348,12 @@ const EMPTY_FORM = {
 function NewRequestForm({
   disabled,
   previousLogoKey,
-  previousCompany,
+  previousAnswers,
   onCreated,
 }: {
   disabled: boolean;
   previousLogoKey: string | null;
-  previousCompany: { companyName: string; brief: string } | null;
+  previousAnswers: PreviousAnswers | null;
   onCreated: () => void;
 }) {
   const [step, setStep] = useState<"form" | "preview">("form");
@@ -326,8 +367,22 @@ function NewRequestForm({
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showCompanySuggestion, setShowCompanySuggestion] = useState(false);
-  const [showBriefSuggestion, setShowBriefSuggestion] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState<keyof PreviousAnswers | null>(null);
+
+  function suggestionHandlers(key: keyof PreviousAnswers) {
+    return {
+      onFocus: () => setActiveSuggestion(key),
+      onBlur: () =>
+        setTimeout(() => setActiveSuggestion((cur) => (cur === key ? null : cur)), 150),
+    };
+  }
+
+  function pickSuggestion(key: keyof PreviousAnswers & keyof typeof EMPTY_FORM) {
+    const value = previousAnswers?.[key];
+    if (!value) return;
+    setForm((f) => ({ ...f, [key]: value }));
+    setActiveSuggestion(null);
+  }
 
   function selectLogoFile(f: File | null) {
     setLogoFile(f);
@@ -539,7 +594,7 @@ function NewRequestForm({
       </p>
 
       <form onSubmit={goToPreview} className="mt-6 space-y-4">
-        <div>
+        <div className="relative">
           <label htmlFor="rtitle" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             Título
           </label>
@@ -551,9 +606,13 @@ function NewRequestForm({
             maxLength={120}
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
+            {...suggestionHandlers("title")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
             placeholder="Anuncio de lanzamiento para Instagram"
           />
+          {activeSuggestion === "title" && previousAnswers?.title ? (
+            <FieldSuggestion text={previousAnswers.title} onPick={() => pickSuggestion("title")} />
+          ) : null}
         </div>
 
         <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
@@ -571,26 +630,15 @@ function NewRequestForm({
             maxLength={120}
             value={form.companyName}
             onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-            onFocus={() => setShowCompanySuggestion(Boolean(previousCompany))}
-            onBlur={() => setTimeout(() => setShowCompanySuggestion(false), 150)}
+            {...suggestionHandlers("companyName")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
             placeholder="El nombre que va impreso en la pieza"
           />
-          {showCompanySuggestion && previousCompany ? (
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                setForm((f) => ({ ...f, companyName: previousCompany.companyName }));
-                setShowCompanySuggestion(false);
-              }}
-              className="absolute z-10 mt-1 w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-2.5 text-left shadow-lg hover:bg-wit-mist/40"
-            >
-              <span className="block text-[10px] font-bold uppercase tracking-wide text-wit-gray">
-                Usaste antes
-              </span>
-              <span className="text-sm text-wit-ink">{previousCompany.companyName}</span>
-            </button>
+          {activeSuggestion === "companyName" && previousAnswers?.companyName ? (
+            <FieldSuggestion
+              text={previousAnswers.companyName}
+              onPick={() => pickSuggestion("companyName")}
+            />
           ) : null}
         </div>
         <div className="relative">
@@ -605,33 +653,19 @@ function NewRequestForm({
             rows={3}
             value={form.brief}
             onChange={(e) => setForm({ ...form, brief: e.target.value })}
-            onFocus={() => setShowBriefSuggestion(Boolean(previousCompany))}
-            onBlur={() => setTimeout(() => setShowBriefSuggestion(false), 150)}
+            {...suggestionHandlers("brief")}
             className="w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
             placeholder="Qué vendes y qué te hace diferente..."
           />
-          {showBriefSuggestion && previousCompany ? (
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                setForm((f) => ({ ...f, brief: previousCompany.brief }));
-                setShowBriefSuggestion(false);
-              }}
-              className="absolute z-10 mt-1 w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-2.5 text-left shadow-lg hover:bg-wit-mist/40"
-            >
-              <span className="block text-[10px] font-bold uppercase tracking-wide text-wit-gray">
-                Usaste antes
-              </span>
-              <span className="line-clamp-2 text-sm text-wit-ink">{previousCompany.brief}</span>
-            </button>
+          {activeSuggestion === "brief" && previousAnswers?.brief ? (
+            <FieldSuggestion text={previousAnswers.brief} onPick={() => pickSuggestion("brief")} />
           ) : null}
         </div>
 
         <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
           Sobre este pedido
         </p>
-        <div>
+        <div className="relative">
           <label htmlFor="rproduct" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             Nombre del producto <span className="font-normal text-wit-gray">(opcional)</span>
           </label>
@@ -641,11 +675,18 @@ function NewRequestForm({
             maxLength={120}
             value={form.productName}
             onChange={(e) => setForm({ ...form, productName: e.target.value })}
+            {...suggestionHandlers("productName")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
             placeholder="Si aplica a un producto en particular"
           />
+          {activeSuggestion === "productName" && previousAnswers?.productName ? (
+            <FieldSuggestion
+              text={previousAnswers.productName}
+              onPick={() => pickSuggestion("productName")}
+            />
+          ) : null}
         </div>
-        <div>
+        <div className="relative">
           <label htmlFor="rpiecebrief" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             Qué quieres que salga en esta pieza
           </label>
@@ -657,11 +698,18 @@ function NewRequestForm({
             rows={3}
             value={form.pieceBrief}
             onChange={(e) => setForm({ ...form, pieceBrief: e.target.value })}
+            {...suggestionHandlers("pieceBrief")}
             className="w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
             placeholder="Describe el concepto de esta pieza: qué debe mostrar, la idea principal..."
           />
+          {activeSuggestion === "pieceBrief" && previousAnswers?.pieceBrief ? (
+            <FieldSuggestion
+              text={previousAnswers.pieceBrief}
+              onPick={() => pickSuggestion("pieceBrief")}
+            />
+          ) : null}
         </div>
-        <div>
+        <div className="relative">
           <label htmlFor="raudience" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             Público objetivo <span className="font-normal text-wit-gray">(opcional)</span>
           </label>
@@ -671,9 +719,13 @@ function NewRequestForm({
             maxLength={200}
             value={form.audience}
             onChange={(e) => setForm({ ...form, audience: e.target.value })}
+            {...suggestionHandlers("audience")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
             placeholder="Ej. mujeres emprendedoras, dueños de restaurantes..."
           />
+          {activeSuggestion === "audience" && previousAnswers?.audience ? (
+            <FieldSuggestion text={previousAnswers.audience} onPick={() => pickSuggestion("audience")} />
+          ) : null}
         </div>
         <div>
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
@@ -694,7 +746,7 @@ function NewRequestForm({
             ))}
           </div>
         </div>
-        <div>
+        <div className="relative">
           <label htmlFor="rpromo" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             Precio o descuento <span className="font-normal text-wit-gray">(opcional)</span>
           </label>
@@ -704,11 +756,18 @@ function NewRequestForm({
             maxLength={80}
             value={form.promoPrice}
             onChange={(e) => setForm({ ...form, promoPrice: e.target.value })}
+            {...suggestionHandlers("promoPrice")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
             placeholder="Ej. $500, 20% de descuento..."
           />
+          {activeSuggestion === "promoPrice" && previousAnswers?.promoPrice ? (
+            <FieldSuggestion
+              text={previousAnswers.promoPrice}
+              onPick={() => pickSuggestion("promoPrice")}
+            />
+          ) : null}
         </div>
-        <div>
+        <div className="relative">
           <label htmlFor="rreqtext" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             Mensaje o dato extra <span className="font-normal text-wit-gray">(opcional)</span>
           </label>
@@ -718,9 +777,16 @@ function NewRequestForm({
             maxLength={500}
             value={form.requiredText}
             onChange={(e) => setForm({ ...form, requiredText: e.target.value })}
+            {...suggestionHandlers("requiredText")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
             placeholder="Ej. válido hasta el 31 de julio, nombre de la promoción..."
           />
+          {activeSuggestion === "requiredText" && previousAnswers?.requiredText ? (
+            <FieldSuggestion
+              text={previousAnswers.requiredText}
+              onPick={() => pickSuggestion("requiredText")}
+            />
+          ) : null}
           <p className="mt-1.5 text-xs text-wit-gray">
             Si lo dejas vacío, nuestro equipo de diseño se encarga de la redacción.
           </p>
@@ -797,14 +863,20 @@ function NewRequestForm({
               />
             ))}
           </div>
-          <input
-            type="text"
-            maxLength={200}
-            value={STYLE_CHIPS.includes(form.style) ? "" : form.style}
-            onChange={(e) => setForm({ ...form, style: e.target.value })}
-            className="mt-2 w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-            placeholder="U otro estilo en tus palabras..."
-          />
+          <div className="relative mt-2">
+            <input
+              type="text"
+              maxLength={200}
+              value={STYLE_CHIPS.includes(form.style) ? "" : form.style}
+              onChange={(e) => setForm({ ...form, style: e.target.value })}
+              {...suggestionHandlers("style")}
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+              placeholder="U otro estilo en tus palabras..."
+            />
+            {activeSuggestion === "style" && previousAnswers?.style ? (
+              <FieldSuggestion text={previousAnswers.style} onPick={() => pickSuggestion("style")} />
+            ) : null}
+          </div>
         </div>
 
         <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">Archivos</p>
