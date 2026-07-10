@@ -1360,22 +1360,42 @@ function RatingCircle({
       onMouseLeave={() => onHover(null)}
       className="flex flex-col items-center gap-1.5 disabled:cursor-not-allowed"
     >
-      <span
-        className="relative flex h-11 w-11 items-center justify-center rounded-full transition-transform active:scale-90"
-        style={{ backgroundColor: filled ? "#0047FF" : "#FACC15" }}
-      >
-        {filled ? (
-          <img
-            src="/assets/logo_w_white.png"
-            alt=""
-            className="pointer-events-none h-4 w-auto"
-          />
-        ) : null}
+      <span className="relative flex h-11 w-11 items-center justify-center active:scale-90">
+        <span
+          className="absolute inset-0 transition-[clip-path,background-color,transform] duration-500 ease-[cubic-bezier(.34,1.56,.64,1)]"
+          style={{
+            clipPath: filled ? CIRCLE_CLIP : STAR_CLIP,
+            backgroundColor: filled ? "#0047FF" : "#FACC15",
+            transform: filled ? "rotate(0deg)" : "rotate(-14deg)",
+          }}
+        />
+        <img
+          src="/assets/logo_w_white.png"
+          alt=""
+          className="pointer-events-none relative h-4 w-auto transition-all duration-300"
+          style={{
+            opacity: filled ? 1 : 0,
+            transform: filled ? "scale(1)" : "scale(0.4)",
+            transitionDelay: filled ? "200ms" : "0ms",
+          }}
+        />
       </span>
-      <span className={`text-xs font-bold ${filled ? "text-wit-blue" : "text-wit-gray"}`}>{n}</span>
+      <span
+        className={`text-xs font-bold transition-colors duration-500 ${filled ? "text-wit-blue" : "text-wit-gray"}`}
+      >
+        {n}
+      </span>
     </button>
   );
 }
+
+// Both shapes use 10 points in the same order so the browser morphs vertex
+// by vertex — a 5-point star unfurling into a circle (decagon) — instead of
+// just crossfading between two unrelated shapes.
+const STAR_CLIP =
+  "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)";
+const CIRCLE_CLIP =
+  "polygon(50% 0%, 79.4% 9.5%, 97.6% 34.5%, 97.6% 65.5%, 79.4% 90.5%, 50% 100%, 20.6% 90.5%, 2.4% 65.5%, 2.4% 34.5%, 20.6% 9.5%)";
 
 function SatisfactionSurvey({
   requestId,
