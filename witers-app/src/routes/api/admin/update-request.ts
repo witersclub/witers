@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { db, json, requireAdminUser } from "../../../lib/witers-auth.server";
+import { db, json, requireStaffUser } from "../../../lib/witers-auth.server";
 
 const schema = z.object({
   requestId: z.string().uuid(),
@@ -13,12 +13,22 @@ export const Route = createFileRoute("/api/admin/update-request")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = await requireAdminUser(request);
-        if (!auth.ok) return json({ ok: false, error: "no_admin" }, { status: auth.status });
+        const auth = await requireStaffUser(request);
+        if (!auth.ok) return json(auth.body, { status: auth.status });
 
         const parsed = schema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) {
           return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
+        }
+
+        if (auth.user.role === "designer") {
+          const reqRow = await db()
+            .prepare("SELECT claimed_by FROM design_requests WHERE id = ?1")
+            .bind(parsed.data.requestId)
+            .first<{ claimed_by: string | null }>();
+          if (!reqRow || reqRow.claimed_by !== auth.user.id) {
+            return json({ ok: false, error: "no_es_tuya" }, { status: 403 });
+          }
         }
 
         await db()

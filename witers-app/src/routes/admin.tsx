@@ -42,6 +42,7 @@ type AdminRequest = {
   created_at: string;
   user_email: string;
   user_name: string;
+  claimed_by_name: string | null;
   results_json: string | null;
 };
 
@@ -54,11 +55,21 @@ type AdminPayment = {
   created_at: string;
 };
 
+type AdminDesigner = {
+  id: string;
+  email: string;
+  name: string;
+  created_at: string;
+  claimed_count: number;
+  completed_count: number;
+};
+
 type Overview = {
   ok: boolean;
   users: AdminUser[];
   requests: AdminRequest[];
   payments: AdminPayment[];
+  designers: AdminDesigner[];
 };
 
 function usePlatformUser() {
@@ -89,7 +100,7 @@ function Admin() {
     enabled: Boolean(platform.data),
     refetchInterval: 30_000,
   });
-  const [tab, setTab] = useState<"solicitudes" | "usuarios" | "pagos">("solicitudes");
+  const [tab, setTab] = useState<"solicitudes" | "usuarios" | "pagos" | "diseñadores">("solicitudes");
 
   if (platform.isLoading) {
     return (
@@ -134,19 +145,24 @@ function Admin() {
               ADMIN
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              void fetch("/api/auth/logout", { method: "POST", credentials: "include" }).finally(
-                () => {
-                  window.location.href = "/";
-                },
-              );
-            }}
-            className="wit-navlink text-sm font-medium text-wit-ink"
-          >
-            Cerrar sesión
-          </button>
+          <div className="flex items-center gap-5">
+            <Link to="/disenadores" className="wit-navlink text-sm font-medium text-wit-ink">
+              Panel de diseñadores
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                void fetch("/api/auth/logout", { method: "POST", credentials: "include" }).finally(
+                  () => {
+                    window.location.href = "/";
+                  },
+                );
+              }}
+              className="wit-navlink text-sm font-medium text-wit-ink"
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       </header>
 
@@ -170,7 +186,7 @@ function Admin() {
         </div>
 
         <div className="mt-8 flex gap-2 border-b border-wit-ink/10">
-          {(["solicitudes", "usuarios", "pagos"] as const).map((t) => (
+          {(["solicitudes", "diseñadores", "usuarios", "pagos"] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -196,6 +212,8 @@ function Admin() {
           </p>
         ) : tab === "solicitudes" ? (
           <RequestsAdmin rows={data.requests} />
+        ) : tab === "diseñadores" ? (
+          <DesignersPanel rows={data.designers} />
         ) : tab === "usuarios" ? (
           <UsersTable rows={data.users} />
         ) : (
@@ -387,6 +405,13 @@ function RequestCard({ row }: { row: AdminRequest }) {
             {row.user_name} ({row.user_email}) · {row.aspect_ratio}
             {row.style ? ` · ${row.style}` : ""} ·{" "}
             {new Date(row.created_at + "Z").toLocaleString("es-MX")}
+          </p>
+          <p className="mt-1 text-xs font-semibold">
+            {row.claimed_by_name ? (
+              <span className="text-wit-blue">Atendido por {row.claimed_by_name}</span>
+            ) : (
+              <span className="text-wit-gray">Sin tomar por ningún diseñador</span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -607,6 +632,127 @@ function RequestCard({ row }: { row: AdminRequest }) {
 
       {msg ? <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p> : null}
     </article>
+  );
+}
+
+/* ---------- designers ---------- */
+
+function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function createDesigner(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/create-designer", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setMsg(
+          data.error === "correo_registrado"
+            ? "Ese correo ya está registrado."
+            : "Revisa los campos (nombre, correo válido, contraseña de al menos 8 caracteres).",
+        );
+        return;
+      }
+      setMsg(`Cuenta creada. Comparte estas credenciales con ${name}: ${email} / ${password}`);
+      setName("");
+      setEmail("");
+      setPassword("");
+      await qc.invalidateQueries({ queryKey: ["admin-overview"] });
+    } catch {
+      setMsg("No pudimos crear la cuenta. Intenta de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-6 space-y-8">
+      <section className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+        <h2 className="text-base font-bold text-wit-ink">Crear cuenta de diseñador</h2>
+        <p className="mt-1 text-sm text-wit-gray">
+          Tú eliges la contraseña y se la compartes directamente — el diseñador no se registra
+          solo.
+        </p>
+        <form onSubmit={createDesigner} className="mt-4 grid gap-3 sm:grid-cols-3">
+          <input
+            type="text"
+            required
+            minLength={2}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nombre"
+            className="rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+          />
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Correo"
+            className="rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+          />
+          <input
+            type="text"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Contraseña temporal"
+            className="rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+          />
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded-xl bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50 sm:col-span-3 sm:w-fit"
+          >
+            {busy ? "Creando..." : "Crear diseñador"}
+          </button>
+        </form>
+        {msg ? <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p> : null}
+      </section>
+
+      <div className="overflow-x-auto rounded-2xl bg-white shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+        <table className="w-full min-w-[560px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-wit-ink/10 text-xs uppercase tracking-wider text-wit-gray">
+              <th className="px-5 py-3.5">Diseñador</th>
+              <th className="px-5 py-3.5">Tomadas</th>
+              <th className="px-5 py-3.5">Entregadas</th>
+              <th className="px-5 py-3.5">Alta</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((d) => (
+              <tr key={d.id} className="border-b border-wit-ink/5 last:border-0">
+                <td className="px-5 py-3.5">
+                  <p className="font-semibold text-wit-ink">{d.name}</p>
+                  <p className="text-xs text-wit-gray">{d.email}</p>
+                </td>
+                <td className="px-5 py-3.5 font-wit-mono">{d.claimed_count}</td>
+                <td className="px-5 py-3.5 font-wit-mono">{d.completed_count}</td>
+                <td className="px-5 py-3.5 text-xs text-wit-gray">
+                  {new Date(d.created_at + "Z").toLocaleDateString("es-MX")}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-wit-gray">Aún no tienes diseñadores.</p>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

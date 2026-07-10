@@ -1,18 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { bindings } from "../../../lib/bindings.server";
-import { db, json, requireAdminUser } from "../../../lib/witers-auth.server";
+import { db, json, requireStaffUser } from "../../../lib/witers-auth.server";
 
 const MAX_BYTES = 15 * 1024 * 1024;
 const ALLOWED = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
 
-// Admin-only: manually deliver a final file for a member request (stored in R2).
+// Staff-only (admin or the designer who claimed it): manually deliver a
+// final file for a member request (stored in R2).
 export const Route = createFileRoute("/api/admin/deliver")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = await requireAdminUser(request);
-        if (!auth.ok) return json({ ok: false, error: "no_admin" }, { status: auth.status });
+        const auth = await requireStaffUser(request);
+        if (!auth.ok) return json(auth.body, { status: auth.status });
 
         const { STORAGE } = bindings();
         if (!STORAGE) return json({ ok: false, error: "sin_storage" }, { status: 500 });
@@ -31,10 +32,13 @@ export const Route = createFileRoute("/api/admin/deliver")({
         }
 
         const reqRow = await db()
-          .prepare("SELECT id FROM design_requests WHERE id = ?1")
+          .prepare("SELECT id, claimed_by FROM design_requests WHERE id = ?1")
           .bind(requestId)
-          .first();
+          .first<{ id: string; claimed_by: string | null }>();
         if (!reqRow) return json({ ok: false, error: "solicitud_no_existe" }, { status: 404 });
+        if (auth.user.role === "designer" && reqRow.claimed_by !== auth.user.id) {
+          return json({ ok: false, error: "no_es_tuya" }, { status: 403 });
+        }
 
         const ext =
           file.type === "image/png"

@@ -14,6 +14,7 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as PanelRouteImport } from './routes/panel'
 import { Route as IngresarRouteImport } from './routes/ingresar'
+import { Route as DisenadoresRouteImport } from './routes/disenadores'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -22,6 +23,8 @@ import { Route as ApiUploadReferenceRouteImport } from './routes/api/upload-refe
 import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
+import { Route as ApiDesignerRequestsRouteImport } from './routes/api/designer/requests'
+import { Route as ApiDesignerClaimRouteImport } from './routes/api/designer/claim'
 import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
@@ -31,6 +34,7 @@ import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overvie
 import { Route as ApiAdminGenerateRouteImport } from './routes/api/admin/generate'
 import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
 import { Route as ApiAdminDeliverRouteImport } from './routes/api/admin/deliver'
+import { Route as ApiAdminCreateDesignerRouteImport } from './routes/api/admin/create-designer'
 import { Route as ApiAdminApproveResultRouteImport } from './routes/api/admin/approve-result'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -56,6 +60,11 @@ const PanelRoute = PanelRouteImport.update({
 const IngresarRoute = IngresarRouteImport.update({
   id: '/ingresar',
   path: '/ingresar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DisenadoresRoute = DisenadoresRouteImport.update({
+  id: '/disenadores',
+  path: '/disenadores',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -96,6 +105,16 @@ const ApiFileRoute = ApiFileRouteImport.update({
 const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   id: '/api/checkout',
   path: '/api/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDesignerRequestsRoute = ApiDesignerRequestsRouteImport.update({
+  id: '/api/designer/requests',
+  path: '/api/designer/requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDesignerClaimRoute = ApiDesignerClaimRouteImport.update({
+  id: '/api/designer/claim',
+  path: '/api/designer/claim',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthRegisterRoute = ApiAuthRegisterRouteImport.update({
@@ -143,6 +162,11 @@ const ApiAdminDeliverRoute = ApiAdminDeliverRouteImport.update({
   path: '/api/admin/deliver',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminCreateDesignerRoute = ApiAdminCreateDesignerRouteImport.update({
+  id: '/api/admin/create-designer',
+  path: '/api/admin/create-designer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminApproveResultRoute = ApiAdminApproveResultRouteImport.update({
   id: '/api/admin/approve-result',
   path: '/api/admin/approve-result',
@@ -153,6 +177,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/checkout': typeof CheckoutRoute
+  '/disenadores': typeof DisenadoresRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
   '/registro': typeof RegistroRoute
@@ -164,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
+  '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
@@ -173,11 +199,14 @@ export interface FileRoutesByFullPath {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/designer/claim': typeof ApiDesignerClaimRoute
+  '/api/designer/requests': typeof ApiDesignerRequestsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/checkout': typeof CheckoutRoute
+  '/disenadores': typeof DisenadoresRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
   '/registro': typeof RegistroRoute
@@ -189,6 +218,7 @@ export interface FileRoutesByTo {
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
+  '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
@@ -198,12 +228,15 @@ export interface FileRoutesByTo {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/designer/claim': typeof ApiDesignerClaimRoute
+  '/api/designer/requests': typeof ApiDesignerRequestsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/checkout': typeof CheckoutRoute
+  '/disenadores': typeof DisenadoresRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
   '/registro': typeof RegistroRoute
@@ -215,6 +248,7 @@ export interface FileRoutesById {
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
+  '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
@@ -224,6 +258,8 @@ export interface FileRoutesById {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/designer/claim': typeof ApiDesignerClaimRoute
+  '/api/designer/requests': typeof ApiDesignerRequestsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -231,6 +267,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/checkout'
+    | '/disenadores'
     | '/ingresar'
     | '/panel'
     | '/registro'
@@ -242,6 +279,7 @@ export interface FileRouteTypes {
     | '/api/upload-reference'
     | '/api/user'
     | '/api/admin/approve-result'
+    | '/api/admin/create-designer'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
     | '/api/admin/generate'
@@ -251,11 +289,14 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/designer/claim'
+    | '/api/designer/requests'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
     | '/checkout'
+    | '/disenadores'
     | '/ingresar'
     | '/panel'
     | '/registro'
@@ -267,6 +308,7 @@ export interface FileRouteTypes {
     | '/api/upload-reference'
     | '/api/user'
     | '/api/admin/approve-result'
+    | '/api/admin/create-designer'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
     | '/api/admin/generate'
@@ -276,11 +318,14 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/designer/claim'
+    | '/api/designer/requests'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/checkout'
+    | '/disenadores'
     | '/ingresar'
     | '/panel'
     | '/registro'
@@ -292,6 +337,7 @@ export interface FileRouteTypes {
     | '/api/upload-reference'
     | '/api/user'
     | '/api/admin/approve-result'
+    | '/api/admin/create-designer'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
     | '/api/admin/generate'
@@ -301,12 +347,15 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/designer/claim'
+    | '/api/designer/requests'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   CheckoutRoute: typeof CheckoutRoute
+  DisenadoresRoute: typeof DisenadoresRoute
   IngresarRoute: typeof IngresarRoute
   PanelRoute: typeof PanelRoute
   RegistroRoute: typeof RegistroRoute
@@ -318,6 +367,7 @@ export interface RootRouteChildren {
   ApiUploadReferenceRoute: typeof ApiUploadReferenceRoute
   ApiUserRoute: typeof ApiUserRoute
   ApiAdminApproveResultRoute: typeof ApiAdminApproveResultRoute
+  ApiAdminCreateDesignerRoute: typeof ApiAdminCreateDesignerRoute
   ApiAdminDeliverRoute: typeof ApiAdminDeliverRoute
   ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
   ApiAdminGenerateRoute: typeof ApiAdminGenerateRoute
@@ -327,6 +377,8 @@ export interface RootRouteChildren {
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
   ApiAuthRegisterRoute: typeof ApiAuthRegisterRoute
+  ApiDesignerClaimRoute: typeof ApiDesignerClaimRoute
+  ApiDesignerRequestsRoute: typeof ApiDesignerRequestsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -364,6 +416,13 @@ declare module '@tanstack/react-router' {
       path: '/ingresar'
       fullPath: '/ingresar'
       preLoaderRoute: typeof IngresarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disenadores': {
+      id: '/disenadores'
+      path: '/disenadores'
+      fullPath: '/disenadores'
+      preLoaderRoute: typeof DisenadoresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -420,6 +479,20 @@ declare module '@tanstack/react-router' {
       path: '/api/checkout'
       fullPath: '/api/checkout'
       preLoaderRoute: typeof ApiCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/designer/requests': {
+      id: '/api/designer/requests'
+      path: '/api/designer/requests'
+      fullPath: '/api/designer/requests'
+      preLoaderRoute: typeof ApiDesignerRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/designer/claim': {
+      id: '/api/designer/claim'
+      path: '/api/designer/claim'
+      fullPath: '/api/designer/claim'
+      preLoaderRoute: typeof ApiDesignerClaimRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/register': {
@@ -485,6 +558,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminDeliverRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/create-designer': {
+      id: '/api/admin/create-designer'
+      path: '/api/admin/create-designer'
+      fullPath: '/api/admin/create-designer'
+      preLoaderRoute: typeof ApiAdminCreateDesignerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/approve-result': {
       id: '/api/admin/approve-result'
       path: '/api/admin/approve-result'
@@ -499,6 +579,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   CheckoutRoute: CheckoutRoute,
+  DisenadoresRoute: DisenadoresRoute,
   IngresarRoute: IngresarRoute,
   PanelRoute: PanelRoute,
   RegistroRoute: RegistroRoute,
@@ -510,6 +591,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUploadReferenceRoute: ApiUploadReferenceRoute,
   ApiUserRoute: ApiUserRoute,
   ApiAdminApproveResultRoute: ApiAdminApproveResultRoute,
+  ApiAdminCreateDesignerRoute: ApiAdminCreateDesignerRoute,
   ApiAdminDeliverRoute: ApiAdminDeliverRoute,
   ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
   ApiAdminGenerateRoute: ApiAdminGenerateRoute,
@@ -519,6 +601,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
   ApiAuthRegisterRoute: ApiAuthRegisterRoute,
+  ApiDesignerClaimRoute: ApiDesignerClaimRoute,
+  ApiDesignerRequestsRoute: ApiDesignerRequestsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

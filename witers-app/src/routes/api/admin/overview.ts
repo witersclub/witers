@@ -23,11 +23,12 @@ export const Route = createFileRoute("/api/admin/overview")({
 
         const requests = await db()
           .prepare(
-            `SELECT r.*, u.email AS user_email, u.name AS user_name,
+            `SELECT r.*, u.email AS user_email, u.name AS user_name, d.name AS claimed_by_name,
                (SELECT json_group_array(json_object('id', res.id, 'kind', res.kind, 'image_url', res.image_url, 'r2_key', res.r2_key))
                 FROM request_results res WHERE res.request_id = r.id) AS results_json
              FROM design_requests r
              JOIN users u ON u.id = r.user_id
+             LEFT JOIN users d ON d.id = r.claimed_by
              ORDER BY r.created_at DESC
              LIMIT 500`,
           )
@@ -41,11 +42,23 @@ export const Route = createFileRoute("/api/admin/overview")({
           )
           .all();
 
+        const designers = await db()
+          .prepare(
+            `SELECT u.id, u.email, u.name, u.created_at,
+                    (SELECT COUNT(*) FROM design_requests r WHERE r.claimed_by = u.id) AS claimed_count,
+                    (SELECT COUNT(*) FROM design_requests r WHERE r.claimed_by = u.id AND r.status = 'completada') AS completed_count
+             FROM users u
+             WHERE u.role = 'designer'
+             ORDER BY u.created_at DESC`,
+          )
+          .all();
+
         return json({
           ok: true,
           users: users.results ?? [],
           requests: requests.results ?? [],
           payments: payments.results ?? [],
+          designers: designers.results ?? [],
         });
       },
     },

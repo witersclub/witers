@@ -160,3 +160,17 @@ export async function requireAdminUser(
   return { ok: true, user };
 }
 
+// Staff auth: admin OR designer — for the shared design-request workflow
+// (claim, deliver, update status). Designer accounts are created by an
+// admin directly (role = 'designer'), never self-registered.
+export async function requireStaffUser(
+  request: Request,
+): Promise<{ ok: true; user: MemberUser } | { ok: false; status: number; body: unknown }> {
+  const user = await getSessionUser(request);
+  if (!user) return { ok: false, status: 401, body: { ok: false, error: "no_sesion" } };
+  if (user.role !== "admin" && user.role !== "designer") {
+    return { ok: false, status: 403, body: { ok: false, error: "no_autorizado" } };
+  }
+  return { ok: true, user };
+}
+
