@@ -56,49 +56,74 @@ type Fields = {
 // The raw answers get stitched into a transcript and handed to the same
 // /api/admin/ai-fill endpoint the freeform lab used, which normalizes
 // them (style → chip, colors → hex, aspectRatio → enum) same as before.
-const QUESTIONS: { field: string; label: string; text: string; required: boolean }[] = [
-  { field: "companyName", label: "Empresa", text: "¿Cuál es el nombre de tu empresa o marca?", required: true },
-  { field: "brief", label: "A qué se dedica", text: "Cuéntame, ¿a qué se dedica tu negocio?", required: true },
+const QUESTIONS: { field: string; label: string; short: string; text: string; required: boolean }[] = [
+  {
+    field: "companyName",
+    label: "Empresa",
+    short: "Empresa",
+    text: "¿Cuál es el nombre de tu empresa o marca?",
+    required: true,
+  },
+  {
+    field: "brief",
+    label: "A qué se dedica",
+    short: "Rubro",
+    text: "Cuéntame, ¿a qué se dedica tu negocio?",
+    required: true,
+  },
   {
     field: "pieceBrief",
     label: "Qué debe mostrar la pieza",
+    short: "La pieza",
     text: "¿Qué quieres que muestre esta pieza en concreto?",
     required: true,
   },
   {
     field: "title",
     label: "Título de la pieza",
+    short: "Título",
     text: "Si le pusieras un título corto a esta pieza, ¿cuál sería?",
     required: true,
   },
   {
     field: "style",
     label: "Estilo",
+    short: "Estilo",
     text: "¿Qué estilo visual te gustaría? Ej. minimalista, colorido, elegante...",
     required: false,
   },
   {
     field: "aspectRatio",
     label: "Formato",
+    short: "Formato",
     text: "¿Para dónde es esta pieza — post cuadrado, historia vertical, banner horizontal?",
     required: false,
   },
-  { field: "audience", label: "Público objetivo", text: "¿A quién quieres llegarle con esta pieza?", required: false },
+  {
+    field: "audience",
+    label: "Público objetivo",
+    short: "Público",
+    text: "¿A quién quieres llegarle con esta pieza?",
+    required: false,
+  },
   {
     field: "promoPrice",
     label: "Precio o descuento",
+    short: "Precio",
     text: "¿Hay algún precio o descuento que quieras destacar? Si no aplica, dime que no.",
     required: false,
   },
   {
     field: "requiredText",
     label: "Texto obligatorio",
+    short: "Texto",
     text: "¿Hay algún texto o dato que deba aparecer sí o sí en la pieza?",
     required: false,
   },
   {
     field: "colors",
     label: "Colores de marca",
+    short: "Colores",
     text: "¿Tienes colores de marca que debamos usar? Descríbelos, o dime que no tienes.",
     required: false,
   },
@@ -383,6 +408,29 @@ function AiLab() {
               ) : null}
             </div>
           )}
+        </div>
+
+        <div className="mt-5 flex w-full flex-wrap items-center justify-center gap-1.5">
+          {QUESTIONS.map((q) => {
+            const isAnswered = Object.prototype.hasOwnProperty.call(answers, q.field);
+            return (
+              <span
+                key={q.field}
+                className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all duration-300 ${
+                  isAnswered
+                    ? "bg-wit-blue text-white"
+                    : "bg-wit-mist/50 text-wit-gray"
+                }`}
+              >
+                {isAnswered ? (
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : null}
+                {q.short}
+              </span>
+            );
+          })}
         </div>
 
         {error ? <p className="mt-3 w-full rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p> : null}
