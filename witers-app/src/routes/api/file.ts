@@ -51,12 +51,16 @@ export const Route = createFileRoute("/api/file")({
         const obj = await STORAGE.get(key);
         if (!obj) return json({ ok: false, error: "no_encontrado" }, { status: 404 });
 
-        return new Response(obj.body as unknown as BodyInit, {
-          headers: {
-            "content-type": obj.httpMetadata?.contentType ?? "application/octet-stream",
-            "cache-control": "private, max-age=300",
-          },
-        });
+        const headers: Record<string, string> = {
+          "content-type": obj.httpMetadata?.contentType ?? "application/octet-stream",
+          "cache-control": "private, max-age=300",
+        };
+        if (url.searchParams.get("download") === "1") {
+          const filename = key.split("/").pop() ?? "archivo";
+          headers["content-disposition"] = `attachment; filename="${filename}"`;
+        }
+
+        return new Response(obj.body as unknown as BodyInit, { headers });
       },
     },
   },

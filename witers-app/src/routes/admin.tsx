@@ -260,6 +260,30 @@ function RequestCard({ row }: { row: AdminRequest }) {
     await qc.invalidateQueries({ queryKey: ["admin-overview"] });
   }
 
+  async function copyInfo() {
+    const lines = [
+      `Título: ${row.title}`,
+      `Cliente: ${row.user_name} (${row.user_email})`,
+      `Negocio: ${row.brief}`,
+      row.audience ? `Público objetivo: ${row.audience}` : null,
+      row.age_range ? `Rango de edad: ${row.age_range}` : null,
+      row.promo_price ? `Precio/Descuento: ${row.promo_price}` : null,
+      row.required_text ? `Mensaje / dato extra: ${row.required_text}` : null,
+      row.brand_colors ? `Colores de marca: ${row.brand_colors}` : null,
+      row.style ? `Estilo: ${row.style}` : null,
+      `Formato: ${row.aspect_ratio}`,
+      row.reference_key
+        ? `Referencia: ${new URL(`/api/file?key=${encodeURIComponent(row.reference_key)}`, window.location.origin).href}`
+        : null,
+    ].filter(Boolean);
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setMsg("Información copiada al portapapeles.");
+    } catch {
+      setMsg("No pudimos copiar. Selecciona el texto manualmente.");
+    }
+  }
+
   async function approve() {
     if (!approveCode.trim()) {
       setMsg("Escribe tu código de aprobación.");
@@ -356,17 +380,26 @@ function RequestCard({ row }: { row: AdminRequest }) {
             {new Date(row.created_at + "Z").toLocaleString("es-MX")}
           </p>
         </div>
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-bold ${
-            row.status === "completada"
-              ? "bg-emerald-50 text-emerald-700"
-              : row.status === "rechazada"
-                ? "bg-red-50 text-red-600"
-                : "bg-amber-50 text-amber-700"
-          }`}
-        >
-          {row.status.replace("_", " ")}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={copyInfo}
+            className="rounded-full border border-wit-ink/15 px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+          >
+            Copiar información
+          </button>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-bold ${
+              row.status === "completada"
+                ? "bg-emerald-50 text-emerald-700"
+                : row.status === "rechazada"
+                  ? "bg-red-50 text-red-600"
+                  : "bg-amber-50 text-amber-700"
+            }`}
+          >
+            {row.status.replace("_", " ")}
+          </span>
+        </div>
       </div>
 
       <p className="mt-3 whitespace-pre-wrap text-sm text-wit-gray">{row.brief}</p>
@@ -420,14 +453,27 @@ function RequestCard({ row }: { row: AdminRequest }) {
       ) : null}
 
       {row.reference_key ? (
-        <a
-          href={`/api/file?key=${encodeURIComponent(row.reference_key)}`}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-3 inline-block text-sm font-semibold text-wit-blue underline-offset-2 hover:underline"
-        >
-          Ver referencia del cliente
-        </a>
+        <div className="mt-3 flex items-center gap-3 rounded-xl border border-wit-ink/10 bg-white p-3">
+          <a href={`/api/file?key=${encodeURIComponent(row.reference_key)}`} target="_blank" rel="noreferrer">
+            <img
+              src={`/api/file?key=${encodeURIComponent(row.reference_key)}`}
+              alt="Referencia / logo del cliente"
+              className="h-16 w-16 rounded-lg border border-wit-ink/10 object-cover"
+              loading="lazy"
+            />
+          </a>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-wit-gray">
+              Referencia del cliente
+            </p>
+            <a
+              href={`/api/file?key=${encodeURIComponent(row.reference_key)}&download=1`}
+              className="mt-0.5 inline-block text-sm font-semibold text-wit-blue underline-offset-2 hover:underline"
+            >
+              Descargar logo
+            </a>
+          </div>
+        </div>
       ) : null}
 
       {drafts.length > 0 ? (
