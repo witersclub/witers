@@ -105,6 +105,32 @@ export async function notifyStaffRevisionRequested(opts: {
   });
 }
 
+export async function notifyStaffLowSatisfaction(opts: {
+  title: string;
+  clientName: string;
+  rating: number;
+  feedback: string | null;
+  panelUrl: string;
+}): Promise<void> {
+  await sendMail({
+    to: STAFF_EMAIL,
+    subject: `Calificación ${opts.rating}/5: ${opts.title}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="color: #1450ff;">Un cliente no quedó del todo satisfecho</h2>
+        <p><strong>${escapeHtml(opts.clientName)}</strong> calificó con <strong>${opts.rating}/5</strong>:</p>
+        <p style="font-size:16px;"><strong>${escapeHtml(opts.title)}</strong></p>
+        ${opts.feedback ? `<p style="background:#f2f5ff;border-radius:8px;padding:12px 16px;">${escapeHtml(opts.feedback)}</p>` : ""}
+        <p style="margin: 24px 0;">
+          <a href="${opts.panelUrl}" style="background:#1450ff;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+            Ver solicitud
+          </a>
+        </p>
+      </div>
+    `,
+  });
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

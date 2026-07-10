@@ -20,6 +20,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiUserRouteImport } from './routes/api/user'
 import { Route as ApiUploadReferenceRouteImport } from './routes/api/upload-reference'
+import { Route as ApiSubmitSatisfactionRouteImport } from './routes/api/submit-satisfaction'
 import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
 import { Route as ApiFileRouteImport } from './routes/api/file'
@@ -92,6 +93,11 @@ const ApiUserRoute = ApiUserRouteImport.update({
 const ApiUploadReferenceRoute = ApiUploadReferenceRouteImport.update({
   id: '/api/upload-reference',
   path: '/api/upload-reference',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSubmitSatisfactionRoute = ApiSubmitSatisfactionRouteImport.update({
+  id: '/api/submit-satisfaction',
+  path: '/api/submit-satisfaction',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRequestsRoute = ApiRequestsRouteImport.update({
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/api/file': typeof ApiFileRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
+  '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
@@ -231,6 +238,7 @@ export interface FileRoutesByTo {
   '/api/file': typeof ApiFileRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
+  '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
@@ -263,6 +271,7 @@ export interface FileRoutesById {
   '/api/file': typeof ApiFileRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
+  '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
@@ -296,6 +305,7 @@ export interface FileRouteTypes {
     | '/api/file'
     | '/api/request-revision'
     | '/api/requests'
+    | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
     | '/api/admin/approve-result'
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/api/file'
     | '/api/request-revision'
     | '/api/requests'
+    | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
     | '/api/admin/approve-result'
@@ -358,6 +369,7 @@ export interface FileRouteTypes {
     | '/api/file'
     | '/api/request-revision'
     | '/api/requests'
+    | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
     | '/api/admin/approve-result'
@@ -390,6 +402,7 @@ export interface RootRouteChildren {
   ApiFileRoute: typeof ApiFileRoute
   ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
   ApiRequestsRoute: typeof ApiRequestsRoute
+  ApiSubmitSatisfactionRoute: typeof ApiSubmitSatisfactionRoute
   ApiUploadReferenceRoute: typeof ApiUploadReferenceRoute
   ApiUserRoute: typeof ApiUserRoute
   ApiAdminApproveResultRoute: typeof ApiAdminApproveResultRoute
@@ -484,6 +497,13 @@ declare module '@tanstack/react-router' {
       path: '/api/upload-reference'
       fullPath: '/api/upload-reference'
       preLoaderRoute: typeof ApiUploadReferenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/submit-satisfaction': {
+      id: '/api/submit-satisfaction'
+      path: '/api/submit-satisfaction'
+      fullPath: '/api/submit-satisfaction'
+      preLoaderRoute: typeof ApiSubmitSatisfactionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/requests': {
@@ -630,6 +650,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFileRoute: ApiFileRoute,
   ApiRequestRevisionRoute: ApiRequestRevisionRoute,
   ApiRequestsRoute: ApiRequestsRoute,
+  ApiSubmitSatisfactionRoute: ApiSubmitSatisfactionRoute,
   ApiUploadReferenceRoute: ApiUploadReferenceRoute,
   ApiUserRoute: ApiUserRoute,
   ApiAdminApproveResultRoute: ApiAdminApproveResultRoute,

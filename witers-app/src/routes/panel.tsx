@@ -34,6 +34,7 @@ type RequestRow = {
   revisions_used: number;
   revision_note_1: string | null;
   revision_note_2: string | null;
+  satisfaction_rating: number | null;
   created_at: string;
   results_json: string | null;
 };
@@ -892,7 +893,9 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
   const [closing, setClosing] = useState(false);
   const [lightbox, setLightbox] = useState<{ src: string; download: string } | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [showSurvey, setShowSurvey] = useState(false);
   const revisionsLeft = 2 - r.revisions_used;
+  const alreadyRated = r.satisfaction_rating !== null;
 
   // Compact timeline: the original request plus each requested change. Only
   // the last step carries the live status — earlier ones are done by definition.
@@ -930,8 +933,9 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
   // clicking "finalizar solicitud".
   async function downloadAndFinalize(downloadHref: string) {
     setDownloading(true);
+    const wasCompleted = r.status === "completada";
     try {
-      if (r.status === "completada") {
+      if (wasCompleted) {
         await fetch("/api/close-request", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -943,6 +947,7 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
     } finally {
       setLightbox(null);
       setDownloading(false);
+      if (wasCompleted && !alreadyRated) setShowSurvey(true);
     }
   }
 
@@ -1172,6 +1177,16 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
           onClose={() => setLightbox(null)}
         />
       ) : null}
+
+      {showSurvey ? (
+        <SatisfactionSurvey
+          requestId={r.id}
+          onDone={async () => {
+            setShowSurvey(false);
+            await qc.invalidateQueries({ queryKey: ["requests"] });
+          }}
+        />
+      ) : null}
     </article>
   );
 }
@@ -1225,6 +1240,163 @@ function ImageLightbox({
             versión.
           </p>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+const STAR_PATH =
+  "M12 2.5l2.98 6.15 6.77.85-4.9 4.72 1.27 6.73L12 17.9l-6.12 3.05 1.27-6.73-4.9-4.72 6.77-.85Z";
+
+function StarButton({
+  n,
+  filled,
+  onClick,
+  onHover,
+}: {
+  n: number;
+  filled: boolean;
+  onClick: () => void;
+  onHover: (n: number | null) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => onHover(n)}
+      onMouseLeave={() => onHover(null)}
+      className="flex flex-col items-center gap-1.5"
+    >
+      <span className="relative flex h-11 w-11 items-center justify-center transition-transform active:scale-90">
+        <svg viewBox="0 0 24 24" className="h-11 w-11">
+          <path d={STAR_PATH} fill={filled ? "#0047FF" : "#FACC15"} />
+        </svg>
+        {filled ? (
+          <img
+            src="/assets/logo_w_white.png"
+            alt=""
+            className="pointer-events-none absolute h-3.5 w-auto"
+            style={{ marginTop: "2px" }}
+          />
+        ) : null}
+      </span>
+      <span className={`text-xs font-bold ${filled ? "text-wit-blue" : "text-wit-gray"}`}>{n}</span>
+    </button>
+  );
+}
+
+function SatisfactionSurvey({
+  requestId,
+  onDone,
+}: {
+  requestId: string;
+  onDone: () => void;
+}) {
+  const [step, setStep] = useState<"rate" | "feedback" | "done">("rate");
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const shown = hover ?? rating;
+
+  async function submit(n: number, fb?: string) {
+    setSubmitting(true);
+    try {
+      await fetch("/api/submit-satisfaction", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId, rating: n, feedback: fb }),
+      }).catch(() => null);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function pick(n: number) {
+    setRating(n);
+    if (n === 5) {
+      await submit(n);
+      setStep("done");
+    } else {
+      setStep("feedback");
+    }
+  }
+
+  async function sendFeedback() {
+    await submit(rating, feedback.trim() || undefined);
+    setStep("done");
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-wit-navy/70 p-5">
+      <div className="w-full max-w-sm rounded-3xl bg-white p-7 text-center shadow-2xl">
+        {step === "rate" ? (
+          <>
+            <h3 className="text-lg font-bold text-wit-ink">
+              ¿Qué tan satisfecho quedaste con esta pieza?
+            </h3>
+            <div className="mt-6 flex justify-center gap-2.5">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <StarButton key={n} n={n} filled={n <= shown} onClick={() => pick(n)} onHover={setHover} />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={onDone}
+              className="mt-7 text-sm font-semibold text-wit-gray hover:text-wit-ink"
+            >
+              Ahora no
+            </button>
+          </>
+        ) : step === "feedback" ? (
+          <>
+            <h3 className="text-lg font-bold text-wit-ink">¿Cómo podemos mejorar?</h3>
+            <p className="mt-1 text-sm text-wit-gray">Cuéntanos qué fue lo que no te gustó.</p>
+            <textarea
+              rows={4}
+              maxLength={1000}
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder="Tu comentario nos ayuda a mejorar (opcional)"
+              className="mt-4 w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-sm outline-none focus:border-wit-blue"
+            />
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={sendFeedback}
+              className="mt-4 w-full rounded-2xl bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
+            >
+              {submitting ? "Enviando..." : "Enviar comentario"}
+            </button>
+          </>
+        ) : (
+          <>
+            {rating === 5 ? (
+              <>
+                <p className="text-4xl">🎉</p>
+                <h3 className="mt-3 text-lg font-bold text-wit-ink">¡Qué gusto!</h3>
+                <p className="mt-2 text-sm text-wit-gray">
+                  Nos encanta que tu pieza haya quedado tal como la imaginabas. Gracias por confiar en
+                  WITERS.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-bold text-wit-ink">Gracias por tu comentario</h3>
+                <p className="mt-2 text-sm text-wit-gray">
+                  Lo vamos a tomar en cuenta para que tus próximas piezas queden mejor.
+                </p>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={onDone}
+              className="mt-6 rounded-full bg-wit-blue px-8 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
+            >
+              Listo
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
