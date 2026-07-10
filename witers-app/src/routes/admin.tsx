@@ -54,6 +54,8 @@ type AdminRequest = {
   results_json: string | null;
 };
 
+type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
+
 type AdminPayment = {
   id: string;
   user_email: string;
@@ -241,6 +243,8 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 /* ---------- requests management ---------- */
 
 function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
+  const [tab, setTab] = useState<"pendientes" | "finalizadas">("pendientes");
+
   if (rows.length === 0) {
     return (
       <div className="wit-glass mt-6 rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
@@ -248,12 +252,142 @@ function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
       </div>
     );
   }
+
+  const pending = rows.filter((r) => r.status !== "cerrada");
+  const finished = rows.filter((r) => r.status === "cerrada");
+  const shown = tab === "pendientes" ? pending : finished;
+
   return (
-    <div className="mt-6 space-y-5">
-      {rows.map((r) => (
-        <RequestCard key={r.id} row={r} />
-      ))}
+    <div>
+      <div className="mt-6 flex gap-2 border-b border-wit-ink/10">
+        <AdminSubTab
+          active={tab === "pendientes"}
+          onClick={() => setTab("pendientes")}
+          label="Pendientes"
+          count={pending.length}
+        />
+        <AdminSubTab
+          active={tab === "finalizadas"}
+          onClick={() => setTab("finalizadas")}
+          label="Finalizadas"
+          count={finished.length}
+        />
+      </div>
+
+      {shown.length === 0 ? (
+        <div className="wit-glass mt-6 rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
+          <p className="text-base font-semibold text-wit-ink">
+            {tab === "pendientes" ? "No hay solicitudes pendientes." : "Aún no hay solicitudes finalizadas."}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-6 space-y-5">
+          {shown.map((r) =>
+            tab === "finalizadas" ? (
+              <FinishedRequestCard key={r.id} row={r} />
+            ) : (
+              <RequestCard key={r.id} row={r} />
+            ),
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+function AdminSubTab({
+  active,
+  onClick,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative -mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-bold transition-colors ${
+        active ? "border-wit-blue text-wit-blue" : "border-transparent text-wit-gray hover:text-wit-ink"
+      }`}
+    >
+      {label}
+      {count > 0 ? (
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+            active ? "bg-wit-blue/10 text-wit-blue" : "bg-wit-mist/60 text-wit-gray"
+          }`}
+        >
+          {count}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+// Collapsed row for an already-finalized request: title, date, and the
+// delivered thumbnail only — clicking it expands into the full RequestCard
+// instead of always showing every field.
+function FinishedRequestCard({ row }: { row: AdminRequest }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const thumb = (() => {
+    if (!row.results_json) return null;
+    try {
+      const arr = (JSON.parse(row.results_json) as ResultItem[]).filter(
+        (x) => x && x.kind !== "draft" && (x.image_url || x.r2_key),
+      );
+      return arr.at(-1) ?? null;
+    } catch {
+      return null;
+    }
+  })();
+  const thumbHref = thumb ? (thumb.image_url ?? `/api/file?key=${encodeURIComponent(thumb.r2_key ?? "")}`) : null;
+
+  if (expanded) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="mb-2 text-xs font-semibold text-wit-gray hover:text-wit-ink"
+        >
+          ← Ocultar detalle
+        </button>
+        <RequestCard row={row} />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setExpanded(true)}
+      className="wit-glass flex w-full items-center gap-4 rounded-2xl p-4 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+    >
+      {thumbHref ? (
+        <img
+          src={thumbHref}
+          alt=""
+          className="h-16 w-16 shrink-0 rounded-xl border border-wit-ink/10 object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <div className="h-16 w-16 shrink-0 rounded-xl bg-wit-mist/40" />
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-wit-ink">{row.title}</p>
+        <p className="mt-0.5 text-xs text-wit-gray">
+          {new Date(row.created_at + "Z").toLocaleString("es-MX")}
+        </p>
+      </div>
+      <span className="shrink-0 rounded-full bg-wit-blue/10 px-3 py-1 text-xs font-bold text-wit-blue">
+        ✓ Finalizada
+      </span>
+    </button>
   );
 }
 
@@ -296,8 +430,6 @@ function RequestCard({ row }: { row: AdminRequest }) {
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState(row.admin_note ?? "");
   const [approveCode, setApproveCode] = useState("");
-
-  type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
 
   const { drafts, results } = (() => {
     if (!row.results_json) return { drafts: [] as ResultItem[], results: [] as ResultItem[] };
