@@ -3,18 +3,29 @@ import { z } from "zod";
 
 import { db, getMembership, getSessionUser, json } from "../../lib/witers-auth.server";
 
-const createSchema = z.object({
-  title: z.string().min(3).max(120),
-  brief: z.string().min(10).max(4000),
-  style: z.string().max(200).optional(),
-  aspectRatio: z.enum(["1:1", "4:3", "3:4", "16:9", "9:16"]).default("1:1"),
-  referenceKey: z.string().max(300).optional(),
-  audience: z.string().max(200).optional(),
-  ageRange: z.string().max(40).optional(),
-  requiredText: z.string().max(500).optional(),
-  brandColors: z.string().max(60).optional(),
-  promoPrice: z.string().max(80).optional(),
-});
+const createSchema = z
+  .object({
+    title: z.string().min(3).max(120),
+    companyName: z.string().min(2).max(120),
+    productName: z.string().max(120).optional(),
+    brief: z.string().min(10).max(4000),
+    pieceBrief: z.string().min(10).max(2000),
+    style: z.string().max(200).optional(),
+    aspectRatio: z.enum(["1:1", "4:3", "3:4", "16:9", "9:16"]).default("1:1"),
+    referenceKey: z.string().max(300).optional(),
+    logoKey: z.string().max(300).optional(),
+    noLogo: z.boolean().default(false),
+    productPhotoKey: z.string().max(300).optional(),
+    audience: z.string().max(200).optional(),
+    ageRange: z.string().max(40).optional(),
+    requiredText: z.string().max(500).optional(),
+    brandColors: z.string().max(60).optional(),
+    promoPrice: z.string().max(80).optional(),
+  })
+  .refine((data) => data.noLogo || Boolean(data.logoKey), {
+    message: "Sube el logotipo o marca 'No tengo logotipo'.",
+    path: ["logoKey"],
+  });
 
 export const Route = createFileRoute("/api/requests")({
   server: {
@@ -59,8 +70,9 @@ export const Route = createFileRoute("/api/requests")({
         await db()
           .prepare(
             `INSERT INTO design_requests
-               (id, user_id, title, brief, style, aspect_ratio, reference_key, audience, age_range, required_text, brand_colors, promo_price)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`,
+               (id, user_id, title, brief, style, aspect_ratio, reference_key, audience, age_range, required_text, brand_colors, promo_price,
+                company_name, product_name, piece_brief, logo_key, product_photo_key)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)`,
           )
           .bind(
             id,
@@ -75,6 +87,11 @@ export const Route = createFileRoute("/api/requests")({
             parsed.data.requiredText?.trim() ?? null,
             parsed.data.brandColors ?? null,
             parsed.data.promoPrice?.trim() ?? null,
+            parsed.data.companyName.trim(),
+            parsed.data.productName?.trim() ?? null,
+            parsed.data.pieceBrief.trim(),
+            parsed.data.logoKey ?? null,
+            parsed.data.productPhotoKey ?? null,
           )
           .run();
 

@@ -28,7 +28,10 @@ type AdminUser = {
 type AdminRequest = {
   id: string;
   title: string;
+  company_name: string | null;
+  product_name: string | null;
   brief: string;
+  piece_brief: string | null;
   style: string | null;
   aspect_ratio: string;
   audience: string | null;
@@ -37,6 +40,8 @@ type AdminRequest = {
   brand_colors: string | null;
   promo_price: string | null;
   reference_key: string | null;
+  logo_key: string | null;
+  product_photo_key: string | null;
   status: string;
   admin_note: string | null;
   created_at: string;
@@ -260,6 +265,30 @@ const RATIO_PROMPT: Record<string, string> = {
   "9:16": "formato vertical 9:16 (stories)",
 };
 
+function FilePreview({ label, fileKey }: { label: string; fileKey: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-wit-ink/10 bg-white p-3">
+      <a href={`/api/file?key=${encodeURIComponent(fileKey)}`} target="_blank" rel="noreferrer">
+        <img
+          src={`/api/file?key=${encodeURIComponent(fileKey)}`}
+          alt={label}
+          className="h-16 w-16 rounded-lg border border-wit-ink/10 object-cover"
+          loading="lazy"
+        />
+      </a>
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-wit-gray">{label}</p>
+        <a
+          href={`/api/file?key=${encodeURIComponent(fileKey)}&download=1`}
+          className="mt-0.5 inline-block text-sm font-semibold text-wit-blue underline-offset-2 hover:underline"
+        >
+          Descargar
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function RequestCard({ row }: { row: AdminRequest }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
@@ -287,6 +316,10 @@ function RequestCard({ row }: { row: AdminRequest }) {
   }
 
   async function copyInfo() {
+    const company = row.company_name
+      ? ` La empresa se llama "${row.company_name}"${row.product_name ? ` y el producto "${row.product_name}"` : ""}, ambos deben aparecer en la pieza.`
+      : "";
+    const pieceBrief = row.piece_brief ? ` Concepto de esta pieza: ${row.piece_brief}.` : "";
     const style = row.style ? ` Estilo: ${row.style}.` : "";
     const audience = row.audience
       ? ` Dirigido a: ${row.audience}${row.age_range ? ` (${row.age_range} años)` : ""}.`
@@ -297,11 +330,12 @@ function RequestCard({ row }: { row: AdminRequest }) {
     const requiredText = row.required_text ? ` Dato extra del cliente: "${row.required_text}".` : "";
     const colors = row.brand_colors ? ` Paleta de colores de marca: ${row.brand_colors}.` : "";
     const ratio = RATIO_PROMPT[row.aspect_ratio] ?? row.aspect_ratio;
-    const reference = row.reference_key
-      ? " El cliente adjuntó un logo/imagen de referencia — descárgala desde el panel y súbela junto con este prompt si tu herramienta de IA lo permite."
+    const hasFiles = row.logo_key || row.product_photo_key || row.reference_key;
+    const reference = hasFiles
+      ? " El cliente adjuntó logo y/o foto de producto — descárgalos desde el panel y súbelos junto con este prompt si tu herramienta de IA lo permite."
       : "";
 
-    const prompt = `Creatividad publicitaria profesional de alta calidad. ${row.brief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio. Usa ${ratio}.${reference}`;
+    const prompt = `Creatividad publicitaria profesional de alta calidad. ${row.brief}${company}${pieceBrief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio. Usa ${ratio}.${reference}`;
 
     try {
       await navigator.clipboard.writeText(prompt);
@@ -401,6 +435,12 @@ function RequestCard({ row }: { row: AdminRequest }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-bold text-wit-ink">{row.title}</h3>
+          {row.company_name ? (
+            <p className="mt-0.5 text-sm font-semibold text-wit-blue">
+              {row.company_name}
+              {row.product_name ? ` · ${row.product_name}` : ""}
+            </p>
+          ) : null}
           <p className="mt-0.5 text-xs text-wit-gray">
             {row.user_name} ({row.user_email}) · {row.aspect_ratio}
             {row.style ? ` · ${row.style}` : ""} ·{" "}
@@ -436,7 +476,20 @@ function RequestCard({ row }: { row: AdminRequest }) {
         </div>
       </div>
 
-      <p className="mt-3 whitespace-pre-wrap text-sm text-wit-gray">{row.brief}</p>
+      <div className="mt-3">
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
+          A qué se dedica la empresa
+        </p>
+        <p className="mt-0.5 whitespace-pre-wrap text-sm text-wit-gray">{row.brief}</p>
+      </div>
+      {row.piece_brief ? (
+        <div className="mt-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
+            Qué quiere el cliente en esta pieza
+          </p>
+          <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium text-wit-ink">{row.piece_brief}</p>
+        </div>
+      ) : null}
 
       {row.audience || row.age_range || row.required_text || row.brand_colors || row.promo_price ? (
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl bg-wit-ice p-4 text-sm sm:grid-cols-4">
@@ -486,27 +539,15 @@ function RequestCard({ row }: { row: AdminRequest }) {
         </dl>
       ) : null}
 
-      {row.reference_key ? (
-        <div className="mt-3 flex items-center gap-3 rounded-xl border border-wit-ink/10 bg-white p-3">
-          <a href={`/api/file?key=${encodeURIComponent(row.reference_key)}`} target="_blank" rel="noreferrer">
-            <img
-              src={`/api/file?key=${encodeURIComponent(row.reference_key)}`}
-              alt="Referencia / logo del cliente"
-              className="h-16 w-16 rounded-lg border border-wit-ink/10 object-cover"
-              loading="lazy"
-            />
-          </a>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-wit-gray">
-              Referencia del cliente
-            </p>
-            <a
-              href={`/api/file?key=${encodeURIComponent(row.reference_key)}&download=1`}
-              className="mt-0.5 inline-block text-sm font-semibold text-wit-blue underline-offset-2 hover:underline"
-            >
-              Descargar logo
-            </a>
-          </div>
+      {row.logo_key || row.product_photo_key || row.reference_key ? (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {row.logo_key ? <FilePreview label="Logotipo" fileKey={row.logo_key} /> : null}
+          {row.product_photo_key ? (
+            <FilePreview label="Foto del producto" fileKey={row.product_photo_key} />
+          ) : null}
+          {row.reference_key ? (
+            <FilePreview label="Referencia (solicitud anterior)" fileKey={row.reference_key} />
+          ) : null}
         </div>
       ) : null}
 

@@ -18,7 +18,10 @@ export const Route = createFileRoute("/panel")({
 type RequestRow = {
   id: string;
   title: string;
+  company_name: string | null;
+  product_name: string | null;
   brief: string;
+  piece_brief: string | null;
   style: string | null;
   aspect_ratio: string;
   audience: string | null;
@@ -214,7 +217,10 @@ function RatioSwatch({ w, h, active }: { w: number; h: number; active: boolean }
 
 const EMPTY_FORM = {
   title: "",
+  companyName: "",
+  productName: "",
   brief: "",
+  pieceBrief: "",
   style: "",
   aspectRatio: "1:1",
   audience: "",
@@ -227,7 +233,9 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
   const [form, setForm] = useState(EMPTY_FORM);
   const [ageRanges, setAgeRanges] = useState<string[]>([]);
   const [colors, setColors] = useState<string[]>(["#2563EB"]);
-  const [file, setFile] = useState<File | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [noLogo, setNoLogo] = useState(false);
+  const [productPhotoFile, setProductPhotoFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -235,8 +243,17 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
   function goToPreview(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (form.title.trim().length < 3 || form.brief.trim().length < 10) {
-      setError("Revisa los campos: título y descripción del negocio son obligatorios.");
+    if (
+      form.title.trim().length < 3 ||
+      form.companyName.trim().length < 2 ||
+      form.brief.trim().length < 10 ||
+      form.pieceBrief.trim().length < 10
+    ) {
+      setError("Revisa los campos obligatorios: título, empresa, a qué se dedica y qué quieres en la pieza.");
+      return;
+    }
+    if (!noLogo && !logoFile) {
+      setError("Sube tu logotipo, o marca 'No tengo logotipo'.");
       return;
     }
     setStep("preview");
@@ -247,18 +264,32 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
     setOkMsg(null);
     setLoading(true);
     try {
-      let referenceKey: string | undefined;
-      if (file) {
+      async function upload(f: File): Promise<string | undefined> {
         const fd = new FormData();
-        fd.append("file", file);
+        fd.append("file", f);
         const up = await fetch("/api/upload-reference", { method: "POST", body: fd });
         const upData = (await up.json()) as { ok: boolean; key?: string };
-        if (!upData.ok) {
-          setError("No pudimos subir tu imagen de referencia (PNG, JPG o WebP, máx. 8 MB).");
+        return upData.ok ? upData.key : undefined;
+      }
+
+      let logoKey: string | undefined;
+      if (logoFile) {
+        logoKey = await upload(logoFile);
+        if (!logoKey) {
+          setError("No pudimos subir tu logotipo (PNG, JPG o WebP, máx. 8 MB).");
           setLoading(false);
           return;
         }
-        referenceKey = upData.key;
+      }
+
+      let productPhotoKey: string | undefined;
+      if (productPhotoFile) {
+        productPhotoKey = await upload(productPhotoFile);
+        if (!productPhotoKey) {
+          setError("No pudimos subir la foto del producto (PNG, JPG o WebP, máx. 8 MB).");
+          setLoading(false);
+          return;
+        }
       }
 
       const res = await fetch("/api/requests", {
@@ -266,10 +297,15 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           title: form.title,
+          companyName: form.companyName,
+          productName: form.productName || undefined,
           brief: form.brief,
+          pieceBrief: form.pieceBrief,
           style: form.style || undefined,
           aspectRatio: form.aspectRatio,
-          referenceKey,
+          logoKey,
+          noLogo,
+          productPhotoKey,
           audience: form.audience || undefined,
           ageRange: ageRanges.length ? ageRanges.join(", ") : undefined,
           promoPrice: form.promoPrice || undefined,
@@ -284,7 +320,7 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
             ? "Ya usaste todas tus solicitudes disponibles."
             : data.error === "sin_membresia"
               ? "Necesitas una membresía activa para enviar solicitudes."
-              : "Revisa los campos: título y descripción son obligatorios.",
+              : "Revisa los campos obligatorios.",
         );
         setStep("form");
         return;
@@ -292,7 +328,9 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
       setForm(EMPTY_FORM);
       setAgeRanges([]);
       setColors(["#2563EB"]);
-      setFile(null);
+      setLogoFile(null);
+      setNoLogo(false);
+      setProductPhotoFile(null);
       setStep("form");
       setOkMsg("Solicitud enviada. El equipo WITERS ya está trabajando en ella.");
       onCreated();
@@ -314,7 +352,10 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
 
         <dl className="mt-6 space-y-4">
           <PreviewRow label="Título" value={form.title} />
-          <PreviewRow label="Negocio" value={form.brief} />
+          <PreviewRow label="Nombre comercial / empresa" value={form.companyName} />
+          {form.productName ? <PreviewRow label="Nombre del producto" value={form.productName} /> : null}
+          <PreviewRow label="A qué se dedica la empresa" value={form.brief} />
+          <PreviewRow label="Qué quieres que salga en esta pieza" value={form.pieceBrief} />
           {form.audience ? <PreviewRow label="Público objetivo" value={form.audience} /> : null}
           {ageRanges.length ? <PreviewRow label="Rango de edad" value={ageRanges.join(", ")} /> : null}
           {form.promoPrice ? <PreviewRow label="Precio o descuento" value={form.promoPrice} /> : null}
@@ -336,7 +377,8 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
           </div>
           {form.style ? <PreviewRow label="Estilo" value={form.style} /> : null}
           <PreviewRow label="Formato" value={RATIO_LABEL[form.aspectRatio] ?? form.aspectRatio} />
-          {file ? <PreviewRow label="Referencia" value={file.name} /> : null}
+          <PreviewRow label="Logotipo" value={noLogo ? "No tiene logotipo" : (logoFile?.name ?? "")} />
+          {productPhotoFile ? <PreviewRow label="Foto del producto" value={productPhotoFile.name} /> : null}
         </dl>
 
         {error ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p> : null}
@@ -388,20 +430,74 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
             placeholder="Anuncio de lanzamiento para Instagram"
           />
         </div>
+
+        <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
+          Sobre tu empresa
+        </p>
+        <div>
+          <label htmlFor="rcompany" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Nombre comercial / de la empresa
+          </label>
+          <input
+            id="rcompany"
+            type="text"
+            required
+            minLength={2}
+            maxLength={120}
+            value={form.companyName}
+            onChange={(e) => setForm({ ...form, companyName: e.target.value })}
+            className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+            placeholder="El nombre que va impreso en la pieza"
+          />
+        </div>
         <div>
           <label htmlFor="rbrief" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Describe tu negocio en pocas palabras
+            A qué se dedica la empresa
           </label>
           <textarea
             id="rbrief"
             required
             minLength={10}
             maxLength={4000}
-            rows={4}
+            rows={3}
             value={form.brief}
             onChange={(e) => setForm({ ...form, brief: e.target.value })}
             className="w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
             placeholder="Qué vendes y qué te hace diferente..."
+          />
+        </div>
+
+        <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
+          Sobre este pedido
+        </p>
+        <div>
+          <label htmlFor="rproduct" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Nombre del producto <span className="font-normal text-wit-gray">(opcional)</span>
+          </label>
+          <input
+            id="rproduct"
+            type="text"
+            maxLength={120}
+            value={form.productName}
+            onChange={(e) => setForm({ ...form, productName: e.target.value })}
+            className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+            placeholder="Si aplica a un producto en particular"
+          />
+        </div>
+        <div>
+          <label htmlFor="rpiecebrief" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Qué quieres que salga en esta pieza
+          </label>
+          <textarea
+            id="rpiecebrief"
+            required
+            minLength={10}
+            maxLength={2000}
+            rows={3}
+            value={form.pieceBrief}
+            onChange={(e) => setForm({ ...form, pieceBrief: e.target.value })}
+            className="w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+            placeholder="Describe el concepto de esta pieza: qué debe mostrar, la idea principal..."
           />
         </div>
         <div>
@@ -468,6 +564,9 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
             Si lo dejas vacío, nuestro equipo de diseño se encarga de la redacción.
           </p>
         </div>
+        <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
+          Marca y estilo
+        </p>
         <div>
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
             Colores de marca <span className="font-normal text-wit-gray">(hasta 3, opcional)</span>
@@ -546,8 +645,48 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
             placeholder="U otro estilo en tus palabras..."
           />
         </div>
+
+        <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">Archivos</p>
         <div>
-          <p className="mb-1.5 text-sm font-semibold text-wit-ink">Formato</p>
+          <label htmlFor="rlogo" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Logotipo
+          </label>
+          <input
+            id="rlogo"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            disabled={noLogo}
+            onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+            className="w-full rounded-xl border border-dashed border-wit-ink/20 px-4 py-3 text-sm text-wit-gray file:mr-3 file:rounded-lg file:border-0 file:bg-wit-mist/60 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-wit-blue disabled:opacity-40"
+          />
+          <label className="mt-2 flex items-center gap-2 text-sm text-wit-ink">
+            <input
+              type="checkbox"
+              checked={noLogo}
+              onChange={(e) => {
+                setNoLogo(e.target.checked);
+                if (e.target.checked) setLogoFile(null);
+              }}
+              className="h-4 w-4 rounded border-wit-ink/30"
+            />
+            No tengo logotipo
+          </label>
+        </div>
+        <div>
+          <label htmlFor="rproductphoto" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Foto del producto <span className="font-normal text-wit-gray">(opcional)</span>
+          </label>
+          <input
+            id="rproductphoto"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => setProductPhotoFile(e.target.files?.[0] ?? null)}
+            className="w-full rounded-xl border border-dashed border-wit-ink/20 px-4 py-3 text-sm text-wit-gray file:mr-3 file:rounded-lg file:border-0 file:bg-wit-mist/60 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-wit-blue"
+          />
+        </div>
+
+        <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">Formato</p>
+        <div>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {RATIO_OPTIONS.map((r) => (
               <button
@@ -579,19 +718,6 @@ function NewRequestForm({ disabled, onCreated }: { disabled: boolean; onCreated:
             ))}
           </div>
         </div>
-        <div>
-          <label htmlFor="rfile" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Referencia opcional (logo o producto)
-          </label>
-          <input
-            id="rfile"
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="w-full rounded-xl border border-dashed border-wit-ink/20 px-4 py-3 text-sm text-wit-gray file:mr-3 file:rounded-lg file:border-0 file:bg-wit-mist/60 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-wit-blue"
-          />
-        </div>
-
         {error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p> : null}
         {okMsg ? (
           <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{okMsg}</p>
