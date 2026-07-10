@@ -7,7 +7,20 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
+
+// Set right before we auto-reload once for a stale-chunk error, cleared as
+// soon as the app mounts cleanly — so a real, persistent error doesn't loop
+// reloads forever, but a fresh deploy can trigger the recovery again later.
+const RELOAD_GUARD_KEY = "wit_reload_once";
+
+function isStaleChunkError(error: Error | undefined | null): boolean {
+  const msg = error?.message ?? "";
+  return /dynamically imported module|failed to fetch|loading chunk|importing a module script failed|module script failed/i.test(
+    msg,
+  );
+}
 
 import appCss from "../styles.css?url";
 
@@ -60,6 +73,27 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+  const staleChunk = isStaleChunkError(error);
+
+  useEffect(() => {
+    // Most common real-world cause: the tab was left open across a new
+    // deploy, so it's still holding references to JS chunk files that no
+    // longer exist on the server. A single reload fetches the current
+    // build and resolves it — the guard just stops a genuine, repeating
+    // error from reload-looping forever.
+    if (staleChunk && !sessionStorage.getItem(RELOAD_GUARD_KEY)) {
+      sessionStorage.setItem(RELOAD_GUARD_KEY, "1");
+      window.location.reload();
+    }
+  }, [staleChunk]);
+
+  if (staleChunk) {
+    return (
+      <div className="wit-page flex min-h-dvh items-center justify-center px-4">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-wit-blue border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="wit-page flex min-h-dvh items-center justify-center px-4">
@@ -85,6 +119,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             Ir al inicio
           </a>
         </div>
+        <p className="mt-6 break-words font-wit-mono text-[11px] text-wit-gray/70">{error.message}</p>
       </div>
     </div>
   );
@@ -114,6 +149,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    sessionStorage.removeItem(RELOAD_GUARD_KEY);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
