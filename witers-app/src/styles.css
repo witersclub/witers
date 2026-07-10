@@ -127,12 +127,14 @@
   position: relative;
 }
 
-/* Rendered once, fixed to the viewport, behind everything — the pattern
-   stays put while page content scrolls over it (depth/parallax feel). */
+/* Rendered once, fixed to the viewport, as the very first element in
+   <body> — the pattern stays put while page content (which follows it
+   in the DOM, so it naturally paints on top) scrolls over it. Deliberately
+   NOT z-index:-1: that would sink it below the page's own default white
+   canvas and hide it completely — plain DOM order is what actually works. */
 .wit-bg-fixed {
   position: fixed;
   inset: 0;
-  z-index: -1;
   background-color: var(--color-wit-ice);
   background-image: url("/assets/bg-pattern.svg");
   background-repeat: repeat;
