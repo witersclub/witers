@@ -285,6 +285,13 @@ function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
           {shown.map((r) =>
             tab === "finalizadas" ? (
               <FinishedRequestCard key={r.id} row={r} />
+            ) : !r.claimed_by_name ? (
+              // Same "waiting for someone" rotating light as the designer
+              // panel's unclaimed requests — only the ring, no fill color
+              // change, so the card's own translucent background stays as-is.
+              <div key={r.id} className="wit-pending-glow">
+                <RequestCard row={r} />
+              </div>
             ) : (
               <RequestCard key={r.id} row={r} />
             ),
