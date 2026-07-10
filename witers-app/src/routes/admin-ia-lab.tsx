@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { WitersLogo } from "../components/witers/brand";
+import { WitersLogo, WMark } from "../components/witers/brand";
 
 // The Web Speech API has no official TS lib entry — declare just the
 // pieces we use rather than pulling in a whole @types package for one file.
@@ -51,6 +51,68 @@ type Fields = {
   missingInfo: string[];
 };
 
+type Message = { role: "assistant" | "user"; text: string };
+
+// One question per field the real form needs — the conversation IS the
+// form, asked one thing at a time instead of dumped as a wall of inputs.
+// The raw answers get stitched into a transcript and handed to the same
+// /api/admin/ai-fill endpoint the freeform lab used, which normalizes
+// them (style → chip, colors → hex, aspectRatio → enum) same as before.
+const QUESTIONS: { field: string; label: string; text: string; required: boolean }[] = [
+  { field: "companyName", label: "Empresa", text: "¿Cuál es el nombre de tu empresa o marca?", required: true },
+  { field: "brief", label: "A qué se dedica", text: "Cuéntame, ¿a qué se dedica tu negocio?", required: true },
+  {
+    field: "pieceBrief",
+    label: "Qué debe mostrar la pieza",
+    text: "¿Qué quieres que muestre esta pieza en concreto?",
+    required: true,
+  },
+  {
+    field: "title",
+    label: "Título de la pieza",
+    text: "Si le pusieras un título corto a esta pieza, ¿cuál sería?",
+    required: true,
+  },
+  {
+    field: "style",
+    label: "Estilo",
+    text: "¿Qué estilo visual te gustaría? Ej. minimalista, colorido, elegante...",
+    required: false,
+  },
+  {
+    field: "aspectRatio",
+    label: "Formato",
+    text: "¿Para dónde es esta pieza — post cuadrado, historia vertical, banner horizontal?",
+    required: false,
+  },
+  { field: "audience", label: "Público objetivo", text: "¿A quién quieres llegarle con esta pieza?", required: false },
+  {
+    field: "promoPrice",
+    label: "Precio o descuento",
+    text: "¿Hay algún precio o descuento que quieras destacar? Si no aplica, dime que no.",
+    required: false,
+  },
+  {
+    field: "requiredText",
+    label: "Texto obligatorio",
+    text: "¿Hay algún texto o dato que deba aparecer sí o sí en la pieza?",
+    required: false,
+  },
+  {
+    field: "colors",
+    label: "Colores de marca",
+    text: "¿Tienes colores de marca que debamos usar? Descríbelos, o dime que no tienes.",
+    required: false,
+  },
+];
+
+function buildTranscript(answers: Record<string, string>): string {
+  return QUESTIONS.map((q) => {
+    const v = (answers[q.field] ?? "").trim();
+    return `${q.label}: ${v || "(no especificado)"}`;
+  }).join("\n");
+}
+
 function usePlatformUser() {
   return useQuery({
     queryKey: ["platform-user"],
@@ -68,16 +130,26 @@ function usePlatformUser() {
 
 function AiLab() {
   const platform = usePlatformUser();
-  const [transcript, setTranscript] = useState("");
+  const [messages, setMessages] = useState<Message[]>([{ role: "assistant", text: QUESTIONS[0].text }]);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [stepIndex, setStepIndex] = useState(0);
+  const [currentAnswer, setCurrentAnswer] = useState("");
+  const [typing, setTyping] = useState(false);
   const [fields, setFields] = useState<Fields | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const transcriptRef = useRef("");
+  const answerRef = useRef("");
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  const done = stepIndex >= QUESTIONS.length;
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, typing]);
 
   async function generate(text: string) {
-    if (text.trim().length < 5) return;
     setLoading(true);
     setError(null);
     setFields(null);
@@ -104,6 +176,59 @@ function AiLab() {
     }
   }
 
+  function submitAnswer(rawText: string) {
+    const q = QUESTIONS[stepIndex];
+    if (!q || done) return;
+    // A manual Enter/Send while the mic is still listening must not let
+    // that recognition's onend fire a second, stale submitAnswer once it
+    // eventually stops — detach it now so only this call goes through.
+    if (recognitionRef.current) {
+      const rec = recognitionRef.current;
+      rec.onend = null;
+      rec.onresult = null;
+      rec.onerror = null;
+      recognitionRef.current = null;
+      rec.stop();
+      setListening(false);
+    }
+    const text = rawText.trim();
+    if (!text && q.required) {
+      setError("Este dato es necesario para continuar.");
+      return;
+    }
+    setError(null);
+    const nextAnswers = { ...answers, [q.field]: text };
+    setAnswers(nextAnswers);
+    setMessages((m) => [...m, { role: "user", text: text || "No aplica" }]);
+    setCurrentAnswer("");
+    answerRef.current = "";
+    const nextIndex = stepIndex + 1;
+    setStepIndex(nextIndex);
+    setTyping(true);
+    window.setTimeout(() => {
+      setTyping(false);
+      if (nextIndex < QUESTIONS.length) {
+        setMessages((m) => [...m, { role: "assistant", text: QUESTIONS[nextIndex].text }]);
+      } else {
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", text: "¡Perfecto! Dame un momento mientras preparo tu solicitud..." },
+        ]);
+        void generate(buildTranscript(nextAnswers));
+      }
+    }, 550);
+  }
+
+  function restart() {
+    setMessages([{ role: "assistant", text: QUESTIONS[0].text }]);
+    setAnswers({});
+    setStepIndex(0);
+    setCurrentAnswer("");
+    setFields(null);
+    setError(null);
+    setTyping(false);
+  }
+
   function toggleMic() {
     setError(null);
     if (listening) {
@@ -116,7 +241,7 @@ function AiLab() {
     };
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!Ctor) {
-      setError("Tu navegador no soporta reconocimiento de voz — escribe el brief en el recuadro.");
+      setError("Tu navegador no soporta reconocimiento de voz — escribe tu respuesta.");
       return;
     }
     const recognition = new Ctor();
@@ -131,8 +256,8 @@ function AiLab() {
         if (r.isFinal) finalChunk += r[0].transcript + " ";
         else interim += r[0].transcript;
       }
-      if (finalChunk) transcriptRef.current = (transcriptRef.current + " " + finalChunk).trim();
-      setTranscript((transcriptRef.current + " " + interim).trim());
+      if (finalChunk) answerRef.current = (answerRef.current + " " + finalChunk).trim();
+      setCurrentAnswer((answerRef.current + " " + interim).trim());
     };
     recognition.onerror = (event) => {
       setListening(false);
@@ -142,11 +267,11 @@ function AiLab() {
     };
     recognition.onend = () => {
       setListening(false);
-      if (transcriptRef.current.trim().length >= 5) {
-        void generate(transcriptRef.current);
+      if (answerRef.current.trim()) {
+        submitAnswer(answerRef.current);
       }
     };
-    transcriptRef.current = transcript;
+    answerRef.current = currentAnswer;
     recognitionRef.current = recognition;
     recognition.start();
     setListening(true);
@@ -195,59 +320,83 @@ function AiLab() {
         </div>
       </header>
 
-      <main
-        className={
-          fields
-            ? "mx-auto max-w-lg px-5 py-10"
-            : "mx-auto flex min-h-[calc(100dvh-4rem)] max-w-lg flex-col items-center justify-center px-5 py-10 text-center"
-        }
-      >
-        <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink">
-          ¿Qué pieza quieres crear <span className="text-wit-blue">hoy</span>?
-        </h1>
-
-        <div className="wit-glass mt-6 w-full rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-          <textarea
-            aria-label="Brief del cliente"
-            rows={2}
-            value={transcript}
-            onChange={(e) => setTranscript(e.target.value)}
-            placeholder="Escribe o presiona el micrófono para hablar..."
-            className="w-full resize-none rounded-xl border-0 bg-transparent px-1 py-1 text-center text-base text-wit-ink outline-none placeholder:text-wit-gray"
-          />
+      <main className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-lg flex-col items-center px-5 py-10">
+        <div className="wit-float">
+          <WMark size={36} />
         </div>
 
-        <button
-          type="button"
-          onClick={toggleMic}
-          aria-label={listening ? "Detener grabación" : "Activar micrófono"}
-          className={`mt-4 flex h-14 w-14 items-center justify-center rounded-full transition-all ${
-            listening
-              ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_8px_rgba(239,68,68,0.15)]"
-              : "bg-wit-blue text-white hover:bg-wit-blue-deep"
-          }`}
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
-          </svg>
-        </button>
-        <p className="mt-2 text-xs text-wit-gray">
-          {listening ? "Escuchando... presiona de nuevo para terminar" : "Toca para hablar"}
-        </p>
+        <div className="mt-4 flex w-full flex-1 flex-col rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+          <div className="wit-glass flex max-h-[52vh] min-h-[260px] flex-col gap-3 overflow-y-auto rounded-t-2xl p-5">
+            {messages.map((m, i) => (
+              <ChatBubble key={i} role={m.role} text={m.text} />
+            ))}
+            {typing ? <TypingBubble /> : null}
+            <div ref={chatEndRef} />
+          </div>
 
-        {transcript.trim().length >= 5 && !listening ? (
-          <button
-            type="button"
-            onClick={() => generate(transcript)}
-            disabled={loading}
-            className="mt-3 text-sm font-semibold text-wit-blue hover:text-wit-blue-deep disabled:opacity-50"
-          >
-            {loading ? "Generando..." : "Generar →"}
-          </button>
-        ) : null}
+          {!done ? (
+            <div className="wit-glass -mt-px flex flex-col gap-2 rounded-b-2xl border-t border-wit-ink/10 p-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={currentAnswer}
+                  onChange={(e) => setCurrentAnswer(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submitAnswer(currentAnswer);
+                    }
+                  }}
+                  placeholder="Escribe tu respuesta..."
+                  className="flex-1 rounded-full border border-wit-ink/15 bg-white px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+                />
+                <button
+                  type="button"
+                  onClick={toggleMic}
+                  aria-label={listening ? "Detener grabación" : "Activar micrófono"}
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all ${
+                    listening
+                      ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_6px_rgba(239,68,68,0.15)]"
+                      : "bg-wit-blue text-white hover:bg-wit-blue-deep"
+                  }`}
+                >
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => submitAnswer(currentAnswer)}
+                  aria-label="Enviar"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-wit-ink/15 text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+              </div>
+              {!QUESTIONS[stepIndex]?.required ? (
+                <button
+                  type="button"
+                  onClick={() => submitAnswer("")}
+                  className="self-center text-xs font-semibold text-wit-gray hover:text-wit-ink"
+                >
+                  Omitir esta pregunta
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="wit-glass -mt-px flex items-center justify-between rounded-b-2xl border-t border-wit-ink/10 px-4 py-3">
+              <p className="text-xs text-wit-gray">{loading ? "Generando..." : "Conversación terminada"}</p>
+              <button type="button" onClick={restart} className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep">
+                ↺ Nueva conversación
+              </button>
+            </div>
+          )}
+        </div>
 
-        {error ? <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="mt-3 w-full rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p> : null}
 
         {fields ? (
           <div className="wit-glass mt-6 w-full rounded-2xl p-6 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
@@ -309,6 +458,35 @@ function LabRow({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">{label}</dt>
       <dd className="mt-1 whitespace-pre-wrap text-sm text-wit-ink">{value || "—"}</dd>
+    </div>
+  );
+}
+
+function ChatBubble({ role, text }: { role: "assistant" | "user"; text: string }) {
+  const isUser = role === "user";
+  return (
+    <div
+      className={`flex animate-in fade-in slide-in-from-bottom-3 duration-300 ${isUser ? "justify-end" : "justify-start"}`}
+    >
+      <div
+        className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm ${
+          isUser ? "bg-wit-blue text-white" : "bg-white text-wit-ink shadow-[0_1px_4px_rgba(5,13,40,0.08)]"
+        }`}
+      >
+        {text}
+      </div>
+    </div>
+  );
+}
+
+function TypingBubble() {
+  return (
+    <div className="flex animate-in fade-in slide-in-from-bottom-3 justify-start duration-300">
+      <div className="flex items-center gap-1 rounded-2xl bg-white px-4 py-3 shadow-[0_1px_4px_rgba(5,13,40,0.08)]">
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-wit-gray [animation-delay:-0.3s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-wit-gray [animation-delay:-0.15s]" />
+        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-wit-gray" />
+      </div>
     </div>
   );
 }

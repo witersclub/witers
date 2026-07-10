@@ -230,6 +230,20 @@
   }
 }
 
+/* Small logo mark hovering above the AI chat, like a quiet mascot. */
+.wit-float {
+  animation: wit-float 3.4s ease-in-out infinite;
+}
+@keyframes wit-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
 .wit-underline {
   position: relative;
   display: inline-block;
