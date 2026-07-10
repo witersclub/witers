@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { WitersLogo } from "../components/witers/brand";
 
@@ -79,6 +79,14 @@ function DesignerPanel() {
     enabled: Boolean(platform.data),
     refetchInterval: 20_000,
   });
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showToast(text: string) {
+    setToast(text);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2200);
+  }
 
   if (platform.isLoading) {
     return (
@@ -113,6 +121,16 @@ function DesignerPanel() {
 
   return (
     <div className="wit-page min-h-dvh">
+      {toast ? (
+        <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 shadow-lg">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold leading-none text-white">
+              ✓
+            </span>
+            {toast}
+          </div>
+        </div>
+      ) : null}
       <header className="border-b border-wit-ink/10 bg-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <div className="flex items-center gap-3">
@@ -164,7 +182,7 @@ function DesignerPanel() {
         ) : (
           <div className="mt-6 space-y-5">
             {data.requests.map((r) => (
-              <DesignerRequestCard key={r.id} row={r} me={data.me} />
+              <DesignerRequestCard key={r.id} row={r} me={data.me} onCopied={showToast} />
             ))}
           </div>
         )}
@@ -197,7 +215,15 @@ function FilePreview({ label, fileKey }: { label: string; fileKey: string }) {
   );
 }
 
-function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) {
+function DesignerRequestCard({
+  row,
+  me,
+  onCopied,
+}: {
+  row: DesignerRequest;
+  me: string;
+  onCopied: (text: string) => void;
+}) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -266,7 +292,7 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
   async function copyText(text: string, okMsg: string) {
     try {
       await navigator.clipboard.writeText(text);
-      setMsg(okMsg);
+      onCopied(okMsg);
     } catch {
       setMsg("No pudimos copiar. Selecciona el texto manualmente.");
     }
