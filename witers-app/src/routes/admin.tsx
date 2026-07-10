@@ -285,15 +285,8 @@ function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
           {shown.map((r) =>
             tab === "finalizadas" ? (
               <FinishedRequestCard key={r.id} row={r} />
-            ) : !r.claimed_by_name ? (
-              // Same "waiting for someone" rotating light as the designer
-              // panel's unclaimed requests — only the ring, no fill color
-              // change, so the card's own translucent background stays as-is.
-              <div key={r.id} className="wit-pending-glow">
-                <RequestCard row={r} />
-              </div>
             ) : (
-              <RequestCard key={r.id} row={r} />
+              <PendingRequestCard key={r.id} row={r} />
             ),
           )}
         </div>
@@ -333,6 +326,62 @@ function AdminSubTab({
       ) : null}
     </button>
   );
+}
+
+// Collapsed row for a not-yet-finalized request: title, format, date, and
+// who (if anyone) has claimed it — clicking it expands into the full
+// RequestCard, same simplification as the designer panel instead of
+// dumping every field for every pending request up front. Unclaimed ones
+// get the same rotating "waiting for someone" light as the designer panel.
+function PendingRequestCard({ row }: { row: AdminRequest }) {
+  const [expanded, setExpanded] = useState(false);
+  const claimed = Boolean(row.claimed_by_name);
+
+  if (expanded) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="mb-2 text-xs font-semibold text-wit-gray hover:text-wit-ink"
+        >
+          ← Ocultar detalle
+        </button>
+        <RequestCard row={row} />
+      </div>
+    );
+  }
+
+  const statusCls =
+    row.status === "completada"
+      ? "bg-emerald-50 text-emerald-700"
+      : row.status === "rechazada"
+        ? "bg-red-50 text-red-600"
+        : "bg-amber-50 text-amber-700";
+
+  const card = (
+    <button
+      type="button"
+      onClick={() => setExpanded(true)}
+      className="wit-glass flex w-full items-center gap-4 rounded-2xl p-4 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+    >
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-wit-ink">{row.title}</p>
+        <p className="mt-0.5 text-xs text-wit-gray">
+          {row.aspect_ratio}
+          {row.style ? ` · ${row.style}` : ""} · {new Date(row.created_at + "Z").toLocaleString("es-MX")}
+        </p>
+      </div>
+      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${statusCls}`}>
+        {row.status.replace("_", " ")}
+      </span>
+      <span className="shrink-0 text-xs font-semibold text-wit-gray">
+        {claimed ? row.claimed_by_name : "Sin tomar"}
+      </span>
+    </button>
+  );
+
+  return claimed ? card : <div className="wit-pending-glow">{card}</div>;
 }
 
 // Collapsed row for an already-finalized request: title, date, and the
