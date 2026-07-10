@@ -53,6 +53,7 @@ function parseResults(row: RequestRow): ResultItem[] {
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   en_proceso: { label: "En proceso", cls: "bg-amber-50 text-amber-700" },
   completada: { label: "Completada", cls: "bg-emerald-50 text-emerald-700" },
+  cerrada: { label: "✓ Finalizada", cls: "bg-wit-blue/10 text-wit-blue" },
   rechazada: { label: "Rechazada", cls: "bg-red-50 text-red-600" },
 };
 
@@ -806,7 +807,30 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
   const [showRevisionForm, setShowRevisionForm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [closing, setClosing] = useState(false);
   const revisionsLeft = 2 - r.revisions_used;
+
+  async function finalize() {
+    setClosing(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/close-request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId: r.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (data.ok) {
+        await qc.invalidateQueries({ queryKey: ["requests"] });
+      } else {
+        setMsg("No pudimos finalizar la solicitud. Intenta de nuevo.");
+      }
+    } catch {
+      setMsg("No pudimos finalizar la solicitud. Intenta de nuevo.");
+    } finally {
+      setClosing(false);
+    }
+  }
 
   async function sendRevision() {
     if (revisionText.trim().length < 5) {
@@ -912,7 +936,7 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
         </div>
       ) : null}
 
-      {r.status === "completada" && revisionsLeft > 0 ? (
+      {r.status === "completada" ? (
         showRevisionForm ? (
           <div className="mt-4 rounded-xl bg-wit-ice p-4">
             <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
@@ -947,13 +971,26 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
             {msg ? <p className="mt-2 text-sm text-red-600">{msg}</p> : null}
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setShowRevisionForm(true)}
-            className="mt-4 rounded-full border border-wit-ink/15 px-4 py-2 text-sm font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
-          >
-            Solicitar cambio ({revisionsLeft} {revisionsLeft === 1 ? "disponible" : "disponibles"})
-          </button>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={closing}
+              onClick={finalize}
+              className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+            >
+              {closing ? "Finalizando..." : "✓ Correcto, finalizar solicitud"}
+            </button>
+            {revisionsLeft > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowRevisionForm(true)}
+                className="rounded-full border border-wit-ink/15 px-4 py-2 text-sm font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+              >
+                Solicitar cambio ({revisionsLeft} {revisionsLeft === 1 ? "disponible" : "disponibles"})
+              </button>
+            ) : null}
+            {msg ? <p className="w-full text-sm text-red-600">{msg}</p> : null}
+          </div>
         )
       ) : null}
     </article>

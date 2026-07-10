@@ -467,14 +467,16 @@ function RequestCard({ row }: { row: AdminRequest }) {
           </button>
           <span
             className={`rounded-full px-3 py-1 text-xs font-bold ${
-              row.status === "completada"
-                ? "bg-emerald-50 text-emerald-700"
-                : row.status === "rechazada"
-                  ? "bg-red-50 text-red-600"
-                  : "bg-amber-50 text-amber-700"
+              row.status === "cerrada"
+                ? "bg-wit-blue/10 text-wit-blue"
+                : row.status === "completada"
+                  ? "bg-emerald-50 text-emerald-700"
+                  : row.status === "rechazada"
+                    ? "bg-red-50 text-red-600"
+                    : "bg-amber-50 text-amber-700"
             }`}
           >
-            {row.status.replace("_", " ")}
+            {row.status === "cerrada" ? "✓ finalizada" : row.status.replace("_", " ")}
           </span>
         </div>
       </div>
@@ -569,7 +571,7 @@ function RequestCard({ row }: { row: AdminRequest }) {
         </div>
       ) : null}
 
-      {drafts.length > 0 ? (
+      {drafts.length > 0 && row.status !== "cerrada" ? (
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-700">
             Pendiente de tu aprobación — el cliente todavía no la ve
@@ -627,67 +629,75 @@ function RequestCard({ row }: { row: AdminRequest }) {
         </div>
       ) : null}
 
-      <div className="mt-5 rounded-xl bg-wit-ice p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-wit-ink">
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp,application/pdf"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="hidden"
-            />
-            <span className="rounded-full border border-wit-ink/20 px-4 py-2 hover:border-wit-blue">
-              {file ? file.name.slice(0, 24) : "Elegir archivo manual"}
-            </span>
-          </label>
-          {file ? (
-            <button
-              type="button"
-              disabled={busy !== null}
-              onClick={deliver}
-              className="rounded-full bg-wit-navy px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue disabled:opacity-50"
-            >
-              {busy === "deliver" ? "Subiendo..." : "Entregar archivo"}
-            </button>
-          ) : null}
-        </div>
-      </div>
+      {row.status === "cerrada" ? (
+        <p className="mt-4 rounded-xl bg-wit-blue/5 px-4 py-3 text-sm font-semibold text-wit-blue">
+          ✓ El cliente marcó esta solicitud como correcta y finalizada. Ya no se puede editar.
+        </p>
+      ) : (
+        <>
+          <div className="mt-5 rounded-xl bg-wit-ice p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-wit-ink">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,application/pdf"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  className="hidden"
+                />
+                <span className="rounded-full border border-wit-ink/20 px-4 py-2 hover:border-wit-blue">
+                  {file ? file.name.slice(0, 24) : "Elegir archivo manual"}
+                </span>
+              </label>
+              {file ? (
+                <button
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={deliver}
+                  className="rounded-full bg-wit-navy px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue disabled:opacity-50"
+                >
+                  {busy === "deliver" ? "Subiendo..." : "Entregar archivo"}
+                </button>
+              ) : null}
+            </div>
+          </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Nota para el cliente (opcional)"
-          className="min-w-0 flex-1 rounded-lg border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue"
-        />
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() => setStatus("en_proceso")}
-            className="rounded-full border border-wit-ink/20 px-4 py-2 text-xs font-bold text-wit-ink hover:border-wit-blue"
-          >
-            En proceso
-          </button>
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() => setStatus("completada")}
-            className="rounded-full border border-emerald-300 px-4 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
-          >
-            Completada
-          </button>
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() => setStatus("rechazada")}
-            className="rounded-full border border-red-300 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
-          >
-            Rechazada
-          </button>
-        </div>
-      </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Nota para el cliente (opcional)"
+              className="min-w-0 flex-1 rounded-lg border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={busy !== null}
+                onClick={() => setStatus("en_proceso")}
+                className="rounded-full border border-wit-ink/20 px-4 py-2 text-xs font-bold text-wit-ink hover:border-wit-blue"
+              >
+                En proceso
+              </button>
+              <button
+                type="button"
+                disabled={busy !== null}
+                onClick={() => setStatus("completada")}
+                className="rounded-full border border-emerald-300 px-4 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
+              >
+                Completada
+              </button>
+              <button
+                type="button"
+                disabled={busy !== null}
+                onClick={() => setStatus("rechazada")}
+                className="rounded-full border border-red-300 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
+              >
+                Rechazada
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {msg ? <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p> : null}
     </article>

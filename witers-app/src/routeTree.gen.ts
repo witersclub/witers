@@ -23,6 +23,7 @@ import { Route as ApiUploadReferenceRouteImport } from './routes/api/upload-refe
 import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
 import { Route as ApiFileRouteImport } from './routes/api/file'
+import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as ApiDesignerRequestsRouteImport } from './routes/api/designer/requests'
 import { Route as ApiDesignerClaimRouteImport } from './routes/api/designer/claim'
@@ -108,6 +109,11 @@ const ApiFileRoute = ApiFileRouteImport.update({
   path: '/api/file',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCloseRequestRoute = ApiCloseRequestRouteImport.update({
+  id: '/api/close-request',
+  path: '/api/close-request',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   id: '/api/checkout',
   path: '/api/checkout',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
   '/api/checkout': typeof ApiCheckoutRoute
+  '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
   '/api/checkout': typeof ApiCheckoutRoute
+  '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -251,6 +259,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
   '/api/checkout': typeof ApiCheckoutRoute
+  '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -283,6 +292,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/witer'
     | '/api/checkout'
+    | '/api/close-request'
     | '/api/file'
     | '/api/request-revision'
     | '/api/requests'
@@ -313,6 +323,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/witer'
     | '/api/checkout'
+    | '/api/close-request'
     | '/api/file'
     | '/api/request-revision'
     | '/api/requests'
@@ -343,6 +354,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/witer'
     | '/api/checkout'
+    | '/api/close-request'
     | '/api/file'
     | '/api/request-revision'
     | '/api/requests'
@@ -374,6 +386,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WiterRoute: typeof WiterRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
+  ApiCloseRequestRoute: typeof ApiCloseRequestRoute
   ApiFileRoute: typeof ApiFileRoute
   ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
   ApiRequestsRoute: typeof ApiRequestsRoute
@@ -494,6 +507,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiFileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/close-request': {
+      id: '/api/close-request'
+      path: '/api/close-request'
+      fullPath: '/api/close-request'
+      preLoaderRoute: typeof ApiCloseRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/checkout': {
       id: '/api/checkout'
       path: '/api/checkout'
@@ -606,6 +626,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WiterRoute: WiterRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
+  ApiCloseRequestRoute: ApiCloseRequestRoute,
   ApiFileRoute: ApiFileRoute,
   ApiRequestRevisionRoute: ApiRequestRevisionRoute,
   ApiRequestsRoute: ApiRequestsRoute,

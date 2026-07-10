@@ -341,14 +341,16 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
           </button>
           <span
             className={`rounded-full px-3 py-1 text-xs font-bold ${
-              row.status === "completada"
-                ? "bg-emerald-50 text-emerald-700"
-                : row.status === "rechazada"
-                  ? "bg-red-50 text-red-600"
-                  : "bg-amber-50 text-amber-700"
+              row.status === "cerrada"
+                ? "bg-wit-blue/10 text-wit-blue"
+                : row.status === "completada"
+                  ? "bg-emerald-50 text-emerald-700"
+                  : row.status === "rechazada"
+                    ? "bg-red-50 text-red-600"
+                    : "bg-amber-50 text-amber-700"
             }`}
           >
-            {row.status.replace("_", " ")}
+            {row.status === "cerrada" ? "✓ finalizada" : row.status.replace("_", " ")}
           </span>
         </div>
       </div>
@@ -469,6 +471,10 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
         <p className="mt-4 rounded-xl bg-wit-mist/40 px-4 py-2.5 text-sm text-wit-gray">
           Esta solicitud ya la tomó {row.claimed_by_name} — solo puede trabajarla y entregarla esa
           persona.
+        </p>
+      ) : row.status === "cerrada" ? (
+        <p className="mt-4 rounded-xl bg-wit-blue/5 px-4 py-3 text-sm font-semibold text-wit-blue">
+          ✓ El cliente marcó esta solicitud como correcta y finalizada. Ya no se puede editar.
         </p>
       ) : (
         <>
