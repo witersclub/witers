@@ -1067,11 +1067,72 @@ function RequestList({
       ) : (
         <div className="space-y-4">
           {rows.map((r) => (
-            <HistoryCard key={r.id} row={r} />
+            <RequestEntry key={r.id} row={r} />
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+// "Completada" needs the client's attention (view/download, revise, or
+// finalize) so it always shows in full. Everything else — still being
+// worked on, or already closed out — collapses to a simple row, same
+// declutter pattern as the designer/admin panels. Only "en_proceso" gets
+// the rotating border: it's the one nobody's finished yet.
+function RequestEntry({ row: r }: { row: RequestRow }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (r.status === "completada") {
+    return <HistoryCard row={r} />;
+  }
+
+  if (expanded) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="mb-2 text-xs font-semibold text-wit-gray hover:text-wit-ink"
+        >
+          ← Ocultar detalle
+        </button>
+        <HistoryCard row={r} />
+      </div>
+    );
+  }
+
+  const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.en_proceso;
+  const compact = (
+    <button
+      type="button"
+      onClick={() => setExpanded(true)}
+      className="wit-glass flex w-full items-center gap-4 rounded-2xl p-4 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+    >
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-wit-ink">{r.title}</p>
+        <p className="mt-0.5 text-xs text-wit-gray">
+          Formato {r.aspect_ratio} ·{" "}
+          {new Date(r.created_at + "Z").toLocaleDateString("es-MX", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })}
+        </p>
+      </div>
+      <span className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
+        {r.status === "en_proceso" ? <Spinner cls="border-amber-600" /> : null}
+        {st.label}
+      </span>
+    </button>
+  );
+
+  return r.status === "en_proceso" ? (
+    <div className="wit-pending-glow">
+      <div className="wit-pending-glow-shield">{compact}</div>
+    </div>
+  ) : (
+    compact
   );
 }
 
