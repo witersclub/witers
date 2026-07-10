@@ -136,12 +136,9 @@
   position: fixed;
   inset: 0;
   background-color: var(--color-wit-ice);
-  /* Swap this file's contents (public/assets/bg-current.jpg) to try a new
-     background candidate — no other change needed. */
-  background-image: url("/assets/bg-current.jpg");
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
+  background-image: url("/assets/bg-pattern.svg");
+  background-repeat: repeat;
+  background-size: 820px 820px;
   pointer-events: none;
 }
 
