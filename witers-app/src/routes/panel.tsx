@@ -107,6 +107,8 @@ function Panel() {
   const membership = me.data.membership;
   const active = membership?.status === "active";
   const remaining = membership ? membership.requests_quota - membership.requests_used : 0;
+  const rows = requests.data?.requests ?? [];
+  const [tab, setTab] = useState<"solicitudes" | "nueva">("solicitudes");
 
   return (
     <div className="wit-page min-h-dvh">
@@ -174,18 +176,73 @@ function Panel() {
           </div>
         ) : null}
 
-        <div className="mt-10 grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-          <NewRequestForm
-            disabled={!active || remaining <= 0}
-            onCreated={() => {
-              void qc.invalidateQueries({ queryKey: ["requests"] });
-              void qc.invalidateQueries({ queryKey: ["me"] });
-            }}
+        <div className="mt-10 flex gap-2 border-b border-wit-ink/10">
+          <PanelTab
+            active={tab === "solicitudes"}
+            onClick={() => setTab("solicitudes")}
+            label="Mis solicitudes"
+            count={rows.length}
           />
-          <RequestList rows={requests.data?.requests ?? []} loading={requests.isLoading} />
+          <PanelTab
+            active={tab === "nueva"}
+            onClick={() => setTab("nueva")}
+            label="+ Nueva solicitud"
+          />
+        </div>
+
+        <div className="mt-8">
+          {tab === "nueva" ? (
+            <NewRequestForm
+              disabled={!active || remaining <= 0}
+              onCreated={() => {
+                void qc.invalidateQueries({ queryKey: ["requests"] });
+                void qc.invalidateQueries({ queryKey: ["me"] });
+                setTab("solicitudes");
+              }}
+            />
+          ) : (
+            <RequestList
+              rows={rows}
+              loading={requests.isLoading}
+              onNew={() => setTab("nueva")}
+            />
+          )}
         </div>
       </main>
     </div>
+  );
+}
+
+function PanelTab({
+  active,
+  onClick,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count?: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative -mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-bold transition-colors ${
+        active ? "border-wit-blue text-wit-blue" : "border-transparent text-wit-gray hover:text-wit-ink"
+      }`}
+    >
+      {label}
+      {typeof count === "number" && count > 0 ? (
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+            active ? "bg-wit-blue/10 text-wit-blue" : "bg-wit-mist/60 text-wit-gray"
+          }`}
+        >
+          {count}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -771,25 +828,39 @@ function PreviewRow({ label, value }: { label: string; value: string }) {
 
 /* ---------- request history ---------- */
 
-function RequestList({ rows, loading }: { rows: RequestRow[]; loading: boolean }) {
+function RequestList({
+  rows,
+  loading,
+  onNew,
+}: {
+  rows: RequestRow[];
+  loading: boolean;
+  onNew: () => void;
+}) {
   return (
     <section>
-      <h2 className="text-xl font-bold text-wit-ink">Historial de solicitudes</h2>
       {loading ? (
-        <div className="mt-5 space-y-4">
+        <div className="space-y-4">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <div className="mt-5 rounded-3xl border border-dashed border-wit-ink/15 bg-white/60 p-10 text-center">
+        <div className="rounded-3xl border border-dashed border-wit-ink/15 bg-white/60 p-10 text-center">
           <p className="text-base font-semibold text-wit-ink">Aún no tienes solicitudes.</p>
           <p className="mt-1 text-sm text-wit-gray">
             Envía tu primera solicitud y aparecerá aquí con su estado.
           </p>
+          <button
+            type="button"
+            onClick={onNew}
+            className="mt-5 rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
+          >
+            Enviar mi primera solicitud
+          </button>
         </div>
       ) : (
-        <div className="mt-5 space-y-4">
+        <div className="space-y-4">
           {rows.map((r) => (
             <HistoryCard key={r.id} row={r} />
           ))}
@@ -819,6 +890,7 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
   const [sentMsg, setSentMsg] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [lightbox, setLightbox] = useState<{ src: string; download: string } | null>(null);
   const revisionsLeft = 2 - r.revisions_used;
 
   // Compact timeline: the original request plus each requested change. Only
@@ -975,12 +1047,14 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {results.map((res) => {
             const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
+            const downloadHref = res.image_url
+              ? res.image_url
+              : `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}&download=1`;
             return (
-              <a
+              <button
                 key={res.id}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
+                type="button"
+                onClick={() => setLightbox({ src: href, download: downloadHref })}
                 className="group relative block overflow-hidden rounded-xl border border-wit-ink/10"
               >
                 <img
@@ -992,7 +1066,7 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
                 <span className="absolute inset-x-0 bottom-0 bg-wit-navy/80 px-2 py-1.5 text-center text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
                   Ver y descargar
                 </span>
-              </a>
+              </button>
             );
           })}
         </div>
@@ -1064,7 +1138,58 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
           </div>
         )
       ) : null}
+
+      {lightbox ? (
+        <ImageLightbox
+          src={lightbox.src}
+          downloadHref={lightbox.download}
+          alt={r.title}
+          onClose={() => setLightbox(null)}
+        />
+      ) : null}
     </article>
+  );
+}
+
+function ImageLightbox({
+  src,
+  downloadHref,
+  alt,
+  onClose,
+}: {
+  src: string;
+  downloadHref: string;
+  alt: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-wit-navy/90 p-5"
+      onClick={onClose}
+    >
+      <div className="flex max-h-full max-w-3xl flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        <img
+          src={src}
+          alt={alt}
+          className="max-h-[70vh] w-auto rounded-2xl object-contain shadow-2xl"
+        />
+        <div className="mt-5 flex items-center gap-3">
+          <a
+            href={downloadHref}
+            className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
+          >
+            Descargar imagen
+          </a>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white hover:bg-white/10"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
