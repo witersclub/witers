@@ -883,7 +883,11 @@ function Spinner({ cls = "border-wit-blue" }: { cls?: string }) {
 function HistoryCard({ row: r }: { row: RequestRow }) {
   const qc = useQueryClient();
   const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.en_proceso;
-  const results = parseResults(r);
+  // Only the most recently delivered file matters — earlier ones were
+  // superseded by a revision, so showing them would just make the client
+  // wonder which version to pick.
+  const latestResult = parseResults(r).at(-1) ?? null;
+  const canInteract = r.status !== "cerrada";
   const [revisionText, setRevisionText] = useState("");
   const [showRevisionForm, setShowRevisionForm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1071,32 +1075,39 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
           <strong>Nota del equipo:</strong> {r.admin_note}
         </p>
       ) : null}
-      {results.length > 0 ? (
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {results.map((res) => {
+      {latestResult ? (
+        <div className="mt-4 w-40 sm:w-48">
+          {(() => {
+            const res = latestResult;
             const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
             const downloadHref = res.image_url
               ? res.image_url
               : `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}&download=1`;
-            return (
+            const img = (
+              <img
+                src={href}
+                alt={`Resultado de ${r.title}`}
+                className={`aspect-square w-full object-cover ${canInteract ? "transition-transform duration-300 group-hover:scale-105" : ""}`}
+                loading="lazy"
+              />
+            );
+            return canInteract ? (
               <button
-                key={res.id}
                 type="button"
                 onClick={() => setLightbox({ src: href, download: downloadHref })}
                 className="group relative block overflow-hidden rounded-xl border border-wit-ink/10"
               >
-                <img
-                  src={href}
-                  alt={`Resultado de ${r.title}`}
-                  className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  loading="lazy"
-                />
+                {img}
                 <span className="absolute inset-x-0 bottom-0 bg-wit-navy/80 px-2 py-1.5 text-center text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
                   {r.status === "completada" ? "Ver y descargar" : "Ver imagen"}
                 </span>
               </button>
+            ) : (
+              <div className="relative block cursor-default overflow-hidden rounded-xl border border-wit-ink/10">
+                {img}
+              </div>
             );
-          })}
+          })()}
         </div>
       ) : null}
 

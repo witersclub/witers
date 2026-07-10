@@ -38,8 +38,12 @@ export const Route = createFileRoute("/api/requests")({
         const rows = await db()
           .prepare(
             `SELECT r.*,
-               (SELECT json_group_array(json_object('id', res.id, 'kind', res.kind, 'image_url', res.image_url, 'r2_key', res.r2_key))
-                FROM request_results res WHERE res.request_id = r.id AND res.kind != 'draft') AS results_json
+               (SELECT json_group_array(json_object('id', id, 'kind', kind, 'image_url', image_url, 'r2_key', r2_key))
+                FROM (
+                  SELECT id, kind, image_url, r2_key FROM request_results
+                  WHERE request_id = r.id AND kind != 'draft'
+                  ORDER BY created_at ASC
+                )) AS results_json
              FROM design_requests r
              WHERE r.user_id = ?1
              ORDER BY r.created_at DESC`,
