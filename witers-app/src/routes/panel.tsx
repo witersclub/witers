@@ -1081,10 +1081,34 @@ function RequestList({
 // declutter pattern as the designer/admin panels. Only "en_proceso" gets
 // the rotating border: it's the one nobody's finished yet.
 function RequestEntry({ row: r }: { row: RequestRow }) {
+  const qc = useQueryClient();
   const [expanded, setExpanded] = useState(false);
+  // Owned here, not inside HistoryCard: closing the request flips its
+  // status away from "completada", and that swap is exactly what unmounts
+  // HistoryCard below (in favor of the collapsed row). If the survey lived
+  // in HistoryCard's own state, it got wiped out before it ever rendered.
+  const [showSurvey, setShowSurvey] = useState(false);
 
-  if (r.status === "completada") {
-    return <HistoryCard row={r} />;
+  const survey = showSurvey
+    ? createPortal(
+        <SatisfactionSurvey
+          requestId={r.id}
+          onDone={async () => {
+            setShowSurvey(false);
+            await qc.invalidateQueries({ queryKey: ["requests"] });
+          }}
+        />,
+        document.body,
+      )
+    : null;
+
+  if (r.status === "completada" || showSurvey) {
+    return (
+      <>
+        <HistoryCard row={r} onDownloadFinalized={() => setShowSurvey(true)} />
+        {survey}
+      </>
+    );
   }
 
   if (expanded) {
@@ -1103,12 +1127,24 @@ function RequestEntry({ row: r }: { row: RequestRow }) {
   }
 
   const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.en_proceso;
+  const latestResult = parseResults(r).at(-1) ?? null;
+  const thumbHref = latestResult
+    ? (latestResult.image_url ?? `/api/file?key=${encodeURIComponent(latestResult.r2_key ?? "")}`)
+    : null;
   const compact = (
     <button
       type="button"
       onClick={() => setExpanded(true)}
       className="wit-glass flex w-full items-center gap-4 rounded-2xl p-4 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
     >
+      {thumbHref ? (
+        <img
+          src={thumbHref}
+          alt=""
+          loading="lazy"
+          className="h-12 w-12 shrink-0 rounded-lg border border-wit-ink/10 object-cover"
+        />
+      ) : null}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-wit-ink">{r.title}</p>
         <p className="mt-0.5 text-xs text-wit-gray">
@@ -1145,7 +1181,13 @@ function Spinner({ cls = "border-wit-blue" }: { cls?: string }) {
   );
 }
 
-function HistoryCard({ row: r }: { row: RequestRow }) {
+function HistoryCard({
+  row: r,
+  onDownloadFinalized,
+}: {
+  row: RequestRow;
+  onDownloadFinalized?: () => void;
+}) {
   const qc = useQueryClient();
   const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.en_proceso;
   // The API only ever returns the single most recent delivered file, and
@@ -1160,7 +1202,6 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
   const [closing, setClosing] = useState(false);
   const [lightbox, setLightbox] = useState<{ src: string; download: string } | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [showSurvey, setShowSurvey] = useState(false);
   const revisionsLeft = 2 - r.revisions_used;
   const alreadyRated = r.satisfaction_rating !== null;
 
@@ -1214,7 +1255,10 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
     } finally {
       setLightbox(null);
       setDownloading(false);
-      if (wasCompleted && !alreadyRated) setShowSurvey(true);
+      // Closing the request flips its status away from "completada", which
+      // unmounts this very card (the parent collapses it) — so the survey
+      // is owned one level up, by whatever still exists after that swap.
+      if (wasCompleted && !alreadyRated) onDownloadFinalized?.();
     }
   }
 
@@ -1454,19 +1498,6 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
               downloading={downloading}
               onDownload={() => downloadAndFinalize(lightbox.download)}
               onClose={() => setLightbox(null)}
-            />,
-            document.body,
-          )
-        : null}
-
-      {showSurvey
-        ? createPortal(
-            <SatisfactionSurvey
-              requestId={r.id}
-              onDone={async () => {
-                setShowSurvey(false);
-                await qc.invalidateQueries({ queryKey: ["requests"] });
-              }}
             />,
             document.body,
           )
