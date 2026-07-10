@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { WitersLogo, WMark } from "../components/witers/brand";
 
@@ -163,8 +163,30 @@ function AiLab() {
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const answerRef = useRef("");
+  const silenceTimerRef = useRef<number | null>(null);
+  const manualStopRef = useRef(false);
 
   const done = stepIndex >= QUESTIONS.length;
+
+  // Don't leave the mic listening in the background if the admin navigates
+  // away mid-conversation.
+  useEffect(() => {
+    return () => {
+      manualStopRef.current = true;
+      if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
+      recognitionRef.current?.stop();
+    };
+  }, []);
+
+  // The mic session spans the whole conversation now (no stop-between-
+  // questions), so its callbacks are wired up once and must always see the
+  // latest state — refs kept in sync every render, read from inside those
+  // callbacks instead of stale closures.
+  const submitAnswerRef = useRef((_text: string) => {});
+  const stepIndexRef = useRef(stepIndex);
+  const doneRef = useRef(done);
+  stepIndexRef.current = stepIndex;
+  doneRef.current = done;
 
   async function generate(text: string) {
     setLoading(true);
@@ -196,18 +218,6 @@ function AiLab() {
   function submitAnswer(rawText: string) {
     const q = QUESTIONS[stepIndex];
     if (!q || done) return;
-    // A manual Enter/Send while the mic is still listening must not let
-    // that recognition's onend fire a second, stale submitAnswer once it
-    // eventually stops — detach it now so only this call goes through.
-    if (recognitionRef.current) {
-      const rec = recognitionRef.current;
-      rec.onend = null;
-      rec.onresult = null;
-      rec.onerror = null;
-      recognitionRef.current = null;
-      rec.stop();
-      setListening(false);
-    }
     const text = rawText.trim();
     if (!text && q.required) {
       setError("Este dato es necesario para continuar.");
@@ -228,8 +238,10 @@ function AiLab() {
       }
     }, 550);
   }
+  submitAnswerRef.current = submitAnswer;
 
   function restart() {
+    stopListening();
     setAnswers({});
     setStepIndex(0);
     setCurrentAnswer("");
@@ -238,12 +250,44 @@ function AiLab() {
     setTyping(false);
   }
 
-  function toggleMic() {
-    setError(null);
-    if (listening) {
-      recognitionRef.current?.stop();
-      return;
+  // Stops the hands-free session outright — used when the admin presses
+  // the mic to cut it off, types an answer instead, or skips a question.
+  // Does NOT fire on the silence-triggered auto-advance between questions,
+  // which is the whole point: the mic stays open across the conversation.
+  function stopListening() {
+    manualStopRef.current = true;
+    if (silenceTimerRef.current) {
+      window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
     }
+    if (recognitionRef.current) {
+      const rec = recognitionRef.current;
+      rec.onend = null;
+      rec.onresult = null;
+      rec.onerror = null;
+      recognitionRef.current = null;
+      rec.stop();
+    }
+    setListening(false);
+  }
+
+  // ~1.7s of silence after the last thing heard = "done answering this
+  // one," so we submit whatever was said and move to the next question
+  // without the admin ever touching the mic again.
+  function scheduleSilenceCheck() {
+    if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
+    silenceTimerRef.current = window.setTimeout(() => {
+      const text = answerRef.current.trim();
+      if (!text) return;
+      const wasLast = stepIndexRef.current >= QUESTIONS.length - 1;
+      answerRef.current = "";
+      setCurrentAnswer("");
+      submitAnswerRef.current(text);
+      if (wasLast) stopListening();
+    }, 1700);
+  }
+
+  function startListening() {
     const w = window as unknown as {
       SpeechRecognition?: new () => SpeechRecognitionLike;
       webkitSpeechRecognition?: new () => SpeechRecognitionLike;
@@ -267,23 +311,43 @@ function AiLab() {
       }
       if (finalChunk) answerRef.current = (answerRef.current + " " + finalChunk).trim();
       setCurrentAnswer((answerRef.current + " " + interim).trim());
+      scheduleSilenceCheck();
     };
     recognition.onerror = (event) => {
+      if (event.error === "no-speech") return;
+      manualStopRef.current = true;
       setListening(false);
-      if (event.error !== "no-speech") {
-        setError("No pudimos usar el micrófono. Revisa los permisos del navegador.");
-      }
+      setError("No pudimos usar el micrófono. Revisa los permisos del navegador.");
     };
     recognition.onend = () => {
       setListening(false);
-      if (answerRef.current.trim()) {
-        submitAnswer(answerRef.current);
+      // Chrome can end a continuous session on its own after a long idle
+      // stretch — if we didn't ask for that and there are still questions
+      // left, just pick the mic back up instead of leaving it dead.
+      if (!manualStopRef.current && !doneRef.current) {
+        startListening();
       }
     };
-    answerRef.current = currentAnswer;
     recognitionRef.current = recognition;
     recognition.start();
     setListening(true);
+  }
+
+  function toggleMic() {
+    setError(null);
+    if (listening) {
+      const text = answerRef.current.trim();
+      stopListening();
+      if (text) {
+        answerRef.current = "";
+        setCurrentAnswer("");
+        submitAnswer(text);
+      }
+      return;
+    }
+    manualStopRef.current = false;
+    answerRef.current = currentAnswer;
+    startListening();
   }
 
   if (platform.isLoading) {
@@ -337,6 +401,7 @@ function AiLab() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (listening) stopListening();
             submitAnswer(currentAnswer);
           }}
           className="wit-glass mt-4 w-full rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
@@ -353,21 +418,26 @@ function AiLab() {
         </form>
 
         {!done ? (
-          <button
-            type="button"
-            onClick={toggleMic}
-            aria-label={listening ? "Detener grabación" : "Activar micrófono"}
-            className={`mt-4 flex h-14 w-14 items-center justify-center rounded-full transition-all ${
-              listening
-                ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_8px_rgba(239,68,68,0.15)]"
-                : "bg-wit-blue text-white hover:bg-wit-blue-deep"
-            }`}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
-            </svg>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={toggleMic}
+              aria-label={listening ? "Detener micrófono" : "Activar micrófono"}
+              className={`mt-4 flex h-14 w-14 items-center justify-center rounded-full transition-all ${
+                listening
+                  ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_8px_rgba(239,68,68,0.15)]"
+                  : "bg-wit-blue text-white hover:bg-wit-blue-deep"
+              }`}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
+              </svg>
+            </button>
+            {listening ? (
+              <p className="mt-1.5 text-[11px] text-wit-gray">Te escucho — sigue hablando, yo voy avanzando</p>
+            ) : null}
+          </>
         ) : (
           <div className="mt-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -400,7 +470,10 @@ function AiLab() {
               {!QUESTIONS[stepIndex]?.required ? (
                 <button
                   type="button"
-                  onClick={() => submitAnswer("")}
+                  onClick={() => {
+                    if (listening) stopListening();
+                    submitAnswer("");
+                  }}
                   className="mt-1 text-xs font-semibold text-wit-gray hover:text-wit-ink"
                 >
                   Omitir
