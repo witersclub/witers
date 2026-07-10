@@ -27,13 +27,15 @@ export const Route = createFileRoute("/api/file")({
           if (key.startsWith(`refs/${member.id}/`)) {
             allowed = true;
           } else if (key.startsWith("deliveries/")) {
-            // The owning client can only fetch a delivered file while it's
-            // still the current, undecided deliverable (status completada)
-            // and it's the latest one for that request — never an older,
-            // superseded version, and never once the request is closed.
-            // This is the actual enforcement of "one download per request";
-            // the UI hiding old thumbnails is not enough on its own since a
-            // client could otherwise hit this URL directly.
+            // The owning client can only ever see the latest delivery for a
+            // request — never an older, superseded version. That thumbnail
+            // stays visible after the request is closed (so the client's
+            // history doesn't go blank), but the forced-attachment download
+            // only works while still "completada" — once closed they already
+            // got their one official download, this is the actual
+            // enforcement of "one download per request" (the UI hiding old
+            // thumbnails alone isn't enough — a client could otherwise hit
+            // this URL directly).
             const row = await db()
               .prepare(
                 `SELECT r.user_id, r.status,
@@ -48,8 +50,12 @@ export const Route = createFileRoute("/api/file")({
               )
               .bind(key)
               .first<{ user_id: string; status: string; is_latest: number }>();
-            allowed =
-              row?.user_id === member.id && row.status === "completada" && row.is_latest === 1;
+            const canView =
+              row?.user_id === member.id &&
+              row.is_latest === 1 &&
+              (row.status === "completada" || row.status === "cerrada");
+            const isForceDownload = url.searchParams.get("download") === "1";
+            allowed = Boolean(canView) && (!isForceDownload || row!.status === "completada");
           }
         }
 

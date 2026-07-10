@@ -1144,22 +1144,35 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
             const downloadHref = res.image_url
               ? res.image_url
               : `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}&download=1`;
-            return (
+            const img = (
+              <img
+                src={href}
+                alt={`Resultado de ${r.title}`}
+                className="aspect-square w-full object-cover"
+                loading="lazy"
+              />
+            );
+            // Once cerrada the request already used its one download — the
+            // thumbnail stays as a friendly, locked reminder instead of
+            // vanishing from the client's history.
+            return r.status === "completada" ? (
               <button
                 type="button"
                 onClick={() => setLightbox({ src: href, download: downloadHref })}
                 className="group relative block overflow-hidden rounded-xl border border-wit-ink/10"
               >
-                <img
-                  src={href}
-                  alt={`Resultado de ${r.title}`}
-                  className="aspect-square w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  loading="lazy"
-                />
+                <span className="block transition-transform duration-300 group-hover:scale-105">{img}</span>
                 <span className="absolute inset-x-0 bottom-0 bg-wit-navy/80 px-2 py-1.5 text-center text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
                   Ver y descargar
                 </span>
               </button>
+            ) : (
+              <div className="relative block cursor-default overflow-hidden rounded-xl border border-wit-ink/10 opacity-90">
+                {img}
+                <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-wit-blue text-[10px] font-bold text-white">
+                  ✓
+                </span>
+              </div>
             );
           })()}
         </div>
@@ -1325,10 +1338,7 @@ function ImageLightbox({
   );
 }
 
-const STAR_PATH =
-  "M12 2.5l2.98 6.15 6.77.85-4.9 4.72 1.27 6.73L12 17.9l-6.12 3.05 1.27-6.73-4.9-4.72 6.77-.85Z";
-
-function StarButton({
+function RatingCircle({
   n,
   filled,
   disabled,
@@ -1350,15 +1360,15 @@ function StarButton({
       onMouseLeave={() => onHover(null)}
       className="flex flex-col items-center gap-1.5 disabled:cursor-not-allowed"
     >
-      <span className="relative flex h-11 w-11 items-center justify-center transition-transform active:scale-90">
-        <svg viewBox="0 0 24 24" className="h-11 w-11">
-          <path d={STAR_PATH} fill={filled ? "#0047FF" : "#FACC15"} />
-        </svg>
+      <span
+        className="relative flex h-11 w-11 items-center justify-center rounded-full transition-transform active:scale-90"
+        style={{ backgroundColor: filled ? "#0047FF" : "#FACC15" }}
+      >
         {filled ? (
           <img
             src="/assets/logo_w_white.png"
             alt=""
-            className="pointer-events-none absolute left-1/2 top-1/2 h-3.5 w-auto -translate-x-1/2 -translate-y-1/2"
+            className="pointer-events-none h-4 w-auto"
           />
         ) : null}
       </span>
@@ -1406,7 +1416,7 @@ function SatisfactionSurvey({
     // Brief pause so the star actually shows filled-in-blue-with-logo before
     // the screen moves on — otherwise the transition happens in the same
     // paint and it looks like nothing happened.
-    await wait(450);
+    await wait(750);
     if (n === 5) {
       await submit(n);
       setStep("done");
@@ -1431,7 +1441,7 @@ function SatisfactionSurvey({
             </h3>
             <div className="mt-6 flex justify-center gap-2.5">
               {[1, 2, 3, 4, 5].map((n) => (
-                <StarButton
+                <RatingCircle
                   key={n}
                   n={n}
                   filled={n <= shown}

@@ -35,16 +35,17 @@ export const Route = createFileRoute("/api/requests")({
         const user = await getSessionUser(request);
         if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
 
-        // Only ever expose the single most recent delivered file, and only
-        // while the request is still in "completada" (the one window where a
-        // download is legitimately allowed) — otherwise a client could read
-        // every past revision's r2_key straight out of this response and
-        // fetch them directly, bypassing the one-download-per-request rule
-        // enforced in /api/file.
+        // Only ever expose the single most recent delivered file — never
+        // older, superseded revisions, whose r2_keys would otherwise let a
+        // client bypass the one-download-per-request rule enforced in
+        // /api/file by reading old URLs straight out of this response.
+        // Shown while "completada" (still open, downloadable) and kept
+        // visible (but locked, per /api/file) once "cerrada" so the client's
+        // history doesn't just go blank after they download it.
         const rows = await db()
           .prepare(
             `SELECT r.*,
-               CASE WHEN r.status = 'completada' THEN (
+               CASE WHEN r.status IN ('completada', 'cerrada') THEN (
                  SELECT json_group_array(json_object('id', id, 'kind', kind, 'image_url', image_url, 'r2_key', r2_key))
                  FROM (
                    SELECT id, kind, image_url, r2_key FROM request_results
