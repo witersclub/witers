@@ -381,7 +381,13 @@ function PendingRequestCard({ row }: { row: AdminRequest }) {
     </button>
   );
 
-  return claimed ? card : <div className="wit-pending-glow">{card}</div>;
+  return claimed ? (
+    card
+  ) : (
+    <div className="wit-pending-glow">
+      <div className="wit-pending-glow-shield">{card}</div>
+    </div>
+  );
 }
 
 // Collapsed row for an already-finalized request: title, date, and the

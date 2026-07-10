@@ -339,7 +339,13 @@ function PendingCompactCard({ row, me }: { row: DesignerRequest; me: string }) {
 
   return (
     <div>
-      {!claimed ? <div className="wit-pending-glow">{card}</div> : card}
+      {!claimed ? (
+        <div className="wit-pending-glow">
+          <div className="wit-pending-glow-shield">{card}</div>
+        </div>
+      ) : (
+        card
+      )}
       {msg ? <p className="mt-1.5 text-xs text-red-600">{msg}</p> : null}
     </div>
   );

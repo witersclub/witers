@@ -179,15 +179,20 @@
 }
 
 /* Rotating light tracing an unclaimed request's border — a "this is
-   waiting for someone" nudge in the designer panel. Wraps the card in a
-   thin (2px) padded box whose OWN background is the rotating
-   conic-gradient; the actual card sits inside and covers everything
-   except that 2px ring. Animates a registered custom property (not
+   waiting for someone" nudge in the designer and admin panels. Wraps the
+   card in a thin (2px) padded box whose OWN background is the rotating
+   conic-gradient. Animates a registered custom property (not
    transform:rotate on the box) so only the light sweeps around — the
    card and its content stay perfectly upright the whole time. (An
    earlier version used a mask-composite trick on a pseudo-element,
    which rendered as a broken, oversized, disconnected shape instead of
-   a ring — verified in a real browser before landing this version.) */
+   a ring — verified in a real browser before landing this version.)
+   The actual card is `.wit-glass`, which is translucent + blurred, so
+   just nesting it directly inside the gradient box let the blue leak
+   through the glass into the card's interior. `.wit-pending-glow-shield`
+   is an opaque backing layer between the gradient and the glass card —
+   backdrop-filter then only ever samples solid white behind the glass,
+   so the color is confined to the 2px ring. */
 @property --wit-glow-angle {
   syntax: "<angle>";
   inherits: false;
@@ -201,12 +206,23 @@
   background: conic-gradient(
     from var(--wit-glow-angle),
     transparent 0deg,
-    transparent 250deg,
-    rgba(0, 71, 255, 0.95) 300deg,
-    rgba(140, 180, 255, 1) 330deg,
+    transparent 245deg,
+    #0d2b6b 258deg,
+    #1e56d6 272deg,
+    #7fb0ff 286deg,
+    #eaf2ff 294deg,
+    #7fb0ff 302deg,
+    #1e56d6 316deg,
+    #0d2b6b 330deg,
+    transparent 344deg,
     transparent 360deg
   );
   animation: wit-glow-spin 3.2s linear infinite;
+}
+.wit-pending-glow-shield {
+  border-radius: calc(1rem - 2px);
+  background-color: #ffffff;
+  overflow: hidden;
 }
 @keyframes wit-glow-spin {
   to {
