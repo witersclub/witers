@@ -236,7 +236,6 @@ function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
 
 function RequestCard({ row }: { row: AdminRequest }) {
   const qc = useQueryClient();
-  const [prompt, setPrompt] = useState(() => buildPrompt(row));
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -259,29 +258,6 @@ function RequestCard({ row }: { row: AdminRequest }) {
 
   async function refresh() {
     await qc.invalidateQueries({ queryKey: ["admin-overview"] });
-  }
-
-  async function generate() {
-    setBusy("generate");
-    setMsg(null);
-    try {
-      const res = await fetch("/api/admin/generate", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ requestId: row.id, prompt, aspectRatio: row.aspect_ratio }),
-      });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      setMsg(
-        data.ok
-          ? "Imagen generada. Revísala abajo y apruébala con tu código para entregarla al cliente."
-          : `La generación falló (${data.error ?? "error"}). Intenta de nuevo o entrega manualmente.`,
-      );
-      await refresh();
-    } catch {
-      setMsg("La generación falló. Intenta de nuevo.");
-    } finally {
-      setBusy(null);
-    }
   }
 
   async function approve() {
@@ -513,26 +489,7 @@ function RequestCard({ row }: { row: AdminRequest }) {
       ) : null}
 
       <div className="mt-5 rounded-xl bg-wit-ice p-4">
-        <label htmlFor={`p-${row.id}`} className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-          Prompt para generar con IA
-        </label>
-        <textarea
-          id={`p-${row.id}`}
-          rows={3}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          className="w-full resize-y rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
-        />
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={generate}
-            className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-wit-blue-deep disabled:opacity-50"
-          >
-            {busy === "generate" ? "Generando (1-2 min)..." : "Generar con IA y entregar"}
-          </button>
-
+        <div className="flex flex-wrap items-center gap-3">
           <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-wit-ink">
             <input
               type="file"
@@ -596,19 +553,6 @@ function RequestCard({ row }: { row: AdminRequest }) {
       {msg ? <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p> : null}
     </article>
   );
-}
-
-function buildPrompt(row: AdminRequest): string {
-  const style = row.style ? ` Estilo: ${row.style}.` : "";
-  const audience = row.audience
-    ? ` Dirigido a: ${row.audience}${row.age_range ? ` (${row.age_range} años)` : ""}.`
-    : row.age_range
-      ? ` Dirigido a personas de ${row.age_range} años.`
-      : "";
-  const promo = row.promo_price ? ` Precio/descuento a destacar: ${row.promo_price}.` : "";
-  const requiredText = row.required_text ? ` Dato extra del cliente: "${row.required_text}".` : "";
-  const colors = row.brand_colors ? ` Paleta de colores de marca: ${row.brand_colors}.` : "";
-  return `Creatividad publicitaria profesional de alta calidad. ${row.brief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio.`;
 }
 
 /* ---------- users & payments ---------- */
