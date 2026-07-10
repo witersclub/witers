@@ -79,14 +79,6 @@ function DesignerPanel() {
     enabled: Boolean(platform.data),
     refetchInterval: 20_000,
   });
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function showToast(text: string) {
-    setToast(text);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 2200);
-  }
 
   if (platform.isLoading) {
     return (
@@ -121,16 +113,6 @@ function DesignerPanel() {
 
   return (
     <div className="wit-page min-h-dvh">
-      {toast ? (
-        <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 shadow-lg">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold leading-none text-white">
-              ✓
-            </span>
-            {toast}
-          </div>
-        </div>
-      ) : null}
       <header className="border-b border-wit-ink/10 bg-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <div className="flex items-center gap-3">
@@ -182,12 +164,23 @@ function DesignerPanel() {
         ) : (
           <div className="mt-6 space-y-5">
             {data.requests.map((r) => (
-              <DesignerRequestCard key={r.id} row={r} me={data.me} onCopied={showToast} />
+              <DesignerRequestCard key={r.id} row={r} me={data.me} />
             ))}
           </div>
         )}
       </main>
     </div>
+  );
+}
+
+// Small green confirmation that appears right under whichever "Copiar
+// prompt" button was clicked, instead of a page-level toast — so the
+// designer doesn't have to look away from what they just clicked.
+function CopiedNotice() {
+  return (
+    <span className="absolute left-1/2 top-full z-10 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+      ✓ Prompt copiado
+    </span>
   );
 }
 
@@ -215,20 +208,14 @@ function FilePreview({ label, fileKey }: { label: string; fileKey: string }) {
   );
 }
 
-function DesignerRequestCard({
-  row,
-  me,
-  onCopied,
-}: {
-  row: DesignerRequest;
-  me: string;
-  onCopied: (text: string) => void;
-}) {
+function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState(row.admin_note ?? "");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const results = (() => {
     if (!row.results_json) return [] as ResultItem[];
@@ -289,22 +276,24 @@ function DesignerRequestCard({
     return `Creatividad publicitaria profesional de alta calidad. ${row.brief}${company}${pieceBrief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio. Usa ${ratio}.${reference}`;
   }
 
-  async function copyText(text: string, okMsg: string) {
+  async function copyText(text: string, key: string) {
     try {
       await navigator.clipboard.writeText(text);
-      onCopied(okMsg);
+      setCopiedKey(key);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedKey(null), 1800);
     } catch {
       setMsg("No pudimos copiar. Selecciona el texto manualmente.");
     }
   }
 
   async function copyInfo() {
-    await copyText(buildBasePrompt(), "Prompt copiado al portapapeles.");
+    await copyText(buildBasePrompt(), "base");
   }
 
   async function copyRevisionPrompt(note: string, n: number) {
     const prompt = `Ajusta la creatividad publicitaria anterior aplicando este cambio solicitado por el cliente: ${note}. Mantén todo lo demás igual a la versión anterior. Contexto original de la pieza: ${buildBasePrompt()}`;
-    await copyText(prompt, `Prompt del cambio ${n} copiado al portapapeles.`);
+    await copyText(prompt, `revision${n}`);
   }
 
   async function deliver() {
@@ -370,13 +359,16 @@ function DesignerRequestCard({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={copyInfo}
-            className="rounded-full border border-wit-ink/15 px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
-          >
-            Copiar prompt
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={copyInfo}
+              className="rounded-full border border-wit-ink/15 px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+            >
+              Copiar prompt
+            </button>
+            {copiedKey === "base" ? <CopiedNotice /> : null}
+          </div>
           <span
             className={`rounded-full px-3 py-1 text-xs font-bold ${
               row.status === "cerrada"
@@ -436,13 +428,16 @@ function DesignerRequestCard({
                   {note}
                 </p>
                 {isActive ? (
-                  <button
-                    type="button"
-                    onClick={() => copyRevisionPrompt(note, n)}
-                    className="shrink-0 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
-                  >
-                    Copiar prompt del cambio
-                  </button>
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => copyRevisionPrompt(note, n)}
+                      className="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+                    >
+                      Copiar prompt del cambio
+                    </button>
+                    {copiedKey === `revision${n}` ? <CopiedNotice /> : null}
+                  </div>
                 ) : (
                   <span className="shrink-0 rounded-full bg-wit-ink/5 px-3 py-1.5 text-xs font-semibold text-wit-gray">
                     ✓ Ya entregado
