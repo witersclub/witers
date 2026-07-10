@@ -4,6 +4,7 @@
 import process from "node:process";
 
 const FROM = "WITERS <notificaciones@witers.com>";
+const STAFF_EMAIL = "imawiter@gmail.com";
 
 export async function sendMail(opts: { to: string; subject: string; html: string }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
@@ -52,6 +53,56 @@ export function requestCompletedEmail(opts: { title: string; requestUrl: string 
       </div>
     `,
   };
+}
+
+// Staff-facing notifications (always to STAFF_EMAIL) — new request / revision.
+export async function notifyStaffNewRequest(opts: {
+  title: string;
+  clientName: string;
+  companyName: string;
+  panelUrl: string;
+}): Promise<void> {
+  await sendMail({
+    to: STAFF_EMAIL,
+    subject: `Nueva solicitud: ${opts.title}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="color: #1450ff;">Nueva solicitud de diseño</h2>
+        <p><strong>${escapeHtml(opts.clientName)}</strong> (${escapeHtml(opts.companyName)}) envió una nueva solicitud:</p>
+        <p style="font-size:16px;"><strong>${escapeHtml(opts.title)}</strong></p>
+        <p style="margin: 24px 0;">
+          <a href="${opts.panelUrl}" style="background:#1450ff;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+            Ver solicitud
+          </a>
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function notifyStaffRevisionRequested(opts: {
+  title: string;
+  clientName: string;
+  message: string;
+  panelUrl: string;
+}): Promise<void> {
+  await sendMail({
+    to: STAFF_EMAIL,
+    subject: `Solicitud de cambio: ${opts.title}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="color: #1450ff;">Solicitud de cambio</h2>
+        <p><strong>${escapeHtml(opts.clientName)}</strong> pidió un ajuste en:</p>
+        <p style="font-size:16px;"><strong>${escapeHtml(opts.title)}</strong></p>
+        <p style="background:#f2f5ff;border-radius:8px;padding:12px 16px;">${escapeHtml(opts.message)}</p>
+        <p style="margin: 24px 0;">
+          <a href="${opts.panelUrl}" style="background:#1450ff;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+            Ver solicitud
+          </a>
+        </p>
+      </div>
+    `,
+  });
 }
 
 function escapeHtml(s: string): string {

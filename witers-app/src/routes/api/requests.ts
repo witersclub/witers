@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { notifyStaffNewRequest } from "../../lib/mail.server";
 import { db, getMembership, getSessionUser, json } from "../../lib/witers-auth.server";
 
 const createSchema = z
@@ -99,6 +100,13 @@ export const Route = createFileRoute("/api/requests")({
           .prepare("UPDATE memberships SET requests_used = requests_used + 1 WHERE user_id = ?1")
           .bind(user.id)
           .run();
+
+        await notifyStaffNewRequest({
+          title: parsed.data.title.trim(),
+          clientName: user.name,
+          companyName: parsed.data.companyName.trim(),
+          panelUrl: "https://witers.com/witer",
+        });
 
         return json({ ok: true, id });
       },

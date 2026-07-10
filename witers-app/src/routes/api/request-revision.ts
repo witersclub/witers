@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { notifyStaffRevisionRequested } from "../../lib/mail.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
 const schema = z.object({
@@ -24,9 +25,9 @@ export const Route = createFileRoute("/api/request-revision")({
         }
 
         const row = await db()
-          .prepare("SELECT status, revisions_used FROM design_requests WHERE id = ?1 AND user_id = ?2")
+          .prepare("SELECT title, status, revisions_used FROM design_requests WHERE id = ?1 AND user_id = ?2")
           .bind(parsed.data.requestId, user.id)
-          .first<{ status: string; revisions_used: number }>();
+          .first<{ title: string; status: string; revisions_used: number }>();
         if (!row) return json({ ok: false, error: "solicitud_no_existe" }, { status: 404 });
         if (row.status !== "completada") {
           return json({ ok: false, error: "no_completada" }, { status: 409 });
@@ -45,6 +46,13 @@ export const Route = createFileRoute("/api/request-revision")({
           )
           .bind(parsed.data.requestId, parsed.data.message.trim())
           .run();
+
+        await notifyStaffRevisionRequested({
+          title: row.title,
+          clientName: user.name,
+          message: parsed.data.message.trim(),
+          panelUrl: "https://witers.com/witer",
+        });
 
         return json({ ok: true });
       },
