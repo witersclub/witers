@@ -23,6 +23,7 @@ interface SpeechRecognitionLike {
   onerror: ((event: { error: string }) => void) | null;
   start: () => void;
   stop: () => void;
+  abort: () => void;
 }
 
 export const Route = createFileRoute("/admin-ia-lab")({
@@ -168,13 +169,22 @@ function AiLab() {
 
   const done = stepIndex >= QUESTIONS.length;
 
-  // Don't leave the mic listening in the background if the admin navigates
-  // away mid-conversation.
+  // Don't leave the mic listening in the background if the admin leaves —
+  // covers both an in-app navigation (React unmount) and a hard exit
+  // (closing the tab, typing a new URL), which unmount alone won't catch.
+  // abort() cuts the mic immediately instead of stop()'s graceful, slightly
+  // delayed wind-down.
   useEffect(() => {
-    return () => {
+    const killMic = () => {
       manualStopRef.current = true;
       if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
-      recognitionRef.current?.stop();
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+    };
+    window.addEventListener("pagehide", killMic);
+    return () => {
+      window.removeEventListener("pagehide", killMic);
+      killMic();
     };
   }, []);
 
@@ -266,7 +276,7 @@ function AiLab() {
       rec.onresult = null;
       rec.onerror = null;
       recognitionRef.current = null;
-      rec.stop();
+      rec.abort();
     }
     setListening(false);
   }
@@ -394,7 +404,10 @@ function AiLab() {
       </header>
 
       <main className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-sm flex-col items-center justify-center px-5 py-10 text-center">
-        <div className="wit-float">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-wit-gray">
+          Creemos tu pieza juntos
+        </p>
+        <div className="wit-float mt-2">
           <WMark size={32} />
         </div>
 
