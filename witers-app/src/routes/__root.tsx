@@ -140,6 +140,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <div className="wit-bg-fixed" aria-hidden="true" />
         {children}
         <Scripts />
       </body>

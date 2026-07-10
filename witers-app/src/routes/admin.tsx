@@ -143,7 +143,7 @@ function Admin() {
 
   return (
     <div className="wit-page min-h-dvh">
-      <header className="border-b border-wit-ink/10 bg-white">
+      <header className="wit-glass border-b border-wit-ink/10">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <div className="flex items-center gap-3">
             <Link to="/">
@@ -234,7 +234,7 @@ function Admin() {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-2xl bg-white px-6 py-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+    <div className="wit-glass rounded-2xl px-6 py-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">{label}</p>
       <p className="mt-1 font-wit-mono text-3xl font-semibold text-wit-ink">{value}</p>
     </div>
@@ -246,7 +246,7 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
   if (rows.length === 0) {
     return (
-      <div className="mt-6 rounded-3xl border border-dashed border-wit-ink/15 bg-white/60 p-10 text-center">
+      <div className="wit-glass mt-6 rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
         <p className="text-base font-semibold text-wit-ink">No hay solicitudes todavía.</p>
       </div>
     );
@@ -434,7 +434,7 @@ function RequestCard({ row }: { row: AdminRequest }) {
   }
 
   return (
-    <article className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+    <article className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-bold text-wit-ink">{row.title}</h3>
@@ -747,7 +747,7 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
 
   return (
     <div className="mt-6 space-y-8">
-      <section className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <section className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
         <h2 className="text-base font-bold text-wit-ink">Crear cuenta de diseñador</h2>
         <p className="mt-1 text-sm text-wit-gray">
           Tú eliges la contraseña y se la compartes directamente — el diseñador no se registra
@@ -791,7 +791,7 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
         {msg ? <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p> : null}
       </section>
 
-      <div className="overflow-x-auto rounded-2xl bg-white shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <div className="wit-glass overflow-x-auto rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead>
             <tr className="border-b border-wit-ink/10 text-xs uppercase tracking-wider text-wit-gray">
@@ -829,7 +829,7 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
 
 function UsersTable({ rows }: { rows: AdminUser[] }) {
   return (
-    <div className="mt-6 overflow-x-auto rounded-2xl bg-white shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+    <div className="wit-glass mt-6 overflow-x-auto rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <table className="w-full min-w-[640px] text-left text-sm">
         <thead>
           <tr className="border-b border-wit-ink/10 text-xs uppercase tracking-wider text-wit-gray">
@@ -878,7 +878,7 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
 
 function PaymentsTable({ rows }: { rows: AdminPayment[] }) {
   return (
-    <div className="mt-6 overflow-x-auto rounded-2xl bg-white shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+    <div className="wit-glass mt-6 overflow-x-auto rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <table className="w-full min-w-[560px] text-left text-sm">
         <thead>
           <tr className="border-b border-wit-ink/10 text-xs uppercase tracking-wider text-wit-gray">

@@ -146,7 +146,7 @@ function Panel() {
 
   return (
     <div className="wit-page min-h-dvh">
-      <header className="border-b border-wit-ink/10 bg-white">
+      <header className="wit-glass border-b border-wit-ink/10">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <Link to="/">
             <WitersLogo compact />
@@ -175,7 +175,7 @@ function Panel() {
             </p>
           </div>
 
-          <div className="flex items-center gap-4 rounded-2xl bg-white px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
+          <div className="wit-glass flex items-center gap-4 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
                 Solicitudes disponibles
@@ -515,7 +515,7 @@ function NewRequestForm({
 
   if (step === "preview") {
     return (
-      <section className="h-fit rounded-3xl bg-white p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      <section className="wit-glass h-fit rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
         <h2 className="text-xl font-bold text-wit-ink">Revisa tu solicitud</h2>
         <p className="mt-1 text-sm text-wit-gray">
           Confirma que todo esté correcto antes de enviarla — usa una de tus solicitudes disponibles.
@@ -586,7 +586,7 @@ function NewRequestForm({
   }
 
   return (
-    <section className="h-fit rounded-3xl bg-white p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+    <section className="wit-glass h-fit rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
       <h2 className="text-xl font-bold text-wit-ink">Nueva solicitud de diseño</h2>
       <p className="mt-1 text-sm text-wit-gray">
         Describe la creatividad publicitaria que necesitas y la generamos con IA. Tu solicitud se
@@ -1031,7 +1031,7 @@ function RequestList({
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-wit-ink/15 bg-white/60 p-10 text-center">
+        <div className="wit-glass rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
           <p className="text-base font-semibold text-wit-ink">Aún no tienes solicitudes.</p>
           <p className="mt-1 text-sm text-wit-gray">
             Envía tu primera solicitud y aparecerá aquí con su estado.
@@ -1167,7 +1167,7 @@ function HistoryCard({ row: r }: { row: RequestRow }) {
   }
 
   return (
-    <article className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+    <article className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base font-bold text-wit-ink">{r.title}</h3>
         <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
@@ -1562,7 +1562,7 @@ function SatisfactionSurvey({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-wit-navy/70 p-5">
-      <div className="w-full max-w-sm rounded-3xl bg-white p-7 text-center shadow-2xl">
+      <div className="wit-glass w-full max-w-sm rounded-3xl p-7 text-center shadow-2xl">
         {step === "rate" ? (
           <>
             <h3 className="text-lg font-bold text-wit-ink">

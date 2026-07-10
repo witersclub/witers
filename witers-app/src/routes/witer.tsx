@@ -113,7 +113,7 @@ function DesignerPanel() {
 
   return (
     <div className="wit-page min-h-dvh">
-      <header className="border-b border-wit-ink/10 bg-white">
+      <header className="wit-glass border-b border-wit-ink/10">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <div className="flex items-center gap-3">
             <Link to="/">
@@ -158,7 +158,7 @@ function DesignerPanel() {
             No pudimos cargar las solicitudes.
           </p>
         ) : data.requests.length === 0 ? (
-          <div className="mt-6 rounded-3xl border border-dashed border-wit-ink/15 bg-white/60 p-10 text-center">
+          <div className="wit-glass mt-6 rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
             <p className="text-base font-semibold text-wit-ink">No hay solicitudes todavía.</p>
           </div>
         ) : (
@@ -333,7 +333,7 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
   }
 
   return (
-    <article className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+    <article className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-bold text-wit-ink">{row.title}</h3>
