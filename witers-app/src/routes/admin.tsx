@@ -234,6 +234,14 @@ function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
   );
 }
 
+const RATIO_PROMPT: Record<string, string> = {
+  "1:1": "formato cuadrado 1:1 (feed)",
+  "4:3": "formato horizontal 4:3",
+  "16:9": "formato horizontal 16:9 (banner)",
+  "3:4": "formato vertical 3:4",
+  "9:16": "formato vertical 9:16 (stories)",
+};
+
 function RequestCard({ row }: { row: AdminRequest }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
@@ -261,24 +269,25 @@ function RequestCard({ row }: { row: AdminRequest }) {
   }
 
   async function copyInfo() {
-    const lines = [
-      `Título: ${row.title}`,
-      `Cliente: ${row.user_name} (${row.user_email})`,
-      `Negocio: ${row.brief}`,
-      row.audience ? `Público objetivo: ${row.audience}` : null,
-      row.age_range ? `Rango de edad: ${row.age_range}` : null,
-      row.promo_price ? `Precio/Descuento: ${row.promo_price}` : null,
-      row.required_text ? `Mensaje / dato extra: ${row.required_text}` : null,
-      row.brand_colors ? `Colores de marca: ${row.brand_colors}` : null,
-      row.style ? `Estilo: ${row.style}` : null,
-      `Formato: ${row.aspect_ratio}`,
-      row.reference_key
-        ? `Referencia: ${new URL(`/api/file?key=${encodeURIComponent(row.reference_key)}`, window.location.origin).href}`
-        : null,
-    ].filter(Boolean);
+    const style = row.style ? ` Estilo: ${row.style}.` : "";
+    const audience = row.audience
+      ? ` Dirigido a: ${row.audience}${row.age_range ? ` (${row.age_range} años)` : ""}.`
+      : row.age_range
+        ? ` Dirigido a personas de ${row.age_range} años.`
+        : "";
+    const promo = row.promo_price ? ` Precio/descuento a destacar: ${row.promo_price}.` : "";
+    const requiredText = row.required_text ? ` Dato extra del cliente: "${row.required_text}".` : "";
+    const colors = row.brand_colors ? ` Paleta de colores de marca: ${row.brand_colors}.` : "";
+    const ratio = RATIO_PROMPT[row.aspect_ratio] ?? row.aspect_ratio;
+    const reference = row.reference_key
+      ? " El cliente adjuntó un logo/imagen de referencia — descárgala desde el panel y súbela junto con este prompt si tu herramienta de IA lo permite."
+      : "";
+
+    const prompt = `Creatividad publicitaria profesional de alta calidad. ${row.brief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio. Usa ${ratio}.${reference}`;
+
     try {
-      await navigator.clipboard.writeText(lines.join("\n"));
-      setMsg("Información copiada al portapapeles.");
+      await navigator.clipboard.writeText(prompt);
+      setMsg("Prompt copiado al portapapeles.");
     } catch {
       setMsg("No pudimos copiar. Selecciona el texto manualmente.");
     }
@@ -386,7 +395,7 @@ function RequestCard({ row }: { row: AdminRequest }) {
             onClick={copyInfo}
             className="rounded-full border border-wit-ink/15 px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
           >
-            Copiar información
+            Copiar prompt
           </button>
           <span
             className={`rounded-full px-3 py-1 text-xs font-bold ${
