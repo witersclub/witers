@@ -128,10 +128,15 @@
 }
 
 /* Rendered once, fixed to the viewport, as the very first element in
-   <body>. Plain white for now — no pattern. */
+   <body> — a looping background video, played back slowed down (see
+   BackgroundVideo's playbackRate). object-fit:cover crops it to fill the
+   viewport like a background-image would. */
 .wit-bg-fixed {
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   background-color: #ffffff;
   pointer-events: none;
 }
