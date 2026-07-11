@@ -63,6 +63,7 @@ function useParallax(factor: number) {
 function Landing() {
   return (
     <div className="wit-page min-h-dvh overflow-x-clip">
+      <HeroVideoBackground />
       <SiteHeader />
       <Hero />
       <ClientesSatisfechos />
@@ -82,17 +83,16 @@ function Landing() {
 
 /* ---------------- 1. HERO ---------------- */
 
-function Hero() {
-  const me = useMe();
-  const signedIn = Boolean(me.data?.ok);
-
+// Fixed, not part of the Hero section — this is what makes it a true page
+// background instead of a hero-only banner. It's the first element in the
+// DOM (before every section), no z-index set: later opaque sections simply
+// paint over it in normal stacking order as they scroll into view, the same
+// technique already verified for .wit-bg-fixed elsewhere in this app. Never
+// use z-index:-1 here — that sinks it below the page's own white canvas and
+// hides it entirely.
+function HeroVideoBackground() {
   return (
-    <section className="relative h-dvh overflow-hidden">
-      {/* Video de fondo a pantalla completa (el poster aparece al instante
-          mientras carga). object-cover recorta automáticamente para llenar
-          cualquier proporción de pantalla — en un celular, prácticamente
-          9:16 de forma natural. Un ligero zoom lento (wit-hero-video) le da
-          movimiento cinematográfico además del propio movimiento del video. */}
+    <div className="pointer-events-none fixed inset-0" aria-hidden="true">
       <video
         src="/assets/banner-witers.mp4"
         poster="/assets/hero-banner.png"
@@ -101,16 +101,22 @@ function Hero() {
         muted
         loop
         playsInline
-        aria-hidden="true"
-        className="wit-hero-video pointer-events-none absolute inset-0 h-full w-full object-cover"
+        className="wit-hero-video h-full w-full object-cover"
       />
-      {/* Velo doble y sutil: oscurece arriba (para que se lea el logo del
-          header transparente) y abajo (para los botones), dejando el centro
-          del video despejado. */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/60"
-      />
+      {/* Difuminado blanco arriba (se funde con el header transparente) y un
+          leve oscurecido abajo, solo para que los botones del primer
+          pantallazo se lean bien — el resto del video queda despejado. */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,white_0%,transparent_14%,transparent_62%,rgba(0,0,0,0.55)_100%)]" />
+    </div>
+  );
+}
+
+function Hero() {
+  const me = useMe();
+  const signedIn = Boolean(me.data?.ok);
+
+  return (
+    <section className="relative h-dvh overflow-hidden">
       {/* Logo flotante en la esquina superior derecha */}
       <img
         src="/assets/witers-logo-full.png"
