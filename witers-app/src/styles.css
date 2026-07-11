@@ -260,24 +260,23 @@
   border-radius: 2px;
 }
 
-/* Clientes-satisfechos carousel: an endless rightward marquee — cards are
-   born at the left edge and slide off the right. The track holds the item
-   list twice back to back; animating it from -50% to 0% (not 0% to -50%)
-   is what makes the motion read as left-to-right instead of the usual
-   right-to-left ticker. Paused on hover so a visitor can actually read a
-   card instead of chasing it. */
+/* Endless right-to-left marquee — cards are born at the right edge, drift
+   left, and fade out under the mask before looping. The track holds the
+   item list twice back to back so the loop from 0% to -50% is seamless. A
+   fairly short duration keeps the pace brisk rather than lazy. Paused on
+   hover so a visitor can actually read a card instead of chasing it. */
 .wit-marquee-track {
-  animation: wit-marquee 32s linear infinite;
+  animation: wit-marquee 20s linear infinite;
 }
 .wit-marquee-track:hover {
   animation-play-state: paused;
 }
 @keyframes wit-marquee {
   from {
-    transform: translateX(-50%);
+    transform: translateX(0%);
   }
   to {
-    transform: translateX(0%);
+    transform: translateX(-50%);
   }
 }
 /* Slow, near-imperceptible zoom on the full-screen hero video — adds

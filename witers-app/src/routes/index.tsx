@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
@@ -111,9 +111,6 @@ function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
 function Hero() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
-  const reviews = useReviews();
-  const list = reviews.data?.reviews ?? [];
-  const avg = list.length ? list.reduce((sum, r) => sum + r.rating, 0) / list.length : 0;
 
   return (
     <section className="relative overflow-hidden pb-16 pt-32 md:pb-24 md:pt-40">
@@ -142,17 +139,9 @@ function Hero() {
               <path d="M3 13 13 3M13 3H6M13 3v7" />
             </svg>
           </Link>
-          {list.length > 0 ? (
-            <div className="flex items-center gap-2 text-sm text-wit-gray">
-              <Stars rating={avg} size={17} />
-              <span className="font-bold text-wit-ink">{avg.toFixed(1)}/5</span>
-              <span>· {list.length} opiniones reales de nuestra comunidad</span>
-            </div>
-          ) : (
-            <a href="/nuestra-historia" className="wit-navlink text-sm font-semibold text-wit-ink">
-              Conocer la comunidad
-            </a>
-          )}
+          <a href="/nuestra-historia" className="wit-navlink text-sm font-semibold text-wit-ink">
+            Conocer la comunidad
+          </a>
         </div>
       </div>
     </section>
@@ -164,76 +153,54 @@ function Hero() {
 function Testimonios() {
   const reviews = useReviews();
   const list = reviews.data?.reviews ?? [];
-  const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-
-  useEffect(() => {
-    if (list.length < 2 || paused) return;
-    const t = setInterval(() => setIndex((i) => (i + 1) % list.length), 5200);
-    return () => clearInterval(t);
-  }, [list.length, paused]);
-
-  useEffect(() => {
-    if (index >= list.length) setIndex(0);
-  }, [list.length, index]);
 
   // No fabricated testimonials — the whole section stays hidden until at
   // least one client has actually submitted a rating.
   if (list.length === 0) return null;
 
-  const current = list[index];
-  const src = current.image_url ?? `/api/public/showcase-image?key=${encodeURIComponent(current.r2_key ?? "")}`;
+  const cards = list.map((r) => ({
+    ...r,
+    src: r.image_url ?? `/api/public/showcase-image?key=${encodeURIComponent(r.r2_key ?? "")}`,
+  }));
+  // Duplicated back to back so the track can loop seamlessly.
+  const track = [...cards, ...cards.map((c) => ({ ...c, request_id: `${c.request_id}-2` }))];
 
   return (
-    <section className="relative bg-white py-20 md:py-28">
+    <section className="relative overflow-hidden bg-white py-20 md:py-28">
       <div className="px-5 md:px-[110px]">
         <p className="text-center text-sm font-bold uppercase tracking-[0.3em] text-wit-blue">Resultados reales</p>
         <h2 className="mt-2 text-center text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
           Lo que dicen quienes ya <span className="wit-underline italic text-wit-blue">confiaron en nosotros</span>.
         </h2>
+      </div>
 
-        <div
-          className="relative mx-auto mt-14 max-w-sm"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
-        >
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[28px] shadow-[0_30px_80px_rgba(5,13,40,0.16)]">
-            <img key={current.request_id} src={src} alt="" className="h-full w-full object-cover" loading="eager" />
-          </div>
-
-          <div className="wit-glass relative -mt-10 mx-4 rounded-2xl p-5 shadow-[0_20px_50px_rgba(5,13,40,0.12)]">
-            <Stars rating={current.rating} />
-            {current.feedback ? (
-              <p className="mt-2 text-[15px] italic leading-relaxed text-wit-ink">&ldquo;{current.feedback}&rdquo;</p>
-            ) : null}
-            <div className="mt-3 flex items-center gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-wit-blue text-xs font-bold text-white">
-                {current.first_name.slice(0, 1).toUpperCase()}
-              </span>
-              <p className="text-sm font-bold text-wit-ink">
-                {current.first_name}
-                {current.company_name ? (
-                  <span className="font-normal text-wit-gray"> — {current.company_name}</span>
+      <div className="wit-marquee-mask relative mt-14 overflow-hidden">
+        <div className="wit-marquee-track flex w-max gap-6 px-5">
+          {track.map((r) => (
+            <article
+              key={r.request_id}
+              className="w-64 shrink-0 overflow-hidden rounded-[24px] bg-white shadow-[0_20px_60px_rgba(5,13,40,0.12)]"
+            >
+              <img src={r.src} alt="" loading="lazy" className="h-64 w-full object-cover" />
+              <div className="p-5">
+                <Stars rating={r.rating} size={14} />
+                {r.feedback ? (
+                  <p className="mt-2 line-clamp-3 text-sm italic leading-relaxed text-wit-ink">
+                    &ldquo;{r.feedback}&rdquo;
+                  </p>
                 ) : null}
-              </p>
-            </div>
-          </div>
-
-          {list.length > 1 ? (
-            <div className="mt-4 flex items-center justify-center gap-1.5">
-              {list.map((r, i) => (
-                <button
-                  key={r.request_id}
-                  type="button"
-                  aria-label={`Ver reseña ${i + 1}`}
-                  onClick={() => setIndex(i)}
-                  className={`h-1.5 rounded-full transition-all duration-200 ${
-                    i === index ? "w-5 bg-wit-blue" : "w-1.5 bg-wit-ink/15"
-                  }`}
-                />
-              ))}
-            </div>
-          ) : null}
+                <div className="mt-3 flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wit-blue text-xs font-bold text-white">
+                    {r.first_name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <p className="text-xs font-bold text-wit-ink">
+                    {r.first_name}
+                    {r.company_name ? <span className="font-normal text-wit-gray"> — {r.company_name}</span> : null}
+                  </p>
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
       </div>
     </section>
