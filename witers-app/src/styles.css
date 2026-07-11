@@ -280,6 +280,21 @@
     transform: translateX(0%);
   }
 }
+/* Slow, near-imperceptible zoom on the full-screen hero video — adds
+   cinematic drift on top of the footage's own motion, without ever
+   revealing an edge (scale only grows, never shrinks below 1). */
+.wit-hero-video {
+  animation: wit-hero-zoom 22s ease-in-out infinite alternate;
+}
+@keyframes wit-hero-zoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
 .wit-marquee-mask {
   -webkit-mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
   mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);

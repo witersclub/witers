@@ -87,8 +87,12 @@ function Hero() {
   const signedIn = Boolean(me.data?.ok);
 
   return (
-    <section className="relative overflow-hidden pt-24">
-      {/* Video de fondo (el poster aparece al instante mientras carga) */}
+    <section className="relative h-dvh overflow-hidden">
+      {/* Video de fondo a pantalla completa (el poster aparece al instante
+          mientras carga). object-cover recorta automáticamente para llenar
+          cualquier proporción de pantalla — en un celular, prácticamente
+          9:16 de forma natural. Un ligero zoom lento (wit-hero-video) le da
+          movimiento cinematográfico además del propio movimiento del video. */}
       <video
         src="/assets/banner-witers.mp4"
         poster="/assets/hero-banner.png"
@@ -98,42 +102,38 @@ function Hero() {
         loop
         playsInline
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-right"
+        className="wit-hero-video pointer-events-none absolute inset-0 h-full w-full object-cover"
       />
-      {/* Velo para que el texto se lea bien sobre el video: de arriba hacia abajo en
-          móvil (el texto ocupa todo el ancho), de izquierda a derecha en escritorio
-          (el texto queda a la izquierda). */}
+      {/* Velo doble y sutil: oscurece arriba (para que se lea el logo del
+          header transparente) y abajo (para los botones), dejando el centro
+          del video despejado. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-gradient-to-b from-white via-white/85 to-white/20 md:bg-gradient-to-r md:from-white md:via-white/80 md:to-white/0"
+        className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/60"
       />
       {/* Logo flotante en la esquina superior derecha */}
       <img
         src="/assets/witers-logo-full.png"
         alt=""
         aria-hidden="true"
-        className="wit-float absolute right-6 top-2 hidden h-[220px] w-auto md:block"
+        className="wit-float absolute right-6 top-6 hidden h-[160px] w-auto md:block"
       />
 
-      <div className="relative grid min-h-[70vh] items-center gap-10 px-5 pb-10 pt-10 md:grid-cols-[1.1fr_0.9fr] md:pb-16 md:pl-[110px] md:pr-[60px]">
-        <div>
-          <div className="wit-rise mt-9 flex flex-wrap items-center gap-4">
-            <Link
-              to={signedIn ? "/panel" : "/registro"}
-              className="group inline-flex items-center gap-2.5 rounded-full bg-wit-blue px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.98]"
-            >
-              Unirme a WITERS
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1">
-                <path d="M3 13 13 3M13 3H6M13 3v7" />
-              </svg>
-            </Link>
-            <a href="#quienes-somos" className="wit-navlink text-sm font-semibold text-wit-ink">
-              Conocer la comunidad
-            </a>
-          </div>
+      <div className="relative flex h-full flex-col justify-end px-5 pb-16 md:px-[110px] md:pb-24">
+        <div className="wit-rise flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+          <Link
+            to={signedIn ? "/panel" : "/registro"}
+            className="group inline-flex items-center gap-2.5 rounded-full bg-wit-blue px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.98]"
+          >
+            Unirme a WITERS
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1">
+              <path d="M3 13 13 3M13 3H6M13 3v7" />
+            </svg>
+          </Link>
+          <a href="#quienes-somos" className="wit-navlink text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
+            Conocer la comunidad
+          </a>
         </div>
-
-        <div />
       </div>
     </section>
   );
