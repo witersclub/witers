@@ -404,7 +404,7 @@ function AiLab() {
       </header>
 
       <main className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-sm flex-col items-center justify-center px-5 py-10 text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-wit-gray">
+        <p className="-mt-6 text-xs font-bold uppercase tracking-[0.14em] text-wit-ink">
           Creemos tu pieza juntos
         </p>
         <div className="wit-float mt-2">
