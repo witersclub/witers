@@ -26,7 +26,7 @@ interface SpeechRecognitionLike {
   abort: () => void;
 }
 
-export const Route = createFileRoute("/admin-ia-lab")({
+export const Route = createFileRoute("/admin-lab")({
   head: () => ({
     meta: [
       { title: "Laboratorio IA. WITERS" },

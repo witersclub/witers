@@ -16,7 +16,7 @@ import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as PanelRouteImport } from './routes/panel'
 import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as CheckoutRouteImport } from './routes/checkout'
-import { Route as AdminIaLabRouteImport } from './routes/admin-ia-lab'
+import { Route as AdminLabRouteImport } from './routes/admin-lab'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiUserRouteImport } from './routes/api/user'
@@ -79,9 +79,9 @@ const CheckoutRoute = CheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminIaLabRoute = AdminIaLabRouteImport.update({
-  id: '/admin-ia-lab',
-  path: '/admin-ia-lab',
+const AdminLabRoute = AdminLabRouteImport.update({
+  id: '/admin-lab',
+  path: '/admin-lab',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -219,7 +219,7 @@ const ApiAdminAiFillRoute = ApiAdminAiFillRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/admin-ia-lab': typeof AdminIaLabRoute
+  '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
@@ -255,7 +255,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/admin-ia-lab': typeof AdminIaLabRoute
+  '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
@@ -292,7 +292,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/admin-ia-lab': typeof AdminIaLabRoute
+  '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
   '/panel': typeof PanelRoute
@@ -330,7 +330,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
-    | '/admin-ia-lab'
+    | '/admin-lab'
     | '/checkout'
     | '/ingresar'
     | '/panel'
@@ -366,7 +366,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
-    | '/admin-ia-lab'
+    | '/admin-lab'
     | '/checkout'
     | '/ingresar'
     | '/panel'
@@ -402,7 +402,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
-    | '/admin-ia-lab'
+    | '/admin-lab'
     | '/checkout'
     | '/ingresar'
     | '/panel'
@@ -439,7 +439,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
-  AdminIaLabRoute: typeof AdminIaLabRoute
+  AdminLabRoute: typeof AdminLabRoute
   CheckoutRoute: typeof CheckoutRoute
   IngresarRoute: typeof IngresarRoute
   PanelRoute: typeof PanelRoute
@@ -524,11 +524,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin-ia-lab': {
-      id: '/admin-ia-lab'
-      path: '/admin-ia-lab'
-      fullPath: '/admin-ia-lab'
-      preLoaderRoute: typeof AdminIaLabRouteImport
+    '/admin-lab': {
+      id: '/admin-lab'
+      path: '/admin-lab'
+      fullPath: '/admin-lab'
+      preLoaderRoute: typeof AdminLabRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -719,7 +719,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
-  AdminIaLabRoute: AdminIaLabRoute,
+  AdminLabRoute: AdminLabRoute,
   CheckoutRoute: CheckoutRoute,
   IngresarRoute: IngresarRoute,
   PanelRoute: PanelRoute,
