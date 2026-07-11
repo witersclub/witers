@@ -307,17 +307,17 @@ function PanelTab({
 const STYLE_CHIPS = ["Minimalista", "Premium / Elegante", "Colorido", "Corporativo", "Divertido / Bold"];
 const AGE_CHIPS = ["18-24", "25-34", "35-44", "45-54", "55+"];
 const RATIO_LABEL: Record<string, string> = {
-  "1:1": "Cuadrado 1:1 (feed)",
+  "1:1": "Cuadrado",
   "4:3": "Horizontal 4:3",
   "16:9": "Horizontal 16:9 (banner)",
-  "3:4": "Vertical 3:4",
+  "3:4": "Feed 3:4",
   "9:16": "Vertical 9:16 (stories)",
 };
 const RATIO_OPTIONS = [
-  { value: "1:1", w: 1, h: 1, label: "Feed" },
+  { value: "1:1", w: 1, h: 1, label: "Cuadrado" },
   { value: "4:3", w: 4, h: 3, label: "Horizontal" },
   { value: "16:9", w: 16, h: 9, label: "Banner" },
-  { value: "3:4", w: 3, h: 4, label: "Vertical" },
+  { value: "3:4", w: 3, h: 4, label: "Feed" },
   { value: "9:16", w: 9, h: 16, label: "Stories" },
 ];
 

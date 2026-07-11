@@ -493,10 +493,10 @@ function FinishedRequestCard({ row }: { row: AdminRequest }) {
 }
 
 const RATIO_PROMPT: Record<string, string> = {
-  "1:1": "formato cuadrado 1:1 (feed)",
+  "1:1": "formato cuadrado 1:1",
   "4:3": "formato horizontal 4:3",
   "16:9": "formato horizontal 16:9 (banner)",
-  "3:4": "formato vertical 3:4",
+  "3:4": "formato vertical 3:4 (feed)",
   "9:16": "formato vertical 9:16 (stories)",
 };
 
