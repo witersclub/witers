@@ -65,6 +65,7 @@ function Landing() {
     <div className="wit-page min-h-dvh overflow-x-clip">
       <SiteHeader />
       <Hero />
+      <ClientesSatisfechos />
       <QuienesSomos />
       <Filosofia />
       <Valores />
@@ -116,17 +117,7 @@ function Hero() {
 
       <div className="relative grid min-h-[70vh] items-center gap-10 px-5 pb-10 pt-10 md:grid-cols-[1.1fr_0.9fr] md:pb-16 md:pl-[110px] md:pr-[60px]">
         <div>
-          <h1 className="wit-rise text-5xl font-extrabold leading-none tracking-tighter text-wit-ink md:text-7xl">
-            La comunidad
-            <br />
-            del <span className="wit-underline text-wit-blue">ingenio</span>
-          </h1>
-          <p className="wit-rise wit-rise-d1 mt-7 max-w-md text-lg leading-relaxed text-wit-gray">
-            Somos una comunidad impulsada por el <strong className="text-wit-blue">ingenio</strong>,
-            la <strong className="text-wit-blue">estrategia</strong> y la{" "}
-            <strong className="text-wit-blue">innovación</strong>.
-          </p>
-          <div className="wit-rise wit-rise-d2 mt-9 flex flex-wrap items-center gap-4">
+          <div className="wit-rise mt-9 flex flex-wrap items-center gap-4">
             <Link
               to={signedIn ? "/panel" : "/registro"}
               className="group inline-flex items-center gap-2.5 rounded-full bg-wit-blue px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.98]"
@@ -143,6 +134,50 @@ function Hero() {
         </div>
 
         <div />
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- 1b. CLIENTES SATISFECHOS ---------------- */
+
+// Placeholder slots until real client pieces are dropped in — same visual
+// size regardless of the format label, so the marquee row stays uniform.
+const PIEZAS_EJEMPLO = [
+  { label: "Post cuadrado", ratio: "1:1" },
+  { label: "Historia", ratio: "9:16" },
+  { label: "Banner", ratio: "16:9" },
+  { label: "Post vertical", ratio: "3:4" },
+  { label: "Post cuadrado", ratio: "1:1" },
+  { label: "Historia", ratio: "9:16" },
+];
+
+function ClientesSatisfechos() {
+  const piezas = [...PIEZAS_EJEMPLO, ...PIEZAS_EJEMPLO];
+
+  return (
+    <section className="bg-white py-16 md:py-20">
+      <div className="px-5 md:px-[110px]">
+        <h2 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
+          Clientes <span className="wit-underline text-wit-blue">satisfechos</span>
+        </h2>
+      </div>
+
+      <div className="wit-marquee-mask relative mt-10 overflow-hidden">
+        <div className="wit-marquee-track flex w-max gap-5 px-5">
+          {piezas.map((p, i) => (
+            <div
+              key={i}
+              className="wit-glass flex h-56 w-40 shrink-0 flex-col items-center justify-center gap-3 rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform duration-300 hover:scale-[1.04]"
+            >
+              <WMark size={30} />
+              <div className="text-center">
+                <p className="text-xs font-bold text-wit-ink">{p.label}</p>
+                <p className="text-[11px] text-wit-gray">{p.ratio}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
