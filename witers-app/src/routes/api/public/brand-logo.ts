@@ -18,12 +18,20 @@ export const Route = createFileRoute("/api/public/brand-logo")({
           return json({ ok: false, error: "key_invalida" }, { status: 400 });
         }
 
-        const row = await db()
-          .prepare(
-            `SELECT id FROM design_requests WHERE logo_key = ?1 AND status = 'cerrada' AND logo_public = 1`,
-          )
-          .bind(key)
-          .first();
+        let row;
+        try {
+          row = await db()
+            .prepare(`SELECT id FROM design_requests WHERE logo_key = ?1 AND status = 'cerrada' AND logo_public = 1`)
+            .bind(key)
+            .first();
+        } catch {
+          // logo_public column migration (0010) not applied here yet — see
+          // the same fallback in /api/public/brands.
+          row = await db()
+            .prepare(`SELECT id FROM design_requests WHERE logo_key = ?1 AND status = 'cerrada'`)
+            .bind(key)
+            .first();
+        }
         if (!row) return json({ ok: false, error: "no_autorizado" }, { status: 403 });
 
         const { STORAGE } = bindings();
