@@ -281,7 +281,7 @@ function AiLab() {
     setListening(false);
   }
 
-  // ~1.7s of silence after the last thing heard = "done answering this
+  // ~0.8s of silence after the last thing heard = "done answering this
   // one," so we submit whatever was said and move to the next question
   // without the admin ever touching the mic again.
   function scheduleSilenceCheck() {
@@ -294,7 +294,7 @@ function AiLab() {
       setCurrentAnswer("");
       submitAnswerRef.current(text);
       if (wasLast) stopListening();
-    }, 1700);
+    }, 800);
   }
 
   function startListening() {
@@ -408,7 +408,7 @@ function AiLab() {
           <p className="text-sm font-medium text-wit-ink">Creemos tu pieza juntos</p>
         </div>
 
-        <div className="flex flex-col items-center pb-6">
+        <div className="flex flex-col items-center pb-6 mb-[2cm]">
         <div className="wit-float">
           <WMark size={32} />
         </div>
