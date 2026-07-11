@@ -29,7 +29,6 @@ function Landing() {
       <Hero />
       <Testimonios />
       <MarcasQueConfian />
-      <LoQueHacemos />
       <Membresia />
       <Faq />
       <CtaFinal />
@@ -247,71 +246,6 @@ function MarcasQueConfian() {
               loading="lazy"
               className="h-8 w-auto max-w-[140px] object-contain opacity-70 grayscale transition duration-200 hover:opacity-100 hover:grayscale-0"
             />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------------- 1a. LO QUE HACEMOS ---------------- */
-
-// Placeholder AI-generated icon renders (Higgsfield), hosted on their CDN —
-// a stand-in until WITERS supplies its own service iconography. Swap for
-// self-hosted assets under /assets before this ships for real.
-const SERVICIOS = [
-  {
-    img: "https://d8j0ntlcm91z4.cloudfront.net/user_3EXW5AO9RcMslsDHXSGxiyHt5iO/hf_20260711_034811_2724ee1b-9bd8-442d-95ca-0f6a4d828ef4.png",
-    label: "Estrategia de marca",
-  },
-  {
-    img: "https://d8j0ntlcm91z4.cloudfront.net/user_3EXW5AO9RcMslsDHXSGxiyHt5iO/hf_20260711_034811_4b7a6f0d-6ccf-4c96-8a81-751f9d083dd6.png",
-    label: "Diseño con IA",
-  },
-  {
-    img: "https://d8j0ntlcm91z4.cloudfront.net/user_3EXW5AO9RcMslsDHXSGxiyHt5iO/hf_20260711_034811_f0c41893-c6a2-4cda-9a42-3d376641d753.png",
-    label: "Producción de contenido",
-  },
-  {
-    img: "https://d8j0ntlcm91z4.cloudfront.net/user_3EXW5AO9RcMslsDHXSGxiyHt5iO/hf_20260711_034811_a57aefa9-df46-4788-906e-12d2c59ca804.png",
-    label: "Comunidad y crecimiento",
-  },
-];
-
-function LoQueHacemos() {
-  return (
-    <section className="relative bg-white py-20 md:py-28">
-      <div className="px-5 md:px-[110px]">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-wit-blue">Lo que hacemos</p>
-        <h2 className="mt-2 max-w-2xl text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
-          Creamos experiencias que{" "}
-          <span className="wit-underline italic text-wit-blue">conectan e impactan</span>.
-        </h2>
-
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {SERVICIOS.map((s) => (
-            <article
-              key={s.label}
-              className="group rounded-3xl bg-wit-mist/40 p-6 transition-colors duration-200 hover:bg-wit-mist/70"
-            >
-              <img src={s.img} alt="" aria-hidden="true" className="h-28 w-28 object-contain" loading="lazy" />
-              <div className="mt-5 flex items-center justify-between gap-3">
-                <p className="text-base font-bold text-wit-ink">{s.label}</p>
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="#0047FF"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="shrink-0 transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1"
-                >
-                  <path d="M3 13 13 3M13 3H6M13 3v7" />
-                </svg>
-              </div>
-            </article>
           ))}
         </div>
       </div>
