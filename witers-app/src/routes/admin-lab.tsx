@@ -166,8 +166,24 @@ function AiLab() {
   const answerRef = useRef("");
   const silenceTimerRef = useRef<number | null>(null);
   const manualStopRef = useRef(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const done = stepIndex >= QUESTIONS.length;
+
+  // Chat transcript built from questions already answered, in order —
+  // derived straight from `answers`/`stepIndex` instead of a separate
+  // messages array, so there's nothing extra to keep in sync.
+  const answeredEntries = QUESTIONS.slice(0, stepIndex).map((q) => ({
+    field: q.field,
+    question: q.text,
+    answer: (answers[q.field] ?? "").trim() || "Omitido",
+  }));
+
+  // Keep the conversation scrolled to the latest message as it grows.
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [stepIndex, typing, done, loading, fields]);
 
   // Don't leave the mic listening in the background if the admin leaves —
   // covers both an in-app navigation (React unmount) and a hard exit
@@ -403,178 +419,219 @@ function AiLab() {
         </div>
       </header>
 
-      <main className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-sm flex-col items-center px-5 pb-10 text-center">
-        <div className="flex flex-1 items-center justify-center">
+      <main className="mx-auto flex h-[calc(100dvh-4rem)] max-w-sm flex-col px-5">
+        <div className="flex flex-col items-center gap-1.5 pb-1 pt-5">
+          <div className="wit-float">
+            <WMark size={26} />
+          </div>
           <p className="text-sm font-medium text-wit-ink">Creemos tu pieza juntos</p>
         </div>
 
-        <div className="flex flex-col items-center pb-6 mb-[2cm]">
-        <div className="wit-float">
-          <WMark size={32} />
-        </div>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+          <div className="flex flex-col gap-3 py-4">
+            {answeredEntries.map((e) => (
+              <div key={e.field} className="flex flex-col gap-3">
+                <ChatBubble role="assistant" text={e.question} />
+                <ChatBubble role="user" text={e.answer} />
+              </div>
+            ))}
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (listening) stopListening();
-            submitAnswer(currentAnswer);
-          }}
-          className="wit-glass mt-4 w-full rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
-        >
-          <input
-            type="text"
-            aria-label="Tu respuesta"
-            value={currentAnswer}
-            onChange={(e) => setCurrentAnswer(e.target.value)}
-            disabled={done}
-            placeholder={done ? "" : "Escribe o presiona el micrófono..."}
-            className="w-full rounded-xl border-0 bg-transparent px-1 py-1 text-center text-base text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
-          />
-        </form>
+            {typing ? (
+              <ChatBubble role="assistant" typingDots />
+            ) : !done ? (
+              <>
+                <ChatBubble role="assistant" text={QUESTIONS[stepIndex].text} />
+                {!QUESTIONS[stepIndex].required ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (listening) stopListening();
+                      submitAnswer("");
+                    }}
+                    className="-mt-2 ml-8 self-start text-xs font-semibold text-wit-gray hover:text-wit-ink"
+                  >
+                    Omitir
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <ChatBubble
+                  role="assistant"
+                  text={loading ? "Generando tu solicitud..." : "¡Listo! Esto armé con tus respuestas:"}
+                />
+                {!loading ? (
+                  <button
+                    type="button"
+                    onClick={restart}
+                    className="-mt-2 ml-8 self-start text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
+                  >
+                    ↺ Nueva conversación
+                  </button>
+                ) : null}
 
-        {!done ? (
-          <>
-            <button
-              type="button"
-              onClick={toggleMic}
-              aria-label={listening ? "Detener micrófono" : "Activar micrófono"}
-              className={`mt-4 flex h-14 w-14 items-center justify-center rounded-full transition-all ${
-                listening
-                  ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_8px_rgba(239,68,68,0.15)]"
-                  : "bg-wit-blue text-white hover:bg-wit-blue-deep"
-              }`}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
-              </svg>
-            </button>
-            {listening ? (
-              <p className="mt-1.5 text-[11px] text-wit-gray">Te escucho — sigue hablando, yo voy avanzando</p>
-            ) : null}
-          </>
-        ) : (
-          <div className="mt-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 13l4 4L19 7" />
-            </svg>
+                {fields ? (
+                  <div className="wit-glass w-full rounded-2xl p-6 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+                    <h2 className="text-base font-bold text-wit-ink">Campos que llenó la IA</h2>
+                    <dl className="mt-4 space-y-4">
+                      <LabRow label="Título" value={fields.title} />
+                      <LabRow label="Nombre comercial / empresa" value={fields.companyName} />
+                      <LabRow label="Nombre del producto" value={fields.productName} />
+                      <LabRow label="A qué se dedica la empresa" value={fields.brief} />
+                      <LabRow label="Qué quieres que salga en esta pieza" value={fields.pieceBrief} />
+                      <LabRow label="Público objetivo" value={fields.audience} />
+                      <LabRow label="Rango de edad" value={fields.ageRanges.join(", ")} />
+                      <LabRow label="Precio o descuento" value={fields.promoPrice} />
+                      <LabRow label="Mensaje o dato extra" value={fields.requiredText} />
+                      <LabRow label="Estilo" value={fields.style} />
+                      <LabRow label="Formato" value={fields.aspectRatio} />
+                      <div>
+                        <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+                          Colores de marca
+                        </dt>
+                        <dd className="mt-1.5 flex gap-2">
+                          {fields.colors.length ? (
+                            fields.colors.map((c) => (
+                              <span
+                                key={c}
+                                className="h-7 w-7 rounded-full border border-wit-ink/10"
+                                style={{ backgroundColor: c }}
+                                title={c}
+                              />
+                            ))
+                          ) : (
+                            <span className="text-sm text-wit-ink">—</span>
+                          )}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    {fields.missingInfo.length ? (
+                      <div className="mt-5 rounded-xl bg-amber-50 px-4 py-3">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-700">
+                          Le faltó preguntar
+                        </p>
+                        <ul className="mt-1.5 list-inside list-disc text-sm text-amber-800">
+                          {fields.missingInfo.map((m, i) => (
+                            <li key={i}>{m}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
+            )}
+            <div ref={bottomRef} />
           </div>
-        )}
-
-        <div key={typing ? `typing-${stepIndex}` : `q-${stepIndex}`} className="mt-4 min-h-[3rem] animate-in fade-in slide-in-from-bottom-2 duration-300">
-          {typing ? (
-            <div className="flex items-center justify-center gap-1">
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-wit-gray [animation-delay:-0.3s]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-wit-gray [animation-delay:-0.15s]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-wit-gray" />
-            </div>
-          ) : done ? (
-            <div>
-              <p className="text-sm font-semibold text-wit-ink">
-                {loading ? "Generando tu solicitud..." : "¡Listo! Esto armé con tus respuestas:"}
-              </p>
-              {!loading ? (
-                <button type="button" onClick={restart} className="mt-1 text-xs font-semibold text-wit-blue hover:text-wit-blue-deep">
-                  ↺ Nueva conversación
-                </button>
-              ) : null}
-            </div>
-          ) : (
-            <div>
-              <p className="text-sm font-semibold text-wit-ink">{QUESTIONS[stepIndex]?.text}</p>
-              {!QUESTIONS[stepIndex]?.required ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (listening) stopListening();
-                    submitAnswer("");
-                  }}
-                  className="mt-1 text-xs font-semibold text-wit-gray hover:text-wit-ink"
-                >
-                  Omitir
-                </button>
-              ) : null}
-            </div>
-          )}
         </div>
 
-        <div className="mt-5 flex w-full flex-wrap items-center justify-center gap-1.5">
-          {QUESTIONS.map((q) => {
-            const isAnswered = Object.prototype.hasOwnProperty.call(answers, q.field);
-            return (
-              <span
-                key={q.field}
-                className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all duration-300 ${
-                  isAnswered
-                    ? "bg-wit-blue text-white"
-                    : "bg-wit-mist/50 text-wit-gray"
+        <div className="shrink-0 border-t border-wit-ink/10 pb-6 pt-3">
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            {QUESTIONS.map((q) => {
+              const isAnswered = Object.prototype.hasOwnProperty.call(answers, q.field);
+              return (
+                <span
+                  key={q.field}
+                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all duration-300 ${
+                    isAnswered ? "bg-wit-blue text-white" : "bg-wit-mist/50 text-wit-gray"
+                  }`}
+                >
+                  {isAnswered ? (
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : null}
+                  {q.short}
+                </span>
+              );
+            })}
+          </div>
+
+          {error ? <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-600">{error}</p> : null}
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (listening) stopListening();
+              submitAnswer(currentAnswer);
+            }}
+            className="wit-glass mt-3 flex items-center gap-2 rounded-full p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+          >
+            <input
+              type="text"
+              aria-label="Tu respuesta"
+              value={currentAnswer}
+              onChange={(e) => setCurrentAnswer(e.target.value)}
+              disabled={done}
+              placeholder={done ? "" : "Escribe o presiona el micrófono..."}
+              className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
+            />
+            {!done ? (
+              <button
+                type="button"
+                onClick={toggleMic}
+                aria-label={listening ? "Detener micrófono" : "Activar micrófono"}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all ${
+                  listening
+                    ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_6px_rgba(239,68,68,0.15)]"
+                    : "bg-wit-blue text-white hover:bg-wit-blue-deep"
                 }`}
               >
-                {isAnswered ? (
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : null}
-                {q.short}
-              </span>
-            );
-          })}
-        </div>
-
-        {error ? <p className="mt-3 w-full rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p> : null}
-
-        {fields ? (
-          <div className="wit-glass mt-6 w-full rounded-2xl p-6 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-            <h2 className="text-base font-bold text-wit-ink">Campos que llenó la IA</h2>
-            <dl className="mt-4 space-y-4">
-              <LabRow label="Título" value={fields.title} />
-              <LabRow label="Nombre comercial / empresa" value={fields.companyName} />
-              <LabRow label="Nombre del producto" value={fields.productName} />
-              <LabRow label="A qué se dedica la empresa" value={fields.brief} />
-              <LabRow label="Qué quieres que salga en esta pieza" value={fields.pieceBrief} />
-              <LabRow label="Público objetivo" value={fields.audience} />
-              <LabRow label="Rango de edad" value={fields.ageRanges.join(", ")} />
-              <LabRow label="Precio o descuento" value={fields.promoPrice} />
-              <LabRow label="Mensaje o dato extra" value={fields.requiredText} />
-              <LabRow label="Estilo" value={fields.style} />
-              <LabRow label="Formato" value={fields.aspectRatio} />
-              <div>
-                <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-                  Colores de marca
-                </dt>
-                <dd className="mt-1.5 flex gap-2">
-                  {fields.colors.length ? (
-                    fields.colors.map((c) => (
-                      <span
-                        key={c}
-                        className="h-7 w-7 rounded-full border border-wit-ink/10"
-                        style={{ backgroundColor: c }}
-                        title={c}
-                      />
-                    ))
-                  ) : (
-                    <span className="text-sm text-wit-ink">—</span>
-                  )}
-                </dd>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
+                </svg>
+              </button>
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 13l4 4L19 7" />
+                </svg>
               </div>
-            </dl>
-
-            {fields.missingInfo.length ? (
-              <div className="mt-5 rounded-xl bg-amber-50 px-4 py-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-700">
-                  Le faltó preguntar
-                </p>
-                <ul className="mt-1.5 list-inside list-disc text-sm text-amber-800">
-                  {fields.missingInfo.map((m, i) => (
-                    <li key={i}>{m}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+            )}
+          </form>
+          {listening ? (
+            <p className="mt-1.5 text-center text-[11px] text-wit-gray">Te escucho — sigue hablando, yo voy avanzando</p>
+          ) : null}
         </div>
       </main>
+    </div>
+  );
+}
+
+function ChatBubble({
+  role,
+  text,
+  typingDots,
+}: {
+  role: "assistant" | "user";
+  text?: string;
+  typingDots?: boolean;
+}) {
+  const isUser = role === "user";
+  return (
+    <div className={`flex items-end gap-2 ${isUser ? "flex-row-reverse self-end" : "self-start"}`}>
+      {!isUser ? (
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-wit-blue/10 text-wit-blue">
+          <WMark size={13} />
+        </span>
+      ) : null}
+      <div
+        className={`max-w-[230px] rounded-2xl px-4 py-2.5 text-left text-sm leading-relaxed ${
+          isUser ? "rounded-br-sm bg-wit-blue text-white" : "wit-glass rounded-bl-sm text-wit-ink"
+        }`}
+      >
+        {typingDots ? (
+          <div className="flex items-center gap-1 py-0.5">
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-wit-gray [animation-delay:-0.3s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-wit-gray [animation-delay:-0.15s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-wit-gray" />
+          </div>
+        ) : (
+          <p className="whitespace-pre-wrap">{text}</p>
+        )}
+      </div>
     </div>
   );
 }
