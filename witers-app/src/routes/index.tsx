@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
@@ -67,12 +67,109 @@ function HeroVideoBackground() {
   );
 }
 
-// Placeholder AI-generated imagery (Higgsfield) hosted on their CDN — a
-// stand-in for real brand photography/portfolio pieces until WITERS supplies
-// its own. Swap these for self-hosted assets under /assets before this ships
-// for real; do not treat them as final.
-const HERO_PORTRAIT =
-  "https://d8j0ntlcm91z4.cloudfront.net/user_3EXW5AO9RcMslsDHXSGxiyHt5iO/hf_20260711_034807_950d5de4-7edb-4b37-a3b5-b40d96840628.png";
+// Real, finalized ("cerrada") client deliveries — same source and trust
+// boundary as TrabajosQueHablan below (/api/public/showcase). Both call
+// useQuery with the same queryKey, so React Query dedupes the fetch instead
+// of hitting the endpoint twice.
+type ShowcasePiece = { id: string; r2_key: string | null; image_url: string | null; title: string };
+
+function useShowcase() {
+  return useQuery({
+    queryKey: ["public-showcase"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/showcase");
+      if (!res.ok) return { ok: false, pieces: [] as ShowcasePiece[] };
+      return (await res.json()) as { ok: boolean; pieces: ShowcasePiece[] };
+    },
+    staleTime: 60_000,
+  });
+}
+
+// Instagram-style auto-advancing carousel of real finished pieces, in the
+// hero's portrait slot. Falls back to a branded placeholder card (not a
+// stock photo) until the first "cerrada" request exists.
+function HeroCarousel() {
+  const showcase = useShowcase();
+  const pieces = (showcase.data?.pieces ?? []).slice(0, 8);
+  const slides = pieces.map((p) => ({
+    key: p.id,
+    src: p.image_url ?? `/api/public/showcase-image?key=${encodeURIComponent(p.r2_key ?? "")}`,
+    alt: p.title,
+  }));
+  const hasReal = slides.length > 0;
+  const count = hasReal ? slides.length : 1;
+
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (count < 2 || paused) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % count), 3800);
+    return () => clearInterval(t);
+  }, [count, paused]);
+
+  useEffect(() => {
+    if (index >= count) setIndex(0);
+  }, [count, index]);
+
+  return (
+    <div
+      className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-[32px] bg-wit-mist shadow-[0_30px_80px_rgba(5,13,40,0.18)] md:max-w-none"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {hasReal ? (
+        <div
+          className="flex h-full transition-transform duration-500 ease-out"
+          style={{ transform: `translateX(-${index * (100 / slides.length)}%)`, width: `${slides.length * 100}%` }}
+        >
+          {slides.map((s, i) => (
+            <img
+              key={s.key}
+              src={s.src}
+              alt={s.alt}
+              loading={i === 0 ? "eager" : "lazy"}
+              className="h-full shrink-0 object-cover"
+              style={{ width: `${100 / slides.length}%` }}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="wit-glass flex h-full w-full flex-col items-center justify-center gap-4 rounded-[32px]">
+          <WMark size={56} />
+          <p className="max-w-[220px] text-center text-sm font-semibold text-wit-gray">
+            Aquí verás las creatividades que entreguemos a nuestra comunidad
+          </p>
+        </div>
+      )}
+
+      {count > 1 ? (
+        <>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/45 to-transparent"
+          />
+          <div className="absolute left-3 top-3 rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+            {index + 1}/{count}
+          </div>
+          <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-1.5">
+            {slides.map((s, i) => (
+              <button
+                key={s.key}
+                type="button"
+                aria-label={`Ver imagen ${i + 1}`}
+                onClick={() => setIndex(i)}
+                className={`h-1.5 rounded-full transition-all duration-200 ${
+                  i === index ? "w-5 bg-white" : "w-1.5 bg-white/50"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 function Hero() {
   const me = useMe();
@@ -112,13 +209,7 @@ function Hero() {
             aria-hidden="true"
             className="absolute -inset-6 -z-10 rounded-[40px] bg-[radial-gradient(closest-side,rgba(0,71,255,0.25),transparent)] blur-2xl"
           />
-          <img
-            src={HERO_PORTRAIT}
-            alt=""
-            aria-hidden="true"
-            className="mx-auto aspect-[3/4] w-full max-w-sm rounded-[32px] object-cover shadow-[0_30px_80px_rgba(5,13,40,0.18)] md:max-w-none"
-            loading="eager"
-          />
+          <HeroCarousel />
           <img
             src="/assets/witers-logo-full.png"
             alt=""
@@ -180,8 +271,9 @@ function MarcasQueConfian() {
 
 /* ---------------- 1a. LO QUE HACEMOS ---------------- */
 
-// Placeholder AI-generated icon renders (Higgsfield) — see HERO_PORTRAIT note
-// above, same caveat applies.
+// Placeholder AI-generated icon renders (Higgsfield), hosted on their CDN —
+// a stand-in until WITERS supplies its own service iconography. Swap for
+// self-hosted assets under /assets before this ships for real.
 const SERVICIOS = [
   {
     img: "https://d8j0ntlcm91z4.cloudfront.net/user_3EXW5AO9RcMslsDHXSGxiyHt5iO/hf_20260711_034811_2724ee1b-9bd8-442d-95ca-0f6a4d828ef4.png",
@@ -253,8 +345,6 @@ const PIEZAS_EJEMPLO = [
   { label: "Post vertical", ratio: "3:4" },
 ];
 
-type ShowcasePiece = { id: string; r2_key: string | null; image_url: string | null; title: string };
-
 type Card =
   | { key: string; kind: "real"; src: string; alt: string }
   | { key: string; kind: "placeholder"; label: string; ratio: string };
@@ -264,15 +354,7 @@ type Card =
 const TILTS = ["-rotate-6", "rotate-3", "-rotate-2", "rotate-6"];
 
 function TrabajosQueHablan() {
-  const showcase = useQuery({
-    queryKey: ["public-showcase"],
-    queryFn: async () => {
-      const res = await fetch("/api/public/showcase");
-      if (!res.ok) return { ok: false, pieces: [] as ShowcasePiece[] };
-      return (await res.json()) as { ok: boolean; pieces: ShowcasePiece[] };
-    },
-    staleTime: 60_000,
-  });
+  const showcase = useShowcase();
 
   const realPieces = showcase.data?.pieces ?? [];
   const cards: Card[] =
