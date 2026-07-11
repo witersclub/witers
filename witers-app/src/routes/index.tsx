@@ -27,6 +27,7 @@ function Landing() {
       <HeroVideoBackground />
       <SiteHeader />
       <Hero />
+      <LoQueHacemos />
       <ClientesSatisfechos />
       <Membresia />
       <Faq />
@@ -64,37 +65,125 @@ function HeroVideoBackground() {
   );
 }
 
+// Placeholder AI-generated imagery (Higgsfield) hosted on their CDN — a
+// stand-in for real brand photography/portfolio pieces until WITERS supplies
+// its own. Swap these for self-hosted assets under /assets before this ships
+// for real; do not treat them as final.
+const HERO_PORTRAIT =
+  "https://d8j0ntlcm91z4.cloudfront.net/user_3EXW5AO9RcMslsDHXSGxiyHt5iO/hf_20260711_034807_950d5de4-7edb-4b37-a3b5-b40d96840628.png";
+
 function Hero() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
 
   return (
     <section className="relative overflow-hidden pb-14 pt-28 md:pb-20 md:pt-36">
-      {/* Logo flotante en la esquina superior derecha */}
-      <img
-        src="/assets/witers-logo-full.png"
-        alt=""
-        aria-hidden="true"
-        className="wit-float absolute right-6 top-6 hidden h-[160px] w-auto md:block"
-      />
+      <div className="relative grid items-center gap-12 px-5 md:grid-cols-[1.05fr_0.95fr] md:px-[110px]">
+        <div>
+          <h1 className="wit-rise text-4xl font-extrabold leading-tight tracking-tighter text-wit-ink md:text-6xl">
+            Elevemos tu <span className="wit-underline text-wit-blue">marca</span>
+          </h1>
+          <p className="wit-rise wit-rise-d1 mt-6 max-w-md text-lg leading-relaxed text-wit-gray">
+            Estrategia, diseño y tecnología con inteligencia artificial para marcas que quieren{" "}
+            <strong className="text-wit-ink">dejar huella</strong>.
+          </p>
+          <div className="wit-rise wit-rise-d2 mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+            <Link
+              to={signedIn ? "/panel" : "/registro"}
+              className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-7 py-3.5 text-base font-semibold text-white shadow-[0_16px_36px_rgba(0,71,255,0.35)] transition-all duration-200 hover:shadow-[0_20px_44px_rgba(0,71,255,0.45)] active:scale-[0.98]"
+            >
+              Unirme ahora
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1">
+                <path d="M3 13 13 3M13 3H6M13 3v7" />
+              </svg>
+            </Link>
+            <a href="/nuestra-historia" className="wit-navlink text-sm font-semibold text-wit-ink">
+              Conocer la comunidad
+            </a>
+          </div>
+        </div>
 
-      <div className="relative px-5 md:px-[110px]">
-        <h1 className="wit-rise text-4xl font-extrabold leading-tight tracking-tighter text-wit-ink md:text-6xl">
-          Elevemos tu <span className="text-wit-blue">marca</span>
-        </h1>
-        <div className="wit-rise wit-rise-d1 mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-          <Link
-            to={signedIn ? "/panel" : "/registro"}
-            className="group inline-flex items-center gap-2.5 rounded-full bg-wit-blue px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.98]"
-          >
-            Unirme ahora
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1">
-              <path d="M3 13 13 3M13 3H6M13 3v7" />
-            </svg>
-          </Link>
-          <a href="/nuestra-historia" className="wit-navlink text-sm font-semibold text-wit-ink">
-            Conocer la comunidad
-          </a>
+        <div className="wit-rise wit-rise-d2 relative mx-auto w-full max-w-sm md:max-w-none">
+          <div
+            aria-hidden="true"
+            className="absolute -inset-6 -z-10 rounded-[40px] bg-[radial-gradient(closest-side,rgba(0,71,255,0.25),transparent)] blur-2xl"
+          />
+          <img
+            src={HERO_PORTRAIT}
+            alt=""
+            aria-hidden="true"
+            className="mx-auto aspect-[3/4] w-full max-w-sm rounded-[32px] object-cover shadow-[0_30px_80px_rgba(5,13,40,0.18)] md:max-w-none"
+            loading="eager"
+          />
+          <img
+            src="/assets/witers-logo-full.png"
+            alt=""
+            aria-hidden="true"
+            className="wit-float absolute -right-6 -top-8 hidden h-24 w-auto drop-shadow-lg md:block"
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- 1a. LO QUE HACEMOS ---------------- */
+
+// Placeholder AI-generated icon renders (Higgsfield) — see HERO_PORTRAIT note
+// above, same caveat applies.
+const SERVICIOS = [
+  {
+    img: "https://d8j0ntlcm91z4.cloudfront.net/user_3EXW5AO9RcMslsDHXSGxiyHt5iO/hf_20260711_034811_2724ee1b-9bd8-442d-95ca-0f6a4d828ef4.png",
+    label: "Estrategia de marca",
+  },
+  {
+    img: "https://d8j0ntlcm91z4.cloudfront.net/user_3EXW5AO9RcMslsDHXSGxiyHt5iO/hf_20260711_034811_4b7a6f0d-6ccf-4c96-8a81-751f9d083dd6.png",
+    label: "Diseño con IA",
+  },
+  {
+    img: "https://d8j0ntlcm91z4.cloudfront.net/user_3EXW5AO9RcMslsDHXSGxiyHt5iO/hf_20260711_034811_f0c41893-c6a2-4cda-9a42-3d376641d753.png",
+    label: "Producción de contenido",
+  },
+  {
+    img: "https://d8j0ntlcm91z4.cloudfront.net/user_3EXW5AO9RcMslsDHXSGxiyHt5iO/hf_20260711_034811_a57aefa9-df46-4788-906e-12d2c59ca804.png",
+    label: "Comunidad y crecimiento",
+  },
+];
+
+function LoQueHacemos() {
+  return (
+    <section className="relative bg-white py-20 md:py-28">
+      <div className="px-5 md:px-[110px]">
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-wit-blue">Lo que hacemos</p>
+        <h2 className="mt-2 max-w-2xl text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
+          Creamos experiencias que <span className="wit-underline text-wit-blue">conectan e impactan</span>.
+        </h2>
+
+        <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {SERVICIOS.map((s) => (
+            <article
+              key={s.label}
+              className="group rounded-3xl bg-wit-mist/40 p-6 transition-colors duration-200 hover:bg-wit-mist/70"
+            >
+              <img src={s.img} alt="" aria-hidden="true" className="h-28 w-28 object-contain" loading="lazy" />
+              <div className="mt-5 flex items-center justify-between gap-3">
+                <p className="text-base font-bold text-wit-ink">{s.label}</p>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="#0047FF"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="shrink-0 transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1"
+                >
+                  <path d="M3 13 13 3M13 3H6M13 3v7" />
+                </svg>
+              </div>
+            </article>
+          ))}
         </div>
       </div>
     </section>
