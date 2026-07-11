@@ -27,10 +27,12 @@ function Landing() {
       <HeroVideoBackground />
       <SiteHeader />
       <Hero />
+      <MarcasQueConfian />
       <LoQueHacemos />
-      <ClientesSatisfechos />
+      <TrabajosQueHablan />
       <Membresia />
       <Faq />
+      <CtaFinal />
       <SiteFooter />
     </div>
   );
@@ -81,7 +83,9 @@ function Hero() {
       <div className="relative grid items-center gap-12 px-5 md:grid-cols-[1.05fr_0.95fr] md:px-[110px]">
         <div>
           <h1 className="wit-rise text-4xl font-extrabold leading-tight tracking-tighter text-wit-ink md:text-6xl">
-            Elevemos tu <span className="wit-underline text-wit-blue">marca</span>
+            Elevemos tu marca.
+            <br />
+            <span className="wit-underline italic text-wit-blue">Con ingenio y tecnología.</span>
           </h1>
           <p className="wit-rise wit-rise-d1 mt-6 max-w-md text-lg leading-relaxed text-wit-gray">
             Estrategia, diseño y tecnología con inteligencia artificial para marcas que quieren{" "}
@@ -90,7 +94,7 @@ function Hero() {
           <div className="wit-rise wit-rise-d2 mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <Link
               to={signedIn ? "/panel" : "/registro"}
-              className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-7 py-3.5 text-base font-semibold text-white shadow-[0_16px_36px_rgba(0,71,255,0.35)] transition-all duration-200 hover:shadow-[0_20px_44px_rgba(0,71,255,0.45)] active:scale-[0.98]"
+              className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-7 py-3.5 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_16px_36px_rgba(0,71,255,0.35)] transition-all duration-200 hover:shadow-[0_20px_44px_rgba(0,71,255,0.45)] active:scale-[0.98]"
             >
               Unirme ahora
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1">
@@ -127,6 +131,53 @@ function Hero() {
   );
 }
 
+/* ---------------- 1a. MARCAS QUE CONFÍAN ---------------- */
+
+// Real client brands only — company_name + logo_key come straight from the
+// client's own request intake form (panel.tsx), scoped server-side to
+// finalized ("cerrada") requests. No stand-in/fabricated logos here: if a
+// client hasn't given us a name + logo yet, their brand simply doesn't
+// appear, and the whole section hides itself rather than show a placeholder.
+type Brand = { company_name: string; logo_key: string };
+
+function MarcasQueConfian() {
+  const brands = useQuery({
+    queryKey: ["public-brands"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/brands");
+      if (!res.ok) return { ok: false, brands: [] as Brand[] };
+      return (await res.json()) as { ok: boolean; brands: Brand[] };
+    },
+    staleTime: 60_000,
+  });
+
+  const list = brands.data?.brands ?? [];
+  if (list.length === 0) return null;
+
+  return (
+    <section className="relative bg-white pb-16 md:pb-20">
+      <div className="px-5 md:px-[110px]">
+        <div className="flex flex-wrap items-center gap-x-10 gap-y-6 border-t border-wit-ink/10 pt-10">
+          <p className="text-xs font-bold uppercase leading-tight tracking-[0.22em] text-wit-gray">
+            Marcas
+            <br />
+            que confían
+          </p>
+          {list.map((b) => (
+            <img
+              key={b.logo_key}
+              src={`/api/public/brand-logo?key=${encodeURIComponent(b.logo_key)}`}
+              alt={b.company_name}
+              loading="lazy"
+              className="h-8 w-auto max-w-[140px] object-contain opacity-70 grayscale transition duration-200 hover:opacity-100 hover:grayscale-0"
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ---------------- 1a. LO QUE HACEMOS ---------------- */
 
 // Placeholder AI-generated icon renders (Higgsfield) — see HERO_PORTRAIT note
@@ -156,7 +207,8 @@ function LoQueHacemos() {
       <div className="px-5 md:px-[110px]">
         <p className="text-sm font-bold uppercase tracking-[0.3em] text-wit-blue">Lo que hacemos</p>
         <h2 className="mt-2 max-w-2xl text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
-          Creamos experiencias que <span className="wit-underline text-wit-blue">conectan e impactan</span>.
+          Creamos experiencias que{" "}
+          <span className="wit-underline italic text-wit-blue">conectan e impactan</span>.
         </h2>
 
         <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -190,18 +242,15 @@ function LoQueHacemos() {
   );
 }
 
-/* ---------------- 1b. CLIENTES SATISFECHOS ---------------- */
+/* ---------------- 1b. TRABAJOS QUE HABLAN ---------------- */
 
 // Placeholder slots shown only until the first "cerrada" (finalized) client
-// request exists — same visual size regardless of the format label, so the
-// marquee row stays uniform either way.
+// request exists.
 const PIEZAS_EJEMPLO = [
   { label: "Post cuadrado", ratio: "1:1" },
   { label: "Historia", ratio: "9:16" },
   { label: "Banner", ratio: "16:9" },
   { label: "Post vertical", ratio: "3:4" },
-  { label: "Post cuadrado", ratio: "1:1" },
-  { label: "Historia", ratio: "9:16" },
 ];
 
 type ShowcasePiece = { id: string; r2_key: string | null; image_url: string | null; title: string };
@@ -210,7 +259,11 @@ type Card =
   | { key: string; kind: "real"; src: string; alt: string }
   | { key: string; kind: "placeholder"; label: string; ratio: string };
 
-function ClientesSatisfechos() {
+// Alternating tilt per card, like a fanned-out deck — matches the reference
+// layout's stacked project mockups.
+const TILTS = ["-rotate-6", "rotate-3", "-rotate-2", "rotate-6"];
+
+function TrabajosQueHablan() {
   const showcase = useQuery({
     queryKey: ["public-showcase"],
     queryFn: async () => {
@@ -224,48 +277,98 @@ function ClientesSatisfechos() {
   const realPieces = showcase.data?.pieces ?? [];
   const cards: Card[] =
     realPieces.length > 0
-      ? realPieces.map((p) => ({
+      ? realPieces.slice(0, 4).map((p) => ({
           key: p.id,
           kind: "real",
           src: p.image_url ?? `/api/public/showcase-image?key=${encodeURIComponent(p.r2_key ?? "")}`,
           alt: p.title,
         }))
       : PIEZAS_EJEMPLO.map((p, i) => ({ key: `ph-${i}`, kind: "placeholder", label: p.label, ratio: p.ratio }));
-  const piezas = [...cards, ...cards.map((c) => ({ ...c, key: `${c.key}-2` }))];
 
   return (
-    <section className="relative bg-white py-16 md:py-20">
-      <div className="px-5 md:px-[110px]">
-        <h2 className="wit-rise text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
-          Clientes <span className="wit-underline text-wit-blue">satisfechos</span>
-        </h2>
+    <section className="relative overflow-hidden bg-wit-navy py-20 text-white md:py-28">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-32 top-1/2 -translate-y-1/2 opacity-[0.06]"
+      >
+        <WMark size={620} />
       </div>
 
-      <div className="wit-marquee-mask relative mt-10 overflow-hidden">
-        <div className="wit-marquee-track flex w-max gap-5 px-5">
-          {piezas.map((p) =>
+      <div className="relative grid items-center gap-14 px-5 md:grid-cols-[0.95fr_1.05fr] md:px-[110px]">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[0.3em] text-[#7d9aff]">Trabajos que hablan</p>
+          <h2 className="mt-2 text-3xl font-extrabold tracking-tighter md:text-5xl">
+            No es solo diseño.
+            <br />
+            <span className="wit-underline italic text-[#7d9aff]">Es transformación.</span>
+          </h2>
+          <p className="mt-6 max-w-sm text-base leading-relaxed text-white/70">
+            Cada proyecto que hacemos está pensado para generar resultados reales.
+          </p>
+          <a
+            href="/nuestra-historia"
+            className="wit-navlink mt-8 inline-flex items-center gap-2 text-sm font-semibold text-white"
+          >
+            Ver nuestros trabajos
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 13 13 3M13 3H6M13 3v7" />
+            </svg>
+          </a>
+        </div>
+
+        <div className="flex justify-center gap-[-2rem] md:justify-end">
+          {cards.map((p, i) =>
             p.kind === "real" ? (
               <img
                 key={p.key}
                 src={p.src}
                 alt={p.alt}
                 loading="lazy"
-                className="h-56 w-40 shrink-0 rounded-2xl object-cover shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform duration-300 hover:scale-[1.04]"
+                style={{ marginLeft: i === 0 ? 0 : "-2.75rem", zIndex: i + 1 }}
+                className={`${TILTS[i % TILTS.length]} h-64 w-44 shrink-0 rounded-2xl object-cover shadow-[0_20px_60px_rgba(0,0,0,0.45)] ring-1 ring-white/10 transition-transform duration-300 hover:z-10 hover:-translate-y-2 hover:rotate-0`}
               />
             ) : (
               <div
                 key={p.key}
-                className="wit-glass flex h-56 w-40 shrink-0 flex-col items-center justify-center gap-3 rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform duration-300 hover:scale-[1.04]"
+                style={{ marginLeft: i === 0 ? 0 : "-2.75rem", zIndex: i + 1 }}
+                className={`${TILTS[i % TILTS.length]} wit-glass flex h-64 w-44 shrink-0 flex-col items-center justify-center gap-3 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.45)] ring-1 ring-white/10 transition-transform duration-300 hover:z-10 hover:-translate-y-2 hover:rotate-0`}
               >
                 <WMark size={30} />
                 <div className="text-center">
-                  <p className="text-xs font-bold text-wit-ink">{p.label}</p>
-                  <p className="text-[11px] text-wit-gray">{p.ratio}</p>
+                  <p className="text-xs font-bold text-white">{p.label}</p>
+                  <p className="text-[11px] text-white/60">{p.ratio}</p>
                 </div>
               </div>
             ),
           )}
         </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- 1c. CTA FINAL ---------------- */
+
+function CtaFinal() {
+  const me = useMe();
+  const signedIn = Boolean(me.data?.ok);
+  return (
+    <section className="relative bg-white py-16 md:py-20">
+      <div className="flex flex-col items-start gap-8 border-t border-wit-ink/10 px-5 pt-14 md:flex-row md:items-center md:justify-between md:px-[110px]">
+        <h2 className="text-2xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
+          Tu marca tiene algo único.
+          <br />
+          Hagamos que el mundo <span className="italic text-wit-blue">la vea</span>.
+        </h2>
+        <Link
+          to={signedIn ? "/panel" : "/registro"}
+          className="group inline-flex shrink-0 items-center gap-2.5 rounded-full border border-wit-ink/15 bg-white px-7 py-3.5 text-sm font-bold uppercase tracking-[0.08em] text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.08)] transition-all duration-200 hover:bg-wit-ink hover:text-white active:scale-[0.98]"
+        >
+          Hablemos de tu proyecto
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1">
+            <path d="M3 13 13 3M13 3H6M13 3v7" />
+          </svg>
+        </Link>
       </div>
     </section>
   );

@@ -30,6 +30,8 @@ import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as ApiPublicShowcaseImageRouteImport } from './routes/api/public/showcase-image'
 import { Route as ApiPublicShowcaseRouteImport } from './routes/api/public/showcase'
+import { Route as ApiPublicBrandsRouteImport } from './routes/api/public/brands'
+import { Route as ApiPublicBrandLogoRouteImport } from './routes/api/public/brand-logo'
 import { Route as ApiDesignerRequestsRouteImport } from './routes/api/designer/requests'
 import { Route as ApiDesignerClaimRouteImport } from './routes/api/designer/claim'
 import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
@@ -151,6 +153,16 @@ const ApiPublicShowcaseImageRoute = ApiPublicShowcaseImageRouteImport.update({
 const ApiPublicShowcaseRoute = ApiPublicShowcaseRouteImport.update({
   id: '/api/public/showcase',
   path: '/api/public/showcase',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicBrandsRoute = ApiPublicBrandsRouteImport.update({
+  id: '/api/public/brands',
+  path: '/api/public/brands',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicBrandLogoRoute = ApiPublicBrandLogoRouteImport.update({
+  id: '/api/public/brand-logo',
+  path: '/api/public/brand-logo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDesignerRequestsRoute = ApiDesignerRequestsRouteImport.update({
@@ -277,6 +289,8 @@ export interface FileRoutesByFullPath {
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
+  '/api/public/brands': typeof ApiPublicBrandsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
 }
@@ -317,6 +331,8 @@ export interface FileRoutesByTo {
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
+  '/api/public/brands': typeof ApiPublicBrandsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
 }
@@ -358,6 +374,8 @@ export interface FileRoutesById {
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
+  '/api/public/brands': typeof ApiPublicBrandsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
 }
@@ -400,6 +418,8 @@ export interface FileRouteTypes {
     | '/api/auth/register'
     | '/api/designer/claim'
     | '/api/designer/requests'
+    | '/api/public/brand-logo'
+    | '/api/public/brands'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
   fileRoutesByTo: FileRoutesByTo
@@ -440,6 +460,8 @@ export interface FileRouteTypes {
     | '/api/auth/register'
     | '/api/designer/claim'
     | '/api/designer/requests'
+    | '/api/public/brand-logo'
+    | '/api/public/brands'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
   id:
@@ -480,6 +502,8 @@ export interface FileRouteTypes {
     | '/api/auth/register'
     | '/api/designer/claim'
     | '/api/designer/requests'
+    | '/api/public/brand-logo'
+    | '/api/public/brands'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
   fileRoutesById: FileRoutesById
@@ -521,6 +545,8 @@ export interface RootRouteChildren {
   ApiAuthRegisterRoute: typeof ApiAuthRegisterRoute
   ApiDesignerClaimRoute: typeof ApiDesignerClaimRoute
   ApiDesignerRequestsRoute: typeof ApiDesignerRequestsRoute
+  ApiPublicBrandLogoRoute: typeof ApiPublicBrandLogoRoute
+  ApiPublicBrandsRoute: typeof ApiPublicBrandsRoute
   ApiPublicShowcaseRoute: typeof ApiPublicShowcaseRoute
   ApiPublicShowcaseImageRoute: typeof ApiPublicShowcaseImageRoute
 }
@@ -672,6 +698,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/showcase'
       fullPath: '/api/public/showcase'
       preLoaderRoute: typeof ApiPublicShowcaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/brands': {
+      id: '/api/public/brands'
+      path: '/api/public/brands'
+      fullPath: '/api/public/brands'
+      preLoaderRoute: typeof ApiPublicBrandsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/brand-logo': {
+      id: '/api/public/brand-logo'
+      path: '/api/public/brand-logo'
+      fullPath: '/api/public/brand-logo'
+      preLoaderRoute: typeof ApiPublicBrandLogoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/designer/requests': {
@@ -833,6 +873,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthRegisterRoute: ApiAuthRegisterRoute,
   ApiDesignerClaimRoute: ApiDesignerClaimRoute,
   ApiDesignerRequestsRoute: ApiDesignerRequestsRoute,
+  ApiPublicBrandLogoRoute: ApiPublicBrandLogoRoute,
+  ApiPublicBrandsRoute: ApiPublicBrandsRoute,
   ApiPublicShowcaseRoute: ApiPublicShowcaseRoute,
   ApiPublicShowcaseImageRoute: ApiPublicShowcaseImageRoute,
 }
