@@ -41,6 +41,7 @@ import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAdminUpdateRequestRouteImport } from './routes/api/admin/update-request'
 import { Route as ApiAdminUpdateDesignerRouteImport } from './routes/api/admin/update-designer'
+import { Route as ApiAdminToggleLogoVisibilityRouteImport } from './routes/api/admin/toggle-logo-visibility'
 import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overview'
 import { Route as ApiAdminGenerateRouteImport } from './routes/api/admin/generate'
 import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
@@ -211,6 +212,12 @@ const ApiAdminUpdateDesignerRoute = ApiAdminUpdateDesignerRouteImport.update({
   path: '/api/admin/update-designer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminToggleLogoVisibilityRoute =
+  ApiAdminToggleLogoVisibilityRouteImport.update({
+    id: '/api/admin/toggle-logo-visibility',
+    path: '/api/admin/toggle-logo-visibility',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminOverviewRoute = ApiAdminOverviewRouteImport.update({
   id: '/api/admin/overview',
   path: '/api/admin/overview',
@@ -287,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -330,6 +338,7 @@ export interface FileRoutesByTo {
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -374,6 +383,7 @@ export interface FileRoutesById {
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -419,6 +429,7 @@ export interface FileRouteTypes {
     | '/api/admin/discard-result'
     | '/api/admin/generate'
     | '/api/admin/overview'
+    | '/api/admin/toggle-logo-visibility'
     | '/api/admin/update-designer'
     | '/api/admin/update-request'
     | '/api/auth/login'
@@ -462,6 +473,7 @@ export interface FileRouteTypes {
     | '/api/admin/discard-result'
     | '/api/admin/generate'
     | '/api/admin/overview'
+    | '/api/admin/toggle-logo-visibility'
     | '/api/admin/update-designer'
     | '/api/admin/update-request'
     | '/api/auth/login'
@@ -505,6 +517,7 @@ export interface FileRouteTypes {
     | '/api/admin/discard-result'
     | '/api/admin/generate'
     | '/api/admin/overview'
+    | '/api/admin/toggle-logo-visibility'
     | '/api/admin/update-designer'
     | '/api/admin/update-request'
     | '/api/auth/login'
@@ -549,6 +562,7 @@ export interface RootRouteChildren {
   ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
   ApiAdminGenerateRoute: typeof ApiAdminGenerateRoute
   ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
+  ApiAdminToggleLogoVisibilityRoute: typeof ApiAdminToggleLogoVisibilityRoute
   ApiAdminUpdateDesignerRoute: typeof ApiAdminUpdateDesignerRoute
   ApiAdminUpdateRequestRoute: typeof ApiAdminUpdateRequestRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
@@ -790,6 +804,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminUpdateDesignerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/toggle-logo-visibility': {
+      id: '/api/admin/toggle-logo-visibility'
+      path: '/api/admin/toggle-logo-visibility'
+      fullPath: '/api/admin/toggle-logo-visibility'
+      preLoaderRoute: typeof ApiAdminToggleLogoVisibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/overview': {
       id: '/api/admin/overview'
       path: '/api/admin/overview'
@@ -885,6 +906,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
   ApiAdminGenerateRoute: ApiAdminGenerateRoute,
   ApiAdminOverviewRoute: ApiAdminOverviewRoute,
+  ApiAdminToggleLogoVisibilityRoute: ApiAdminToggleLogoVisibilityRoute,
   ApiAdminUpdateDesignerRoute: ApiAdminUpdateDesignerRoute,
   ApiAdminUpdateRequestRoute: ApiAdminUpdateRequestRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,

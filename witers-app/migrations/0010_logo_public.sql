@@ -1,0 +1,1 @@
+ALTER TABLE design_requests ADD COLUMN logo_public INTEGER NOT NULL DEFAULT 1;

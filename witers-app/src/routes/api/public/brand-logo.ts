@@ -20,7 +20,7 @@ export const Route = createFileRoute("/api/public/brand-logo")({
 
         const row = await db()
           .prepare(
-            `SELECT id FROM design_requests WHERE logo_key = ?1 AND status = 'cerrada'`,
+            `SELECT id FROM design_requests WHERE logo_key = ?1 AND status = 'cerrada' AND logo_public = 1`,
           )
           .bind(key)
           .first();

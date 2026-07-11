@@ -42,6 +42,7 @@ type AdminRequest = {
   promo_price: string | null;
   reference_key: string | null;
   logo_key: string | null;
+  logo_public: number;
   product_photo_key: string | null;
   status: string;
   admin_note: string | null;
@@ -398,6 +399,29 @@ function FinishedRequestCard({ row }: { row: AdminRequest }) {
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [togglingLogo, setTogglingLogo] = useState(false);
+
+  async function toggleLogoVisibility() {
+    const nextVisible = row.logo_public !== 1;
+    setTogglingLogo(true);
+    try {
+      const res = await fetch("/api/admin/toggle-logo-visibility", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId: row.id, visible: nextVisible }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (data.ok) {
+        await qc.invalidateQueries({ queryKey: ["admin-overview"] });
+      } else {
+        window.alert("No pudimos actualizar el logo. Intenta de nuevo.");
+      }
+    } catch {
+      window.alert("No pudimos actualizar el logo. Intenta de nuevo.");
+    } finally {
+      setTogglingLogo(false);
+    }
+  }
 
   async function deleteRequest() {
     if (
@@ -451,6 +475,20 @@ function FinishedRequestCard({ row }: { row: AdminRequest }) {
           ← Ocultar detalle
         </button>
         <RequestCard row={row} />
+        {row.logo_key ? (
+          <button
+            type="button"
+            disabled={togglingLogo}
+            onClick={toggleLogoVisibility}
+            className="mt-3 w-full rounded-2xl border border-wit-ink/15 py-3 text-sm font-bold text-wit-ink hover:bg-wit-mist/50 disabled:opacity-50"
+          >
+            {togglingLogo
+              ? "Actualizando..."
+              : row.logo_public === 1
+                ? "Ocultar logo de “Marcas que confían”"
+                : "Mostrar logo en “Marcas que confían”"}
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={deleting}
