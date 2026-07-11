@@ -403,11 +403,13 @@ function AiLab() {
         </div>
       </header>
 
-      <main className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-sm flex-col items-center justify-center px-5 py-10 text-center">
-        <p className="-mt-6 text-xs font-bold uppercase tracking-[0.14em] text-wit-ink">
-          Creemos tu pieza juntos
-        </p>
-        <div className="wit-float mt-2">
+      <main className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-sm flex-col items-center px-5 pb-10 text-center">
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-sm font-medium text-wit-ink">Creemos tu pieza juntos</p>
+        </div>
+
+        <div className="flex flex-col items-center pb-6">
+        <div className="wit-float">
           <WMark size={32} />
         </div>
 
@@ -571,6 +573,7 @@ function AiLab() {
             ) : null}
           </div>
         ) : null}
+        </div>
       </main>
     </div>
   );
