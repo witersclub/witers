@@ -104,10 +104,9 @@ function HeroVideoBackground() {
         playsInline
         className="wit-hero-video h-full w-full object-cover"
       />
-      {/* Difuminado blanco arriba (se funde con el header transparente) y un
-          leve oscurecido abajo, solo para que los botones del primer
-          pantallazo se lean bien — el resto del video queda despejado. */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,white_0%,transparent_14%,transparent_62%,rgba(0,0,0,0.55)_100%)]" />
+      {/* Difuminado blanco fuerte — el video queda de fondo, pero lo que
+          importa (título, botón, carrusel) tiene que resaltar por encima. */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,white_0%,white_40%,rgba(255,255,255,0.75)_65%,rgba(255,255,255,0.2)_100%)]" />
     </div>
   );
 }
@@ -117,7 +116,7 @@ function Hero() {
   const signedIn = Boolean(me.data?.ok);
 
   return (
-    <section className="relative h-dvh overflow-hidden">
+    <section className="relative overflow-hidden pb-14 pt-28 md:pb-20 md:pt-36">
       {/* Logo flotante en la esquina superior derecha */}
       <img
         src="/assets/witers-logo-full.png"
@@ -126,18 +125,21 @@ function Hero() {
         className="wit-float absolute right-6 top-6 hidden h-[160px] w-auto md:block"
       />
 
-      <div className="relative flex h-full flex-col justify-end px-5 pb-16 md:px-[110px] md:pb-24">
-        <div className="wit-rise flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+      <div className="relative px-5 md:px-[110px]">
+        <h1 className="wit-rise text-4xl font-extrabold leading-tight tracking-tighter text-wit-ink md:text-6xl">
+          Elevemos tu <span className="text-wit-blue">marca</span>
+        </h1>
+        <div className="wit-rise wit-rise-d1 mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
           <Link
             to={signedIn ? "/panel" : "/registro"}
             className="group inline-flex items-center gap-2.5 rounded-full bg-wit-blue px-7 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.98]"
           >
-            Unirme a WITERS
+            Unirme ahora
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1">
               <path d="M3 13 13 3M13 3H6M13 3v7" />
             </svg>
           </Link>
-          <a href="#quienes-somos" className="wit-navlink text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
+          <a href="#quienes-somos" className="wit-navlink text-sm font-semibold text-wit-ink">
             Conocer la comunidad
           </a>
         </div>
@@ -190,9 +192,9 @@ function ClientesSatisfechos() {
   const piezas = [...cards, ...cards.map((c) => ({ ...c, key: `${c.key}-2` }))];
 
   return (
-    <section className="bg-white py-16 md:py-20">
+    <section className="relative bg-white py-16 md:py-20">
       <div className="px-5 md:px-[110px]">
-        <h2 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
+        <h2 className="wit-rise text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
           Clientes <span className="wit-underline text-wit-blue">satisfechos</span>
         </h2>
       </div>
@@ -265,7 +267,7 @@ const PILLARS = [
 
 function QuienesSomos() {
   return (
-    <section id="quienes-somos" className="bg-white py-20 md:py-28">
+    <section id="quienes-somos" className="relative bg-white py-20 md:py-28">
       <div className="px-5 md:px-[110px]">
         <h2 className="text-4xl font-extrabold tracking-tighter text-wit-ink md:text-6xl">
           ¿Quiénes <span className="wit-underline text-wit-blue">Somos?</span>
@@ -311,7 +313,7 @@ const FILO_PILLS = [
 function Filosofia() {
   const imgRef = useParallax(0.05);
   return (
-    <section className="py-20 md:py-28">
+    <section className="relative bg-white py-20 md:py-28">
       <div className="grid items-center gap-12 px-5 md:grid-cols-[0.95fr_1.05fr] md:px-[110px]">
         <div className="order-2 md:order-1">
           <p className="text-sm font-bold uppercase tracking-[0.3em] text-wit-gray">Nuestra</p>
@@ -398,7 +400,7 @@ const VALORES = [
 
 function Valores() {
   return (
-    <section id="valores" className="bg-white py-20 md:py-28">
+    <section id="valores" className="relative bg-white py-20 md:py-28">
       <div className="px-5 md:px-[110px]">
         <div className="grid items-start gap-14 lg:grid-cols-[0.8fr_1.2fr]">
           <div className="lg:sticky lg:top-28">
@@ -465,7 +467,7 @@ function Valores() {
 
 function Proposito() {
   return (
-    <section className="relative overflow-hidden py-20 md:py-24">
+    <section className="relative overflow-hidden bg-white py-20 md:py-24">
       <div className="grid items-center gap-10 px-5 md:grid-cols-2 md:px-[110px]">
         <div>
           <span className="inline-flex items-center gap-2 rounded-full bg-wit-mist/60 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.24em] text-wit-blue">
@@ -569,7 +571,7 @@ const HISTORIA = [
 
 function Historia() {
   return (
-    <section className="py-20 md:py-28">
+    <section className="relative bg-white py-20 md:py-28">
       <div className="px-5 md:px-[110px]">
         <div className="grid gap-14 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
@@ -675,7 +677,7 @@ function Manifiesto() {
 
 function MisionVision() {
   return (
-    <section className="py-20 md:py-28">
+    <section className="relative bg-white py-20 md:py-28">
       <div className="grid gap-8 px-5 lg:grid-cols-2 md:px-[110px]">
         <article className="group overflow-hidden rounded-3xl bg-white shadow-[0_20px_60px_rgba(5,13,40,0.08)]">
           <div className="overflow-hidden">
@@ -892,7 +894,7 @@ const FAQS = [
 function Faq() {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
   return (
-    <section className="py-20 md:py-24">
+    <section className="relative bg-white py-20 md:py-24">
       <div className="mx-auto max-w-3xl px-5">
         <h2 className="text-center text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
           Preguntas <span className="wit-underline text-wit-blue">frecuentes</span>

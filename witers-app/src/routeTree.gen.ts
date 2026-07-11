@@ -41,6 +41,7 @@ import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overvie
 import { Route as ApiAdminGenerateRouteImport } from './routes/api/admin/generate'
 import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
 import { Route as ApiAdminDeliverRouteImport } from './routes/api/admin/deliver'
+import { Route as ApiAdminDeleteRequestRouteImport } from './routes/api/admin/delete-request'
 import { Route as ApiAdminDeactivateDesignerRouteImport } from './routes/api/admin/deactivate-designer'
 import { Route as ApiAdminCreateDesignerRouteImport } from './routes/api/admin/create-designer'
 import { Route as ApiAdminApproveResultRouteImport } from './routes/api/admin/approve-result'
@@ -206,6 +207,11 @@ const ApiAdminDeliverRoute = ApiAdminDeliverRouteImport.update({
   path: '/api/admin/deliver',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminDeleteRequestRoute = ApiAdminDeleteRequestRouteImport.update({
+  id: '/api/admin/delete-request',
+  path: '/api/admin/delete-request',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminDeactivateDesignerRoute =
   ApiAdminDeactivateDesignerRouteImport.update({
     id: '/api/admin/deactivate-designer',
@@ -251,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
+  '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
@@ -289,6 +296,7 @@ export interface FileRoutesByTo {
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
+  '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
@@ -328,6 +336,7 @@ export interface FileRoutesById {
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
+  '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/generate': typeof ApiAdminGenerateRoute
@@ -368,6 +377,7 @@ export interface FileRouteTypes {
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
     | '/api/admin/deactivate-designer'
+    | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
     | '/api/admin/generate'
@@ -406,6 +416,7 @@ export interface FileRouteTypes {
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
     | '/api/admin/deactivate-designer'
+    | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
     | '/api/admin/generate'
@@ -444,6 +455,7 @@ export interface FileRouteTypes {
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
     | '/api/admin/deactivate-designer'
+    | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
     | '/api/admin/generate'
@@ -483,6 +495,7 @@ export interface RootRouteChildren {
   ApiAdminApproveResultRoute: typeof ApiAdminApproveResultRoute
   ApiAdminCreateDesignerRoute: typeof ApiAdminCreateDesignerRoute
   ApiAdminDeactivateDesignerRoute: typeof ApiAdminDeactivateDesignerRoute
+  ApiAdminDeleteRequestRoute: typeof ApiAdminDeleteRequestRoute
   ApiAdminDeliverRoute: typeof ApiAdminDeliverRoute
   ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
   ApiAdminGenerateRoute: typeof ApiAdminGenerateRoute
@@ -725,6 +738,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminDeliverRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/delete-request': {
+      id: '/api/admin/delete-request'
+      path: '/api/admin/delete-request'
+      fullPath: '/api/admin/delete-request'
+      preLoaderRoute: typeof ApiAdminDeleteRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/deactivate-designer': {
       id: '/api/admin/deactivate-designer'
       path: '/api/admin/deactivate-designer'
@@ -779,6 +799,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminApproveResultRoute: ApiAdminApproveResultRoute,
   ApiAdminCreateDesignerRoute: ApiAdminCreateDesignerRoute,
   ApiAdminDeactivateDesignerRoute: ApiAdminDeactivateDesignerRoute,
+  ApiAdminDeleteRequestRoute: ApiAdminDeleteRequestRoute,
   ApiAdminDeliverRoute: ApiAdminDeliverRoute,
   ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
   ApiAdminGenerateRoute: ApiAdminGenerateRoute,

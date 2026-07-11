@@ -395,7 +395,37 @@ function PendingRequestCard({ row }: { row: AdminRequest }) {
 // delivered thumbnail only — clicking it expands into the full RequestCard
 // instead of always showing every field.
 function FinishedRequestCard({ row }: { row: AdminRequest }) {
+  const qc = useQueryClient();
   const [expanded, setExpanded] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function deleteRequest() {
+    if (
+      !window.confirm(
+        `¿Eliminar la solicitud "${row.title}"? Esto borra el registro y los archivos entregados de forma permanente — no se puede deshacer.`,
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/admin/delete-request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId: row.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (data.ok) {
+        await qc.invalidateQueries({ queryKey: ["admin-overview"] });
+      } else {
+        window.alert("No pudimos eliminar la solicitud. Intenta de nuevo.");
+      }
+    } catch {
+      window.alert("No pudimos eliminar la solicitud. Intenta de nuevo.");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   const thumb = (() => {
     if (!row.results_json) return null;
@@ -421,6 +451,14 @@ function FinishedRequestCard({ row }: { row: AdminRequest }) {
           ← Ocultar detalle
         </button>
         <RequestCard row={row} />
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={deleteRequest}
+          className="mt-3 w-full rounded-2xl border border-red-200 py-3 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
+        >
+          {deleting ? "Eliminando..." : "Eliminar"}
+        </button>
       </div>
     );
   }
