@@ -49,7 +49,7 @@ function HeroVideoBackground() {
     <div className="pointer-events-none fixed inset-0" aria-hidden="true">
       <video
         src="/assets/banner-witers.mp4"
-        poster="/assets/hero-banner.png"
+        poster="/assets/hero-banner.jpg"
         preload="auto"
         autoPlay
         muted
