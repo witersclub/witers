@@ -170,6 +170,10 @@ function AiLab() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const done = stepIndex >= QUESTIONS.length;
+  // The full chat view only takes over the screen once the first answer is
+  // sent — before that it's a small, centered composer, closer to how
+  // ChatGPT/Claude start before the first message.
+  const started = stepIndex > 0;
 
   // Chat transcript built from questions already answered, in order —
   // derived straight from `answers`/`stepIndex` instead of a separate
@@ -401,6 +405,102 @@ function AiLab() {
     );
   }
 
+  const showSend = !listening && currentAnswer.trim().length > 0;
+
+  const composer = (
+    <>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (listening) stopListening();
+          submitAnswer(currentAnswer);
+        }}
+        className="wit-glass flex items-center gap-2 rounded-full p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+      >
+        <input
+          type="text"
+          aria-label="Tu respuesta"
+          value={currentAnswer}
+          onChange={(e) => setCurrentAnswer(e.target.value)}
+          disabled={done}
+          placeholder={done ? "" : "Escribe o presiona el micrófono..."}
+          className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
+        />
+        {done ? (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        ) : showSend ? (
+          <button
+            type="submit"
+            aria-label="Enviar respuesta"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wit-blue text-white transition-all hover:bg-wit-blue-deep"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 2 11 13" />
+              <path d="M22 2 15 22 11 13 2 9 22 2Z" />
+            </svg>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={toggleMic}
+            aria-label={listening ? "Detener micrófono" : "Activar micrófono"}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all ${
+              listening
+                ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_6px_rgba(239,68,68,0.15)]"
+                : "bg-wit-blue text-white hover:bg-wit-blue-deep"
+            }`}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
+            </svg>
+          </button>
+        )}
+      </form>
+      {listening ? (
+        <p className="mt-1.5 text-center text-[11px] text-wit-gray">Te escucho — sigue hablando, yo voy avanzando</p>
+      ) : null}
+    </>
+  );
+
+  if (!started) {
+    return (
+      <div className="wit-page min-h-dvh">
+        <header className="wit-glass border-b border-wit-ink/10">
+          <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+            <div className="flex items-center gap-3">
+              <Link to="/">
+                <WitersLogo compact />
+              </Link>
+              <span className="rounded-full bg-wit-mist/60 px-3 py-1 text-xs font-bold text-wit-blue">
+                LAB · SOLO ADMIN
+              </span>
+            </div>
+            <Link to="/admin" className="wit-navlink text-sm font-medium text-wit-ink">
+              ← Volver al panel
+            </Link>
+          </div>
+        </header>
+
+        <main className="wit-rise mx-auto flex h-[calc(100dvh-4rem)] max-w-sm flex-col items-center justify-center px-5 text-center">
+          <div className="wit-float">
+            <WMark size={32} />
+          </div>
+          <p className="mt-3 text-base font-medium text-wit-ink">Creemos tu pieza juntos</p>
+          <p className="mt-2 text-sm text-wit-gray">{QUESTIONS[0].text}</p>
+
+          {error ? <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p> : null}
+
+          <div className="mt-6 w-full">{composer}</div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="wit-page min-h-dvh">
       <header className="wit-glass border-b border-wit-ink/10">
@@ -419,7 +519,7 @@ function AiLab() {
         </div>
       </header>
 
-      <main className="mx-auto flex h-[calc(100dvh-4rem)] max-w-sm flex-col px-5">
+      <main className="wit-rise mx-auto flex h-[calc(100dvh-4rem)] max-w-sm flex-col px-5">
         <div className="flex flex-col items-center gap-1.5 pb-1 pt-5">
           <div className="wit-float">
             <WMark size={26} />
@@ -550,50 +650,7 @@ function AiLab() {
 
           {error ? <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-600">{error}</p> : null}
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (listening) stopListening();
-              submitAnswer(currentAnswer);
-            }}
-            className="wit-glass mt-3 flex items-center gap-2 rounded-full p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
-          >
-            <input
-              type="text"
-              aria-label="Tu respuesta"
-              value={currentAnswer}
-              onChange={(e) => setCurrentAnswer(e.target.value)}
-              disabled={done}
-              placeholder={done ? "" : "Escribe o presiona el micrófono..."}
-              className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
-            />
-            {!done ? (
-              <button
-                type="button"
-                onClick={toggleMic}
-                aria-label={listening ? "Detener micrófono" : "Activar micrófono"}
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all ${
-                  listening
-                    ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_6px_rgba(239,68,68,0.15)]"
-                    : "bg-wit-blue text-white hover:bg-wit-blue-deep"
-                }`}
-              >
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
-                </svg>
-              </button>
-            ) : (
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            )}
-          </form>
-          {listening ? (
-            <p className="mt-1.5 text-center text-[11px] text-wit-gray">Te escucho — sigue hablando, yo voy avanzando</p>
-          ) : null}
+          <div className="mt-3">{composer}</div>
         </div>
       </main>
     </div>
