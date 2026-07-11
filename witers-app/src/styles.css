@@ -300,6 +300,39 @@
   mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
 }
 
+/* Hero orbit: pieces travel around the glowing W by rotating the whole ring.
+   Each piece nests a second element spinning at the same speed but the
+   opposite direction, cancelling the ring's rotation so the artwork itself
+   stays upright instead of tumbling as it orbits. */
+.wit-orbit-ring {
+  animation: wit-orbit-spin 42s linear infinite;
+}
+.wit-orbit-counter {
+  animation: wit-orbit-spin-reverse 42s linear infinite;
+}
+@keyframes wit-orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes wit-orbit-spin-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+.wit-orbit-core {
+  animation: wit-orbit-pulse 4s ease-in-out infinite;
+}
+@keyframes wit-orbit-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
 .wit-navlink {
   position: relative;
 }
@@ -357,7 +390,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .wit-rise,
-  .wit-float {
+  .wit-float,
+  .wit-orbit-ring,
+  .wit-orbit-counter,
+  .wit-orbit-core {
     animation: none;
   }
   .wit-navlink::after {

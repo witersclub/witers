@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
@@ -85,88 +85,89 @@ function useShowcase() {
   });
 }
 
-// Instagram-style auto-advancing carousel of real finished pieces, in the
-// hero's portrait slot. Falls back to a branded placeholder card (not a
-// stock photo) until the first "cerrada" request exists.
-function HeroCarousel() {
+// Fixed angle/radius/size per orbit slot — deliberately uneven (not evenly
+// spaced sizes) so pieces read as "some bigger than others", per the brief.
+// Angles in degrees, radius/size in % and px of the orbit container.
+const ORBIT_LAYOUT = [
+  { angle: -78, radius: 40, size: 78 },
+  { angle: -16, radius: 28, size: 52 },
+  { angle: 42, radius: 44, size: 68 },
+  { angle: 104, radius: 31, size: 48 },
+  { angle: 162, radius: 41, size: 72 },
+  { angle: 224, radius: 29, size: 56 },
+];
+
+// The centerpiece: a glowing W with real finished pieces orbiting around it,
+// connected by thin light lines, slowly spinning — replaces the earlier
+// carousel/photo treatments in the hero's right-hand slot. Each piece is
+// counter-rotated against the ring's spin so the artwork itself stays
+// upright while still traveling around the circle (classic orbit trick: two
+// nested elements animating equal and opposite rotation at the same speed).
+function HeroOrbit() {
   const showcase = useShowcase();
-  const pieces = (showcase.data?.pieces ?? []).slice(0, 8);
-  const slides = pieces.map((p) => ({
-    key: p.id,
-    src: p.image_url ?? `/api/public/showcase-image?key=${encodeURIComponent(p.r2_key ?? "")}`,
-    alt: p.title,
-  }));
-  const hasReal = slides.length > 0;
-  const count = hasReal ? slides.length : 1;
-
-  const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-
-  useEffect(() => {
-    if (count < 2 || paused) return;
-    const t = setInterval(() => setIndex((i) => (i + 1) % count), 3800);
-    return () => clearInterval(t);
-  }, [count, paused]);
-
-  useEffect(() => {
-    if (index >= count) setIndex(0);
-  }, [count, index]);
+  const realPieces = (showcase.data?.pieces ?? []).slice(0, ORBIT_LAYOUT.length);
+  const hasReal = realPieces.length > 0;
+  const items = hasReal
+    ? realPieces.map((p, i) => ({
+        ...ORBIT_LAYOUT[i % ORBIT_LAYOUT.length],
+        key: p.id,
+        src: p.image_url ?? `/api/public/showcase-image?key=${encodeURIComponent(p.r2_key ?? "")}`,
+        alt: p.title,
+      }))
+    : ORBIT_LAYOUT.map((l, i) => ({ ...l, key: `ph-${i}`, src: null as string | null, alt: "" }));
 
   return (
-    <div
-      className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-[32px] bg-wit-mist shadow-[0_30px_80px_rgba(5,13,40,0.18)] md:max-w-none"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
-      {hasReal ? (
-        <div
-          className="flex h-full transition-transform duration-500 ease-out"
-          style={{ transform: `translateX(-${index * (100 / slides.length)}%)`, width: `${slides.length * 100}%` }}
-        >
-          {slides.map((s, i) => (
-            <img
-              key={s.key}
-              src={s.src}
-              alt={s.alt}
-              loading={i === 0 ? "eager" : "lazy"}
-              className="h-full shrink-0 object-cover"
-              style={{ width: `${100 / slides.length}%` }}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="wit-glass flex h-full w-full flex-col items-center justify-center gap-4 rounded-[32px]">
-          <WMark size={56} />
-          <p className="max-w-[220px] text-center text-sm font-semibold text-wit-gray">
-            Aquí verás las creatividades que entreguemos a nuestra comunidad
-          </p>
-        </div>
-      )}
+    <div className="relative mx-auto aspect-square w-full max-w-md md:max-w-none">
+      <div
+        aria-hidden="true"
+        className="absolute left-1/2 top-1/2 h-2/3 w-2/3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(0,71,255,0.28),transparent)] blur-2xl"
+      />
 
-      {count > 1 ? (
-        <>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/45 to-transparent"
-          />
-          <div className="absolute left-3 top-3 rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
-            {index + 1}/{count}
+      <div className="wit-orbit-ring absolute inset-0">
+        {items.map((it) => (
+          <div key={it.key}>
+            <div
+              aria-hidden="true"
+              className="absolute left-1/2 top-1/2 h-px origin-left bg-gradient-to-r from-wit-blue/50 to-transparent"
+              style={{ width: `${it.radius}%`, transform: `rotate(${it.angle}deg)` }}
+            />
+            <div
+              className="absolute -translate-x-1/2 -translate-y-1/2"
+              style={{
+                left: `${50 + it.radius * Math.cos((it.angle * Math.PI) / 180)}%`,
+                top: `${50 + it.radius * Math.sin((it.angle * Math.PI) / 180)}%`,
+                width: it.size,
+                height: it.size,
+              }}
+            >
+              <div className="wit-orbit-counter h-full w-full">
+                {it.src ? (
+                  <img
+                    src={it.src}
+                    alt={it.alt}
+                    loading="lazy"
+                    className="h-full w-full rounded-2xl object-cover shadow-[0_10px_30px_rgba(5,13,40,0.18)] ring-1 ring-white/70"
+                  />
+                ) : (
+                  <div className="wit-glass flex h-full w-full items-center justify-center rounded-2xl">
+                    <WMark size={Math.round(it.size * 0.4)} />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-1.5">
-            {slides.map((s, i) => (
-              <button
-                key={s.key}
-                type="button"
-                aria-label={`Ver imagen ${i + 1}`}
-                onClick={() => setIndex(i)}
-                className={`h-1.5 rounded-full transition-all duration-200 ${
-                  i === index ? "w-5 bg-white" : "w-1.5 bg-white/50"
-                }`}
-              />
-            ))}
-          </div>
-        </>
-      ) : null}
+        ))}
+      </div>
+
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div
+          aria-hidden="true"
+          className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(0,71,255,0.55),transparent)] blur-xl"
+        />
+        <div className="wit-orbit-core relative flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-[0_20px_60px_rgba(0,71,255,0.35)]">
+          <WMark size={52} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -205,17 +206,7 @@ function Hero() {
         </div>
 
         <div className="wit-rise wit-rise-d2 relative mx-auto w-full max-w-sm md:max-w-none">
-          <div
-            aria-hidden="true"
-            className="absolute -inset-6 -z-10 rounded-[40px] bg-[radial-gradient(closest-side,rgba(0,71,255,0.25),transparent)] blur-2xl"
-          />
-          <HeroCarousel />
-          <img
-            src="/assets/witers-logo-full.png"
-            alt=""
-            aria-hidden="true"
-            className="wit-float absolute -right-6 -top-8 hidden h-24 w-auto drop-shadow-lg md:block"
-          />
+          <HeroOrbit />
         </div>
       </div>
     </section>
