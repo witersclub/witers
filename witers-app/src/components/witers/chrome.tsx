@@ -27,8 +27,8 @@ export function SiteHeader() {
   }, []);
 
   const links = [
-    { href: "#quienes-somos", label: "Quiénes somos" },
-    { href: "#valores", label: "Comunidad" },
+    { href: "/nuestra-historia", label: "Nuestra historia" },
+    { href: "/nuestra-historia#valores", label: "Comunidad" },
     { href: "#membresia", label: "Membresía" },
   ];
 
@@ -136,7 +136,7 @@ export function SiteFooter() {
           <div className="mt-12 flex flex-col gap-6 border-t border-white/10 pt-8 md:flex-row md:items-center md:justify-between">
             <WitersLogo dark compact />
             <nav className="flex flex-wrap gap-x-8 gap-y-3 text-sm text-white/70">
-              <a href="#quienes-somos" className="hover:text-white">Quiénes somos</a>
+              <a href="/nuestra-historia" className="hover:text-white">Nuestra historia</a>
               <a href="#membresia" className="hover:text-white">Membresía</a>
               <Link to="/ingresar" className="hover:text-white">Ingresar</Link>
               <a href="mailto:hola@witers.com" className="hover:text-white">hola@witers.com</a>

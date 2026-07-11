@@ -14,6 +14,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as PanelRouteImport } from './routes/panel'
+import { Route as NuestraHistoriaRouteImport } from './routes/nuestra-historia'
 import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as AdminLabRouteImport } from './routes/admin-lab'
@@ -70,6 +71,11 @@ const RegistroRoute = RegistroRouteImport.update({
 const PanelRoute = PanelRouteImport.update({
   id: '/panel',
   path: '/panel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NuestraHistoriaRoute = NuestraHistoriaRouteImport.update({
+  id: '/nuestra-historia',
+  path: '/nuestra-historia',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IngresarRoute = IngresarRouteImport.update({
@@ -240,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
+  '/nuestra-historia': typeof NuestraHistoriaRoute
   '/panel': typeof PanelRoute
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
+  '/nuestra-historia': typeof NuestraHistoriaRoute
   '/panel': typeof PanelRoute
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -319,6 +327,7 @@ export interface FileRoutesById {
   '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
+  '/nuestra-historia': typeof NuestraHistoriaRoute
   '/panel': typeof PanelRoute
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -360,6 +369,7 @@ export interface FileRouteTypes {
     | '/admin-lab'
     | '/checkout'
     | '/ingresar'
+    | '/nuestra-historia'
     | '/panel'
     | '/registro'
     | '/robots.txt'
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/admin-lab'
     | '/checkout'
     | '/ingresar'
+    | '/nuestra-historia'
     | '/panel'
     | '/registro'
     | '/robots.txt'
@@ -438,6 +449,7 @@ export interface FileRouteTypes {
     | '/admin-lab'
     | '/checkout'
     | '/ingresar'
+    | '/nuestra-historia'
     | '/panel'
     | '/registro'
     | '/robots.txt'
@@ -478,6 +490,7 @@ export interface RootRouteChildren {
   AdminLabRoute: typeof AdminLabRoute
   CheckoutRoute: typeof CheckoutRoute
   IngresarRoute: typeof IngresarRoute
+  NuestraHistoriaRoute: typeof NuestraHistoriaRoute
   PanelRoute: typeof PanelRoute
   RegistroRoute: typeof RegistroRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -547,6 +560,13 @@ declare module '@tanstack/react-router' {
       path: '/panel'
       fullPath: '/panel'
       preLoaderRoute: typeof PanelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nuestra-historia': {
+      id: '/nuestra-historia'
+      path: '/nuestra-historia'
+      fullPath: '/nuestra-historia'
+      preLoaderRoute: typeof NuestraHistoriaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ingresar': {
@@ -782,6 +802,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLabRoute: AdminLabRoute,
   CheckoutRoute: CheckoutRoute,
   IngresarRoute: IngresarRoute,
+  NuestraHistoriaRoute: NuestraHistoriaRoute,
   PanelRoute: PanelRoute,
   RegistroRoute: RegistroRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
