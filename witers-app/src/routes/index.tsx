@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
@@ -147,8 +148,9 @@ function Hero() {
 
 /* ---------------- 1b. CLIENTES SATISFECHOS ---------------- */
 
-// Placeholder slots until real client pieces are dropped in — same visual
-// size regardless of the format label, so the marquee row stays uniform.
+// Placeholder slots shown only until the first "cerrada" (finalized) client
+// request exists — same visual size regardless of the format label, so the
+// marquee row stays uniform either way.
 const PIEZAS_EJEMPLO = [
   { label: "Post cuadrado", ratio: "1:1" },
   { label: "Historia", ratio: "9:16" },
@@ -158,8 +160,34 @@ const PIEZAS_EJEMPLO = [
   { label: "Historia", ratio: "9:16" },
 ];
 
+type ShowcasePiece = { id: string; r2_key: string | null; image_url: string | null; title: string };
+
+type Card =
+  | { key: string; kind: "real"; src: string; alt: string }
+  | { key: string; kind: "placeholder"; label: string; ratio: string };
+
 function ClientesSatisfechos() {
-  const piezas = [...PIEZAS_EJEMPLO, ...PIEZAS_EJEMPLO];
+  const showcase = useQuery({
+    queryKey: ["public-showcase"],
+    queryFn: async () => {
+      const res = await fetch("/api/public/showcase");
+      if (!res.ok) return { ok: false, pieces: [] as ShowcasePiece[] };
+      return (await res.json()) as { ok: boolean; pieces: ShowcasePiece[] };
+    },
+    staleTime: 60_000,
+  });
+
+  const realPieces = showcase.data?.pieces ?? [];
+  const cards: Card[] =
+    realPieces.length > 0
+      ? realPieces.map((p) => ({
+          key: p.id,
+          kind: "real",
+          src: p.image_url ?? `/api/public/showcase-image?key=${encodeURIComponent(p.r2_key ?? "")}`,
+          alt: p.title,
+        }))
+      : PIEZAS_EJEMPLO.map((p, i) => ({ key: `ph-${i}`, kind: "placeholder", label: p.label, ratio: p.ratio }));
+  const piezas = [...cards, ...cards.map((c) => ({ ...c, key: `${c.key}-2` }))];
 
   return (
     <section className="bg-white py-16 md:py-20">
@@ -171,18 +199,28 @@ function ClientesSatisfechos() {
 
       <div className="wit-marquee-mask relative mt-10 overflow-hidden">
         <div className="wit-marquee-track flex w-max gap-5 px-5">
-          {piezas.map((p, i) => (
-            <div
-              key={i}
-              className="wit-glass flex h-56 w-40 shrink-0 flex-col items-center justify-center gap-3 rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform duration-300 hover:scale-[1.04]"
-            >
-              <WMark size={30} />
-              <div className="text-center">
-                <p className="text-xs font-bold text-wit-ink">{p.label}</p>
-                <p className="text-[11px] text-wit-gray">{p.ratio}</p>
+          {piezas.map((p) =>
+            p.kind === "real" ? (
+              <img
+                key={p.key}
+                src={p.src}
+                alt={p.alt}
+                loading="lazy"
+                className="h-56 w-40 shrink-0 rounded-2xl object-cover shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform duration-300 hover:scale-[1.04]"
+              />
+            ) : (
+              <div
+                key={p.key}
+                className="wit-glass flex h-56 w-40 shrink-0 flex-col items-center justify-center gap-3 rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform duration-300 hover:scale-[1.04]"
+              >
+                <WMark size={30} />
+                <div className="text-center">
+                  <p className="text-xs font-bold text-wit-ink">{p.label}</p>
+                  <p className="text-[11px] text-wit-gray">{p.ratio}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ),
+          )}
         </div>
       </div>
     </section>

@@ -27,6 +27,8 @@ import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-rev
 import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
+import { Route as ApiPublicShowcaseImageRouteImport } from './routes/api/public/showcase-image'
+import { Route as ApiPublicShowcaseRouteImport } from './routes/api/public/showcase'
 import { Route as ApiDesignerRequestsRouteImport } from './routes/api/designer/requests'
 import { Route as ApiDesignerClaimRouteImport } from './routes/api/designer/claim'
 import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
@@ -132,6 +134,16 @@ const ApiCloseRequestRoute = ApiCloseRequestRouteImport.update({
 const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   id: '/api/checkout',
   path: '/api/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicShowcaseImageRoute = ApiPublicShowcaseImageRouteImport.update({
+  id: '/api/public/showcase-image',
+  path: '/api/public/showcase-image',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicShowcaseRoute = ApiPublicShowcaseRouteImport.update({
+  id: '/api/public/showcase',
+  path: '/api/public/showcase',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDesignerRequestsRoute = ApiDesignerRequestsRouteImport.update({
@@ -251,6 +263,8 @@ export interface FileRoutesByFullPath {
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/public/showcase': typeof ApiPublicShowcaseRoute
+  '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -287,6 +301,8 @@ export interface FileRoutesByTo {
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/public/showcase': typeof ApiPublicShowcaseRoute
+  '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -324,6 +340,8 @@ export interface FileRoutesById {
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/public/showcase': typeof ApiPublicShowcaseRoute
+  '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -362,6 +380,8 @@ export interface FileRouteTypes {
     | '/api/auth/register'
     | '/api/designer/claim'
     | '/api/designer/requests'
+    | '/api/public/showcase'
+    | '/api/public/showcase-image'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -398,6 +418,8 @@ export interface FileRouteTypes {
     | '/api/auth/register'
     | '/api/designer/claim'
     | '/api/designer/requests'
+    | '/api/public/showcase'
+    | '/api/public/showcase-image'
   id:
     | '__root__'
     | '/'
@@ -434,6 +456,8 @@ export interface FileRouteTypes {
     | '/api/auth/register'
     | '/api/designer/claim'
     | '/api/designer/requests'
+    | '/api/public/showcase'
+    | '/api/public/showcase-image'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -471,6 +495,8 @@ export interface RootRouteChildren {
   ApiAuthRegisterRoute: typeof ApiAuthRegisterRoute
   ApiDesignerClaimRoute: typeof ApiDesignerClaimRoute
   ApiDesignerRequestsRoute: typeof ApiDesignerRequestsRoute
+  ApiPublicShowcaseRoute: typeof ApiPublicShowcaseRoute
+  ApiPublicShowcaseImageRoute: typeof ApiPublicShowcaseImageRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -599,6 +625,20 @@ declare module '@tanstack/react-router' {
       path: '/api/checkout'
       fullPath: '/api/checkout'
       preLoaderRoute: typeof ApiCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/showcase-image': {
+      id: '/api/public/showcase-image'
+      path: '/api/public/showcase-image'
+      fullPath: '/api/public/showcase-image'
+      preLoaderRoute: typeof ApiPublicShowcaseImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/showcase': {
+      id: '/api/public/showcase'
+      path: '/api/public/showcase'
+      fullPath: '/api/public/showcase'
+      preLoaderRoute: typeof ApiPublicShowcaseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/designer/requests': {
@@ -751,6 +791,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthRegisterRoute: ApiAuthRegisterRoute,
   ApiDesignerClaimRoute: ApiDesignerClaimRoute,
   ApiDesignerRequestsRoute: ApiDesignerRequestsRoute,
+  ApiPublicShowcaseRoute: ApiPublicShowcaseRoute,
+  ApiPublicShowcaseImageRoute: ApiPublicShowcaseImageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
