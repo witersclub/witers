@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
@@ -27,9 +27,9 @@ function Landing() {
       <HeroVideoBackground />
       <SiteHeader />
       <Hero />
+      <Testimonios />
       <MarcasQueConfian />
       <LoQueHacemos />
-      <TrabajosQueHablan />
       <Membresia />
       <Faq />
       <CtaFinal />
@@ -67,107 +67,43 @@ function HeroVideoBackground() {
   );
 }
 
-// Real, finalized ("cerrada") client deliveries — same source and trust
-// boundary as TrabajosQueHablan below (/api/public/showcase). Both call
-// useQuery with the same queryKey, so React Query dedupes the fetch instead
-// of hitting the endpoint twice.
-type ShowcasePiece = { id: string; r2_key: string | null; image_url: string | null; title: string };
+// Real satisfaction-survey ratings/feedback, paired with the piece the
+// client reviewed — see /api/public/reviews.ts for the trust boundary.
+// Never fabricated: no stand-in people, photos, or quotes. Sections built
+// from this hide themselves entirely when the list is empty rather than
+// show a placeholder testimonial.
+type Review = {
+  request_id: string;
+  rating: number;
+  feedback: string | null;
+  company_name: string | null;
+  first_name: string;
+  r2_key: string | null;
+  image_url: string | null;
+};
 
-function useShowcase() {
+function useReviews() {
   return useQuery({
-    queryKey: ["public-showcase"],
+    queryKey: ["public-reviews"],
     queryFn: async () => {
-      const res = await fetch("/api/public/showcase");
-      if (!res.ok) return { ok: false, pieces: [] as ShowcasePiece[] };
-      return (await res.json()) as { ok: boolean; pieces: ShowcasePiece[] };
+      const res = await fetch("/api/public/reviews");
+      if (!res.ok) return { ok: false, reviews: [] as Review[] };
+      return (await res.json()) as { ok: boolean; reviews: Review[] };
     },
     staleTime: 60_000,
   });
 }
 
-// Fixed angle/radius/size per orbit slot — deliberately uneven (not evenly
-// spaced sizes) so pieces read as "some bigger than others", per the brief.
-// Angles in degrees, radius/size in % and px of the orbit container.
-const ORBIT_LAYOUT = [
-  { angle: -78, radius: 40, size: 78 },
-  { angle: -16, radius: 28, size: 52 },
-  { angle: 42, radius: 44, size: 68 },
-  { angle: 104, radius: 31, size: 48 },
-  { angle: 162, radius: 41, size: 72 },
-  { angle: 224, radius: 29, size: 56 },
-];
-
-// The centerpiece: a glowing W with real finished pieces orbiting around it,
-// connected by thin light lines, slowly spinning — replaces the earlier
-// carousel/photo treatments in the hero's right-hand slot. Each piece is
-// counter-rotated against the ring's spin so the artwork itself stays
-// upright while still traveling around the circle (classic orbit trick: two
-// nested elements animating equal and opposite rotation at the same speed).
-function HeroOrbit() {
-  const showcase = useShowcase();
-  const realPieces = (showcase.data?.pieces ?? []).slice(0, ORBIT_LAYOUT.length);
-  const hasReal = realPieces.length > 0;
-  const items = hasReal
-    ? realPieces.map((p, i) => ({
-        ...ORBIT_LAYOUT[i % ORBIT_LAYOUT.length],
-        key: p.id,
-        src: p.image_url ?? `/api/public/showcase-image?key=${encodeURIComponent(p.r2_key ?? "")}`,
-        alt: p.title,
-      }))
-    : ORBIT_LAYOUT.map((l, i) => ({ ...l, key: `ph-${i}`, src: null as string | null, alt: "" }));
-
+function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
+  const STAR_PATH =
+    "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.367 2.446a1 1 0 00-.363 1.118l1.287 3.957c.3.922-.755 1.688-1.539 1.118l-3.367-2.446a1 1 0 00-1.176 0l-3.367 2.446c-.784.57-1.838-.196-1.539-1.118l1.286-3.957a1 1 0 00-.363-1.118L2.98 9.385c-.783-.57-.38-1.81.588-1.81h4.163a1 1 0 00.95-.69l1.286-3.958z";
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-md md:max-w-none">
-      <div
-        aria-hidden="true"
-        className="absolute left-1/2 top-1/2 h-2/3 w-2/3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(0,71,255,0.28),transparent)] blur-2xl"
-      />
-
-      <div className="wit-orbit-ring absolute inset-0">
-        {items.map((it) => (
-          <div key={it.key}>
-            <div
-              aria-hidden="true"
-              className="absolute left-1/2 top-1/2 h-px origin-left bg-gradient-to-r from-wit-blue/50 to-transparent"
-              style={{ width: `${it.radius}%`, transform: `rotate(${it.angle}deg)` }}
-            />
-            <div
-              className="absolute -translate-x-1/2 -translate-y-1/2"
-              style={{
-                left: `${50 + it.radius * Math.cos((it.angle * Math.PI) / 180)}%`,
-                top: `${50 + it.radius * Math.sin((it.angle * Math.PI) / 180)}%`,
-                width: it.size,
-                height: it.size,
-              }}
-            >
-              <div className="wit-orbit-counter h-full w-full">
-                {it.src ? (
-                  <img
-                    src={it.src}
-                    alt={it.alt}
-                    loading="lazy"
-                    className="h-full w-full rounded-2xl object-cover shadow-[0_10px_30px_rgba(5,13,40,0.18)] ring-1 ring-white/70"
-                  />
-                ) : (
-                  <div className="wit-glass flex h-full w-full items-center justify-center rounded-2xl">
-                    <WMark size={Math.round(it.size * 0.4)} />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <div
-          aria-hidden="true"
-          className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(0,71,255,0.55),transparent)] blur-xl"
-        />
-        <div className="wit-orbit-core relative flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-[0_20px_60px_rgba(0,71,255,0.35)]">
-          <WMark size={52} />
-        </div>
-      </div>
+    <div className="flex items-center gap-0.5" aria-label={`${rating} de 5 estrellas`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <svg key={n} width={size} height={size} viewBox="0 0 20 20">
+          <path d={STAR_PATH} fill={n <= Math.round(rating) ? "#0047FF" : "#0047FF22"} />
+        </svg>
+      ))}
     </div>
   );
 }
@@ -175,38 +111,129 @@ function HeroOrbit() {
 function Hero() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
+  const reviews = useReviews();
+  const list = reviews.data?.reviews ?? [];
+  const avg = list.length ? list.reduce((sum, r) => sum + r.rating, 0) / list.length : 0;
 
   return (
-    <section className="relative overflow-hidden pb-14 pt-28 md:pb-20 md:pt-36">
-      <div className="relative grid items-center gap-12 px-5 md:grid-cols-[1.05fr_0.95fr] md:px-[110px]">
-        <div>
-          <h1 className="wit-rise text-4xl font-extrabold leading-tight tracking-tighter text-wit-ink md:text-6xl">
-            Elevemos tu marca.
-            <br />
-            <span className="wit-underline italic text-wit-blue">Con ingenio y tecnología.</span>
-          </h1>
-          <p className="wit-rise wit-rise-d1 mt-6 max-w-md text-lg leading-relaxed text-wit-gray">
-            Estrategia, diseño y tecnología con inteligencia artificial para marcas que quieren{" "}
-            <strong className="text-wit-ink">dejar huella</strong>.
-          </p>
-          <div className="wit-rise wit-rise-d2 mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-            <Link
-              to={signedIn ? "/panel" : "/registro"}
-              className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-7 py-3.5 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_16px_36px_rgba(0,71,255,0.35)] transition-all duration-200 hover:shadow-[0_20px_44px_rgba(0,71,255,0.45)] active:scale-[0.98]"
-            >
-              Unirme ahora
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1">
-                <path d="M3 13 13 3M13 3H6M13 3v7" />
-              </svg>
-            </Link>
+    <section className="relative overflow-hidden pb-16 pt-32 md:pb-24 md:pt-40">
+      <div className="relative mx-auto max-w-3xl px-5 text-center md:px-[110px]">
+        <span className="wit-rise inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-white/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue backdrop-blur-sm">
+          Branding · Marketing · IA
+        </span>
+        <h1 className="wit-rise wit-rise-d1 mx-auto mt-7 max-w-2xl text-5xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-7xl">
+          Elevemos tu marca con{" "}
+          <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
+            inteligencia artificial
+          </span>
+          .
+        </h1>
+        <p className="wit-rise wit-rise-d2 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-wit-gray">
+          Estrategia, diseño y tecnología para marcas que quieren dejar huella. Únete a la comunidad y
+          empieza a crear hoy.
+        </p>
+        <div className="wit-rise wit-rise-d2 mt-9 flex flex-col items-center gap-5">
+          <Link
+            to={signedIn ? "/panel" : "/registro"}
+            className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-8 py-4 text-base font-bold uppercase tracking-[0.06em] text-white shadow-[0_18px_40px_rgba(0,71,255,0.38)] transition-all duration-200 hover:shadow-[0_22px_48px_rgba(0,71,255,0.48)] active:scale-[0.98]"
+          >
+            Unirme ahora
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1">
+              <path d="M3 13 13 3M13 3H6M13 3v7" />
+            </svg>
+          </Link>
+          {list.length > 0 ? (
+            <div className="flex items-center gap-2 text-sm text-wit-gray">
+              <Stars rating={avg} size={17} />
+              <span className="font-bold text-wit-ink">{avg.toFixed(1)}/5</span>
+              <span>· {list.length} opiniones reales de nuestra comunidad</span>
+            </div>
+          ) : (
             <a href="/nuestra-historia" className="wit-navlink text-sm font-semibold text-wit-ink">
               Conocer la comunidad
             </a>
-          </div>
+          )}
         </div>
+      </div>
+    </section>
+  );
+}
 
-        <div className="wit-rise wit-rise-d2 relative mx-auto w-full max-w-sm md:max-w-none">
-          <HeroOrbit />
+/* ---------------- 1a. RESULTADOS REALES (imagen + reseña) ---------------- */
+
+function Testimonios() {
+  const reviews = useReviews();
+  const list = reviews.data?.reviews ?? [];
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (list.length < 2 || paused) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % list.length), 5200);
+    return () => clearInterval(t);
+  }, [list.length, paused]);
+
+  useEffect(() => {
+    if (index >= list.length) setIndex(0);
+  }, [list.length, index]);
+
+  // No fabricated testimonials — the whole section stays hidden until at
+  // least one client has actually submitted a rating.
+  if (list.length === 0) return null;
+
+  const current = list[index];
+  const src = current.image_url ?? `/api/public/showcase-image?key=${encodeURIComponent(current.r2_key ?? "")}`;
+
+  return (
+    <section className="relative bg-white py-20 md:py-28">
+      <div className="px-5 md:px-[110px]">
+        <p className="text-center text-sm font-bold uppercase tracking-[0.3em] text-wit-blue">Resultados reales</p>
+        <h2 className="mt-2 text-center text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
+          Lo que dicen quienes ya <span className="wit-underline italic text-wit-blue">confiaron en nosotros</span>.
+        </h2>
+
+        <div
+          className="relative mx-auto mt-14 max-w-sm"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
+          <div className="relative aspect-[4/5] overflow-hidden rounded-[28px] shadow-[0_30px_80px_rgba(5,13,40,0.16)]">
+            <img key={current.request_id} src={src} alt="" className="h-full w-full object-cover" loading="eager" />
+          </div>
+
+          <div className="wit-glass relative -mt-10 mx-4 rounded-2xl p-5 shadow-[0_20px_50px_rgba(5,13,40,0.12)]">
+            <Stars rating={current.rating} />
+            {current.feedback ? (
+              <p className="mt-2 text-[15px] italic leading-relaxed text-wit-ink">&ldquo;{current.feedback}&rdquo;</p>
+            ) : null}
+            <div className="mt-3 flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-wit-blue text-xs font-bold text-white">
+                {current.first_name.slice(0, 1).toUpperCase()}
+              </span>
+              <p className="text-sm font-bold text-wit-ink">
+                {current.first_name}
+                {current.company_name ? (
+                  <span className="font-normal text-wit-gray"> — {current.company_name}</span>
+                ) : null}
+              </p>
+            </div>
+          </div>
+
+          {list.length > 1 ? (
+            <div className="mt-4 flex items-center justify-center gap-1.5">
+              {list.map((r, i) => (
+                <button
+                  key={r.request_id}
+                  type="button"
+                  aria-label={`Ver reseña ${i + 1}`}
+                  onClick={() => setIndex(i)}
+                  className={`h-1.5 rounded-full transition-all duration-200 ${
+                    i === index ? "w-5 bg-wit-blue" : "w-1.5 bg-wit-ink/15"
+                  }`}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
     </section>
@@ -319,101 +346,6 @@ function LoQueHacemos() {
               </div>
             </article>
           ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ---------------- 1b. TRABAJOS QUE HABLAN ---------------- */
-
-// Placeholder slots shown only until the first "cerrada" (finalized) client
-// request exists.
-const PIEZAS_EJEMPLO = [
-  { label: "Post cuadrado", ratio: "1:1" },
-  { label: "Historia", ratio: "9:16" },
-  { label: "Banner", ratio: "16:9" },
-  { label: "Post vertical", ratio: "3:4" },
-];
-
-type Card =
-  | { key: string; kind: "real"; src: string; alt: string }
-  | { key: string; kind: "placeholder"; label: string; ratio: string };
-
-// Alternating tilt per card, like a fanned-out deck — matches the reference
-// layout's stacked project mockups.
-const TILTS = ["-rotate-6", "rotate-3", "-rotate-2", "rotate-6"];
-
-function TrabajosQueHablan() {
-  const showcase = useShowcase();
-
-  const realPieces = showcase.data?.pieces ?? [];
-  const cards: Card[] =
-    realPieces.length > 0
-      ? realPieces.slice(0, 4).map((p) => ({
-          key: p.id,
-          kind: "real",
-          src: p.image_url ?? `/api/public/showcase-image?key=${encodeURIComponent(p.r2_key ?? "")}`,
-          alt: p.title,
-        }))
-      : PIEZAS_EJEMPLO.map((p, i) => ({ key: `ph-${i}`, kind: "placeholder", label: p.label, ratio: p.ratio }));
-
-  return (
-    <section className="relative overflow-hidden bg-wit-navy py-20 text-white md:py-28">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-32 top-1/2 -translate-y-1/2 opacity-[0.06]"
-      >
-        <WMark size={620} />
-      </div>
-
-      <div className="relative grid items-center gap-14 px-5 md:grid-cols-[0.95fr_1.05fr] md:px-[110px]">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.3em] text-[#7d9aff]">Trabajos que hablan</p>
-          <h2 className="mt-2 text-3xl font-extrabold tracking-tighter md:text-5xl">
-            No es solo diseño.
-            <br />
-            <span className="wit-underline italic text-[#7d9aff]">Es transformación.</span>
-          </h2>
-          <p className="mt-6 max-w-sm text-base leading-relaxed text-white/70">
-            Cada proyecto que hacemos está pensado para generar resultados reales.
-          </p>
-          <a
-            href="/nuestra-historia"
-            className="wit-navlink mt-8 inline-flex items-center gap-2 text-sm font-semibold text-white"
-          >
-            Ver nuestros trabajos
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 13 13 3M13 3H6M13 3v7" />
-            </svg>
-          </a>
-        </div>
-
-        <div className="flex justify-center gap-[-2rem] md:justify-end">
-          {cards.map((p, i) =>
-            p.kind === "real" ? (
-              <img
-                key={p.key}
-                src={p.src}
-                alt={p.alt}
-                loading="lazy"
-                style={{ marginLeft: i === 0 ? 0 : "-2.75rem", zIndex: i + 1 }}
-                className={`${TILTS[i % TILTS.length]} h-64 w-44 shrink-0 rounded-2xl object-cover shadow-[0_20px_60px_rgba(0,0,0,0.45)] ring-1 ring-white/10 transition-transform duration-300 hover:z-10 hover:-translate-y-2 hover:rotate-0`}
-              />
-            ) : (
-              <div
-                key={p.key}
-                style={{ marginLeft: i === 0 ? 0 : "-2.75rem", zIndex: i + 1 }}
-                className={`${TILTS[i % TILTS.length]} wit-glass flex h-64 w-44 shrink-0 flex-col items-center justify-center gap-3 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.45)] ring-1 ring-white/10 transition-transform duration-300 hover:z-10 hover:-translate-y-2 hover:rotate-0`}
-              >
-                <WMark size={30} />
-                <div className="text-center">
-                  <p className="text-xs font-bold text-white">{p.label}</p>
-                  <p className="text-[11px] text-white/60">{p.ratio}</p>
-                </div>
-              </div>
-            ),
-          )}
         </div>
       </div>
     </section>

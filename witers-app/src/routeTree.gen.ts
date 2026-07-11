@@ -30,6 +30,7 @@ import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as ApiPublicShowcaseImageRouteImport } from './routes/api/public/showcase-image'
 import { Route as ApiPublicShowcaseRouteImport } from './routes/api/public/showcase'
+import { Route as ApiPublicReviewsRouteImport } from './routes/api/public/reviews'
 import { Route as ApiPublicBrandsRouteImport } from './routes/api/public/brands'
 import { Route as ApiPublicBrandLogoRouteImport } from './routes/api/public/brand-logo'
 import { Route as ApiDesignerRequestsRouteImport } from './routes/api/designer/requests'
@@ -153,6 +154,11 @@ const ApiPublicShowcaseImageRoute = ApiPublicShowcaseImageRouteImport.update({
 const ApiPublicShowcaseRoute = ApiPublicShowcaseRouteImport.update({
   id: '/api/public/showcase',
   path: '/api/public/showcase',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicReviewsRoute = ApiPublicReviewsRouteImport.update({
+  id: '/api/public/reviews',
+  path: '/api/public/reviews',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicBrandsRoute = ApiPublicBrandsRouteImport.update({
@@ -291,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
   '/api/public/brands': typeof ApiPublicBrandsRoute
+  '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
 }
@@ -333,6 +340,7 @@ export interface FileRoutesByTo {
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
   '/api/public/brands': typeof ApiPublicBrandsRoute
+  '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
 }
@@ -376,6 +384,7 @@ export interface FileRoutesById {
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
   '/api/public/brands': typeof ApiPublicBrandsRoute
+  '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
 }
@@ -420,6 +429,7 @@ export interface FileRouteTypes {
     | '/api/designer/requests'
     | '/api/public/brand-logo'
     | '/api/public/brands'
+    | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
   fileRoutesByTo: FileRoutesByTo
@@ -462,6 +472,7 @@ export interface FileRouteTypes {
     | '/api/designer/requests'
     | '/api/public/brand-logo'
     | '/api/public/brands'
+    | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
   id:
@@ -504,6 +515,7 @@ export interface FileRouteTypes {
     | '/api/designer/requests'
     | '/api/public/brand-logo'
     | '/api/public/brands'
+    | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
   fileRoutesById: FileRoutesById
@@ -547,6 +559,7 @@ export interface RootRouteChildren {
   ApiDesignerRequestsRoute: typeof ApiDesignerRequestsRoute
   ApiPublicBrandLogoRoute: typeof ApiPublicBrandLogoRoute
   ApiPublicBrandsRoute: typeof ApiPublicBrandsRoute
+  ApiPublicReviewsRoute: typeof ApiPublicReviewsRoute
   ApiPublicShowcaseRoute: typeof ApiPublicShowcaseRoute
   ApiPublicShowcaseImageRoute: typeof ApiPublicShowcaseImageRoute
 }
@@ -698,6 +711,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/showcase'
       fullPath: '/api/public/showcase'
       preLoaderRoute: typeof ApiPublicShowcaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/reviews': {
+      id: '/api/public/reviews'
+      path: '/api/public/reviews'
+      fullPath: '/api/public/reviews'
+      preLoaderRoute: typeof ApiPublicReviewsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/brands': {
@@ -875,6 +895,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDesignerRequestsRoute: ApiDesignerRequestsRoute,
   ApiPublicBrandLogoRoute: ApiPublicBrandLogoRoute,
   ApiPublicBrandsRoute: ApiPublicBrandsRoute,
+  ApiPublicReviewsRoute: ApiPublicReviewsRoute,
   ApiPublicShowcaseRoute: ApiPublicShowcaseRoute,
   ApiPublicShowcaseImageRoute: ApiPublicShowcaseImageRoute,
 }
