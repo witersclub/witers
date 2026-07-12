@@ -845,16 +845,16 @@ function AiLab() {
         </div>
 
         <div className="shrink-0 border-t border-wit-ink/10 pb-6 pt-3">
-          <div className="mx-auto h-1 w-full max-w-[220px] overflow-hidden rounded-full bg-wit-mist/50">
+          <div>{activeInput}</div>
+
+          {error ? <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-600">{error}</p> : null}
+
+          <div className="mx-auto mt-4 h-1 w-full max-w-[220px] overflow-hidden rounded-full bg-wit-mist/50">
             <div
               className="h-full rounded-full bg-wit-blue transition-all duration-500 ease-out"
               style={{ width: `${Math.min(100, (stepIndex / QUESTIONS.length) * 100)}%` }}
             />
           </div>
-
-          {error ? <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-600">{error}</p> : null}
-
-          <div className="mt-3">{activeInput}</div>
         </div>
       </main>
     </div>
@@ -965,10 +965,17 @@ function AspectRatioPicker({ onPick }: { onPick: (value: string) => void }) {
           onClick={() => onPick(opt.value)}
           className="flex shrink-0 flex-col items-center gap-1.5 transition-transform hover:scale-[1.05] active:scale-95"
         >
-          <span
-            className="wit-float w-10 rounded-[4px] border-2 border-wit-blue bg-wit-blue/10 shadow-[0_10px_24px_rgba(5,13,40,0.1)]"
+          {/* Same rotating-border treatment as an unclaimed request
+              (wit-pending-glow/-shield) — a spinning conic-gradient ring
+              around a plain white card, instead of a flat blue border. */}
+          <div
+            className="wit-float wit-pending-glow w-10 shadow-[0_10px_24px_rgba(5,13,40,0.12)]"
             style={{ aspectRatio: opt.value.replace(":", " / ") }}
-          />
+          >
+            <div className="wit-pending-glow-shield flex h-full w-full items-center justify-center text-[10px] font-bold text-wit-blue">
+              {opt.value}
+            </div>
+          </div>
           <span className="text-[10px] font-semibold text-wit-gray">{opt.label}</span>
         </button>
       ))}
