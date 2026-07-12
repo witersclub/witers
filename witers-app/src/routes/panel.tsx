@@ -1,9 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { WitersLogo } from "../components/witers/brand";
+import {
+  AgeRangeMultiPicker,
+  AspectRatioPicker,
+  AudiencePicker,
+  BusinessTypeWheel,
+  ColorsPicker,
+  LogoUploadPicker,
+  PieceTypePicker,
+  ProductPhotoUploadPicker,
+  StylePicker,
+} from "../components/witers/lab-pickers";
 import { useMe } from "../lib/witers-client";
 
 export const Route = createFileRoute("/panel")({
@@ -44,7 +55,6 @@ type RequestRow = {
 type PreviousAnswers = {
   title: string | null;
   companyName: string | null;
-  brief: string | null;
   productName: string | null;
   pieceBrief: string | null;
   audience: string | null;
@@ -76,7 +86,7 @@ function Panel() {
   const me = useMe();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"solicitudes" | "nueva">("solicitudes");
+  const [tab, setTab] = useState<"solicitudes" | "chat" | "nueva">("solicitudes");
 
   const requests = useQuery({
     queryKey: ["requests"],
@@ -154,7 +164,6 @@ function Panel() {
     ? {
         title: lastRow.title || null,
         companyName: lastRow.company_name,
-        brief: lastRow.brief || null,
         productName: lastRow.product_name,
         pieceBrief: lastRow.piece_brief,
         audience: lastRow.audience,
@@ -238,6 +247,11 @@ function Panel() {
             count={rows.length}
           />
           <PanelTab
+            active={tab === "chat"}
+            onClick={() => setTab("chat")}
+            label="Chat con IA"
+          />
+          <PanelTab
             active={tab === "nueva"}
             onClick={() => setTab("nueva")}
             label="+ Nueva solicitud"
@@ -245,7 +259,17 @@ function Panel() {
         </div>
 
         <div className="mt-8">
-          {tab === "nueva" ? (
+          {tab === "chat" ? (
+            <AiChatRequestForm
+              disabled={!active || remaining <= 0}
+              onCreated={() => {
+                void qc.invalidateQueries({ queryKey: ["requests"] });
+                void qc.invalidateQueries({ queryKey: ["me"] });
+                setTab("solicitudes");
+              }}
+              onUseClassicForm={() => setTab("nueva")}
+            />
+          ) : tab === "nueva" ? (
             <NewRequestForm
               disabled={!active || remaining <= 0}
               previousLogoKey={previousLogoKey}
@@ -299,6 +323,461 @@ function PanelTab({
         </span>
       ) : null}
     </button>
+  );
+}
+
+/* ---------- AI chat request form ---------- */
+
+// Same 14 questions the admin lab (admin-lab.tsx) prototyped — no `brief`,
+// businessType covers that ground now. Unlike the lab's free-text
+// questions (which went through an admin-only OpenAI extraction step),
+// every question here maps 1:1 onto a real /api/requests field, so typed
+// answers are used directly — no AI call, no extra cost, one thing less
+// that can fail for a paying member submitting a real request.
+const CHAT_QUESTIONS: { field: string; text: string; required: boolean }[] = [
+  { field: "pieceType", text: "¿Qué tipo de pieza quieres crear hoy?", required: false },
+  { field: "aspectRatio", text: "¿Qué forma tiene la pieza que te imaginas?", required: false },
+  { field: "companyName", text: "¿Cuál es el nombre de tu empresa o marca?", required: true },
+  {
+    field: "colors",
+    text: "¿Tienes colores de marca que debamos usar? Si no tienes, elige los que más te gusten.",
+    required: true,
+  },
+  { field: "style", text: "¿Qué estilo visual te gustaría para tu pieza?", required: true },
+  { field: "businessType", text: "¿En qué categoría cae tu negocio?", required: true },
+  { field: "pieceBrief", text: "¿Qué quieres que muestre esta pieza en concreto?", required: true },
+  { field: "title", text: "Si le pusieras un título corto a esta pieza, ¿cuál sería?", required: true },
+  { field: "audience", text: "¿A quién quieres llegarle con esta pieza?", required: true },
+  { field: "ageRanges", text: "¿En qué rango de edad está tu público? Elige uno o varios.", required: false },
+  { field: "logoKey", text: "Sube tu logotipo.", required: true },
+  { field: "productPhotoKey", text: "¿Tienes una foto del producto que debamos usar?", required: false },
+  {
+    field: "promoPrice",
+    text: "¿Hay algún precio o descuento que quieras destacar? Si no aplica, dime que no.",
+    required: false,
+  },
+  { field: "requiredText", text: "¿Hay algún texto o dato que deba aparecer sí o sí en la pieza?", required: false },
+];
+
+function ChatBubble({ role, children }: { role: "assistant" | "user"; children: React.ReactNode }) {
+  return (
+    <div className={`flex ${role === "user" ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm ${
+          role === "user" ? "bg-wit-blue text-white" : "bg-wit-mist/60 text-wit-ink"
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function describeAnswer(field: string, value: string): string {
+  if (!value) return "Omitido";
+  if (field === "logoKey") return value === "Sin logotipo" ? "Sin logotipo" : "Logotipo recibido ✓";
+  if (field === "productPhotoKey") return "Foto recibida ✓";
+  return value;
+}
+
+// Single-line pill or multiline card, matching the glassy look of the
+// picker components it sits alongside — the questions this handles
+// (companyName, pieceBrief, title, promoPrice, requiredText) map straight
+// onto a form field, so there's nothing to parse, just to validate.
+function ChatTextInput({
+  onPick,
+  placeholder,
+  minLength,
+  maxLength,
+  multiline,
+}: {
+  onPick: (value: string) => void;
+  placeholder: string;
+  minLength?: number;
+  maxLength?: number;
+  multiline?: boolean;
+}) {
+  const [text, setText] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+
+  function submit(ev: React.FormEvent) {
+    ev.preventDefault();
+    const trimmed = text.trim();
+    if (minLength && trimmed.length < minLength) {
+      setErr(`Necesitamos al menos ${minLength} caracteres.`);
+      return;
+    }
+    onPick(trimmed);
+  }
+
+  if (multiline) {
+    return (
+      <form
+        onSubmit={submit}
+        className="wit-glass mx-auto flex max-w-[320px] flex-col gap-2 rounded-2xl p-3.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+      >
+        <textarea
+          autoFocus
+          rows={3}
+          maxLength={maxLength}
+          value={text}
+          onChange={(ev) => setText(ev.target.value)}
+          placeholder={placeholder}
+          className="w-full resize-none border-0 bg-transparent text-sm text-wit-ink outline-none placeholder:text-wit-gray"
+        />
+        {err ? <p className="text-xs text-red-600">{err}</p> : null}
+        <button
+          type="submit"
+          className="self-end rounded-full bg-wit-blue px-5 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+        >
+          Enviar
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex max-w-[320px] flex-col items-center gap-1.5">
+      <form
+        onSubmit={submit}
+        className="wit-glass flex w-full items-center gap-2 rounded-full p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+      >
+        <input
+          autoFocus
+          type="text"
+          maxLength={maxLength}
+          value={text}
+          onChange={(ev) => setText(ev.target.value)}
+          placeholder={placeholder}
+          className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray"
+        />
+        <button
+          type="submit"
+          className="shrink-0 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+        >
+          Enviar
+        </button>
+      </form>
+      {err ? <p className="text-xs text-red-600">{err}</p> : null}
+    </div>
+  );
+}
+
+function AiChatRequestForm({
+  disabled,
+  onCreated,
+  onUseClassicForm,
+}: {
+  disabled: boolean;
+  onCreated: () => void;
+  onUseClassicForm: () => void;
+}) {
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [stepIndex, setStepIndex] = useState(0);
+  const [phase, setPhase] = useState<"chat" | "review">("chat");
+  const [error, setError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const done = stepIndex >= CHAT_QUESTIONS.length;
+  const currentQuestion = CHAT_QUESTIONS[stepIndex];
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [stepIndex, phase]);
+
+  function submitAnswer(rawText: string) {
+    const q = currentQuestion;
+    if (!q || done) return;
+    const text = rawText.trim();
+    if (!text && q.required) {
+      setError("Este dato es necesario para continuar.");
+      return;
+    }
+    setError(null);
+    const nextAnswers = { ...answers, [q.field]: text };
+    setAnswers(nextAnswers);
+    const nextIndex = stepIndex + 1;
+    setStepIndex(nextIndex);
+    if (nextIndex >= CHAT_QUESTIONS.length) setPhase("review");
+  }
+
+  function goBack() {
+    if (stepIndex === 0) return;
+    const prevField = CHAT_QUESTIONS[stepIndex - 1].field;
+    setAnswers((prev) => {
+      const next = { ...prev };
+      delete next[prevField];
+      return next;
+    });
+    setError(null);
+    setStepIndex((i) => i - 1);
+  }
+
+  // "Editar" from the review screen reopens the last question — from there
+  // "Atrás" walks back through earlier answers same as during the chat, so
+  // there's one consistent way to correct something instead of two.
+  function editFromReview() {
+    const lastField = CHAT_QUESTIONS[CHAT_QUESTIONS.length - 1].field;
+    setAnswers((prev) => {
+      const next = { ...prev };
+      delete next[lastField];
+      return next;
+    });
+    setStepIndex(CHAT_QUESTIONS.length - 1);
+    setPhase("chat");
+  }
+
+  async function confirmSend() {
+    setSendError(null);
+    setSending(true);
+    try {
+      const noLogo = answers.logoKey === "Sin logotipo";
+      const res = await fetch("/api/requests", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: answers.title,
+          companyName: answers.companyName,
+          pieceBrief: answers.pieceBrief,
+          style: answers.style || undefined,
+          aspectRatio: answers.aspectRatio || "1:1",
+          logoKey: noLogo ? undefined : answers.logoKey || undefined,
+          noLogo,
+          productPhotoKey: answers.productPhotoKey || undefined,
+          audience: answers.audience || undefined,
+          ageRange: answers.ageRanges || undefined,
+          promoPrice: answers.promoPrice || undefined,
+          requiredText: answers.requiredText || undefined,
+          brandColors: answers.colors || undefined,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setSendError(
+          data.error === "sin_saldo"
+            ? "Ya usaste todas tus solicitudes disponibles."
+            : data.error === "sin_membresia"
+              ? "Necesitas una membresía activa para enviar solicitudes."
+              : "Revisa tus respuestas e intenta de nuevo.",
+        );
+        return;
+      }
+      setAnswers({});
+      setStepIndex(0);
+      setPhase("chat");
+      onCreated();
+    } catch {
+      setSendError("No pudimos enviar tu solicitud. Intenta de nuevo.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (phase === "review") {
+    const colorList = (answers.colors ?? "")
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+    return (
+      <section className="wit-glass h-fit rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+        <h2 className="text-xl font-bold text-wit-ink">Revisa tu solicitud</h2>
+        <p className="mt-1 text-sm text-wit-gray">
+          Confirma que todo esté correcto antes de enviarla — usa una de tus solicitudes disponibles.
+        </p>
+
+        <dl className="mt-6 space-y-4">
+          <PreviewRow label="Título" value={answers.title ?? ""} />
+          <PreviewRow label="Nombre comercial / empresa" value={answers.companyName ?? ""} />
+          <PreviewRow label="Qué quieres que salga en esta pieza" value={answers.pieceBrief ?? ""} />
+          {answers.audience ? <PreviewRow label="Público objetivo" value={answers.audience} /> : null}
+          {answers.ageRanges ? <PreviewRow label="Rango de edad" value={answers.ageRanges} /> : null}
+          {answers.promoPrice ? <PreviewRow label="Precio o descuento" value={answers.promoPrice} /> : null}
+          {answers.requiredText ? (
+            <PreviewRow label="Mensaje o dato extra" value={answers.requiredText} />
+          ) : null}
+          <div>
+            <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+              Colores de marca
+            </dt>
+            <dd className="mt-1.5 flex gap-2">
+              {colorList.map((c) => (
+                <span
+                  key={c}
+                  className="h-7 w-7 rounded-full border border-wit-ink/10"
+                  style={{ backgroundColor: c }}
+                  title={c}
+                />
+              ))}
+            </dd>
+          </div>
+          {answers.style ? <PreviewRow label="Estilo" value={answers.style} /> : null}
+          <PreviewRow
+            label="Formato"
+            value={RATIO_LABEL[answers.aspectRatio ?? ""] ?? answers.aspectRatio ?? "Cuadrado"}
+          />
+          <PreviewRow
+            label="Logotipo"
+            value={answers.logoKey === "Sin logotipo" ? "No tiene logotipo" : "Logotipo recibido"}
+          />
+          {answers.productPhotoKey ? <PreviewRow label="Foto del producto" value="Foto recibida" /> : null}
+        </dl>
+
+        {sendError ? (
+          <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{sendError}</p>
+        ) : null}
+
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={editFromReview}
+            disabled={sending}
+            className="flex-1 rounded-2xl border border-wit-ink/15 px-6 py-4 text-base font-bold text-wit-ink transition-colors hover:border-wit-blue disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            onClick={confirmSend}
+            disabled={disabled || sending}
+            className="flex-1 rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {sending ? "Enviando..." : "Confirmar y enviar"}
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  const activeInput =
+    currentQuestion?.field === "pieceType" ? (
+      <PieceTypePicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "aspectRatio" ? (
+      <AspectRatioPicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "companyName" ? (
+      <ChatTextInput
+        onPick={submitAnswer}
+        placeholder="Nombre de tu empresa o marca"
+        minLength={2}
+        maxLength={120}
+      />
+    ) : currentQuestion?.field === "colors" ? (
+      <ColorsPicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "style" ? (
+      <StylePicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "businessType" ? (
+      <BusinessTypeWheel onPick={submitAnswer} />
+    ) : currentQuestion?.field === "pieceBrief" ? (
+      <ChatTextInput
+        onPick={submitAnswer}
+        placeholder="Describe qué debe mostrar esta pieza..."
+        minLength={10}
+        maxLength={2000}
+        multiline
+      />
+    ) : currentQuestion?.field === "title" ? (
+      <ChatTextInput
+        onPick={submitAnswer}
+        placeholder="Un título corto para esta pieza"
+        minLength={3}
+        maxLength={120}
+      />
+    ) : currentQuestion?.field === "audience" ? (
+      <AudiencePicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "ageRanges" ? (
+      <AgeRangeMultiPicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "logoKey" ? (
+      <LogoUploadPicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "productPhotoKey" ? (
+      <ProductPhotoUploadPicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "promoPrice" ? (
+      <ChatTextInput onPick={submitAnswer} placeholder="Ej. $500, 20% de descuento..." maxLength={80} />
+    ) : currentQuestion?.field === "requiredText" ? (
+      <ChatTextInput
+        onPick={submitAnswer}
+        placeholder="Ej. válido hasta el 31 de julio..."
+        maxLength={500}
+      />
+    ) : null;
+
+  return (
+    <section className="wit-glass h-fit rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-wit-ink">Chat con IA</h2>
+          <p className="mt-1 text-sm text-wit-gray">
+            Contesta unas preguntas rápidas y armamos tu solicitud — nada de formularios largos.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onUseClassicForm}
+          className="text-xs font-semibold text-wit-gray underline-offset-2 hover:text-wit-blue hover:underline"
+        >
+          Prefiero el formulario clásico
+        </button>
+      </div>
+
+      <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-wit-mist/50">
+        <div
+          className="h-full rounded-full bg-wit-blue transition-all duration-300"
+          style={{ width: `${Math.min(100, (stepIndex / CHAT_QUESTIONS.length) * 100)}%` }}
+        />
+      </div>
+
+      <div className="mt-6 max-h-[420px] space-y-4 overflow-y-auto pr-1">
+        {CHAT_QUESTIONS.slice(0, stepIndex).map((q) => (
+          <div key={q.field} className="space-y-2">
+            <ChatBubble role="assistant">{q.text}</ChatBubble>
+            <ChatBubble role="user">
+              {q.field === "colors" && answers.colors ? (
+                <span className="flex gap-1.5">
+                  {answers.colors.split(",").map((c) => (
+                    <span
+                      key={c}
+                      className="h-4 w-4 rounded-full border border-white/30"
+                      style={{ backgroundColor: c.trim() }}
+                    />
+                  ))}
+                </span>
+              ) : (
+                describeAnswer(q.field, answers[q.field] ?? "")
+              )}
+            </ChatBubble>
+          </div>
+        ))}
+
+        {!done ? (
+          <div className="space-y-3">
+            <ChatBubble role="assistant">{currentQuestion.text}</ChatBubble>
+            <div>{activeInput}</div>
+            <div className="flex items-center justify-center gap-4">
+              {stepIndex > 0 ? (
+                <button
+                  type="button"
+                  onClick={goBack}
+                  className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
+                >
+                  ← Atrás
+                </button>
+              ) : null}
+              {!currentQuestion.required ? (
+                <button
+                  type="button"
+                  onClick={() => submitAnswer("")}
+                  className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
+                >
+                  Omitir
+                </button>
+              ) : null}
+            </div>
+            {error ? <p className="text-center text-xs text-red-600">{error}</p> : null}
+          </div>
+        ) : null}
+        <div ref={bottomRef} />
+      </div>
+    </section>
   );
 }
 
@@ -356,7 +835,6 @@ const EMPTY_FORM = {
   title: "",
   companyName: "",
   productName: "",
-  brief: "",
   pieceBrief: "",
   style: "",
   aspectRatio: "1:1",
@@ -434,10 +912,9 @@ function NewRequestForm({
     if (
       form.title.trim().length < 3 ||
       form.companyName.trim().length < 2 ||
-      form.brief.trim().length < 10 ||
       form.pieceBrief.trim().length < 10
     ) {
-      setError("Revisa los campos obligatorios: título, empresa, a qué se dedica y qué quieres en la pieza.");
+      setError("Revisa los campos obligatorios: título, empresa y qué quieres en la pieza.");
       return;
     }
     if (!noLogo && !useSameLogo && !logoFile) {
@@ -489,7 +966,6 @@ function NewRequestForm({
           title: form.title,
           companyName: form.companyName,
           productName: form.productName || undefined,
-          brief: form.brief,
           pieceBrief: form.pieceBrief,
           style: form.style || undefined,
           aspectRatio: form.aspectRatio,
@@ -545,7 +1021,6 @@ function NewRequestForm({
           <PreviewRow label="Título" value={form.title} />
           <PreviewRow label="Nombre comercial / empresa" value={form.companyName} />
           {form.productName ? <PreviewRow label="Nombre del producto" value={form.productName} /> : null}
-          <PreviewRow label="A qué se dedica la empresa" value={form.brief} />
           <PreviewRow label="Qué quieres que salga en esta pieza" value={form.pieceBrief} />
           {form.audience ? <PreviewRow label="Público objetivo" value={form.audience} /> : null}
           {ageRanges.length ? <PreviewRow label="Rango de edad" value={ageRanges.join(", ")} /> : null}
@@ -661,27 +1136,6 @@ function NewRequestForm({
             />
           ) : null}
         </div>
-        <div className="relative">
-          <label htmlFor="rbrief" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            A qué se dedica la empresa
-          </label>
-          <textarea
-            id="rbrief"
-            required
-            minLength={10}
-            maxLength={4000}
-            rows={3}
-            value={form.brief}
-            onChange={(e) => setForm({ ...form, brief: e.target.value })}
-            {...suggestionHandlers("brief")}
-            className="w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-            placeholder="Qué vendes y qué te hace diferente..."
-          />
-          {activeSuggestion === "brief" && previousAnswers?.brief ? (
-            <FieldSuggestion text={previousAnswers.brief} onPick={() => pickSuggestion("brief")} />
-          ) : null}
-        </div>
-
         <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
           Sobre este pedido
         </p>

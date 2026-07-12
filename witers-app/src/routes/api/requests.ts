@@ -9,7 +9,6 @@ const createSchema = z
     title: z.string().min(3).max(120),
     companyName: z.string().min(2).max(120),
     productName: z.string().max(120).optional(),
-    brief: z.string().min(10).max(4000),
     pieceBrief: z.string().min(10).max(2000),
     style: z.string().max(200).optional(),
     aspectRatio: z.enum(["1:1", "4:3", "3:4", "16:9", "9:16"]).default("1:1"),
@@ -93,7 +92,10 @@ export const Route = createFileRoute("/api/requests")({
             id,
             user.id,
             parsed.data.title.trim(),
-            parsed.data.brief.trim(),
+            // design_requests.brief is still NOT NULL at the DB level — no
+            // longer collected from the client, so this is just satisfying
+            // that constraint, not a real value.
+            "",
             parsed.data.style?.trim() ?? null,
             parsed.data.aspectRatio,
             parsed.data.referenceKey ?? null,

@@ -25,7 +25,6 @@ const RESPONSE_SCHEMA = {
     title: { type: "string", description: "Título corto de la pieza, ej. 'Anuncio de lanzamiento para Instagram'." },
     companyName: { type: "string", description: "Nombre comercial o de la empresa." },
     productName: { type: "string", description: "Nombre del producto específico, o '' si no aplica." },
-    brief: { type: "string", description: "A qué se dedica la empresa." },
     pieceBrief: { type: "string", description: "Qué debe mostrar/comunicar esta pieza en concreto." },
     promoPrice: { type: "string", description: "Precio o descuento a destacar, o '' si no aplica." },
     requiredText: { type: "string", description: "Texto/dato obligatorio a incluir en la pieza, o '' si no aplica." },
@@ -35,7 +34,7 @@ const RESPONSE_SCHEMA = {
       description: "En español, lista breve de qué información importante falta o quedó ambigua (para preguntarle al cliente). Arreglo vacío si el brief está completo.",
     },
   },
-  required: ["title", "companyName", "productName", "brief", "pieceBrief", "promoPrice", "requiredText", "missingInfo"],
+  required: ["title", "companyName", "productName", "pieceBrief", "promoPrice", "requiredText", "missingInfo"],
   additionalProperties: false,
 };
 
