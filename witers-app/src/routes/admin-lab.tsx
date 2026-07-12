@@ -194,16 +194,6 @@ function AiLab() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [stepIndex, typing, done, loading, fields]);
 
-  // Tapping/clicking anywhere outside the long-press popup dismisses it.
-  useEffect(() => {
-    if (!menuField) return;
-    const dismiss = (ev: Event) => {
-      if (!(ev.target as Element | null)?.closest("[data-edit-menu]")) setMenuField(null);
-    };
-    document.addEventListener("pointerdown", dismiss);
-    return () => document.removeEventListener("pointerdown", dismiss);
-  }, [menuField]);
-
   // Press-and-hold a sent answer to reveal a tiny "Editar" popup, instead of
   // a link sitting under every bubble all the time.
   function handlePressStart(field: string) {
@@ -595,9 +585,69 @@ function AiLab() {
 
       {menuField || editingField ? (
         <div
-          aria-hidden="true"
-          className="wit-rise fixed inset-0 z-30 bg-wit-ink/15 backdrop-blur-sm"
-        />
+          className="wit-rise fixed inset-0 z-30 flex items-center justify-center bg-wit-ink/20 px-6 backdrop-blur-sm"
+          onClick={() => {
+            setMenuField(null);
+            cancelEditing();
+          }}
+        >
+          <div onClick={(ev) => ev.stopPropagation()} className="wit-rise w-full max-w-xs">
+            {editingField ? (
+              <div className="rounded-2xl bg-white p-5 shadow-[0_25px_70px_rgba(5,13,40,0.35)]">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+                  Editar respuesta
+                </p>
+                <input
+                  autoFocus
+                  type="text"
+                  aria-label="Editar respuesta"
+                  value={editValue}
+                  onChange={(ev) => setEditValue(ev.target.value)}
+                  onKeyDown={(ev) => {
+                    if (ev.key === "Enter") {
+                      ev.preventDefault();
+                      saveEdit();
+                    }
+                    if (ev.key === "Escape") cancelEditing();
+                  }}
+                  className="mt-3 w-full rounded-xl border border-wit-ink/15 px-3.5 py-2.5 text-sm text-wit-ink outline-none focus:border-wit-blue"
+                />
+                <div className="mt-4 flex justify-end gap-4">
+                  <button
+                    type="button"
+                    onClick={cancelEditing}
+                    className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveEdit}
+                    className="rounded-full bg-wit-blue px-4 py-1.5 text-sm font-bold text-white hover:bg-wit-blue-deep"
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            ) : menuField ? (
+              <div className="overflow-hidden rounded-2xl bg-white shadow-[0_25px_70px_rgba(5,13,40,0.35)]">
+                <p className="border-b border-wit-ink/10 px-4 py-3 text-sm text-wit-gray">
+                  &ldquo;{answers[menuField] ?? ""}&rdquo;
+                </p>
+                <button
+                  type="button"
+                  onClick={() => startEditing(menuField, answers[menuField] ?? "")}
+                  className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-wit-ink hover:bg-wit-mist/50"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                  Editar
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
       ) : null}
 
       <main className="wit-rise mx-auto flex h-[calc(100dvh-4rem)] max-w-sm flex-col px-5">
@@ -613,80 +663,19 @@ function AiLab() {
             {answeredEntries.map((e) => (
               <div key={e.field} className="flex flex-col gap-3">
                 <ChatBubble role="assistant" text={e.question} />
-                {editingField === e.field ? (
-                  <div className="relative z-40 flex flex-col items-end gap-1.5 self-end">
-                    <div className="flex w-full max-w-[230px] items-center rounded-2xl rounded-br-sm border-2 border-wit-blue bg-white px-3.5 py-2">
-                      <input
-                        autoFocus
-                        type="text"
-                        aria-label="Editar respuesta"
-                        value={editValue}
-                        onChange={(ev) => setEditValue(ev.target.value)}
-                        onKeyDown={(ev) => {
-                          if (ev.key === "Enter") {
-                            ev.preventDefault();
-                            saveEdit();
-                          }
-                          if (ev.key === "Escape") cancelEditing();
-                        }}
-                        className="min-w-0 flex-1 border-0 bg-transparent text-sm text-wit-ink outline-none"
-                      />
-                    </div>
-                    <div className="flex gap-3">
-                      <button
-                        type="button"
-                        onClick={cancelEditing}
-                        className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={saveEdit}
-                        className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
-                      >
-                        Guardar
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className={`relative self-end ${menuField === e.field ? "z-40" : ""}`}>
-                    <div
-                      onMouseDown={() => handlePressStart(e.field)}
-                      onMouseUp={handlePressEnd}
-                      onMouseLeave={handlePressEnd}
-                      onMouseMove={handlePressMove}
-                      onTouchStart={() => handlePressStart(e.field)}
-                      onTouchEnd={handlePressEnd}
-                      onTouchMove={handlePressMove}
-                      onContextMenu={(ev) => ev.preventDefault()}
-                      className="cursor-pointer select-none transition-transform active:scale-[0.97]"
-                    >
-                      <ChatBubble role="user" text={e.answer} />
-                    </div>
-                    {menuField === e.field ? (
-                      <div
-                        data-edit-menu
-                        className="wit-rise absolute -top-11 right-0 z-10 flex items-center gap-1.5 rounded-xl bg-wit-ink px-3 py-2 text-xs font-semibold text-white shadow-[0_10px_30px_rgba(5,13,40,0.25)]"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => startEditing(e.field, answers[e.field] ?? "")}
-                          className="flex items-center gap-1.5"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                          </svg>
-                          Editar
-                        </button>
-                        <span
-                          aria-hidden="true"
-                          className="absolute -bottom-1 right-4 h-2 w-2 rotate-45 bg-wit-ink"
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-                )}
+                <div
+                  onMouseDown={() => handlePressStart(e.field)}
+                  onMouseUp={handlePressEnd}
+                  onMouseLeave={handlePressEnd}
+                  onMouseMove={handlePressMove}
+                  onTouchStart={() => handlePressStart(e.field)}
+                  onTouchEnd={handlePressEnd}
+                  onTouchMove={handlePressMove}
+                  onContextMenu={(ev) => ev.preventDefault()}
+                  className="cursor-pointer self-end select-none transition-transform active:scale-[0.97]"
+                >
+                  <ChatBubble role="user" text={e.answer} />
+                </div>
               </div>
             ))}
 
