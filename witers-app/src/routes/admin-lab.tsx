@@ -1134,24 +1134,24 @@ function AudiencePicker({ onPick }: { onPick: (value: string) => void }) {
   }
 
   return (
-    <div className="flex flex-wrap justify-center gap-3 px-1 py-2">
+    <div className="flex items-start justify-center gap-2 px-1 py-2">
       {AUDIENCE_OPTIONS.map((opt) => (
         <button
           key={opt}
           type="button"
           onClick={() => onPick(opt)}
-          className="flex w-20 flex-col items-center gap-1 rounded-2xl bg-wit-mist/50 px-2 py-3 transition-transform hover:scale-[1.03] hover:bg-wit-mist active:scale-95"
+          className="flex flex-col items-center gap-1 transition-transform hover:scale-[1.05] active:scale-95"
         >
           <span className="wit-float text-wit-blue">
             <AudienceIcon value={opt} />
           </span>
-          <span className="text-center text-[10px] font-semibold leading-tight text-wit-ink">{opt}</span>
+          <span className="w-14 text-center text-[10px] font-semibold leading-tight text-wit-gray">{opt}</span>
         </button>
       ))}
       <button
         type="button"
         onClick={() => setCustomMode(true)}
-        className="flex w-20 flex-col items-center justify-center gap-1 rounded-2xl bg-wit-mist/50 px-2 py-3 text-xs font-semibold text-wit-gray transition-transform hover:scale-[1.03] hover:bg-wit-mist hover:text-wit-ink active:scale-95"
+        className="flex flex-col items-center gap-1 pt-1.5 text-[10px] font-semibold text-wit-gray transition-transform hover:scale-[1.05] hover:text-wit-ink active:scale-95"
       >
         Otro
       </button>
