@@ -185,7 +185,7 @@ const BUSINESS_INDUSTRIES: { value: string; types: string[] }[] = [
   { value: "Mascotas", types: ["Veterinaria / Pet shop"] },
 ];
 
-const AUDIENCE_OPTIONS = ["Mujeres", "Hombres", "Todos / Público general", "Corporativos / Empresas"];
+const AUDIENCE_OPTIONS = ["Mujeres", "Hombres", "Todos", "Empresas"];
 
 // Hand-drawn, one glyph per option instead of one icon family reused with a
 // className swap — each option reads clearer through its own convention
@@ -216,7 +216,7 @@ function AudienceIcon({ value }: { value: string }) {
           <polyline points="13,5 19,5 19,11" />
         </svg>
       );
-    case "Todos / Público general":
+    case "Todos":
       return (
         <svg width="26" height="26" viewBox="0 0 24 24">
           <circle cx="7" cy="9" r="3" fill="currentColor" />
@@ -224,7 +224,7 @@ function AudienceIcon({ value }: { value: string }) {
           <circle cx="12" cy="16" r="3.5" fill="currentColor" />
         </svg>
       );
-    case "Corporativos / Empresas":
+    case "Empresas":
       return (
         <svg width="26" height="26" viewBox="0 0 24 24" {...stroke}>
           <rect x="6" y="4" width="12" height="17" />
@@ -1134,24 +1134,26 @@ function AudiencePicker({ onPick }: { onPick: (value: string) => void }) {
   }
 
   return (
-    <div className="flex items-start justify-center gap-2 px-1 py-2">
-      {AUDIENCE_OPTIONS.map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => onPick(opt)}
-          className="flex flex-col items-center gap-1 transition-transform hover:scale-[1.05] active:scale-95"
-        >
-          <span className="wit-float text-wit-blue">
-            <AudienceIcon value={opt} />
-          </span>
-          <span className="w-14 text-center text-[10px] font-semibold leading-tight text-wit-gray">{opt}</span>
-        </button>
-      ))}
+    <div className="flex flex-col items-center gap-3 px-1 py-2">
+      <div className="flex items-start justify-center gap-4">
+        {AUDIENCE_OPTIONS.map((opt) => (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onPick(opt)}
+            className="flex flex-col items-center gap-1 transition-transform hover:scale-[1.05] active:scale-95"
+          >
+            <span className="wit-float text-wit-blue">
+              <AudienceIcon value={opt} />
+            </span>
+            <span className="text-center text-[10px] font-semibold leading-tight text-wit-gray">{opt}</span>
+          </button>
+        ))}
+      </div>
       <button
         type="button"
         onClick={() => setCustomMode(true)}
-        className="flex flex-col items-center gap-1 pt-1.5 text-[10px] font-semibold text-wit-gray transition-transform hover:scale-[1.05] hover:text-wit-ink active:scale-95"
+        className="text-[10px] font-semibold text-wit-gray transition-transform hover:scale-[1.05] hover:text-wit-ink active:scale-95"
       >
         Otro
       </button>
