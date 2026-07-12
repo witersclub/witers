@@ -957,7 +957,7 @@ function PieceTypePicker({ onPick }: { onPick: (value: string) => void }) {
 // grid.
 function AspectRatioPicker({ onPick }: { onPick: (value: string) => void }) {
   return (
-    <div className="flex justify-center gap-4 overflow-x-auto px-1 py-2">
+    <div className="flex items-end justify-center gap-4 overflow-x-auto px-1 py-2">
       {ASPECT_OPTIONS.map((opt) => (
         <button
           key={opt.value}
@@ -965,9 +965,10 @@ function AspectRatioPicker({ onPick }: { onPick: (value: string) => void }) {
           onClick={() => onPick(opt.value)}
           className="flex shrink-0 flex-col items-center gap-1.5 transition-transform hover:scale-[1.05] active:scale-95"
         >
-          <span className="wit-float wit-glass flex h-12 w-12 items-center justify-center rounded-2xl text-[11px] font-bold text-wit-blue shadow-[0_10px_30px_rgba(5,13,40,0.08)]">
-            {opt.value}
-          </span>
+          <span
+            className="wit-float w-10 rounded-[4px] border-2 border-wit-blue bg-wit-blue/10 shadow-[0_10px_24px_rgba(5,13,40,0.1)]"
+            style={{ aspectRatio: opt.value.replace(":", " / ") }}
+          />
           <span className="text-[10px] font-semibold text-wit-gray">{opt.label}</span>
         </button>
       ))}
