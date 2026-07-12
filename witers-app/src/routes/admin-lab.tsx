@@ -1137,8 +1137,12 @@ function WheelPicker({
 // the whole time and swaps to a plain text field when tapped, at whichever
 // level the client's business doesn't fit.
 function BusinessTypeWheel({ onPick }: { onPick: (value: string) => void }) {
-  const [industry, setIndustry] = useState<string | null>(null);
-  const [type, setType] = useState<string | null>(null);
+  // One wheel visible at a time — industry first, and only once that's
+  // locked in with "Siguiente" does the business-type wheel for it appear,
+  // instead of both spinning on screen together.
+  const [step, setStep] = useState<"industry" | "type">("industry");
+  const [industry, setIndustry] = useState(BUSINESS_INDUSTRIES[0].value);
+  const [type, setType] = useState(BUSINESS_INDUSTRIES[0].types[0]);
   const [customStep, setCustomStep] = useState<"industry" | "type" | null>(null);
   const [customText, setCustomText] = useState("");
 
@@ -1170,41 +1174,56 @@ function BusinessTypeWheel({ onPick }: { onPick: (value: string) => void }) {
     );
   }
 
-  const industryEntry = BUSINESS_INDUSTRIES.find((i) => i.value === industry);
-
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="flex items-center gap-2">
-        <WheelPicker
-          items={BUSINESS_INDUSTRIES.map((i) => i.value)}
-          onSettle={(value) => {
-            setIndustry(value);
-            setType(null);
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => setCustomStep("industry")}
-          className="shrink-0 rounded-full bg-wit-mist/50 px-3 py-1.5 text-xs font-semibold text-wit-gray hover:text-wit-ink"
-        >
-          Otro
-        </button>
-      </div>
-
-      {industryEntry ? (
+  if (step === "industry") {
+    return (
+      <div className="flex flex-col items-center gap-3">
         <div className="flex items-center gap-2">
-          <WheelPicker key={industry} items={industryEntry.types} onSettle={setType} />
+          <WheelPicker items={BUSINESS_INDUSTRIES.map((i) => i.value)} onSettle={setIndustry} />
           <button
             type="button"
-            onClick={() => setCustomStep("type")}
+            onClick={() => setCustomStep("industry")}
             className="shrink-0 rounded-full bg-wit-mist/50 px-3 py-1.5 text-xs font-semibold text-wit-gray hover:text-wit-ink"
           >
             Otro
           </button>
         </div>
-      ) : null}
+        <button
+          type="button"
+          onClick={() => {
+            const entry = BUSINESS_INDUSTRIES.find((i) => i.value === industry);
+            setType(entry?.types[0] ?? "");
+            setStep("type");
+          }}
+          className="rounded-full bg-wit-blue px-6 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
+        >
+          Siguiente
+        </button>
+      </div>
+    );
+  }
 
-      {type ? (
+  const industryEntry = BUSINESS_INDUSTRIES.find((i) => i.value === industry);
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="flex items-center gap-2">
+        <WheelPicker items={industryEntry?.types ?? []} onSettle={setType} />
+        <button
+          type="button"
+          onClick={() => setCustomStep("type")}
+          className="shrink-0 rounded-full bg-wit-mist/50 px-3 py-1.5 text-xs font-semibold text-wit-gray hover:text-wit-ink"
+        >
+          Otro
+        </button>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setStep("industry")}
+          className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
+        >
+          Atrás
+        </button>
         <button
           type="button"
           onClick={() => onPick(type)}
@@ -1212,7 +1231,7 @@ function BusinessTypeWheel({ onPick }: { onPick: (value: string) => void }) {
         >
           Confirmar
         </button>
-      ) : null}
+      </div>
     </div>
   );
 }
