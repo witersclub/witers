@@ -209,12 +209,20 @@ function useDraggableMarquee<T>(itemCount: number) {
     onPointerCancel: () => {
       draggingRef.current = false;
     },
-    onMouseEnter: () => {
-      pausedRef.current = true;
+    // Pause-on-hover only makes sense for an actual mouse — a touch tap
+    // fires a synthetic "mouseenter" with no matching "mouseleave" behind
+    // it (there's no real pointer to move away), which left the marquee
+    // paused for good after a single tap. Gating on pointerType keeps
+    // that behavior mouse-only; a tap or drag on touch never touches
+    // pausedRef at all.
+    onPointerEnter: (ev: React.PointerEvent) => {
+      if (ev.pointerType === "mouse") pausedRef.current = true;
     },
-    onMouseLeave: () => {
-      pausedRef.current = false;
-      draggingRef.current = false;
+    onPointerLeave: (ev: React.PointerEvent) => {
+      if (ev.pointerType === "mouse") {
+        pausedRef.current = false;
+        draggingRef.current = false;
+      }
     },
   };
 
