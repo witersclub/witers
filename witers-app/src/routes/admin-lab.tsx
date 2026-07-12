@@ -43,6 +43,7 @@ type Fields = {
   brief: string;
   pieceBrief: string;
   style: string;
+  pieceType: string;
   aspectRatio: string;
   audience: string;
   ageRanges: string[];
@@ -55,9 +56,19 @@ type Fields = {
 // One question per field the real form needs — the conversation IS the
 // form, asked one thing at a time instead of dumped as a wall of inputs.
 // The raw answers get stitched into a transcript and handed to the same
-// /api/admin/ai-fill endpoint the freeform lab used, which normalizes
-// them (style → chip, colors → hex, aspectRatio → enum) same as before.
+// /api/admin/ai-fill endpoint the freeform lab used, which normalizes the
+// free-text fields (style → chip, brief, etc). pieceType/aspectRatio/colors
+// are answered through dedicated pickers instead of free text, so those
+// three are never sent through the AI at all — see generate() below,
+// which merges them straight from `answers` into the final Fields.
 const QUESTIONS: { field: string; label: string; short: string; text: string; required: boolean }[] = [
+  {
+    field: "pieceType",
+    label: "Tipo de pieza",
+    short: "Tipo",
+    text: "¿Qué tipo de pieza quieres crear hoy?",
+    required: false,
+  },
   {
     field: "aspectRatio",
     label: "Formato",
@@ -137,6 +148,8 @@ const ASPECT_OPTIONS: { value: string; label: string }[] = [
   { value: "3:4", label: "Vertical" },
   { value: "9:16", label: "Historia" },
 ];
+
+const PIECE_TYPE_OPTIONS = ["Instagram", "Historia", "Facebook", "Banner web", "Impreso", "Otro"];
 
 function buildTranscript(answers: Record<string, string>): string {
   return QUESTIONS.map((q) => {
@@ -268,7 +281,11 @@ function AiLab() {
   stepIndexRef.current = stepIndex;
   doneRef.current = done;
 
-  async function generate(text: string) {
+  // `capturedAnswers` is passed in explicitly (not read from the `answers`
+  // state closure) because this runs inside a setTimeout scheduled by
+  // submitAnswer/saveEdit — by the time it fires, the closure that created
+  // it is stale relative to the latest setAnswers() call.
+  async function generate(text: string, capturedAnswers: Record<string, string>) {
     setLoading(true);
     setError(null);
     setFields(null);
@@ -287,7 +304,18 @@ function AiLab() {
         );
         return;
       }
-      setFields(data.fields);
+      // pieceType/aspectRatio/colors came from dedicated pickers, not free
+      // text — use the exact values the client chose instead of whatever
+      // the AI guessed from the transcript (it isn't even asked for these).
+      setFields({
+        ...data.fields,
+        pieceType: capturedAnswers.pieceType ?? "",
+        aspectRatio: capturedAnswers.aspectRatio ?? "",
+        colors: (capturedAnswers.colors ?? "")
+          .split(",")
+          .map((c) => c.trim())
+          .filter(Boolean),
+      });
     } catch {
       setError("No pudimos generar los campos. Intenta de nuevo.");
     } finally {
@@ -314,7 +342,7 @@ function AiLab() {
     window.setTimeout(() => {
       setTyping(false);
       if (nextIndex >= QUESTIONS.length) {
-        void generate(buildTranscript(nextAnswers));
+        void generate(buildTranscript(nextAnswers), nextAnswers);
       }
     }, 550);
   }
@@ -353,7 +381,7 @@ function AiLab() {
     setEditValue("");
     if (done && fields) {
       setFields(null);
-      void generate(buildTranscript(nextAnswers));
+      void generate(buildTranscript(nextAnswers), nextAnswers);
     }
   }
 
@@ -557,12 +585,15 @@ function AiLab() {
     </>
   );
 
-  // Formato y colores se contestan con un selector visual en vez del campo
-  // de texto/mic — más fácil para un cliente que no sabe qué es un hex o un
-  // aspect ratio, y elimina la necesidad de que la IA adivine ese dato.
+  // Tipo de pieza, formato y colores se contestan con un selector visual en
+  // vez del campo de texto/mic — más fácil para un cliente que no sabe qué
+  // es un hex o un aspect ratio, y elimina la necesidad de que la IA
+  // adivine esos datos.
   const currentQuestion = QUESTIONS[stepIndex];
   const activeInput =
-    currentQuestion?.field === "aspectRatio" ? (
+    currentQuestion?.field === "pieceType" ? (
+      <PieceTypePicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "aspectRatio" ? (
       <AspectRatioPicker onPick={submitAnswer} />
     ) : currentQuestion?.field === "colors" ? (
       <ColorsPicker onPick={submitAnswer} />
@@ -693,7 +724,11 @@ function AiLab() {
                       onContextMenu={(ev) => ev.preventDefault()}
                       className="cursor-pointer select-none transition-transform active:scale-[0.97]"
                     >
-                      <ChatBubble role="user" text={e.answer} />
+                      {e.field === "colors" && e.answer !== "Omitido" ? (
+                        <ColorsAnswerBubble value={e.answer} />
+                      ) : (
+                        <ChatBubble role="user" text={e.answer} />
+                      )}
                     </div>
                     {menuField === e.field ? (
                       <div
@@ -766,6 +801,7 @@ function AiLab() {
                       <LabRow label="Precio o descuento" value={fields.promoPrice} />
                       <LabRow label="Mensaje o dato extra" value={fields.requiredText} />
                       <LabRow label="Estilo" value={fields.style} />
+                      <LabRow label="Tipo de pieza" value={fields.pieceType} />
                       <LabRow label="Formato" value={fields.aspectRatio} />
                       <div>
                         <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
@@ -875,6 +911,31 @@ function ChatBubble({
   );
 }
 
+// Mirrors ChatBubble's user-bubble shape, but swaps the text for the actual
+// swatches the client picked — the point of the color picker was to keep
+// the colors visible, not to collapse them back into a hex string.
+function ColorsAnswerBubble({ value }: { value: string }) {
+  const colors = value
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  return (
+    // Neutral background (not bg-wit-blue like a normal user bubble) so a
+    // brand color that happens to be WITERS blue still stands out instead
+    // of disappearing into the bubble itself.
+    <div className="wit-glass flex items-center gap-2 self-end rounded-2xl rounded-br-sm px-4 py-2.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      {colors.map((c, i) => (
+        <span
+          key={i}
+          title={c}
+          className="h-6 w-6 shrink-0 rounded-full border-2 border-white shadow-[0_1px_4px_rgba(5,13,40,0.25)]"
+          style={{ backgroundColor: c }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function LabRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -884,26 +945,77 @@ function LabRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Tapping a card submits straight away — no separate "confirm" step, since
-// picking a shape is a single, reversible action (Editar can always redo it).
-function AspectRatioPicker({ onPick }: { onPick: (value: string) => void }) {
+// Plain pill chips, one tap = submit — there's no natural "shape" for a
+// platform the way there is for an aspect ratio, so no preview needed here.
+function PieceTypePicker({ onPick }: { onPick: (value: string) => void }) {
   return (
-    <div className="wit-glass grid grid-cols-3 gap-2 rounded-2xl p-3 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-      {ASPECT_OPTIONS.map((opt) => (
+    <div className="wit-glass flex flex-wrap justify-center gap-2 rounded-2xl p-3 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      {PIECE_TYPE_OPTIONS.map((opt) => (
         <button
-          key={opt.value}
+          key={opt}
           type="button"
-          onClick={() => onPick(opt.value)}
-          className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center transition-transform hover:scale-[1.04] active:scale-95"
+          onClick={() => onPick(opt)}
+          className="rounded-full bg-wit-mist/50 px-4 py-2 text-xs font-semibold text-wit-ink transition-transform hover:scale-[1.03] hover:bg-wit-mist active:scale-95"
         >
-          <span
-            className="w-7 rounded-[3px] border-2 border-wit-blue bg-wit-blue/10"
-            style={{ aspectRatio: opt.value.replace(":", " / ") }}
-          />
-          <span className="text-[10px] font-semibold leading-tight text-wit-ink">{opt.label}</span>
-          <span className="text-[9px] text-wit-gray">{opt.value}</span>
+          {opt}
         </button>
       ))}
+    </div>
+  );
+}
+
+// A single compact pill instead of all 5 ratio cards sitting inline — tap
+// it to pop the real picker open right above it, pick a card there, and
+// it collapses back down. Keeps the resting state of the conversation
+// small even though the full picker is exactly the same grid as before.
+function AspectRatioPicker({ onPick }: { onPick: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (ev: Event) => {
+      if (!wrapRef.current?.contains(ev.target as Node | null)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [open]);
+
+  return (
+    <div ref={wrapRef} className="relative flex justify-center">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="wit-glass flex items-center gap-2.5 rounded-2xl px-4 py-2.5 text-xs font-semibold text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.05)] transition-transform hover:scale-[1.02] active:scale-95"
+      >
+        <span className="flex h-6 w-9 items-center justify-center rounded-[3px] border-2 border-wit-blue bg-wit-blue/10 text-[9px] font-bold text-wit-blue">
+          1:1
+        </span>
+        Elegir formato
+      </button>
+
+      {open ? (
+        <div className="wit-rise absolute bottom-full z-10 mb-2 grid grid-cols-3 gap-2 rounded-2xl bg-white p-3 shadow-[0_14px_40px_rgba(5,13,40,0.18)]">
+          {ASPECT_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onPick(opt.value);
+                setOpen(false);
+              }}
+              className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center transition-transform hover:scale-[1.04] active:scale-95"
+            >
+              <span
+                className="w-7 rounded-[3px] border-2 border-wit-blue bg-wit-blue/10"
+                style={{ aspectRatio: opt.value.replace(":", " / ") }}
+              />
+              <span className="text-[10px] font-semibold leading-tight text-wit-ink">{opt.label}</span>
+              <span className="text-[9px] text-wit-gray">{opt.value}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -16,8 +16,10 @@ const OPENAI_MODEL = "gpt-4o-mini";
 
 const STYLE_CHIPS = ["Minimalista", "Premium / Elegante", "Colorido", "Corporativo", "Divertido / Bold"];
 const AGE_CHIPS = ["18-24", "25-34", "35-44", "45-54", "55+"];
-const ASPECT_RATIOS = ["1:1", "4:3", "16:9", "3:4", "9:16"];
 
+// aspectRatio and colors are deliberately absent — the chat collects those
+// through dedicated pickers (exact values), so there's nothing left for the
+// model to guess there.
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -30,11 +32,6 @@ const RESPONSE_SCHEMA = {
       type: "string",
       description: `Estilo deseado. Usa una de estas opciones si claramente aplica: ${STYLE_CHIPS.join(", ")}. Si no, describe el estilo en pocas palabras, o '' si no se mencionó.`,
     },
-    aspectRatio: {
-      type: "string",
-      enum: ASPECT_RATIOS,
-      description: "Formato de la pieza. Si no se menciona, usa '1:1'.",
-    },
     audience: { type: "string", description: "Público objetivo en palabras, o '' si no se mencionó." },
     ageRanges: {
       type: "array",
@@ -43,11 +40,6 @@ const RESPONSE_SCHEMA = {
     },
     promoPrice: { type: "string", description: "Precio o descuento a destacar, o '' si no aplica." },
     requiredText: { type: "string", description: "Texto/dato obligatorio a incluir en la pieza, o '' si no aplica." },
-    colors: {
-      type: "array",
-      items: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
-      description: "Hasta 3 colores de marca en hexadecimal, solo si el cliente los mencionó explícitamente.",
-    },
     missingInfo: {
       type: "array",
       items: { type: "string" },
@@ -61,12 +53,10 @@ const RESPONSE_SCHEMA = {
     "brief",
     "pieceBrief",
     "style",
-    "aspectRatio",
     "audience",
     "ageRanges",
     "promoPrice",
     "requiredText",
-    "colors",
     "missingInfo",
   ],
   additionalProperties: false,
