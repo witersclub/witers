@@ -601,10 +601,6 @@ function AiLab() {
         </div>
       </header>
 
-      {menuField || editingField ? (
-        <div aria-hidden="true" className="wit-rise fixed inset-0 z-30 bg-wit-ink/15 backdrop-blur-sm" />
-      ) : null}
-
       <main className="wit-rise mx-auto flex h-[calc(100dvh-4rem)] max-w-sm flex-col px-5">
         <div className="flex flex-col items-center gap-1.5 pb-1 pt-5">
           <div className="wit-float">
