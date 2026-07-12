@@ -906,10 +906,12 @@ function ColorsAnswerBubble({ value }: { value: string }) {
     .map((c) => c.trim())
     .filter(Boolean);
   return (
-    // Neutral background (not bg-wit-blue like a normal user bubble) so a
-    // brand color that happens to be WITERS blue still stands out instead
-    // of disappearing into the bubble itself.
-    <div className="wit-glass flex items-center gap-2 self-end rounded-2xl rounded-br-sm px-4 py-2.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+    // White (not bg-wit-blue like a normal user bubble) so a brand color
+    // that happens to be WITERS blue still stands out instead of
+    // disappearing into the bubble — but a plain white bubble reads as an
+    // assistant message at a glance, so a blue border marks it as the
+    // client's own answer instead.
+    <div className="flex items-center gap-2 self-end rounded-2xl rounded-br-sm border-2 border-wit-blue bg-white px-4 py-2.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       {colors.map((c, i) => (
         <span
           key={i}
@@ -957,7 +959,10 @@ function PieceTypePicker({ onPick }: { onPick: (value: string) => void }) {
 // grid.
 function AspectRatioPicker({ onPick }: { onPick: (value: string) => void }) {
   return (
-    <div className="flex items-end justify-center gap-4 overflow-x-auto px-1 py-2">
+    // overflow-y-visible undoes the overflow-y:auto that overflow-x-auto
+    // implies on its own — without it, the tallest badge's float bob got
+    // clipped by this row's own box on every upswing.
+    <div className="flex items-end justify-center gap-4 overflow-x-auto overflow-y-visible px-1 pb-2 pt-4">
       {ASPECT_OPTIONS.map((opt) => (
         <button
           key={opt.value}
@@ -965,15 +970,20 @@ function AspectRatioPicker({ onPick }: { onPick: (value: string) => void }) {
           onClick={() => onPick(opt.value)}
           className="flex shrink-0 flex-col items-center gap-1.5 transition-transform hover:scale-[1.05] active:scale-95"
         >
-          {/* Same rotating-border treatment as an unclaimed request
-              (wit-pending-glow/-shield) — a spinning conic-gradient ring
-              around a plain white card, instead of a flat blue border. */}
-          <div
-            className="wit-float wit-pending-glow w-10 shadow-[0_10px_24px_rgba(5,13,40,0.12)]"
-            style={{ aspectRatio: opt.value.replace(":", " / ") }}
-          >
-            <div className="wit-pending-glow-shield flex h-full w-full items-center justify-center text-[10px] font-bold text-wit-blue">
-              {opt.value}
+          {/* Two nested elements, not one — wit-float and wit-pending-glow
+              each set the `animation` shorthand, so putting both classes
+              on a single element let one silently overwrite the other
+              (the ring never actually spun). Separate elements means both
+              animations run at once: this one bobs, the one inside it
+              spins its own ring. */}
+          <div className="wit-float">
+            <div
+              className="wit-pending-glow w-10 shadow-[0_10px_24px_rgba(5,13,40,0.12)]"
+              style={{ aspectRatio: opt.value.replace(":", " / ") }}
+            >
+              <div className="wit-pending-glow-shield flex h-full w-full items-center justify-center text-[10px] font-bold text-wit-blue">
+                {opt.value}
+              </div>
             </div>
           </div>
           <span className="text-[10px] font-semibold text-wit-gray">{opt.label}</span>
