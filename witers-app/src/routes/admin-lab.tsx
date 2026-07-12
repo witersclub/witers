@@ -977,11 +977,18 @@ function AspectRatioPicker({ onPick }: { onPick: (value: string) => void }) {
               animations run at once: this one bobs, the one inside it
               spins its own ring. */}
           <div className="wit-float">
+            {/* wit-pending-glow/-shield hardcode a 1rem radius (tuned for
+                full-size request cards) — inline style overrides it here
+                since unlayered CSS classes always beat Tailwind utilities,
+                so a rounded-* class on this element wouldn't have won. */}
             <div
-              className="wit-pending-glow w-10 shadow-[0_10px_24px_rgba(5,13,40,0.12)]"
-              style={{ aspectRatio: opt.value.replace(":", " / ") }}
+              className="wit-pending-glow w-10 shadow-[0_12px_28px_rgba(5,13,40,0.18)]"
+              style={{ aspectRatio: opt.value.replace(":", " / "), borderRadius: "8px" }}
             >
-              <div className="wit-pending-glow-shield flex h-full w-full items-center justify-center text-[10px] font-bold text-wit-blue">
+              <div
+                className="wit-pending-glow-shield flex h-full w-full items-center justify-center text-[10px] font-bold text-wit-blue"
+                style={{ borderRadius: "6px" }}
+              >
                 {opt.value}
               </div>
             </div>
