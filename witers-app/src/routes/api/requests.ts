@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { resolveBrandProfile } from "../../lib/brand-profile.server";
 import { notifyStaffNewRequest } from "../../lib/mail.server";
 import { db, getMembership, getSessionUser, json } from "../../lib/witers-auth.server";
 
@@ -11,6 +12,10 @@ const createSchema = z
     productName: z.string().max(120).optional(),
     pieceBrief: z.string().min(10).max(2000),
     style: z.string().max(200).optional(),
+    // Not stored on design_requests — used once, the first time a member
+    // ever submits, to seed brand_profiles. Every submission after that
+    // reuses the locked value, so this is safe to just ignore then.
+    businessType: z.string().max(100).optional(),
     aspectRatio: z.enum(["1:1", "4:3", "3:4", "16:9", "9:16"]).default("1:1"),
     referenceKey: z.string().max(300).optional(),
     logoKey: z.string().max(300).optional(),
@@ -80,6 +85,21 @@ export const Route = createFileRoute("/api/requests")({
           return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
         }
 
+        // One membership serves one business: company name, brand colors,
+        // and logo lock to whatever this member's first submission
+        // contains, so a later submission can't quietly swap them for a
+        // different business. This is enforced here — the one place every
+        // request-creation path (chat, classic form, or a raw API call)
+        // funnels through — not just hidden in a UI, and the *returned*
+        // values (not whatever the client just sent) are what actually get
+        // written below.
+        const brand = await resolveBrandProfile(user.id, {
+          companyName: parsed.data.companyName.trim(),
+          brandColors: parsed.data.brandColors ?? null,
+          businessType: parsed.data.businessType?.trim() || null,
+          logoKey: parsed.data.noLogo ? null : (parsed.data.logoKey ?? null),
+        });
+
         const id = crypto.randomUUID();
         await db()
           .prepare(
@@ -102,12 +122,12 @@ export const Route = createFileRoute("/api/requests")({
             parsed.data.audience?.trim() ?? null,
             parsed.data.ageRange ?? null,
             parsed.data.requiredText?.trim() ?? null,
-            parsed.data.brandColors ?? null,
+            brand.brand_colors,
             parsed.data.promoPrice?.trim() ?? null,
-            parsed.data.companyName.trim(),
+            brand.company_name,
             parsed.data.productName?.trim() ?? null,
             parsed.data.pieceBrief.trim(),
-            parsed.data.logoKey ?? null,
+            brand.logo_key,
             parsed.data.productPhotoKey ?? null,
           )
           .run();
@@ -120,7 +140,7 @@ export const Route = createFileRoute("/api/requests")({
         await notifyStaffNewRequest({
           title: parsed.data.title.trim(),
           clientName: user.name,
-          companyName: parsed.data.companyName.trim(),
+          companyName: brand.company_name,
           panelUrl: "https://witers.com/witer",
         });
 
@@ -129,4 +149,3 @@ export const Route = createFileRoute("/api/requests")({
     },
   },
 });
-

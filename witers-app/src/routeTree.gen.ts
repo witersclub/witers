@@ -28,6 +28,7 @@ import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-rev
 import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
+import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
 import { Route as ApiPublicShowcaseImageRouteImport } from './routes/api/public/showcase-image'
 import { Route as ApiPublicShowcaseRouteImport } from './routes/api/public/showcase'
 import { Route as ApiPublicReviewsRouteImport } from './routes/api/public/reviews'
@@ -41,6 +42,7 @@ import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAdminUpdateRequestRouteImport } from './routes/api/admin/update-request'
 import { Route as ApiAdminUpdateDesignerRouteImport } from './routes/api/admin/update-designer'
+import { Route as ApiAdminUpdateBrandProfileRouteImport } from './routes/api/admin/update-brand-profile'
 import { Route as ApiAdminToggleLogoVisibilityRouteImport } from './routes/api/admin/toggle-logo-visibility'
 import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overview'
 import { Route as ApiAdminGenerateRouteImport } from './routes/api/admin/generate'
@@ -147,6 +149,11 @@ const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   path: '/api/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBrandProfileRoute = ApiBrandProfileRouteImport.update({
+  id: '/api/brand-profile',
+  path: '/api/brand-profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicShowcaseImageRoute = ApiPublicShowcaseImageRouteImport.update({
   id: '/api/public/showcase-image',
   path: '/api/public/showcase-image',
@@ -212,6 +219,12 @@ const ApiAdminUpdateDesignerRoute = ApiAdminUpdateDesignerRouteImport.update({
   path: '/api/admin/update-designer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminUpdateBrandProfileRoute =
+  ApiAdminUpdateBrandProfileRouteImport.update({
+    id: '/api/admin/update-brand-profile',
+    path: '/api/admin/update-brand-profile',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminToggleLogoVisibilityRoute =
   ApiAdminToggleLogoVisibilityRouteImport.update({
     id: '/api/admin/toggle-logo-visibility',
@@ -277,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
+  '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -295,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
+  '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -321,6 +336,7 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
+  '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -339,6 +355,7 @@ export interface FileRoutesByTo {
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
+  '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -366,6 +383,7 @@ export interface FileRoutesById {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
+  '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -384,6 +402,7 @@ export interface FileRoutesById {
   '/api/admin/generate': typeof ApiAdminGenerateRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
+  '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -412,6 +431,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/witer'
+    | '/api/brand-profile'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -430,6 +450,7 @@ export interface FileRouteTypes {
     | '/api/admin/generate'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
+    | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
     | '/api/admin/update-request'
     | '/api/auth/login'
@@ -456,6 +477,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/witer'
+    | '/api/brand-profile'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -474,6 +496,7 @@ export interface FileRouteTypes {
     | '/api/admin/generate'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
+    | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
     | '/api/admin/update-request'
     | '/api/auth/login'
@@ -500,6 +523,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/witer'
+    | '/api/brand-profile'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -518,6 +542,7 @@ export interface FileRouteTypes {
     | '/api/admin/generate'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
+    | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
     | '/api/admin/update-request'
     | '/api/auth/login'
@@ -545,6 +570,7 @@ export interface RootRouteChildren {
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WiterRoute: typeof WiterRoute
+  ApiBrandProfileRoute: typeof ApiBrandProfileRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiCloseRequestRoute: typeof ApiCloseRequestRoute
   ApiFileRoute: typeof ApiFileRoute
@@ -563,6 +589,7 @@ export interface RootRouteChildren {
   ApiAdminGenerateRoute: typeof ApiAdminGenerateRoute
   ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
   ApiAdminToggleLogoVisibilityRoute: typeof ApiAdminToggleLogoVisibilityRoute
+  ApiAdminUpdateBrandProfileRoute: typeof ApiAdminUpdateBrandProfileRoute
   ApiAdminUpdateDesignerRoute: typeof ApiAdminUpdateDesignerRoute
   ApiAdminUpdateRequestRoute: typeof ApiAdminUpdateRequestRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
@@ -713,6 +740,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/brand-profile': {
+      id: '/api/brand-profile'
+      path: '/api/brand-profile'
+      fullPath: '/api/brand-profile'
+      preLoaderRoute: typeof ApiBrandProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/showcase-image': {
       id: '/api/public/showcase-image'
       path: '/api/public/showcase-image'
@@ -804,6 +838,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminUpdateDesignerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/update-brand-profile': {
+      id: '/api/admin/update-brand-profile'
+      path: '/api/admin/update-brand-profile'
+      fullPath: '/api/admin/update-brand-profile'
+      preLoaderRoute: typeof ApiAdminUpdateBrandProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/toggle-logo-visibility': {
       id: '/api/admin/toggle-logo-visibility'
       path: '/api/admin/toggle-logo-visibility'
@@ -889,6 +930,7 @@ const rootRouteChildren: RootRouteChildren = {
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WiterRoute: WiterRoute,
+  ApiBrandProfileRoute: ApiBrandProfileRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiCloseRequestRoute: ApiCloseRequestRoute,
   ApiFileRoute: ApiFileRoute,
@@ -907,6 +949,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminGenerateRoute: ApiAdminGenerateRoute,
   ApiAdminOverviewRoute: ApiAdminOverviewRoute,
   ApiAdminToggleLogoVisibilityRoute: ApiAdminToggleLogoVisibilityRoute,
+  ApiAdminUpdateBrandProfileRoute: ApiAdminUpdateBrandProfileRoute,
   ApiAdminUpdateDesignerRoute: ApiAdminUpdateDesignerRoute,
   ApiAdminUpdateRequestRoute: ApiAdminUpdateRequestRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,

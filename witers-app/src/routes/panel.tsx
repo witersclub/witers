@@ -64,6 +64,17 @@ type PreviousAnswers = {
   style: string | null;
 };
 
+// One membership, one business: once this exists, company_name/brand_colors
+// (and logo_key once given) are locked and reused on every request from
+// here on, in both the chat and the classic form — see /api/requests.
+type BrandProfile = {
+  user_id: string;
+  company_name: string;
+  brand_colors: string | null;
+  business_type: string | null;
+  logo_key: string | null;
+};
+
 type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
 
 function parseResults(row: RequestRow): ResultItem[] {
@@ -105,6 +116,18 @@ function Panel() {
     },
     enabled: Boolean(me.data?.ok),
     refetchInterval: 30_000,
+  });
+
+  // One membership, one business — once set (see /api/requests), company
+  // name/colors/logo are locked here too, not just suggested.
+  const brandProfileQuery = useQuery({
+    queryKey: ["brand-profile"],
+    queryFn: async () => {
+      const res = await fetch("/api/brand-profile", { credentials: "include" });
+      if (!res.ok) return { ok: false, profile: null as BrandProfile | null };
+      return (await res.json()) as { ok: boolean; profile: BrandProfile | null };
+    },
+    enabled: Boolean(me.data?.ok),
   });
 
   // Once we actually know whether this client has any past requests, open
@@ -199,6 +222,7 @@ function Panel() {
         style: lastRow.style,
       }
     : null;
+  const brandProfile = brandProfileQuery.data?.profile ?? null;
 
   return (
     <div className="wit-page min-h-dvh">
@@ -303,9 +327,11 @@ function Panel() {
             <AiChatRequestForm
               key={chatKey}
               disabled={!active || remaining <= 0}
+              brandProfile={brandProfile}
               onCreated={() => {
                 void qc.invalidateQueries({ queryKey: ["requests"] });
                 void qc.invalidateQueries({ queryKey: ["me"] });
+                void qc.invalidateQueries({ queryKey: ["brand-profile"] });
                 setChatOpen(false);
                 setChatKey((k) => k + 1);
                 setTab("solicitudes");
@@ -317,9 +343,11 @@ function Panel() {
               disabled={!active || remaining <= 0}
               previousLogoKey={previousLogoKey}
               previousAnswers={previousAnswers}
+              brandProfile={brandProfile}
               onCreated={() => {
                 void qc.invalidateQueries({ queryKey: ["requests"] });
                 void qc.invalidateQueries({ queryKey: ["me"] });
+                void qc.invalidateQueries({ queryKey: ["brand-profile"] });
                 setTab("solicitudes");
               }}
             />
@@ -372,16 +400,10 @@ function PanelTab({
 /* ---------- AI chat request form ---------- */
 
 // Same 14 questions the admin lab (admin-lab.tsx) prototyped — no `brief`,
-// businessType covers that ground now. Unlike the lab's free-text
-// questions (which went through an admin-only OpenAI extraction step),
-// every question here maps 1:1 onto a real /api/requests field, so typed
-// answers are used directly — no AI call, no extra cost, one thing less
-// that can fail for a paying member submitting a real request.
-// Same 14 questions the admin lab (admin-lab.tsx) prototyped — no `brief`,
 // businessType covers that ground now. Every question maps 1:1 onto a real
 // /api/requests field, so answers are used directly — no AI extraction
 // call, no extra cost.
-const CHAT_QUESTIONS: { field: string; text: string; required: boolean }[] = [
+const ALL_CHAT_QUESTIONS: { field: string; text: string; required: boolean }[] = [
   { field: "pieceType", text: "¿Qué tipo de pieza quieres crear hoy?", required: false },
   { field: "aspectRatio", text: "¿Qué forma tiene la pieza que te imaginas?", required: false },
   { field: "companyName", text: "¿Cuál es el nombre de tu empresa o marca?", required: true },
@@ -405,6 +427,17 @@ const CHAT_QUESTIONS: { field: string; text: string; required: boolean }[] = [
   },
   { field: "requiredText", text: "¿Hay algún texto o dato que deba aparecer sí o sí en la pieza?", required: false },
 ];
+
+// Once a member has a locked brand profile, company/colors/category never
+// need asking again — and the logo question drops out too, but only once
+// a real logo has actually been locked in (still asked every time before
+// that, same as a brand-new member).
+function buildChatQuestions(profile: BrandProfile | null) {
+  if (!profile) return ALL_CHAT_QUESTIONS;
+  const skip = new Set(["companyName", "colors", "businessType"]);
+  if (profile.logo_key) skip.add("logoKey");
+  return ALL_CHAT_QUESTIONS.filter((q) => !skip.has(q.field));
+}
 
 // The confirm/review box that appears in place of ChatIntakeFlow's
 // AI-generated-fields box once every question is answered — same
@@ -480,14 +513,17 @@ function AiChatRequestForm({
   disabled,
   onCreated,
   onClose,
+  brandProfile,
 }: {
   disabled: boolean;
   onCreated: () => void;
   onClose: () => void;
+  brandProfile: BrandProfile | null;
 }) {
   const [completedAnswers, setCompletedAnswers] = useState<Record<string, string> | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const questions = buildChatQuestions(brandProfile);
 
   function pickerFor(field: string, onPick: (value: string) => void) {
     switch (field) {
@@ -528,6 +564,10 @@ function AiChatRequestForm({
           companyName: completedAnswers.companyName,
           pieceBrief: completedAnswers.pieceBrief,
           style: completedAnswers.style || undefined,
+          // Only meaningful the very first time (seeds brand_profiles) —
+          // harmless to keep sending on later submissions since the server
+          // ignores it once a profile already exists.
+          businessType: completedAnswers.businessType || undefined,
           aspectRatio: completedAnswers.aspectRatio || "1:1",
           logoKey: noLogo ? undefined : completedAnswers.logoKey || undefined,
           noLogo,
@@ -560,11 +600,24 @@ function AiChatRequestForm({
 
   return (
     <div className="wit-glass flex h-[min(700px,78vh)] flex-col overflow-hidden rounded-3xl px-5 pb-4 pt-2 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      {brandProfile ? (
+        <p className="mb-2 shrink-0 rounded-xl bg-wit-blue/5 px-3 py-2 text-center text-xs font-medium text-wit-blue">
+          Ya tenemos los datos de tu marca registrada — solo te preguntamos lo de esta pieza.
+        </p>
+      ) : null}
       <ChatIntakeFlow
-        questions={CHAT_QUESTIONS}
+        questions={questions}
         pickerFor={pickerFor}
         onComplete={(answers) => {
-          setCompletedAnswers(answers);
+          // Locked fields were never asked this round, so they're not in
+          // `answers` — merge them back in from the profile before this
+          // goes anywhere near the review box or the API.
+          setCompletedAnswers({
+            ...answers,
+            companyName: brandProfile?.company_name ?? answers.companyName,
+            colors: brandProfile?.brand_colors ?? answers.colors,
+            logoKey: brandProfile?.logo_key ?? answers.logoKey,
+          });
           setSendError(null);
         }}
         pending={sending}
@@ -653,11 +706,13 @@ function NewRequestForm({
   disabled,
   previousLogoKey,
   previousAnswers,
+  brandProfile,
   onCreated,
 }: {
   disabled: boolean;
   previousLogoKey: string | null;
   previousAnswers: PreviousAnswers | null;
+  brandProfile: BrandProfile | null;
   onCreated: () => void;
 }) {
   const [step, setStep] = useState<"form" | "preview">("form");
@@ -672,6 +727,21 @@ function NewRequestForm({
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState<keyof PreviousAnswers | null>(null);
+  const logoLocked = Boolean(brandProfile?.logo_key);
+
+  // Company name and colors are locked, not just suggested — force the
+  // form's state to match instead of leaving the (disabled) fields empty.
+  useEffect(() => {
+    if (!brandProfile) return;
+    setForm((f) => (f.companyName === brandProfile.company_name ? f : { ...f, companyName: brandProfile.company_name }));
+    if (brandProfile.brand_colors) {
+      const locked = brandProfile.brand_colors
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean);
+      if (locked.length) setColors(locked);
+    }
+  }, [brandProfile]);
 
   function suggestionHandlers(key: keyof PreviousAnswers) {
     return {
@@ -723,7 +793,7 @@ function NewRequestForm({
       setError("Revisa los campos obligatorios: título, empresa y qué quieres en la pieza.");
       return;
     }
-    if (!noLogo && !useSameLogo && !logoFile) {
+    if (!logoLocked && !noLogo && !useSameLogo && !logoFile) {
       setError("Sube tu logotipo, marca 'No tengo logotipo' o usa el de tu solicitud anterior.");
       return;
     }
@@ -744,7 +814,9 @@ function NewRequestForm({
       }
 
       let logoKey: string | undefined;
-      if (useSameLogo && previousLogoKey) {
+      if (logoLocked) {
+        logoKey = brandProfile?.logo_key ?? undefined;
+      } else if (useSameLogo && previousLogoKey) {
         logoKey = previousLogoKey;
       } else if (logoFile) {
         logoKey = await upload(logoFile);
@@ -852,11 +924,13 @@ function NewRequestForm({
           <PreviewRow
             label="Logotipo"
             value={
-              noLogo
-                ? "No tiene logotipo"
-                : useSameLogo
-                  ? "Mismo logotipo de tu solicitud anterior"
-                  : (logoFile?.name ?? "")
+              logoLocked
+                ? "Tu logotipo registrado"
+                : noLogo
+                  ? "No tiene logotipo"
+                  : useSameLogo
+                    ? "Mismo logotipo de tu solicitud anterior"
+                    : (logoFile?.name ?? "")
             }
           />
           {productPhotoFile ? <PreviewRow label="Foto del producto" value={productPhotoFile.name} /> : null}
@@ -930,12 +1004,17 @@ function NewRequestForm({
             minLength={2}
             maxLength={120}
             value={form.companyName}
+            disabled={Boolean(brandProfile)}
             onChange={(e) => setForm({ ...form, companyName: e.target.value })}
             {...suggestionHandlers("companyName")}
-            className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
+            className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue disabled:bg-wit-mist/40 disabled:text-wit-gray"
             placeholder="El nombre que va impreso en la pieza"
           />
-          {activeSuggestion === "companyName" && previousAnswers?.companyName ? (
+          {brandProfile ? (
+            <p className="mt-1.5 text-xs text-wit-gray">
+              Tu empresa ya está registrada. Escríbenos si necesitas cambiarla.
+            </p>
+          ) : activeSuggestion === "companyName" && previousAnswers?.companyName ? (
             <FieldSuggestion
               text={previousAnswers.companyName}
               onPick={() => pickSuggestion("companyName")}
@@ -1076,58 +1155,73 @@ function NewRequestForm({
         </p>
         <div>
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
-            Colores de marca <span className="font-normal text-wit-gray">(hasta 3, opcional)</span>
+            Colores de marca{" "}
+            {brandProfile ? null : <span className="font-normal text-wit-gray">(hasta 3, opcional)</span>}
           </p>
-          <div className="flex flex-wrap items-center gap-3">
-            {colors.map((c, i) => (
-              <div key={i} className="relative flex items-center gap-1.5 rounded-xl border border-wit-ink/15 py-1 pl-1 pr-2">
-                <input
-                  type="color"
-                  value={/^#[0-9A-Fa-f]{6}$/.test(c) ? c : "#000000"}
-                  onChange={(e) => {
-                    const next = [...colors];
-                    next[i] = e.target.value;
-                    setColors(next);
-                  }}
-                  className="h-8 w-8 cursor-pointer rounded-full border border-wit-ink/15 p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch-wrapper]:rounded-full [&::-webkit-color-swatch-wrapper]:p-0"
-                  aria-label={`Color ${i + 1}`}
+          {brandProfile ? (
+            <div className="flex flex-wrap items-center gap-3">
+              {colors.map((c) => (
+                <span
+                  key={c}
+                  className="h-9 w-9 rounded-full border border-wit-ink/10"
+                  style={{ backgroundColor: c }}
+                  title={c}
                 />
-                <input
-                  type="text"
-                  value={c}
-                  onChange={(e) => {
-                    const next = [...colors];
-                    next[i] = e.target.value;
-                    setColors(next);
-                  }}
-                  maxLength={7}
-                  placeholder="#111827"
-                  className="w-20 bg-transparent text-sm font-wit-mono text-wit-ink outline-none"
-                  aria-label={`Código hexadecimal del color ${i + 1}`}
-                />
-                {colors.length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => setColors(colors.filter((_, j) => j !== i))}
-                    className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-wit-ink text-[10px] leading-none text-white"
-                    aria-label="Quitar color"
-                  >
-                    ×
-                  </button>
-                ) : null}
-              </div>
-            ))}
-            {colors.length < 3 ? (
-              <button
-                type="button"
-                onClick={() => setColors([...colors, "#111827"])}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-dashed border-wit-ink/25 text-lg text-wit-gray hover:border-wit-blue hover:text-wit-blue"
-                aria-label="Agregar color"
-              >
-                +
-              </button>
-            ) : null}
-          </div>
+              ))}
+              <p className="text-xs text-wit-gray">Tus colores de marca ya están registrados.</p>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              {colors.map((c, i) => (
+                <div key={i} className="relative flex items-center gap-1.5 rounded-xl border border-wit-ink/15 py-1 pl-1 pr-2">
+                  <input
+                    type="color"
+                    value={/^#[0-9A-Fa-f]{6}$/.test(c) ? c : "#000000"}
+                    onChange={(e) => {
+                      const next = [...colors];
+                      next[i] = e.target.value;
+                      setColors(next);
+                    }}
+                    className="h-8 w-8 cursor-pointer rounded-full border border-wit-ink/15 p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch-wrapper]:rounded-full [&::-webkit-color-swatch-wrapper]:p-0"
+                    aria-label={`Color ${i + 1}`}
+                  />
+                  <input
+                    type="text"
+                    value={c}
+                    onChange={(e) => {
+                      const next = [...colors];
+                      next[i] = e.target.value;
+                      setColors(next);
+                    }}
+                    maxLength={7}
+                    placeholder="#111827"
+                    className="w-20 bg-transparent text-sm font-wit-mono text-wit-ink outline-none"
+                    aria-label={`Código hexadecimal del color ${i + 1}`}
+                  />
+                  {colors.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => setColors(colors.filter((_, j) => j !== i))}
+                      className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-wit-ink text-[10px] leading-none text-white"
+                      aria-label="Quitar color"
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+              {colors.length < 3 ? (
+                <button
+                  type="button"
+                  onClick={() => setColors([...colors, "#111827"])}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-dashed border-wit-ink/25 text-lg text-wit-gray hover:border-wit-blue hover:text-wit-blue"
+                  aria-label="Agregar color"
+                >
+                  +
+                </button>
+              ) : null}
+            </div>
+          )}
         </div>
         <div>
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
@@ -1161,42 +1255,55 @@ function NewRequestForm({
 
         <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">Archivos</p>
         <div>
-          <label htmlFor="rlogo" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Logotipo
-          </label>
-          <input
-            id="rlogo"
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            disabled={noLogo || useSameLogo}
-            onChange={(e) => selectLogoFile(e.target.files?.[0] ?? null)}
-            className="w-full rounded-xl border border-dashed border-wit-ink/20 px-4 py-3 text-sm text-wit-gray file:mr-3 file:rounded-lg file:border-0 file:bg-wit-mist/60 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-wit-blue disabled:opacity-40"
-          />
-          {previousLogoKey ? (
-            <label className="mt-2 flex items-center gap-2 text-sm text-wit-ink">
-              <input
-                type="checkbox"
-                checked={useSameLogo}
-                onChange={(e) => selectUseSameLogo(e.target.checked)}
-                className="h-4 w-4 rounded border-wit-ink/30"
-              />
-              Utilizar el logotipo de la solicitud anterior
+          <label className="mb-1.5 block text-sm font-semibold text-wit-ink">Logotipo</label>
+          {logoLocked ? (
+            <div className="flex items-center gap-3 rounded-xl border border-wit-ink/15 px-4 py-3">
               <img
-                src={`/api/file?key=${encodeURIComponent(previousLogoKey)}`}
+                src={`/api/file?key=${encodeURIComponent(brandProfile!.logo_key!)}`}
                 alt=""
-                className="h-6 w-6 rounded border border-wit-ink/10 object-cover"
+                className="h-10 w-10 rounded-lg border border-wit-ink/10 object-cover"
               />
-            </label>
-          ) : null}
-          <label className="mt-2 flex items-center gap-2 text-sm text-wit-ink">
-            <input
-              type="checkbox"
-              checked={noLogo}
-              onChange={(e) => selectNoLogo(e.target.checked)}
-              className="h-4 w-4 rounded border-wit-ink/30"
-            />
-            No tengo logotipo
-          </label>
+              <p className="text-sm text-wit-gray">
+                Este es tu logotipo registrado. Escríbenos si necesitas cambiarlo.
+              </p>
+            </div>
+          ) : (
+            <>
+              <input
+                id="rlogo"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={noLogo || useSameLogo}
+                onChange={(e) => selectLogoFile(e.target.files?.[0] ?? null)}
+                className="w-full rounded-xl border border-dashed border-wit-ink/20 px-4 py-3 text-sm text-wit-gray file:mr-3 file:rounded-lg file:border-0 file:bg-wit-mist/60 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-wit-blue disabled:opacity-40"
+              />
+              {previousLogoKey ? (
+                <label className="mt-2 flex items-center gap-2 text-sm text-wit-ink">
+                  <input
+                    type="checkbox"
+                    checked={useSameLogo}
+                    onChange={(e) => selectUseSameLogo(e.target.checked)}
+                    className="h-4 w-4 rounded border-wit-ink/30"
+                  />
+                  Utilizar el logotipo de la solicitud anterior
+                  <img
+                    src={`/api/file?key=${encodeURIComponent(previousLogoKey)}`}
+                    alt=""
+                    className="h-6 w-6 rounded border border-wit-ink/10 object-cover"
+                  />
+                </label>
+              ) : null}
+              <label className="mt-2 flex items-center gap-2 text-sm text-wit-ink">
+                <input
+                  type="checkbox"
+                  checked={noLogo}
+                  onChange={(e) => selectNoLogo(e.target.checked)}
+                  className="h-4 w-4 rounded border-wit-ink/30"
+                />
+                No tengo logotipo
+              </label>
+            </>
+          )}
         </div>
         <div>
           <label htmlFor="rproductphoto" className="mb-1.5 block text-sm font-semibold text-wit-ink">

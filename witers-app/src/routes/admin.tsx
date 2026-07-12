@@ -24,6 +24,12 @@ type AdminUser = {
   requests_quota: number | null;
   requests_used: number | null;
   total_paid_mxn: number;
+  // One membership, one business — set once a member submits their first
+  // request, then locked (see /api/requests). Null means no request yet.
+  brand_company_name: string | null;
+  brand_colors: string | null;
+  brand_business_type: string | null;
+  brand_logo_key: string | null;
 };
 
 type AdminRequest = {
@@ -1302,16 +1308,21 @@ function EditDesignerModal({
 /* ---------- users & payments ---------- */
 
 function UsersTable({ rows }: { rows: AdminUser[] }) {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState<AdminUser | null>(null);
+
   return (
     <div className="wit-glass mt-6 overflow-x-auto rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-      <table className="w-full min-w-[640px] text-left text-sm">
+      <table className="w-full min-w-[720px] text-left text-sm">
         <thead>
           <tr className="border-b border-wit-ink/10 text-xs uppercase tracking-wider text-wit-gray">
             <th className="px-5 py-3.5">Usuario</th>
+            <th className="px-5 py-3.5">Marca</th>
             <th className="px-5 py-3.5">Membresía</th>
             <th className="px-5 py-3.5">Solicitudes</th>
             <th className="px-5 py-3.5">Pagado</th>
             <th className="px-5 py-3.5">Alta</th>
+            <th className="px-5 py-3.5" />
           </tr>
         </thead>
         <tbody>
@@ -1320,6 +1331,13 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
               <td className="px-5 py-3.5">
                 <p className="font-semibold text-wit-ink">{u.name}</p>
                 <p className="text-xs text-wit-gray">{u.email}</p>
+              </td>
+              <td className="px-5 py-3.5">
+                {u.brand_company_name ? (
+                  <p className="text-sm text-wit-ink">{u.brand_company_name}</p>
+                ) : (
+                  <p className="text-xs text-wit-gray">Sin solicitud aún</p>
+                )}
               </td>
               <td className="px-5 py-3.5">
                 <span
@@ -1339,6 +1357,29 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
               <td className="px-5 py-3.5 text-xs text-wit-gray">
                 {new Date(u.created_at + "Z").toLocaleDateString("es-MX")}
               </td>
+              <td className="px-5 py-3.5 text-right">
+                <button
+                  type="button"
+                  onClick={() => setEditing(u)}
+                  aria-label={`Editar marca de ${u.name}`}
+                  title="Editar marca"
+                  className="rounded-lg p-2 text-wit-gray transition-colors hover:bg-wit-blue/10 hover:text-wit-blue"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -1346,6 +1387,209 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
       {rows.length === 0 ? (
         <p className="px-5 py-8 text-center text-sm text-wit-gray">Sin usuarios registrados aún.</p>
       ) : null}
+
+      {editing
+        ? createPortal(
+            <EditBrandProfileModal
+              user={editing}
+              onClose={() => setEditing(null)}
+              onSaved={async () => {
+                setEditing(null);
+                await qc.invalidateQueries({ queryKey: ["admin-overview"] });
+              }}
+            />,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+// One membership, one business: this is the only way to correct a
+// member's locked brand identity (company name, colors, category, logo)
+// once they've submitted their first request — see /api/requests and
+// brand-profile.server.ts for the lock itself.
+function EditBrandProfileModal({
+  user,
+  onClose,
+  onSaved,
+}: {
+  user: AdminUser;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [companyName, setCompanyName] = useState(user.brand_company_name ?? "");
+  const [brandColors, setBrandColors] = useState(user.brand_colors ?? "");
+  const [businessType, setBusinessType] = useState(user.brand_business_type ?? "");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [clearLogo, setClearLogo] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (companyName.trim().length < 2) {
+      setMsg("El nombre de la empresa debe tener al menos 2 caracteres.");
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      let logoKey: string | null | undefined;
+      if (clearLogo) {
+        logoKey = null;
+      } else if (logoFile) {
+        const fd = new FormData();
+        fd.append("file", logoFile);
+        const up = await fetch("/api/upload-reference", { method: "POST", body: fd });
+        const upData = (await up.json()) as { ok: boolean; key?: string };
+        if (!upData.ok || !upData.key) {
+          setMsg("No pudimos subir el logotipo (PNG, JPG o WebP, máx. 8 MB).");
+          setBusy(false);
+          return;
+        }
+        logoKey = upData.key;
+      }
+
+      const res = await fetch("/api/admin/update-brand-profile", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          companyName,
+          brandColors: brandColors || undefined,
+          businessType: businessType || undefined,
+          logoKey,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) {
+        setMsg("Revisa los campos e intenta de nuevo.");
+        return;
+      }
+      onSaved();
+    } catch {
+      setMsg("No pudimos guardar los cambios. Intenta de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-wit-navy/90 p-5"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-base font-bold text-wit-ink">Editar marca de {user.name}</h2>
+        <p className="mt-1 text-xs text-wit-gray">
+          Estos datos quedan fijos para el cliente desde su primera solicitud — solo un administrador
+          puede cambiarlos.
+        </p>
+        <form onSubmit={save} className="mt-4 space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">Nombre de la empresa</label>
+            <input
+              type="text"
+              required
+              minLength={2}
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">
+              Colores de marca <span className="font-normal">(hex, separados por coma)</span>
+            </label>
+            <input
+              type="text"
+              value={brandColors}
+              onChange={(e) => setBrandColors(e.target.value)}
+              placeholder="#0047FF, #111827"
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">Categoría de negocio</label>
+            <input
+              type="text"
+              value={businessType}
+              onChange={(e) => setBusinessType(e.target.value)}
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">
+              Logotipo{" "}
+              {user.brand_logo_key && !clearLogo ? (
+                <span className="font-normal">(ya tiene uno registrado)</span>
+              ) : null}
+            </label>
+            {user.brand_logo_key && !clearLogo ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={`/api/file?key=${encodeURIComponent(user.brand_logo_key)}`}
+                  alt=""
+                  className="h-10 w-10 rounded-lg border border-wit-ink/10 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setClearLogo(true)}
+                  className="text-xs font-semibold text-red-600 hover:text-red-700"
+                >
+                  Quitar (vuelve a preguntársele)
+                </button>
+              </div>
+            ) : (
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => {
+                  setLogoFile(e.target.files?.[0] ?? null);
+                  setClearLogo(false);
+                }}
+                className="w-full rounded-xl border border-dashed border-wit-ink/20 px-4 py-2.5 text-sm text-wit-gray file:mr-3 file:rounded-lg file:border-0 file:bg-wit-mist/60 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-wit-blue"
+              />
+            )}
+            {clearLogo ? (
+              <p className="mt-1.5 text-xs text-wit-gray">
+                Se quitará el logotipo actual — el cliente lo verá pedido de nuevo en su próxima
+                solicitud.{" "}
+                <button
+                  type="button"
+                  onClick={() => setClearLogo(false)}
+                  className="font-semibold text-wit-blue hover:text-wit-blue-deep"
+                >
+                  Deshacer
+                </button>
+              </p>
+            ) : null}
+          </div>
+
+          {msg ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{msg}</p> : null}
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-xl bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+            >
+              {busy ? "Guardando..." : "Guardar cambios"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-wit-ink/15 px-5 py-2.5 text-sm font-semibold text-wit-ink hover:border-wit-ink/30"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

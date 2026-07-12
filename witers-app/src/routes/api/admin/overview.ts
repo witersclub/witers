@@ -13,9 +13,12 @@ export const Route = createFileRoute("/api/admin/overview")({
           .prepare(
             `SELECT u.id, u.email, u.name, u.created_at,
                     m.status AS membership_status, m.requests_quota, m.requests_used, m.activated_at,
-                    (SELECT COALESCE(SUM(p.amount_mxn), 0) FROM payments p WHERE p.user_id = u.id AND p.status = 'paid') AS total_paid_mxn
+                    (SELECT COALESCE(SUM(p.amount_mxn), 0) FROM payments p WHERE p.user_id = u.id AND p.status = 'paid') AS total_paid_mxn,
+                    bp.company_name AS brand_company_name, bp.brand_colors AS brand_colors,
+                    bp.business_type AS brand_business_type, bp.logo_key AS brand_logo_key
              FROM users u
              LEFT JOIN memberships m ON m.user_id = u.id
+             LEFT JOIN brand_profiles bp ON bp.user_id = u.id
              ORDER BY u.created_at DESC
              LIMIT 500`,
           )
@@ -64,4 +67,3 @@ export const Route = createFileRoute("/api/admin/overview")({
     },
   },
 });
-
