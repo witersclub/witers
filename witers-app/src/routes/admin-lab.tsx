@@ -56,11 +56,12 @@ type Fields = {
 // One question per field the real form needs — the conversation IS the
 // form, asked one thing at a time instead of dumped as a wall of inputs.
 // The raw answers get stitched into a transcript and handed to the same
-// /api/admin/ai-fill endpoint the freeform lab used, which normalizes the
-// free-text fields (style → chip, brief, etc). pieceType/aspectRatio/colors
-// are answered through dedicated pickers instead of free text, so those
-// three are never sent through the AI at all — see generate() below,
-// which merges them straight from `answers` into the final Fields.
+// /api/admin/ai-fill endpoint the freeform lab used, which normalizes
+// what's left as genuinely free text (brief, pieceBrief, etc).
+// pieceType/aspectRatio/colors/style are answered through dedicated
+// pickers instead of free text, so those are never sent through the AI at
+// all — see generate() below, which merges them straight from `answers`
+// into the final Fields.
 const QUESTIONS: { field: string; label: string; short: string; text: string; required: boolean }[] = [
   {
     field: "pieceType",
@@ -94,8 +95,8 @@ const QUESTIONS: { field: string; label: string; short: string; text: string; re
     field: "style",
     label: "Estilo",
     short: "Estilo",
-    text: "¿Qué estilo visual te gustaría? Ej. minimalista, colorido, elegante...",
-    required: false,
+    text: "¿Qué estilo visual te gustaría para tu pieza?",
+    required: true,
   },
   {
     field: "brief",
@@ -150,6 +151,17 @@ const ASPECT_OPTIONS: { value: string; label: string }[] = [
 ];
 
 const PIECE_TYPE_OPTIONS = ["Instagram", "Historia", "Facebook", "Banner web", "Impreso", "Otro"];
+
+// No real photography to preview each style with, so each swatch is a small
+// CSS treatment that evokes the vibe instead: minimalista plain, elegante
+// dark, colorido a vivid gradient, corporativo structured blues, bold loud.
+const STYLE_OPTIONS: { value: string; swatchClass: string }[] = [
+  { value: "Minimalista", swatchClass: "border border-wit-ink/15 bg-white" },
+  { value: "Premium / Elegante", swatchClass: "bg-gradient-to-br from-wit-ink to-black" },
+  { value: "Colorido", swatchClass: "bg-gradient-to-br from-pink-400 via-amber-300 to-sky-400" },
+  { value: "Corporativo", swatchClass: "bg-gradient-to-br from-wit-blue to-wit-navy" },
+  { value: "Divertido / Bold", swatchClass: "bg-gradient-to-br from-orange-400 to-fuchsia-500" },
+];
 
 function buildTranscript(answers: Record<string, string>): string {
   return QUESTIONS.map((q) => {
@@ -304,13 +316,15 @@ function AiLab() {
         );
         return;
       }
-      // pieceType/aspectRatio/colors came from dedicated pickers, not free
-      // text — use the exact values the client chose instead of whatever
-      // the AI guessed from the transcript (it isn't even asked for these).
+      // pieceType/aspectRatio/colors/style came from dedicated pickers, not
+      // free text — use the exact values the client chose instead of
+      // whatever the AI guessed from the transcript (it isn't even asked
+      // for these).
       setFields({
         ...data.fields,
         pieceType: capturedAnswers.pieceType ?? "",
         aspectRatio: capturedAnswers.aspectRatio ?? "",
+        style: capturedAnswers.style ?? "",
         colors: (capturedAnswers.colors ?? "")
           .split(",")
           .map((c) => c.trim())
@@ -597,6 +611,8 @@ function AiLab() {
       <AspectRatioPicker onPick={submitAnswer} />
     ) : currentQuestion?.field === "colors" ? (
       <ColorsPicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "style" ? (
+      <StylePicker onPick={submitAnswer} />
     ) : (
       composer
     );
@@ -946,6 +962,28 @@ function PieceTypePicker({ onPick }: { onPick: (value: string) => void }) {
           className="rounded-full bg-wit-mist/50 px-4 py-2 text-xs font-semibold text-wit-ink transition-transform hover:scale-[1.03] hover:bg-wit-mist active:scale-95"
         >
           {opt}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Tap a swatch, done — no popup, no confirm step, just pick the vibe that
+// looks right.
+function StylePicker({ onPick }: { onPick: (value: string) => void }) {
+  return (
+    <div className="flex flex-wrap justify-center gap-3 px-1 py-2">
+      {STYLE_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onPick(opt.value)}
+          className="flex flex-col items-center gap-1.5 transition-transform hover:scale-[1.05] active:scale-95"
+        >
+          <span className={`h-12 w-12 rounded-xl shadow-[0_8px_20px_rgba(5,13,40,0.15)] ${opt.swatchClass}`} />
+          <span className="max-w-[4.5rem] text-center text-[10px] font-semibold leading-tight text-wit-gray">
+            {opt.value}
+          </span>
         </button>
       ))}
     </div>
