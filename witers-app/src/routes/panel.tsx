@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { WitersLogo } from "../components/witers/brand";
+import { ChatIntakeFlow } from "../components/witers/chat-intake";
 import {
   AgeRangeMultiPicker,
   AspectRatioPicker,
@@ -86,7 +87,14 @@ function Panel() {
   const me = useMe();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"solicitudes" | "chat" | "nueva">("solicitudes");
+  const [tab, setTab] = useState<"solicitudes" | "nueva">("solicitudes");
+  // The chat is a takeover of the content area, not a third tab — a totally
+  // new client (no requests yet) lands straight on it; a returning one opens
+  // it with the glowing "Chat IA" button and closes it (or taps a tab) to
+  // get back to their solicitudes.
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatKey, setChatKey] = useState(0);
+  const autoOpenedRef = useRef(false);
 
   const requests = useQuery({
     queryKey: ["requests"],
@@ -98,6 +106,25 @@ function Panel() {
     enabled: Boolean(me.data?.ok),
     refetchInterval: 30_000,
   });
+
+  // Once we actually know whether this client has any past requests, open
+  // the chat automatically for a brand-new one — but only the first time
+  // per visit, so it doesn't keep popping back open after they close it.
+  // isFetched (not isLoading) is the right gate here: the query starts out
+  // disabled until `me` resolves, and isLoading reads false while disabled
+  // — checking that instead would fire this before the request list (or
+  // even the session) has actually loaded.
+  useEffect(() => {
+    if (autoOpenedRef.current) return;
+    if (!requests.isFetched) return;
+    autoOpenedRef.current = true;
+    if ((requests.data?.requests ?? []).length === 0) setChatOpen(true);
+  }, [requests.isFetched, requests.data]);
+
+  function openChat() {
+    setChatKey((k) => k + 1);
+    setChatOpen(true);
+  }
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -239,35 +266,51 @@ function Panel() {
           </div>
         ) : null}
 
-        <div className="mt-10 flex gap-2 border-b border-wit-ink/10">
-          <PanelTab
-            active={tab === "solicitudes"}
-            onClick={() => setTab("solicitudes")}
-            label="Mis solicitudes"
-            count={rows.length}
-          />
-          <PanelTab
-            active={tab === "chat"}
-            onClick={() => setTab("chat")}
-            label="Chat con IA"
-          />
-          <PanelTab
-            active={tab === "nueva"}
-            onClick={() => setTab("nueva")}
-            label="+ Nueva solicitud"
-          />
+        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-b border-wit-ink/10 pb-0">
+          <div className="flex gap-2">
+            <PanelTab
+              active={!chatOpen && tab === "solicitudes"}
+              onClick={() => {
+                setChatOpen(false);
+                setTab("solicitudes");
+              }}
+              label="Mis solicitudes"
+              count={rows.length}
+            />
+            <PanelTab
+              active={!chatOpen && tab === "nueva"}
+              onClick={() => {
+                setChatOpen(false);
+                setTab("nueva");
+              }}
+              label="+ Nueva solicitud"
+            />
+          </div>
+          <button type="button" onClick={openChat} className="mb-2 shrink-0">
+            <span className="wit-pending-glow inline-block" style={{ borderRadius: "9999px" }}>
+              <span
+                className="wit-pending-glow-shield flex items-center gap-1.5 bg-white px-4 py-2 text-xs font-bold text-wit-blue"
+                style={{ borderRadius: "9999px" }}
+              >
+                ✨ Chat IA
+              </span>
+            </span>
+          </button>
         </div>
 
         <div className="mt-8">
-          {tab === "chat" ? (
+          {chatOpen ? (
             <AiChatRequestForm
+              key={chatKey}
               disabled={!active || remaining <= 0}
               onCreated={() => {
                 void qc.invalidateQueries({ queryKey: ["requests"] });
                 void qc.invalidateQueries({ queryKey: ["me"] });
+                setChatOpen(false);
+                setChatKey((k) => k + 1);
                 setTab("solicitudes");
               }}
-              onUseClassicForm={() => setTab("nueva")}
+              onClose={() => setChatOpen(false)}
             />
           ) : tab === "nueva" ? (
             <NewRequestForm
@@ -334,6 +377,10 @@ function PanelTab({
 // every question here maps 1:1 onto a real /api/requests field, so typed
 // answers are used directly — no AI call, no extra cost, one thing less
 // that can fail for a paying member submitting a real request.
+// Same 14 questions the admin lab (admin-lab.tsx) prototyped — no `brief`,
+// businessType covers that ground now. Every question maps 1:1 onto a real
+// /api/requests field, so answers are used directly — no AI extraction
+// call, no extra cost.
 const CHAT_QUESTIONS: { field: string; text: string; required: boolean }[] = [
   { field: "pieceType", text: "¿Qué tipo de pieza quieres crear hoy?", required: false },
   { field: "aspectRatio", text: "¿Qué forma tiene la pieza que te imaginas?", required: false },
@@ -359,106 +406,72 @@ const CHAT_QUESTIONS: { field: string; text: string; required: boolean }[] = [
   { field: "requiredText", text: "¿Hay algún texto o dato que deba aparecer sí o sí en la pieza?", required: false },
 ];
 
-function ChatBubble({ role, children }: { role: "assistant" | "user"; children: React.ReactNode }) {
-  return (
-    <div className={`flex ${role === "user" ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm ${
-          role === "user" ? "bg-wit-blue text-white" : "bg-wit-mist/60 text-wit-ink"
-        }`}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function describeAnswer(field: string, value: string): string {
-  if (!value) return "Omitido";
-  if (field === "logoKey") return value === "Sin logotipo" ? "Sin logotipo" : "Logotipo recibido ✓";
-  if (field === "productPhotoKey") return "Foto recibida ✓";
-  return value;
-}
-
-// Single-line pill or multiline card, matching the glassy look of the
-// picker components it sits alongside — the questions this handles
-// (companyName, pieceBrief, title, promoPrice, requiredText) map straight
-// onto a form field, so there's nothing to parse, just to validate.
-function ChatTextInput({
-  onPick,
-  placeholder,
-  minLength,
-  maxLength,
-  multiline,
+// The confirm/review box that appears in place of ChatIntakeFlow's
+// AI-generated-fields box once every question is answered — same
+// long-press-to-edit transcript stays live above it, so there's one way to
+// correct an answer (not a second "editar" flow bolted onto this box).
+function ChatReviewBox({
+  answers,
+  disabled,
+  sendError,
+  sending,
+  onConfirm,
 }: {
-  onPick: (value: string) => void;
-  placeholder: string;
-  minLength?: number;
-  maxLength?: number;
-  multiline?: boolean;
+  answers: Record<string, string>;
+  disabled: boolean;
+  sendError: string | null;
+  sending: boolean;
+  onConfirm: () => void;
 }) {
-  const [text, setText] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-
-  function submit(ev: React.FormEvent) {
-    ev.preventDefault();
-    const trimmed = text.trim();
-    if (minLength && trimmed.length < minLength) {
-      setErr(`Necesitamos al menos ${minLength} caracteres.`);
-      return;
-    }
-    onPick(trimmed);
-  }
-
-  if (multiline) {
-    return (
-      <form
-        onSubmit={submit}
-        className="wit-glass mx-auto flex max-w-[320px] flex-col gap-2 rounded-2xl p-3.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
-      >
-        <textarea
-          autoFocus
-          rows={3}
-          maxLength={maxLength}
-          value={text}
-          onChange={(ev) => setText(ev.target.value)}
-          placeholder={placeholder}
-          className="w-full resize-none border-0 bg-transparent text-sm text-wit-ink outline-none placeholder:text-wit-gray"
-        />
-        {err ? <p className="text-xs text-red-600">{err}</p> : null}
-        <button
-          type="submit"
-          className="self-end rounded-full bg-wit-blue px-5 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-        >
-          Enviar
-        </button>
-      </form>
-    );
-  }
-
+  const colorList = (answers.colors ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
   return (
-    <div className="mx-auto flex max-w-[320px] flex-col items-center gap-1.5">
-      <form
-        onSubmit={submit}
-        className="wit-glass flex w-full items-center gap-2 rounded-full p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
-      >
-        <input
-          autoFocus
-          type="text"
-          maxLength={maxLength}
-          value={text}
-          onChange={(ev) => setText(ev.target.value)}
-          placeholder={placeholder}
-          className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray"
+    <div className="wit-glass w-full rounded-2xl p-5 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <dl className="space-y-3.5">
+        <PreviewRow label="Título" value={answers.title ?? ""} />
+        <PreviewRow label="Nombre comercial / empresa" value={answers.companyName ?? ""} />
+        <PreviewRow label="Qué quieres que salga en esta pieza" value={answers.pieceBrief ?? ""} />
+        {answers.audience ? <PreviewRow label="Público objetivo" value={answers.audience} /> : null}
+        {answers.ageRanges ? <PreviewRow label="Rango de edad" value={answers.ageRanges} /> : null}
+        {answers.promoPrice ? <PreviewRow label="Precio o descuento" value={answers.promoPrice} /> : null}
+        {answers.requiredText ? <PreviewRow label="Mensaje o dato extra" value={answers.requiredText} /> : null}
+        <div>
+          <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">Colores de marca</dt>
+          <dd className="mt-1.5 flex gap-2">
+            {colorList.map((c) => (
+              <span
+                key={c}
+                className="h-6 w-6 rounded-full border border-wit-ink/10"
+                style={{ backgroundColor: c }}
+                title={c}
+              />
+            ))}
+          </dd>
+        </div>
+        {answers.style ? <PreviewRow label="Estilo" value={answers.style} /> : null}
+        <PreviewRow
+          label="Formato"
+          value={RATIO_LABEL[answers.aspectRatio ?? ""] ?? answers.aspectRatio ?? "Cuadrado"}
         />
-        <button
-          type="submit"
-          className="shrink-0 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-        >
-          Enviar
-        </button>
-      </form>
-      {err ? <p className="text-xs text-red-600">{err}</p> : null}
+        <PreviewRow
+          label="Logotipo"
+          value={answers.logoKey === "Sin logotipo" ? "No tiene logotipo" : "Logotipo recibido"}
+        />
+        {answers.productPhotoKey ? <PreviewRow label="Foto del producto" value="Foto recibida" /> : null}
+      </dl>
+
+      {sendError ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{sendError}</p> : null}
+
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={disabled || sending}
+        className="mt-5 w-full rounded-2xl bg-wit-blue px-6 py-3.5 text-sm font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {sending ? "Enviando..." : "Confirmar y enviar"}
+      </button>
     </div>
   );
 }
@@ -466,91 +479,64 @@ function ChatTextInput({
 function AiChatRequestForm({
   disabled,
   onCreated,
-  onUseClassicForm,
+  onClose,
 }: {
   disabled: boolean;
   onCreated: () => void;
-  onUseClassicForm: () => void;
+  onClose: () => void;
 }) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [stepIndex, setStepIndex] = useState(0);
-  const [phase, setPhase] = useState<"chat" | "review">("chat");
-  const [error, setError] = useState<string | null>(null);
+  const [completedAnswers, setCompletedAnswers] = useState<Record<string, string> | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
 
-  const done = stepIndex >= CHAT_QUESTIONS.length;
-  const currentQuestion = CHAT_QUESTIONS[stepIndex];
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [stepIndex, phase]);
-
-  function submitAnswer(rawText: string) {
-    const q = currentQuestion;
-    if (!q || done) return;
-    const text = rawText.trim();
-    if (!text && q.required) {
-      setError("Este dato es necesario para continuar.");
-      return;
+  function pickerFor(field: string, onPick: (value: string) => void) {
+    switch (field) {
+      case "pieceType":
+        return <PieceTypePicker onPick={onPick} />;
+      case "aspectRatio":
+        return <AspectRatioPicker onPick={onPick} />;
+      case "colors":
+        return <ColorsPicker onPick={onPick} />;
+      case "style":
+        return <StylePicker onPick={onPick} />;
+      case "businessType":
+        return <BusinessTypeWheel onPick={onPick} />;
+      case "audience":
+        return <AudiencePicker onPick={onPick} />;
+      case "ageRanges":
+        return <AgeRangeMultiPicker onPick={onPick} />;
+      case "logoKey":
+        return <LogoUploadPicker onPick={onPick} />;
+      case "productPhotoKey":
+        return <ProductPhotoUploadPicker onPick={onPick} />;
+      default:
+        return null;
     }
-    setError(null);
-    const nextAnswers = { ...answers, [q.field]: text };
-    setAnswers(nextAnswers);
-    const nextIndex = stepIndex + 1;
-    setStepIndex(nextIndex);
-    if (nextIndex >= CHAT_QUESTIONS.length) setPhase("review");
-  }
-
-  function goBack() {
-    if (stepIndex === 0) return;
-    const prevField = CHAT_QUESTIONS[stepIndex - 1].field;
-    setAnswers((prev) => {
-      const next = { ...prev };
-      delete next[prevField];
-      return next;
-    });
-    setError(null);
-    setStepIndex((i) => i - 1);
-  }
-
-  // "Editar" from the review screen reopens the last question — from there
-  // "Atrás" walks back through earlier answers same as during the chat, so
-  // there's one consistent way to correct something instead of two.
-  function editFromReview() {
-    const lastField = CHAT_QUESTIONS[CHAT_QUESTIONS.length - 1].field;
-    setAnswers((prev) => {
-      const next = { ...prev };
-      delete next[lastField];
-      return next;
-    });
-    setStepIndex(CHAT_QUESTIONS.length - 1);
-    setPhase("chat");
   }
 
   async function confirmSend() {
+    if (!completedAnswers) return;
     setSendError(null);
     setSending(true);
     try {
-      const noLogo = answers.logoKey === "Sin logotipo";
+      const noLogo = completedAnswers.logoKey === "Sin logotipo";
       const res = await fetch("/api/requests", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          title: answers.title,
-          companyName: answers.companyName,
-          pieceBrief: answers.pieceBrief,
-          style: answers.style || undefined,
-          aspectRatio: answers.aspectRatio || "1:1",
-          logoKey: noLogo ? undefined : answers.logoKey || undefined,
+          title: completedAnswers.title,
+          companyName: completedAnswers.companyName,
+          pieceBrief: completedAnswers.pieceBrief,
+          style: completedAnswers.style || undefined,
+          aspectRatio: completedAnswers.aspectRatio || "1:1",
+          logoKey: noLogo ? undefined : completedAnswers.logoKey || undefined,
           noLogo,
-          productPhotoKey: answers.productPhotoKey || undefined,
-          audience: answers.audience || undefined,
-          ageRange: answers.ageRanges || undefined,
-          promoPrice: answers.promoPrice || undefined,
-          requiredText: answers.requiredText || undefined,
-          brandColors: answers.colors || undefined,
+          productPhotoKey: completedAnswers.productPhotoKey || undefined,
+          audience: completedAnswers.audience || undefined,
+          ageRange: completedAnswers.ageRanges || undefined,
+          promoPrice: completedAnswers.promoPrice || undefined,
+          requiredText: completedAnswers.requiredText || undefined,
+          brandColors: completedAnswers.colors || undefined,
         }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
@@ -564,9 +550,6 @@ function AiChatRequestForm({
         );
         return;
       }
-      setAnswers({});
-      setStepIndex(0);
-      setPhase("chat");
       onCreated();
     } catch {
       setSendError("No pudimos enviar tu solicitud. Intenta de nuevo.");
@@ -575,209 +558,32 @@ function AiChatRequestForm({
     }
   }
 
-  if (phase === "review") {
-    const colorList = (answers.colors ?? "")
-      .split(",")
-      .map((c) => c.trim())
-      .filter(Boolean);
-    return (
-      <section className="wit-glass h-fit rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-        <h2 className="text-xl font-bold text-wit-ink">Revisa tu solicitud</h2>
-        <p className="mt-1 text-sm text-wit-gray">
-          Confirma que todo esté correcto antes de enviarla — usa una de tus solicitudes disponibles.
-        </p>
-
-        <dl className="mt-6 space-y-4">
-          <PreviewRow label="Título" value={answers.title ?? ""} />
-          <PreviewRow label="Nombre comercial / empresa" value={answers.companyName ?? ""} />
-          <PreviewRow label="Qué quieres que salga en esta pieza" value={answers.pieceBrief ?? ""} />
-          {answers.audience ? <PreviewRow label="Público objetivo" value={answers.audience} /> : null}
-          {answers.ageRanges ? <PreviewRow label="Rango de edad" value={answers.ageRanges} /> : null}
-          {answers.promoPrice ? <PreviewRow label="Precio o descuento" value={answers.promoPrice} /> : null}
-          {answers.requiredText ? (
-            <PreviewRow label="Mensaje o dato extra" value={answers.requiredText} />
-          ) : null}
-          <div>
-            <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-              Colores de marca
-            </dt>
-            <dd className="mt-1.5 flex gap-2">
-              {colorList.map((c) => (
-                <span
-                  key={c}
-                  className="h-7 w-7 rounded-full border border-wit-ink/10"
-                  style={{ backgroundColor: c }}
-                  title={c}
-                />
-              ))}
-            </dd>
-          </div>
-          {answers.style ? <PreviewRow label="Estilo" value={answers.style} /> : null}
-          <PreviewRow
-            label="Formato"
-            value={RATIO_LABEL[answers.aspectRatio ?? ""] ?? answers.aspectRatio ?? "Cuadrado"}
-          />
-          <PreviewRow
-            label="Logotipo"
-            value={answers.logoKey === "Sin logotipo" ? "No tiene logotipo" : "Logotipo recibido"}
-          />
-          {answers.productPhotoKey ? <PreviewRow label="Foto del producto" value="Foto recibida" /> : null}
-        </dl>
-
-        {sendError ? (
-          <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{sendError}</p>
-        ) : null}
-
-        <div className="mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={editFromReview}
-            disabled={sending}
-            className="flex-1 rounded-2xl border border-wit-ink/15 px-6 py-4 text-base font-bold text-wit-ink transition-colors hover:border-wit-blue disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={confirmSend}
-            disabled={disabled || sending}
-            className="flex-1 rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {sending ? "Enviando..." : "Confirmar y enviar"}
-          </button>
-        </div>
-      </section>
-    );
-  }
-
-  const activeInput =
-    currentQuestion?.field === "pieceType" ? (
-      <PieceTypePicker onPick={submitAnswer} />
-    ) : currentQuestion?.field === "aspectRatio" ? (
-      <AspectRatioPicker onPick={submitAnswer} />
-    ) : currentQuestion?.field === "companyName" ? (
-      <ChatTextInput
-        onPick={submitAnswer}
-        placeholder="Nombre de tu empresa o marca"
-        minLength={2}
-        maxLength={120}
-      />
-    ) : currentQuestion?.field === "colors" ? (
-      <ColorsPicker onPick={submitAnswer} />
-    ) : currentQuestion?.field === "style" ? (
-      <StylePicker onPick={submitAnswer} />
-    ) : currentQuestion?.field === "businessType" ? (
-      <BusinessTypeWheel onPick={submitAnswer} />
-    ) : currentQuestion?.field === "pieceBrief" ? (
-      <ChatTextInput
-        onPick={submitAnswer}
-        placeholder="Describe qué debe mostrar esta pieza..."
-        minLength={10}
-        maxLength={2000}
-        multiline
-      />
-    ) : currentQuestion?.field === "title" ? (
-      <ChatTextInput
-        onPick={submitAnswer}
-        placeholder="Un título corto para esta pieza"
-        minLength={3}
-        maxLength={120}
-      />
-    ) : currentQuestion?.field === "audience" ? (
-      <AudiencePicker onPick={submitAnswer} />
-    ) : currentQuestion?.field === "ageRanges" ? (
-      <AgeRangeMultiPicker onPick={submitAnswer} />
-    ) : currentQuestion?.field === "logoKey" ? (
-      <LogoUploadPicker onPick={submitAnswer} />
-    ) : currentQuestion?.field === "productPhotoKey" ? (
-      <ProductPhotoUploadPicker onPick={submitAnswer} />
-    ) : currentQuestion?.field === "promoPrice" ? (
-      <ChatTextInput onPick={submitAnswer} placeholder="Ej. $500, 20% de descuento..." maxLength={80} />
-    ) : currentQuestion?.field === "requiredText" ? (
-      <ChatTextInput
-        onPick={submitAnswer}
-        placeholder="Ej. válido hasta el 31 de julio..."
-        maxLength={500}
-      />
-    ) : null;
-
   return (
-    <section className="wit-glass h-fit rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold text-wit-ink">Chat con IA</h2>
-          <p className="mt-1 text-sm text-wit-gray">
-            Contesta unas preguntas rápidas y armamos tu solicitud — nada de formularios largos.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onUseClassicForm}
-          className="text-xs font-semibold text-wit-gray underline-offset-2 hover:text-wit-blue hover:underline"
-        >
-          Prefiero el formulario clásico
-        </button>
-      </div>
-
-      <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-wit-mist/50">
-        <div
-          className="h-full rounded-full bg-wit-blue transition-all duration-300"
-          style={{ width: `${Math.min(100, (stepIndex / CHAT_QUESTIONS.length) * 100)}%` }}
-        />
-      </div>
-
-      <div className="mt-6 max-h-[420px] space-y-4 overflow-y-auto pr-1">
-        {CHAT_QUESTIONS.slice(0, stepIndex).map((q) => (
-          <div key={q.field} className="space-y-2">
-            <ChatBubble role="assistant">{q.text}</ChatBubble>
-            <ChatBubble role="user">
-              {q.field === "colors" && answers.colors ? (
-                <span className="flex gap-1.5">
-                  {answers.colors.split(",").map((c) => (
-                    <span
-                      key={c}
-                      className="h-4 w-4 rounded-full border border-white/30"
-                      style={{ backgroundColor: c.trim() }}
-                    />
-                  ))}
-                </span>
-              ) : (
-                describeAnswer(q.field, answers[q.field] ?? "")
-              )}
-            </ChatBubble>
-          </div>
-        ))}
-
-        {!done ? (
-          <div className="space-y-3">
-            <ChatBubble role="assistant">{currentQuestion.text}</ChatBubble>
-            <div>{activeInput}</div>
-            <div className="flex items-center justify-center gap-4">
-              {stepIndex > 0 ? (
-                <button
-                  type="button"
-                  onClick={goBack}
-                  className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
-                >
-                  ← Atrás
-                </button>
-              ) : null}
-              {!currentQuestion.required ? (
-                <button
-                  type="button"
-                  onClick={() => submitAnswer("")}
-                  className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
-                >
-                  Omitir
-                </button>
-              ) : null}
-            </div>
-            {error ? <p className="text-center text-xs text-red-600">{error}</p> : null}
-          </div>
-        ) : null}
-        <div ref={bottomRef} />
-      </div>
-    </section>
+    <div className="wit-glass flex h-[min(700px,78vh)] flex-col overflow-hidden rounded-3xl px-5 pb-4 pt-2 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      <ChatIntakeFlow
+        questions={CHAT_QUESTIONS}
+        pickerFor={pickerFor}
+        onComplete={(answers) => {
+          setCompletedAnswers(answers);
+          setSendError(null);
+        }}
+        pending={sending}
+        pendingLabel="Enviando tu solicitud..."
+        doneLabel="¡Listo! Revisa tu solicitud antes de enviarla:"
+        onClose={onClose}
+        resultSlot={
+          completedAnswers ? (
+            <ChatReviewBox
+              answers={completedAnswers}
+              disabled={disabled}
+              sendError={sendError}
+              sending={sending}
+              onConfirm={confirmSend}
+            />
+          ) : null
+        }
+      />
+    </div>
   );
 }
 
