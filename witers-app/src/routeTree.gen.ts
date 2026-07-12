@@ -53,6 +53,7 @@ import { Route as ApiAdminDeactivateDesignerRouteImport } from './routes/api/adm
 import { Route as ApiAdminCreateDesignerRouteImport } from './routes/api/admin/create-designer'
 import { Route as ApiAdminApproveResultRouteImport } from './routes/api/admin/approve-result'
 import { Route as ApiAdminAiFillRouteImport } from './routes/api/admin/ai-fill'
+import { Route as ApiAdminActivateMembershipRouteImport } from './routes/api/admin/activate-membership'
 
 const WiterRoute = WiterRouteImport.update({
   id: '/witer',
@@ -277,6 +278,12 @@ const ApiAdminAiFillRoute = ApiAdminAiFillRouteImport.update({
   path: '/api/admin/ai-fill',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminActivateMembershipRoute =
+  ApiAdminActivateMembershipRouteImport.update({
+    id: '/api/admin/activate-membership',
+    path: '/api/admin/activate-membership',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -299,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/admin/activate-membership': typeof ApiAdminActivateMembershipRoute
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
@@ -345,6 +353,7 @@ export interface FileRoutesByTo {
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/admin/activate-membership': typeof ApiAdminActivateMembershipRoute
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
@@ -392,6 +401,7 @@ export interface FileRoutesById {
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/admin/activate-membership': typeof ApiAdminActivateMembershipRoute
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
@@ -440,6 +450,7 @@ export interface FileRouteTypes {
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/admin/activate-membership'
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
@@ -486,6 +497,7 @@ export interface FileRouteTypes {
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/admin/activate-membership'
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
@@ -532,6 +544,7 @@ export interface FileRouteTypes {
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/admin/activate-membership'
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
@@ -579,6 +592,7 @@ export interface RootRouteChildren {
   ApiSubmitSatisfactionRoute: typeof ApiSubmitSatisfactionRoute
   ApiUploadReferenceRoute: typeof ApiUploadReferenceRoute
   ApiUserRoute: typeof ApiUserRoute
+  ApiAdminActivateMembershipRoute: typeof ApiAdminActivateMembershipRoute
   ApiAdminAiFillRoute: typeof ApiAdminAiFillRoute
   ApiAdminApproveResultRoute: typeof ApiAdminApproveResultRoute
   ApiAdminCreateDesignerRoute: typeof ApiAdminCreateDesignerRoute
@@ -915,6 +929,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminAiFillRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/activate-membership': {
+      id: '/api/admin/activate-membership'
+      path: '/api/admin/activate-membership'
+      fullPath: '/api/admin/activate-membership'
+      preLoaderRoute: typeof ApiAdminActivateMembershipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -939,6 +960,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSubmitSatisfactionRoute: ApiSubmitSatisfactionRoute,
   ApiUploadReferenceRoute: ApiUploadReferenceRoute,
   ApiUserRoute: ApiUserRoute,
+  ApiAdminActivateMembershipRoute: ApiAdminActivateMembershipRoute,
   ApiAdminAiFillRoute: ApiAdminAiFillRoute,
   ApiAdminApproveResultRoute: ApiAdminApproveResultRoute,
   ApiAdminCreateDesignerRoute: ApiAdminCreateDesignerRoute,
