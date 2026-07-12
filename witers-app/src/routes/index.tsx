@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
+import { AspectRatioPicker, ColorsPicker, PieceTypePicker, StylePicker } from "../components/witers/lab-pickers";
 import { useMe } from "../lib/witers-client";
 
 export const Route = createFileRoute("/")({
@@ -29,6 +30,7 @@ function Landing() {
       <Hero />
       <Testimonios />
       <MarcasQueConfian />
+      <PruebaInteractiva />
       <Membresia />
       <Faq />
       <CtaFinal />
@@ -331,6 +333,105 @@ function MarcasQueConfian() {
               className="h-10 w-auto max-w-[160px] object-contain grayscale"
             />
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- 1b. PRUEBA INTERACTIVA ---------------- */
+
+// A trimmed, public preview of the AI-lab intake chat (admin-lab.tsx) —
+// only the four zero-typing, zero-file, zero-AI-call pickers (piece type,
+// format, colors, style). Nothing here ever calls OpenAI or touches
+// design_requests, so it costs nothing to run for an anonymous visitor no
+// matter how many times they play with it. The payoff at the end is the
+// account/checkout flow, not a generated image — that stays behind
+// signup, where a real client relationship (and the membership that pays
+// for actual generation) already exists.
+const PRUEBA_STEPS = [
+  { field: "pieceType", text: "¿Qué tipo de pieza quieres crear hoy?" },
+  { field: "aspectRatio", text: "¿Qué forma tiene la pieza que te imaginas?" },
+  { field: "colors", text: "¿Tienes colores de marca? Si no, elige los que más te gusten." },
+  { field: "style", text: "¿Qué estilo visual te gustaría?" },
+] as const;
+
+function PruebaInteractiva() {
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const done = step >= PRUEBA_STEPS.length;
+
+  function submitAnswer(value: string) {
+    setAnswers((prev) => ({ ...prev, [PRUEBA_STEPS[step].field]: value }));
+    setStep((s) => s + 1);
+  }
+
+  const current = PRUEBA_STEPS[step];
+  const activeInput =
+    current?.field === "pieceType" ? (
+      <PieceTypePicker onPick={submitAnswer} />
+    ) : current?.field === "aspectRatio" ? (
+      <AspectRatioPicker onPick={submitAnswer} />
+    ) : current?.field === "colors" ? (
+      <ColorsPicker onPick={submitAnswer} />
+    ) : current?.field === "style" ? (
+      <StylePicker onPick={submitAnswer} />
+    ) : null;
+
+  return (
+    <section className="relative bg-wit-ice py-16 md:py-20">
+      <div className="mx-auto max-w-sm px-5">
+        <p className="wit-rise text-center text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
+          Pruébalo tú mismo
+        </p>
+        <h2 className="wit-rise mt-2 text-center text-2xl font-extrabold tracking-tighter text-wit-ink md:text-3xl">
+          Arma tu pieza en 4 pasos
+        </h2>
+
+        <div className="wit-glass mt-8 rounded-3xl p-6 shadow-[0_20px_50px_rgba(5,13,40,0.08)]">
+          {!done ? (
+            <>
+              <div className="mb-5 flex items-start gap-2">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-wit-blue/10 text-wit-blue">
+                  <WMark size={13} />
+                </span>
+                <p className="rounded-2xl rounded-bl-sm bg-wit-mist/50 px-4 py-2.5 text-sm text-wit-ink">
+                  {current.text}
+                </p>
+              </div>
+              {activeInput}
+              <div className="mx-auto mt-6 h-1 w-full max-w-[220px] overflow-hidden rounded-full bg-wit-mist/50">
+                <div
+                  className="h-full rounded-full bg-wit-blue transition-all duration-500 ease-out"
+                  style={{ width: `${(step / PRUEBA_STEPS.length) * 100}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="wit-float">
+                <WMark size={30} />
+              </div>
+              <p className="text-base font-bold text-wit-ink">¡Nos encantó lo que armaste!</p>
+              <p className="text-sm text-wit-gray">
+                Crea tu cuenta para que empecemos a diseñar tu pieza de verdad.
+              </p>
+              <div className="mt-2 flex w-full flex-col gap-2">
+                <Link
+                  to="/registro"
+                  className="rounded-full bg-wit-blue px-6 py-3 text-center text-sm font-bold text-white hover:bg-wit-blue-deep"
+                >
+                  Crear cuenta gratis
+                </Link>
+                <Link
+                  to="/ingresar"
+                  className="rounded-full border border-wit-ink/15 px-6 py-3 text-center text-sm font-bold text-wit-ink hover:bg-wit-mist/40"
+                >
+                  Ya tengo cuenta
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>
