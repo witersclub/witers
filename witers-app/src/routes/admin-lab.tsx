@@ -164,12 +164,15 @@ function AiLab() {
   const [listening, setListening] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [menuField, setMenuField] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const answerRef = useRef("");
   const silenceTimerRef = useRef<number | null>(null);
   const manualStopRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const pressTimerRef = useRef<number | null>(null);
+  const pressMovedRef = useRef(false);
 
   const done = stepIndex >= QUESTIONS.length;
   // The full chat view only takes over the screen once the first answer is
@@ -190,6 +193,35 @@ function AiLab() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [stepIndex, typing, done, loading, fields]);
+
+  // Tapping/clicking anywhere outside the long-press popup dismisses it.
+  useEffect(() => {
+    if (!menuField) return;
+    const dismiss = (ev: Event) => {
+      if (!(ev.target as Element | null)?.closest("[data-edit-menu]")) setMenuField(null);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [menuField]);
+
+  // Press-and-hold a sent answer to reveal a tiny "Editar" popup, instead of
+  // a link sitting under every bubble all the time.
+  function handlePressStart(field: string) {
+    pressMovedRef.current = false;
+    if (pressTimerRef.current) window.clearTimeout(pressTimerRef.current);
+    pressTimerRef.current = window.setTimeout(() => {
+      if (!pressMovedRef.current) setMenuField(field);
+    }, 450);
+  }
+  function handlePressMove() {
+    pressMovedRef.current = true;
+  }
+  function handlePressEnd() {
+    if (pressTimerRef.current) {
+      window.clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+  }
 
   // Don't leave the mic listening in the background if the admin leaves —
   // covers both an in-app navigation (React unmount) and a hard exit
@@ -275,6 +307,7 @@ function AiLab() {
   function startEditing(field: string, currentValue: string) {
     if (listening) stopListening();
     setError(null);
+    setMenuField(null);
     setEditingField(field);
     setEditValue(currentValue);
   }
@@ -318,6 +351,7 @@ function AiLab() {
     setTyping(false);
     setEditingField(null);
     setEditValue("");
+    setMenuField(null);
   }
 
   // Stops the hands-free session outright — used when the admin presses
@@ -609,19 +643,42 @@ function AiLab() {
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <ChatBubble role="user" text={e.answer} />
-                    <button
-                      type="button"
-                      onClick={() => startEditing(e.field, answers[e.field] ?? "")}
-                      className="-mt-2 mr-1 flex items-center gap-1 self-end text-xs font-semibold text-wit-gray hover:text-wit-ink"
+                  <div className="relative self-end">
+                    <div
+                      onMouseDown={() => handlePressStart(e.field)}
+                      onMouseUp={handlePressEnd}
+                      onMouseLeave={handlePressEnd}
+                      onMouseMove={handlePressMove}
+                      onTouchStart={() => handlePressStart(e.field)}
+                      onTouchEnd={handlePressEnd}
+                      onTouchMove={handlePressMove}
+                      onContextMenu={(ev) => ev.preventDefault()}
+                      className="cursor-pointer select-none transition-transform active:scale-[0.97]"
                     >
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                      </svg>
-                      Editar
-                    </button>
-                  </>
+                      <ChatBubble role="user" text={e.answer} />
+                    </div>
+                    {menuField === e.field ? (
+                      <div
+                        data-edit-menu
+                        className="wit-rise absolute -top-11 right-0 z-10 flex items-center gap-1.5 rounded-xl bg-wit-ink px-3 py-2 text-xs font-semibold text-white shadow-[0_10px_30px_rgba(5,13,40,0.25)]"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => startEditing(e.field, answers[e.field] ?? "")}
+                          className="flex items-center gap-1.5"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                          </svg>
+                          Editar
+                        </button>
+                        <span
+                          aria-hidden="true"
+                          className="absolute -bottom-1 right-4 h-2 w-2 rotate-45 bg-wit-ink"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 )}
               </div>
             ))}
