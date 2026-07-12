@@ -185,12 +185,12 @@ const BUSINESS_INDUSTRIES: { value: string; types: string[] }[] = [
   { value: "Mascotas", types: ["Veterinaria / Pet shop"] },
 ];
 
-const AUDIENCE_OPTIONS = ["Mujeres", "Hombres", "Todos / Público general", "Familias", "Jóvenes", "Corporativos / Empresas"];
+const AUDIENCE_OPTIONS = ["Mujeres", "Hombres", "Todos / Público general", "Corporativos / Empresas"];
 
 // Hand-drawn, one glyph per option instead of one icon family reused with a
 // className swap — each option reads clearer through its own convention
-// (gender symbols, a group of dots, a roof, a spark, a building) than it
-// would forcing every concept through the same shape language.
+// (gender symbols, a group of dots, a building) than it would forcing
+// every concept through the same shape language.
 function AudienceIcon({ value }: { value: string }) {
   const stroke = {
     fill: "none" as const,
@@ -222,20 +222,6 @@ function AudienceIcon({ value }: { value: string }) {
           <circle cx="7" cy="9" r="3" fill="currentColor" />
           <circle cx="17" cy="9" r="3" fill="currentColor" />
           <circle cx="12" cy="16" r="3.5" fill="currentColor" />
-        </svg>
-      );
-    case "Familias":
-      return (
-        <svg width="26" height="26" viewBox="0 0 24 24" {...stroke}>
-          <path d="M4 12 12 5 20 12" />
-          <path d="M6 11v9h12v-9" />
-          <path d="M10 20v-5h4v5" />
-        </svg>
-      );
-    case "Jóvenes":
-      return (
-        <svg width="26" height="26" viewBox="0 0 24 24">
-          <path d="M12 3 14 10 21 12 14 14 12 21 10 14 3 12 10 10Z" fill="currentColor" />
         </svg>
       );
     case "Corporativos / Empresas":
