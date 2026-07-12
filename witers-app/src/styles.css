@@ -260,25 +260,6 @@
   border-radius: 2px;
 }
 
-/* Endless right-to-left marquee — cards are born at the right edge, drift
-   left, and fade out under the mask before looping. The track holds the
-   item list twice back to back so the loop from 0% to -50% is seamless. A
-   fairly short duration keeps the pace brisk rather than lazy. Paused on
-   hover so a visitor can actually read a card instead of chasing it. */
-.wit-marquee-track {
-  animation: wit-marquee 20s linear infinite;
-}
-.wit-marquee-track:hover {
-  animation-play-state: paused;
-}
-@keyframes wit-marquee {
-  from {
-    transform: translateX(0%);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
 /* Slow, near-imperceptible zoom on the full-screen hero video — adds
    cinematic drift on top of the footage's own motion, without ever
    revealing an edge (scale only grows, never shrinks below 1). */

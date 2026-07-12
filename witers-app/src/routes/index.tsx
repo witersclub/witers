@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
@@ -118,9 +118,9 @@ function Hero() {
           Branding · Marketing · IA
         </span>
         <h1 className="wit-rise wit-rise-d1 mx-auto mt-7 max-w-2xl text-5xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-7xl">
-          Elevemos tu marca con{" "}
+          Elevemos tu{" "}
           <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
-            inteligencia artificial
+            marca
           </span>
           .
         </h1>
@@ -149,13 +149,81 @@ function Hero() {
 
 /* ---------------- 1a. RESULTADOS REALES (imagen + reseña) ---------------- */
 
+// Drives the marquee's position by hand (translateX in px, via requestAnimationFrame)
+// instead of a CSS animation, so a finger/mouse drag can grab it mid-scroll and the
+// auto-scroll can resume smoothly from wherever it was left — a CSS keyframe animation
+// can't be nudged like that without a visual snap.
+function useDraggableMarquee<T>(itemCount: number) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef(0);
+  const halfWidthRef = useRef(0);
+  const draggingRef = useRef(false);
+  const pausedRef = useRef(false);
+  const lastXRef = useRef(0);
+
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el || itemCount === 0) return;
+    halfWidthRef.current = el.scrollWidth / 2;
+  }, [itemCount]);
+
+  useEffect(() => {
+    if (itemCount === 0) return;
+    const SPEED = 36; // px/s
+    let last = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const dt = (now - last) / 1000;
+      last = now;
+      if (!draggingRef.current && !pausedRef.current) {
+        offsetRef.current -= SPEED * dt;
+      }
+      const half = halfWidthRef.current;
+      if (half > 0) {
+        if (offsetRef.current <= -half) offsetRef.current += half;
+        if (offsetRef.current > 0) offsetRef.current -= half;
+      }
+      if (trackRef.current) {
+        trackRef.current.style.transform = `translateX(${offsetRef.current}px)`;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [itemCount]);
+
+  const dragHandlers = {
+    onPointerDown: (ev: React.PointerEvent) => {
+      draggingRef.current = true;
+      lastXRef.current = ev.clientX;
+      (ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId);
+    },
+    onPointerMove: (ev: React.PointerEvent) => {
+      if (!draggingRef.current) return;
+      offsetRef.current += ev.clientX - lastXRef.current;
+      lastXRef.current = ev.clientX;
+    },
+    onPointerUp: () => {
+      draggingRef.current = false;
+    },
+    onPointerCancel: () => {
+      draggingRef.current = false;
+    },
+    onMouseEnter: () => {
+      pausedRef.current = true;
+    },
+    onMouseLeave: () => {
+      pausedRef.current = false;
+      draggingRef.current = false;
+    },
+  };
+
+  return { trackRef, dragHandlers };
+}
+
 function Testimonios() {
   const reviews = useReviews();
   const list = reviews.data?.reviews ?? [];
-
-  // No fabricated testimonials — the whole section stays hidden until at
-  // least one client has actually submitted a rating.
-  if (list.length === 0) return null;
 
   const cards = list.map((r) => ({
     ...r,
@@ -163,6 +231,12 @@ function Testimonios() {
   }));
   // Duplicated back to back so the track can loop seamlessly.
   const track = [...cards, ...cards.map((c) => ({ ...c, request_id: `${c.request_id}-2` }))];
+  const { trackRef, dragHandlers } = useDraggableMarquee(track.length);
+
+  // No fabricated testimonials — the whole section stays hidden until at
+  // least one client has actually submitted a rating. Hooks above still run
+  // every render either way, so this early return can't shift hook order.
+  if (list.length === 0) return null;
 
   return (
     <section className="relative overflow-hidden bg-white py-20 md:py-28">
@@ -174,7 +248,11 @@ function Testimonios() {
       </div>
 
       <div className="wit-marquee-mask relative mt-14 overflow-hidden">
-        <div className="wit-marquee-track flex w-max gap-6 px-5">
+        <div
+          ref={trackRef}
+          {...dragHandlers}
+          className="flex w-max cursor-grab touch-pan-y gap-6 px-5 active:cursor-grabbing"
+        >
           {track.map((r) => (
             <article
               key={r.request_id}
