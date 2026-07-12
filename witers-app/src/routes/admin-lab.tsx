@@ -48,6 +48,8 @@ type Fields = {
   aspectRatio: string;
   audience: string;
   ageRanges: string[];
+  logoKey: string;
+  productPhotoKey: string;
   promoPrice: string;
   requiredText: string;
   colors: string[];
@@ -59,10 +61,10 @@ type Fields = {
 // The raw answers get stitched into a transcript and handed to the same
 // /api/admin/ai-fill endpoint the freeform lab used, which normalizes
 // what's left as genuinely free text (pieceBrief, etc).
-// pieceType/aspectRatio/colors/style/businessType are answered through
-// dedicated pickers instead of free text, so those are never sent through
-// the AI at all — see generate() below, which merges them straight from
-// `answers` into the final Fields.
+// pieceType/aspectRatio/colors/style/businessType/audience/ageRanges/
+// logoKey/productPhotoKey are answered through dedicated pickers instead of
+// free text, so those are never sent through the AI at all — see generate()
+// below, which merges them straight from `answers` into the final Fields.
 // `brief` (what the business does) has no chat question anymore —
 // businessType covers that ground now — so the AI has to infer it from
 // context alone until this gets built out properly.
@@ -131,6 +133,27 @@ const QUESTIONS: { field: string; label: string; short: string; text: string; re
     required: true,
   },
   {
+    field: "ageRanges",
+    label: "Rango de edad",
+    short: "Edad",
+    text: "¿En qué rango de edad está tu público? Elige uno o varios.",
+    required: false,
+  },
+  {
+    field: "logoKey",
+    label: "Logotipo",
+    short: "Logo",
+    text: "Sube tu logotipo.",
+    required: true,
+  },
+  {
+    field: "productPhotoKey",
+    label: "Foto del producto",
+    short: "Foto",
+    text: "¿Tienes una foto del producto que debamos usar?",
+    required: false,
+  },
+  {
     field: "promoPrice",
     label: "Precio o descuento",
     short: "Precio",
@@ -186,6 +209,9 @@ const BUSINESS_INDUSTRIES: { value: string; types: string[] }[] = [
 ];
 
 const AUDIENCE_OPTIONS = ["Mujeres", "Hombres", "Todos", "Empresas"];
+
+// Same five ranges the real form (panel.tsx) uses, so the two stay in sync.
+const AGE_CHIPS = ["18-24", "25-34", "35-44", "45-54", "55+"];
 
 // Hand-drawn, one glyph per option instead of one icon family reused with a
 // className swap — each option reads clearer through its own convention
@@ -449,9 +475,15 @@ function AiLab() {
         style: capturedAnswers.style ?? "",
         businessType: capturedAnswers.businessType ?? "",
         audience: capturedAnswers.audience ?? "",
+        logoKey: capturedAnswers.logoKey ?? "",
+        productPhotoKey: capturedAnswers.productPhotoKey ?? "",
         colors: (capturedAnswers.colors ?? "")
           .split(",")
           .map((c) => c.trim())
+          .filter(Boolean),
+        ageRanges: (capturedAnswers.ageRanges ?? "")
+          .split(",")
+          .map((a) => a.trim())
           .filter(Boolean),
       });
     } catch {
@@ -741,6 +773,12 @@ function AiLab() {
       <BusinessTypeWheel onPick={submitAnswer} />
     ) : currentQuestion?.field === "audience" ? (
       <AudiencePicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "ageRanges" ? (
+      <AgeRangeMultiPicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "logoKey" ? (
+      <LogoUploadPicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "productPhotoKey" ? (
+      <ProductPhotoUploadPicker onPick={submitAnswer} />
     ) : (
       composer
     );
@@ -943,6 +981,8 @@ function AiLab() {
                       <LabRow label="Qué quieres que salga en esta pieza" value={fields.pieceBrief} />
                       <LabRow label="Público objetivo" value={fields.audience} />
                       <LabRow label="Rango de edad" value={fields.ageRanges.join(", ")} />
+                      <ImageLabRow label="Logotipo" fileKey={fields.logoKey} emptyText="Sin logotipo" />
+                      <ImageLabRow label="Foto del producto" fileKey={fields.productPhotoKey} emptyText="—" />
                       <LabRow label="Precio o descuento" value={fields.promoPrice} />
                       <LabRow label="Mensaje o dato extra" value={fields.requiredText} />
                       <LabRow label="Estilo" value={fields.style} />
@@ -1078,6 +1118,29 @@ function LabRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+// fileKey is only ever a real R2 key ("refs/...") when something was
+// actually uploaded — anything else (empty, or the "Sin logotipo" sentinel
+// LogoUploadPicker submits) falls back to plain text, same as LabRow.
+function ImageLabRow({ label, fileKey, emptyText }: { label: string; fileKey: string; emptyText: string }) {
+  const hasFile = fileKey.startsWith("refs/");
+  return (
+    <div>
+      <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">{label}</dt>
+      <dd className="mt-1.5 text-sm text-wit-ink">
+        {hasFile ? (
+          <img
+            src={`/api/file?key=${encodeURIComponent(fileKey)}`}
+            alt=""
+            className="h-16 w-16 rounded-lg border border-wit-ink/10 object-cover"
+          />
+        ) : (
+          fileKey || emptyText
+        )}
+      </dd>
+    </div>
+  );
+}
+
 // Plain pill chips, one tap = submit — there's no natural "shape" for a
 // platform the way there is for an aspect ratio, so no preview needed here.
 function PieceTypePicker({ onPick }: { onPick: (value: string) => void }) {
@@ -1156,6 +1219,159 @@ function AudiencePicker({ onPick }: { onPick: (value: string) => void }) {
         className="text-[10px] font-semibold text-wit-gray transition-transform hover:scale-[1.05] hover:text-wit-ink active:scale-95"
       >
         Otro
+      </button>
+    </div>
+  );
+}
+
+// Toggle any number of chips, then confirm — unlike a single-select picker,
+// tapping a chip here can't submit right away since the client might still
+// want to add or remove another range.
+function AgeRangeMultiPicker({ onPick }: { onPick: (value: string) => void }) {
+  const [selected, setSelected] = useState<string[]>([]);
+
+  function toggle(chip: string) {
+    setSelected((prev) => (prev.includes(chip) ? prev.filter((x) => x !== chip) : [...prev, chip]));
+  }
+
+  return (
+    <div className="wit-glass mx-auto flex max-w-[280px] flex-col items-center gap-3 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <div className="flex flex-wrap justify-center gap-2">
+        {AGE_CHIPS.map((chip) => (
+          <button
+            key={chip}
+            type="button"
+            onClick={() => toggle(chip)}
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+              selected.includes(chip) ? "bg-wit-blue text-white" : "bg-wit-mist/50 text-wit-ink hover:bg-wit-mist"
+            }`}
+          >
+            {chip}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => onPick(selected.join(", "))}
+        className="rounded-full bg-wit-blue px-6 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
+      >
+        Continuar
+      </button>
+    </div>
+  );
+}
+
+// Shared by both upload pickers below — same endpoint and constraints the
+// real client form (panel.tsx) already uses, so a key captured here is
+// valid anywhere in the app that reads request_results/design_requests
+// file keys.
+async function uploadReferenceFile(file: File): Promise<string | undefined> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("/api/upload-reference", { method: "POST", body: fd });
+  const data = (await res.json().catch(() => null)) as { ok: boolean; key?: string } | null;
+  return data?.ok ? data.key : undefined;
+}
+
+// Required, but "No tengo logotipo" is a legitimate answer — matches the
+// real form's same escape hatch (it doesn't have the "usar el logotipo de
+// mi solicitud anterior" option here, since this lab has no client request
+// history to reuse from).
+function LogoUploadPicker({ onPick }: { onPick: (value: string) => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [noLogo, setNoLogo] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleContinue() {
+    if (noLogo) {
+      onPick("Sin logotipo");
+      return;
+    }
+    if (!file) {
+      setError("Sube tu logotipo o marca 'No tengo logotipo'.");
+      return;
+    }
+    setError(null);
+    setUploading(true);
+    const key = await uploadReferenceFile(file);
+    setUploading(false);
+    if (!key) {
+      setError("No pudimos subir tu logotipo (PNG, JPG o WebP, máx. 8 MB).");
+      return;
+    }
+    onPick(key);
+  }
+
+  return (
+    <div className="wit-glass mx-auto flex max-w-[280px] flex-col gap-3 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <input
+        type="file"
+        aria-label="Tu logotipo"
+        accept="image/png,image/jpeg,image/webp"
+        disabled={noLogo}
+        onChange={(ev) => setFile(ev.target.files?.[0] ?? null)}
+        className="w-full rounded-xl border border-dashed border-wit-ink/20 px-3 py-2.5 text-xs text-wit-gray file:mr-2 file:rounded-lg file:border-0 file:bg-wit-mist/60 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-wit-blue disabled:opacity-40"
+      />
+      <label className="flex items-center gap-2 text-xs text-wit-ink">
+        <input
+          type="checkbox"
+          checked={noLogo}
+          onChange={(ev) => setNoLogo(ev.target.checked)}
+          className="h-4 w-4 rounded border-wit-ink/30"
+        />
+        No tengo logotipo
+      </label>
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      <button
+        type="button"
+        onClick={handleContinue}
+        disabled={uploading}
+        className="self-center rounded-full bg-wit-blue px-6 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
+      >
+        {uploading ? "Subiendo..." : "Continuar"}
+      </button>
+    </div>
+  );
+}
+
+// Optional — the generic Omitir link above the question bubble already
+// handles "skip entirely," so this only needs to handle the upload path.
+function ProductPhotoUploadPicker({ onPick }: { onPick: (value: string) => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleUpload() {
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    const key = await uploadReferenceFile(file);
+    setUploading(false);
+    if (!key) {
+      setError("No pudimos subir la foto (PNG, JPG o WebP, máx. 8 MB).");
+      return;
+    }
+    onPick(key);
+  }
+
+  return (
+    <div className="wit-glass mx-auto flex max-w-[280px] flex-col gap-3 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <input
+        type="file"
+        aria-label="Foto del producto"
+        accept="image/png,image/jpeg,image/webp"
+        onChange={(ev) => setFile(ev.target.files?.[0] ?? null)}
+        className="w-full rounded-xl border border-dashed border-wit-ink/20 px-3 py-2.5 text-xs text-wit-gray file:mr-2 file:rounded-lg file:border-0 file:bg-wit-mist/60 file:px-2.5 file:py-1 file:text-xs file:font-semibold file:text-wit-blue"
+      />
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      <button
+        type="button"
+        onClick={handleUpload}
+        disabled={!file || uploading}
+        className="self-center rounded-full bg-wit-blue px-6 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
+      >
+        {uploading ? "Subiendo..." : "Subir"}
       </button>
     </div>
   );
