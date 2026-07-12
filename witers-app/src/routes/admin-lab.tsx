@@ -87,7 +87,7 @@ const QUESTIONS: { field: string; label: string; short: string; text: string; re
     field: "colors",
     label: "Colores de marca",
     short: "Colores",
-    text: "Elige los colores de tu marca.",
+    text: "¿Tienes colores de marca que debamos usar? Si no tienes, elige los que más te gusten.",
     required: true,
   },
   {
