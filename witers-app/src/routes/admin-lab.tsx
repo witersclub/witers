@@ -59,11 +59,32 @@ type Fields = {
 // them (style → chip, colors → hex, aspectRatio → enum) same as before.
 const QUESTIONS: { field: string; label: string; short: string; text: string; required: boolean }[] = [
   {
+    field: "aspectRatio",
+    label: "Formato",
+    short: "Formato",
+    text: "¿Para dónde es esta pieza — post cuadrado, historia vertical, banner horizontal?",
+    required: false,
+  },
+  {
     field: "companyName",
     label: "Empresa",
     short: "Empresa",
     text: "¿Cuál es el nombre de tu empresa o marca?",
     required: true,
+  },
+  {
+    field: "colors",
+    label: "Colores de marca",
+    short: "Colores",
+    text: "¿Tienes colores de marca que debamos usar? Descríbelos, o dime que no tienes.",
+    required: false,
+  },
+  {
+    field: "style",
+    label: "Estilo",
+    short: "Estilo",
+    text: "¿Qué estilo visual te gustaría? Ej. minimalista, colorido, elegante...",
+    required: false,
   },
   {
     field: "brief",
@@ -87,20 +108,6 @@ const QUESTIONS: { field: string; label: string; short: string; text: string; re
     required: true,
   },
   {
-    field: "style",
-    label: "Estilo",
-    short: "Estilo",
-    text: "¿Qué estilo visual te gustaría? Ej. minimalista, colorido, elegante...",
-    required: false,
-  },
-  {
-    field: "aspectRatio",
-    label: "Formato",
-    short: "Formato",
-    text: "¿Para dónde es esta pieza — post cuadrado, historia vertical, banner horizontal?",
-    required: false,
-  },
-  {
     field: "audience",
     label: "Público objetivo",
     short: "Público",
@@ -119,13 +126,6 @@ const QUESTIONS: { field: string; label: string; short: string; text: string; re
     label: "Texto obligatorio",
     short: "Texto",
     text: "¿Hay algún texto o dato que deba aparecer sí o sí en la pieza?",
-    required: false,
-  },
-  {
-    field: "colors",
-    label: "Colores de marca",
-    short: "Colores",
-    text: "¿Tienes colores de marca que debamos usar? Descríbelos, o dime que no tienes.",
     required: false,
   },
 ];
