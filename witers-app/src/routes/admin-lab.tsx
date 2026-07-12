@@ -593,6 +593,13 @@ function AiLab() {
         </div>
       </header>
 
+      {menuField || editingField ? (
+        <div
+          aria-hidden="true"
+          className="wit-rise fixed inset-0 z-30 bg-wit-ink/15 backdrop-blur-sm"
+        />
+      ) : null}
+
       <main className="wit-rise mx-auto flex h-[calc(100dvh-4rem)] max-w-sm flex-col px-5">
         <div className="flex flex-col items-center gap-1.5 pb-1 pt-5">
           <div className="wit-float">
@@ -607,7 +614,7 @@ function AiLab() {
               <div key={e.field} className="flex flex-col gap-3">
                 <ChatBubble role="assistant" text={e.question} />
                 {editingField === e.field ? (
-                  <div className="flex flex-col items-end gap-1.5 self-end">
+                  <div className="relative z-40 flex flex-col items-end gap-1.5 self-end">
                     <div className="flex w-full max-w-[230px] items-center rounded-2xl rounded-br-sm border-2 border-wit-blue bg-white px-3.5 py-2">
                       <input
                         autoFocus
@@ -643,7 +650,7 @@ function AiLab() {
                     </div>
                   </div>
                 ) : (
-                  <div className="relative self-end">
+                  <div className={`relative self-end ${menuField === e.field ? "z-40" : ""}`}>
                     <div
                       onMouseDown={() => handlePressStart(e.field)}
                       onMouseUp={handlePressEnd}
