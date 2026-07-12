@@ -44,6 +44,7 @@ type Fields = {
   pieceBrief: string;
   style: string;
   pieceType: string;
+  businessType: string;
   aspectRatio: string;
   audience: string;
   ageRanges: string[];
@@ -96,6 +97,13 @@ const QUESTIONS: { field: string; label: string; short: string; text: string; re
     label: "Estilo",
     short: "Estilo",
     text: "¿Qué estilo visual te gustaría para tu pieza?",
+    required: true,
+  },
+  {
+    field: "businessType",
+    label: "Categoría de negocio",
+    short: "Categoría",
+    text: "¿En qué categoría cae tu negocio?",
     required: true,
   },
   {
@@ -162,6 +170,57 @@ const STYLE_OPTIONS: { value: string; swatchClass: string }[] = [
   { value: "Corporativo", swatchClass: "bg-gradient-to-br from-wit-blue to-wit-navy" },
   { value: "Divertido / Bold", swatchClass: "bg-gradient-to-br from-orange-400 to-fuchsia-500" },
 ];
+
+// Curated, not exhaustive — covers the industries a design membership
+// service actually sees, with "Otro" (typed free text) as the escape
+// valve for the long tail instead of trying to enumerate every business.
+const BUSINESS_INDUSTRIES: { value: string; types: string[] }[] = [
+  { value: "Alimentos y bebidas", types: ["Restaurante", "Cafetería", "Panadería / Repostería", "Bar", "Catering"] },
+  { value: "Salud y bienestar", types: ["Spa / Centro de bienestar", "Consultorio médico", "Clínica dental", "Psicología / Terapia"] },
+  { value: "Belleza", types: ["Salón de belleza", "Barbería", "Nail spa"] },
+  { value: "Fitness", types: ["Gimnasio", "Yoga / Pilates", "Entrenador personal"] },
+  { value: "Moda y retail", types: ["Tienda de ropa", "Joyería", "Tienda en línea"] },
+  { value: "Educación", types: ["Academia / Curso", "Guardería"] },
+  { value: "Servicios profesionales", types: ["Consultoría / Contabilidad", "Bufete legal", "Agencia de marketing"] },
+  { value: "Bienes raíces y construcción", types: ["Inmobiliaria", "Construcción / Remodelación"] },
+  { value: "Automotriz", types: ["Taller mecánico"] },
+  { value: "Eventos", types: ["Organización de eventos", "Fotografía / Video"] },
+  { value: "Tecnología", types: ["Software / Apps"] },
+  { value: "Mascotas", types: ["Veterinaria / Pet shop"] },
+];
+
+const WHEEL_ITEM_HEIGHT = 32;
+const WHEEL_VISIBLE_ROWS = 3;
+const WHEEL_HEIGHT = WHEEL_ITEM_HEIGHT * WHEEL_VISIBLE_ROWS;
+
+// One shared AudioContext, created lazily on the first tick (needs a user
+// gesture to actually produce sound in most browsers, and scrolling the
+// wheel counts as one). Best-effort only — a missing Vibration API (iOS
+// Safari has none) or blocked audio should never break the picker itself.
+let wheelAudioCtx: AudioContext | null = null;
+function playWheelTick() {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    navigator.vibrate(8);
+  }
+  try {
+    const Ctx =
+      window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    if (!wheelAudioCtx) wheelAudioCtx = new Ctx();
+    if (wheelAudioCtx.state === "suspended") void wheelAudioCtx.resume();
+    const osc = wheelAudioCtx.createOscillator();
+    const gain = wheelAudioCtx.createGain();
+    osc.type = "square";
+    osc.frequency.value = 1200;
+    gain.gain.setValueAtTime(0.06, wheelAudioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, wheelAudioCtx.currentTime + 0.04);
+    osc.connect(gain).connect(wheelAudioCtx.destination);
+    osc.start();
+    osc.stop(wheelAudioCtx.currentTime + 0.05);
+  } catch {
+    // sound is a nice-to-have — never let it throw into the scroll handler
+  }
+}
 
 function buildTranscript(answers: Record<string, string>): string {
   return QUESTIONS.map((q) => {
@@ -325,6 +384,7 @@ function AiLab() {
         pieceType: capturedAnswers.pieceType ?? "",
         aspectRatio: capturedAnswers.aspectRatio ?? "",
         style: capturedAnswers.style ?? "",
+        businessType: capturedAnswers.businessType ?? "",
         colors: (capturedAnswers.colors ?? "")
           .split(",")
           .map((c) => c.trim())
@@ -613,6 +673,8 @@ function AiLab() {
       <ColorsPicker onPick={submitAnswer} />
     ) : currentQuestion?.field === "style" ? (
       <StylePicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "businessType" ? (
+      <BusinessTypeWheel onPick={submitAnswer} />
     ) : (
       composer
     );
@@ -810,6 +872,7 @@ function AiLab() {
                       <LabRow label="Título" value={fields.title} />
                       <LabRow label="Nombre comercial / empresa" value={fields.companyName} />
                       <LabRow label="Nombre del producto" value={fields.productName} />
+                      <LabRow label="Categoría de negocio" value={fields.businessType} />
                       <LabRow label="A qué se dedica la empresa" value={fields.brief} />
                       <LabRow label="Qué quieres que salga en esta pieza" value={fields.pieceBrief} />
                       <LabRow label="Público objetivo" value={fields.audience} />
@@ -986,6 +1049,163 @@ function StylePicker({ onPick }: { onPick: (value: string) => void }) {
           </span>
         </button>
       ))}
+    </div>
+  );
+}
+
+// A vertical scroll-snap list standing in for a real 3D picker wheel —
+// native scroll physics (flick, momentum, snap) for free, instead of
+// hand-rolling drag/inertia math. Padding top/bottom equal to half the
+// visible height lets the first/last item scroll to dead-center same as
+// any other. Calls onSettle with whatever's centered ~140ms after
+// scrolling stops, AND once on mount so the default (first item, before
+// any scrolling) counts as a real selection too.
+function WheelPicker({
+  items,
+  onSettle,
+}: {
+  items: string[];
+  onSettle: (value: string, index: number) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const settleTimerRef = useRef<number | null>(null);
+  const centeredRef = useRef(0);
+  const [centeredIndex, setCenteredIndex] = useState(0);
+  const onSettleRef = useRef(onSettle);
+  onSettleRef.current = onSettle;
+  const padding = (WHEEL_HEIGHT - WHEEL_ITEM_HEIGHT) / 2;
+
+  useEffect(() => {
+    onSettleRef.current(items[0], 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleScroll() {
+    const el = containerRef.current;
+    if (!el) return;
+    const index = Math.max(0, Math.min(items.length - 1, Math.round(el.scrollTop / WHEEL_ITEM_HEIGHT)));
+    if (index !== centeredRef.current) {
+      centeredRef.current = index;
+      setCenteredIndex(index);
+      playWheelTick();
+    }
+    if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = window.setTimeout(() => {
+      onSettleRef.current(items[index], index);
+    }, 140);
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      aria-label="Selector"
+      className="wit-wheel relative overflow-y-scroll"
+      style={{ height: WHEEL_HEIGHT, width: 190, scrollSnapType: "y mandatory" }}
+    >
+      <div aria-hidden="true" style={{ height: padding }} />
+      {items.map((item, i) => (
+        <div
+          key={item}
+          style={{ height: WHEEL_ITEM_HEIGHT, scrollSnapAlign: "center" }}
+          className={`flex items-center justify-center px-2 text-center transition-all duration-150 ${
+            i === centeredIndex ? "text-sm font-bold text-wit-ink" : "text-xs font-medium text-wit-gray opacity-50"
+          }`}
+        >
+          {item}
+        </div>
+      ))}
+      <div aria-hidden="true" style={{ height: padding }} />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-2 border-y border-wit-blue/25"
+        style={{ top: padding, height: WHEEL_ITEM_HEIGHT }}
+      />
+    </div>
+  );
+}
+
+// Industry wheel first (short), then the specific-business-type wheel for
+// that industry appears once it settles — "Otro" sits next to each wheel
+// the whole time and swaps to a plain text field when tapped, at whichever
+// level the client's business doesn't fit.
+function BusinessTypeWheel({ onPick }: { onPick: (value: string) => void }) {
+  const [industry, setIndustry] = useState<string | null>(null);
+  const [type, setType] = useState<string | null>(null);
+  const [customStep, setCustomStep] = useState<"industry" | "type" | null>(null);
+  const [customText, setCustomText] = useState("");
+
+  if (customStep) {
+    return (
+      <form
+        onSubmit={(ev) => {
+          ev.preventDefault();
+          if (customText.trim()) onPick(customText.trim());
+        }}
+        className="wit-glass mx-auto flex max-w-[280px] items-center gap-2 rounded-full p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+      >
+        <input
+          autoFocus
+          type="text"
+          aria-label="Tu categoría de negocio"
+          value={customText}
+          onChange={(ev) => setCustomText(ev.target.value)}
+          placeholder="Escribe tu tipo de negocio..."
+          className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray"
+        />
+        <button
+          type="submit"
+          className="shrink-0 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+        >
+          Enviar
+        </button>
+      </form>
+    );
+  }
+
+  const industryEntry = BUSINESS_INDUSTRIES.find((i) => i.value === industry);
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="flex items-center gap-2">
+        <WheelPicker
+          items={BUSINESS_INDUSTRIES.map((i) => i.value)}
+          onSettle={(value) => {
+            setIndustry(value);
+            setType(null);
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setCustomStep("industry")}
+          className="shrink-0 rounded-full bg-wit-mist/50 px-3 py-1.5 text-xs font-semibold text-wit-gray hover:text-wit-ink"
+        >
+          Otro
+        </button>
+      </div>
+
+      {industryEntry ? (
+        <div className="flex items-center gap-2">
+          <WheelPicker key={industry} items={industryEntry.types} onSettle={setType} />
+          <button
+            type="button"
+            onClick={() => setCustomStep("type")}
+            className="shrink-0 rounded-full bg-wit-mist/50 px-3 py-1.5 text-xs font-semibold text-wit-gray hover:text-wit-ink"
+          >
+            Otro
+          </button>
+        </div>
+      ) : null}
+
+      {type ? (
+        <button
+          type="button"
+          onClick={() => onPick(type)}
+          className="rounded-full bg-wit-blue px-6 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
+        >
+          Confirmar
+        </button>
+      ) : null}
     </div>
   );
 }

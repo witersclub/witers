@@ -280,6 +280,19 @@
   mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
 }
 
+/* Vertical picker-wheel look: fades the top/bottom rows out instead of
+   cropping them sharply, and hides the native scrollbar track so the
+   scroll-snap list reads as a wheel, not a plain scrollable list. */
+.wit-wheel {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.wit-wheel::-webkit-scrollbar {
+  display: none;
+}
+
 
 .wit-navlink {
   position: relative;
