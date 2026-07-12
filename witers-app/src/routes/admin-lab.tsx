@@ -58,11 +58,14 @@ type Fields = {
 // form, asked one thing at a time instead of dumped as a wall of inputs.
 // The raw answers get stitched into a transcript and handed to the same
 // /api/admin/ai-fill endpoint the freeform lab used, which normalizes
-// what's left as genuinely free text (brief, pieceBrief, etc).
-// pieceType/aspectRatio/colors/style are answered through dedicated
-// pickers instead of free text, so those are never sent through the AI at
-// all — see generate() below, which merges them straight from `answers`
-// into the final Fields.
+// what's left as genuinely free text (pieceBrief, etc).
+// pieceType/aspectRatio/colors/style/businessType are answered through
+// dedicated pickers instead of free text, so those are never sent through
+// the AI at all — see generate() below, which merges them straight from
+// `answers` into the final Fields.
+// `brief` (what the business does) has no chat question anymore —
+// businessType covers that ground now — so the AI has to infer it from
+// context alone until this gets built out properly.
 const QUESTIONS: { field: string; label: string; short: string; text: string; required: boolean }[] = [
   {
     field: "pieceType",
@@ -104,13 +107,6 @@ const QUESTIONS: { field: string; label: string; short: string; text: string; re
     label: "Categoría de negocio",
     short: "Categoría",
     text: "¿En qué categoría cae tu negocio?",
-    required: true,
-  },
-  {
-    field: "brief",
-    label: "A qué se dedica",
-    short: "Rubro",
-    text: "Cuéntame, ¿a qué se dedica tu negocio?",
     required: true,
   },
   {
@@ -200,7 +196,7 @@ const WHEEL_HEIGHT = WHEEL_ITEM_HEIGHT * WHEEL_VISIBLE_ROWS;
 let wheelAudioCtx: AudioContext | null = null;
 function playWheelTick() {
   if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-    navigator.vibrate(8);
+    navigator.vibrate(10);
   }
   try {
     const Ctx =
@@ -208,15 +204,26 @@ function playWheelTick() {
     if (!Ctx) return;
     if (!wheelAudioCtx) wheelAudioCtx = new Ctx();
     if (wheelAudioCtx.state === "suspended") void wheelAudioCtx.resume();
-    const osc = wheelAudioCtx.createOscillator();
-    const gain = wheelAudioCtx.createGain();
-    osc.type = "square";
-    osc.frequency.value = 1200;
-    gain.gain.setValueAtTime(0.06, wheelAudioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, wheelAudioCtx.currentTime + 0.04);
-    osc.connect(gain).connect(wheelAudioCtx.destination);
-    osc.start();
-    osc.stop(wheelAudioCtx.currentTime + 0.05);
+    const ctx = wheelAudioCtx;
+    // A short burst of high-passed white noise with a built-in linear
+    // decay, not an oscillator tone — a tone always has pitch/ring to it,
+    // which read as a dated "beep" rather than a dry mechanical click.
+    const duration = 0.018;
+    const sampleCount = Math.ceil(ctx.sampleRate * duration);
+    const buffer = ctx.createBuffer(1, sampleCount, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < sampleCount; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / sampleCount);
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.value = 3500;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.5;
+    source.connect(filter).connect(gain).connect(ctx.destination);
+    source.start();
   } catch {
     // sound is a nice-to-have — never let it throw into the scroll handler
   }
