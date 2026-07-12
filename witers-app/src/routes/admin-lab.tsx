@@ -73,7 +73,7 @@ const QUESTIONS: { field: string; label: string; short: string; text: string; re
     field: "aspectRatio",
     label: "Formato",
     short: "Formato",
-    text: "¿Para dónde es esta pieza — post cuadrado, historia vertical, banner horizontal?",
+    text: "¿Qué forma tiene la pieza que te imaginas?",
     required: false,
   },
   {
@@ -143,7 +143,7 @@ const QUESTIONS: { field: string; label: string; short: string; text: string; re
 
 const ASPECT_OPTIONS: { value: string; label: string }[] = [
   { value: "1:1", label: "Cuadrado" },
-  { value: "4:3", label: "Estándar" },
+  { value: "4:3", label: "Feed" },
   { value: "16:9", label: "Horizontal" },
   { value: "3:4", label: "Vertical" },
   { value: "9:16", label: "Historia" },
@@ -845,25 +845,11 @@ function AiLab() {
         </div>
 
         <div className="shrink-0 border-t border-wit-ink/10 pb-6 pt-3">
-          <div className="flex flex-wrap items-center justify-center gap-1.5">
-            {QUESTIONS.map((q) => {
-              const isAnswered = Object.prototype.hasOwnProperty.call(answers, q.field);
-              return (
-                <span
-                  key={q.field}
-                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-all duration-300 ${
-                    isAnswered ? "bg-wit-blue text-white" : "bg-wit-mist/50 text-wit-gray"
-                  }`}
-                >
-                  {isAnswered ? (
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : null}
-                  {q.short}
-                </span>
-              );
-            })}
+          <div className="mx-auto h-1 w-full max-w-[220px] overflow-hidden rounded-full bg-wit-mist/50">
+            <div
+              className="h-full rounded-full bg-wit-blue transition-all duration-500 ease-out"
+              style={{ width: `${Math.min(100, (stepIndex / QUESTIONS.length) * 100)}%` }}
+            />
           </div>
 
           {error ? <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-600">{error}</p> : null}
@@ -964,58 +950,27 @@ function PieceTypePicker({ onPick }: { onPick: (value: string) => void }) {
   );
 }
 
-// A single compact pill instead of all 5 ratio cards sitting inline — tap
-// it to pop the real picker open right above it, pick a card there, and
-// it collapses back down. Keeps the resting state of the conversation
-// small even though the full picker is exactly the same grid as before.
+// Each ratio is its own small floating badge (same wit-float bob the WMark
+// logo uses elsewhere) with just the number inside — the label sits below
+// it, static, not bundled into one shared card the way the badges are.
+// Laid out in one horizontal, scrollable line so nothing ever wraps into a
+// grid.
 function AspectRatioPicker({ onPick }: { onPick: (value: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const dismiss = (ev: Event) => {
-      if (!wrapRef.current?.contains(ev.target as Node | null)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", dismiss);
-    return () => document.removeEventListener("pointerdown", dismiss);
-  }, [open]);
-
   return (
-    <div ref={wrapRef} className="relative flex justify-center">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="wit-glass flex items-center gap-2.5 rounded-2xl px-4 py-2.5 text-xs font-semibold text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.05)] transition-transform hover:scale-[1.02] active:scale-95"
-      >
-        <span className="flex h-6 w-9 items-center justify-center rounded-[3px] border-2 border-wit-blue bg-wit-blue/10 text-[9px] font-bold text-wit-blue">
-          1:1
-        </span>
-        Elegir formato
-      </button>
-
-      {open ? (
-        <div className="wit-rise absolute bottom-full z-10 mb-2 grid grid-cols-3 gap-2 rounded-2xl bg-white p-3 shadow-[0_14px_40px_rgba(5,13,40,0.18)]">
-          {ASPECT_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                onPick(opt.value);
-                setOpen(false);
-              }}
-              className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center transition-transform hover:scale-[1.04] active:scale-95"
-            >
-              <span
-                className="w-7 rounded-[3px] border-2 border-wit-blue bg-wit-blue/10"
-                style={{ aspectRatio: opt.value.replace(":", " / ") }}
-              />
-              <span className="text-[10px] font-semibold leading-tight text-wit-ink">{opt.label}</span>
-              <span className="text-[9px] text-wit-gray">{opt.value}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+    <div className="flex justify-center gap-4 overflow-x-auto px-1 py-2">
+      {ASPECT_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onPick(opt.value)}
+          className="flex shrink-0 flex-col items-center gap-1.5 transition-transform hover:scale-[1.05] active:scale-95"
+        >
+          <span className="wit-float wit-glass flex h-12 w-12 items-center justify-center rounded-2xl text-[11px] font-bold text-wit-blue shadow-[0_10px_30px_rgba(5,13,40,0.08)]">
+            {opt.value}
+          </span>
+          <span className="text-[10px] font-semibold text-wit-gray">{opt.label}</span>
+        </button>
+      ))}
     </div>
   );
 }
