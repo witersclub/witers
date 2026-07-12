@@ -128,7 +128,7 @@ const QUESTIONS: { field: string; label: string; short: string; text: string; re
     label: "Público objetivo",
     short: "Público",
     text: "¿A quién quieres llegarle con esta pieza?",
-    required: false,
+    required: true,
   },
   {
     field: "promoPrice",
@@ -184,6 +184,76 @@ const BUSINESS_INDUSTRIES: { value: string; types: string[] }[] = [
   { value: "Tecnología", types: ["Software / Apps"] },
   { value: "Mascotas", types: ["Veterinaria / Pet shop"] },
 ];
+
+const AUDIENCE_OPTIONS = ["Mujeres", "Hombres", "Todos / Público general", "Familias", "Jóvenes", "Corporativos / Empresas"];
+
+// Hand-drawn, one glyph per option instead of one icon family reused with a
+// className swap — each option reads clearer through its own convention
+// (gender symbols, a group of dots, a roof, a spark, a building) than it
+// would forcing every concept through the same shape language.
+function AudienceIcon({ value }: { value: string }) {
+  const stroke = {
+    fill: "none" as const,
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  switch (value) {
+    case "Mujeres":
+      return (
+        <svg width="26" height="26" viewBox="0 0 24 24" {...stroke}>
+          <circle cx="12" cy="8" r="5" />
+          <line x1="12" y1="13" x2="12" y2="21" />
+          <line x1="8" y1="17" x2="16" y2="17" />
+        </svg>
+      );
+    case "Hombres":
+      return (
+        <svg width="26" height="26" viewBox="0 0 24 24" {...stroke}>
+          <circle cx="9" cy="15" r="5" />
+          <line x1="12.5" y1="11.5" x2="19" y2="5" />
+          <polyline points="13,5 19,5 19,11" />
+        </svg>
+      );
+    case "Todos / Público general":
+      return (
+        <svg width="26" height="26" viewBox="0 0 24 24">
+          <circle cx="7" cy="9" r="3" fill="currentColor" />
+          <circle cx="17" cy="9" r="3" fill="currentColor" />
+          <circle cx="12" cy="16" r="3.5" fill="currentColor" />
+        </svg>
+      );
+    case "Familias":
+      return (
+        <svg width="26" height="26" viewBox="0 0 24 24" {...stroke}>
+          <path d="M4 12 12 5 20 12" />
+          <path d="M6 11v9h12v-9" />
+          <path d="M10 20v-5h4v5" />
+        </svg>
+      );
+    case "Jóvenes":
+      return (
+        <svg width="26" height="26" viewBox="0 0 24 24">
+          <path d="M12 3 14 10 21 12 14 14 12 21 10 14 3 12 10 10Z" fill="currentColor" />
+        </svg>
+      );
+    case "Corporativos / Empresas":
+      return (
+        <svg width="26" height="26" viewBox="0 0 24 24" {...stroke}>
+          <rect x="6" y="4" width="12" height="17" />
+          <rect x="9" y="7" width="2" height="2" fill="currentColor" stroke="none" />
+          <rect x="13" y="7" width="2" height="2" fill="currentColor" stroke="none" />
+          <rect x="9" y="11" width="2" height="2" fill="currentColor" stroke="none" />
+          <rect x="13" y="11" width="2" height="2" fill="currentColor" stroke="none" />
+          <rect x="9" y="15" width="2" height="2" fill="currentColor" stroke="none" />
+          <rect x="13" y="15" width="2" height="2" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
 
 const WHEEL_ITEM_HEIGHT = 32;
 const WHEEL_VISIBLE_ROWS = 3;
@@ -392,6 +462,7 @@ function AiLab() {
         aspectRatio: capturedAnswers.aspectRatio ?? "",
         style: capturedAnswers.style ?? "",
         businessType: capturedAnswers.businessType ?? "",
+        audience: capturedAnswers.audience ?? "",
         colors: (capturedAnswers.colors ?? "")
           .split(",")
           .map((c) => c.trim())
@@ -682,6 +753,8 @@ function AiLab() {
       <StylePicker onPick={submitAnswer} />
     ) : currentQuestion?.field === "businessType" ? (
       <BusinessTypeWheel onPick={submitAnswer} />
+    ) : currentQuestion?.field === "audience" ? (
+      <AudiencePicker onPick={submitAnswer} />
     ) : (
       composer
     );
@@ -1034,6 +1107,68 @@ function PieceTypePicker({ onPick }: { onPick: (value: string) => void }) {
           {opt}
         </button>
       ))}
+    </div>
+  );
+}
+
+// Same pill-chip layout as PieceTypePicker, but each chip carries its own
+// small floating icon (wit-float, same bob the WMark logo and format
+// badges use) above the label instead of being plain text. "Otro" sits in
+// the row as just another chip, matching PieceTypePicker's convention.
+function AudiencePicker({ onPick }: { onPick: (value: string) => void }) {
+  const [customMode, setCustomMode] = useState(false);
+  const [customText, setCustomText] = useState("");
+
+  if (customMode) {
+    return (
+      <form
+        onSubmit={(ev) => {
+          ev.preventDefault();
+          if (customText.trim()) onPick(customText.trim());
+        }}
+        className="wit-glass mx-auto flex max-w-[280px] items-center gap-2 rounded-full p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+      >
+        <input
+          autoFocus
+          type="text"
+          aria-label="Tu público objetivo"
+          value={customText}
+          onChange={(ev) => setCustomText(ev.target.value)}
+          placeholder="Escribe a quién le hablas..."
+          className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray"
+        />
+        <button
+          type="submit"
+          className="shrink-0 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+        >
+          Enviar
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap justify-center gap-3 px-1 py-2">
+      {AUDIENCE_OPTIONS.map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onPick(opt)}
+          className="flex w-20 flex-col items-center gap-1 rounded-2xl bg-wit-mist/50 px-2 py-3 transition-transform hover:scale-[1.03] hover:bg-wit-mist active:scale-95"
+        >
+          <span className="wit-float text-wit-blue">
+            <AudienceIcon value={opt} />
+          </span>
+          <span className="text-center text-[10px] font-semibold leading-tight text-wit-ink">{opt}</span>
+        </button>
+      ))}
+      <button
+        type="button"
+        onClick={() => setCustomMode(true)}
+        className="flex w-20 flex-col items-center justify-center gap-1 rounded-2xl bg-wit-mist/50 px-2 py-3 text-xs font-semibold text-wit-gray transition-transform hover:scale-[1.03] hover:bg-wit-mist hover:text-wit-ink active:scale-95"
+      >
+        Otro
+      </button>
     </div>
   );
 }

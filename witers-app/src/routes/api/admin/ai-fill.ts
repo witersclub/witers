@@ -16,9 +16,9 @@ const OPENAI_MODEL = "gpt-4o-mini";
 
 const AGE_CHIPS = ["18-24", "25-34", "35-44", "45-54", "55+"];
 
-// aspectRatio, colors and style are deliberately absent — the chat collects
-// those through dedicated pickers (exact values), so there's nothing left
-// for the model to guess there.
+// aspectRatio, colors, style, businessType and audience are deliberately
+// absent — the chat collects those through dedicated pickers (exact
+// values), so there's nothing left for the model to guess there.
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -27,7 +27,6 @@ const RESPONSE_SCHEMA = {
     productName: { type: "string", description: "Nombre del producto específico, o '' si no aplica." },
     brief: { type: "string", description: "A qué se dedica la empresa." },
     pieceBrief: { type: "string", description: "Qué debe mostrar/comunicar esta pieza en concreto." },
-    audience: { type: "string", description: "Público objetivo en palabras, o '' si no se mencionó." },
     ageRanges: {
       type: "array",
       items: { type: "string", enum: AGE_CHIPS },
@@ -47,7 +46,6 @@ const RESPONSE_SCHEMA = {
     "productName",
     "brief",
     "pieceBrief",
-    "audience",
     "ageRanges",
     "promoPrice",
     "requiredText",
