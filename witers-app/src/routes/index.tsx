@@ -470,8 +470,8 @@ function CtaFinal() {
 
 /* ---------------- 9. MEMBRESÍA ---------------- */
 
-const PRECIO_MENSUAL = 5999;
-const PRECIO_ANUAL = 50000; // facturado una vez al año
+const PRECIO_MENSUAL = 2999;
+const PRECIO_ANUAL = 30000; // facturado una vez al año
 
 const BENEFICIOS = [
   "Acceso completo a la comunidad WITERS",
@@ -606,7 +606,7 @@ const FAQS = [
   },
   {
     q: "¿Cómo se paga?",
-    a: "Con tarjeta de crédito o débito desde la propia plataforma. Puedes elegir el plan mensual de $5,999 MXN al mes, o el plan anual de $50,000 MXN al año (equivalente a $4,167 al mes). Tu cuenta se activa de inmediato. Pronto también aceptaremos Mercado Pago.",
+    a: "Con tarjeta de crédito o débito desde la propia plataforma. Puedes elegir el plan mensual de $2,999 MXN al mes, o el plan anual de $30,000 MXN al año (equivalente a $2,500 al mes). Tu cuenta se activa de inmediato. Pronto también aceptaremos Mercado Pago.",
   },
   {
     q: "¿Cómo uso la plataforma?",

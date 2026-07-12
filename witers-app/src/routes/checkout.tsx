@@ -9,7 +9,7 @@ export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [
       { title: "Activa tu membresía. WITERS" },
-      { name: "description", content: "Activa tu membresía WITERS por $5,999 MXN." },
+      { name: "description", content: "Activa tu membresía WITERS por $2,999 MXN al mes." },
     ],
   }),
   component: Checkout,
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/checkout")({
 
 const BENEFICIOS = [
   "Acceso completo a la comunidad",
-  "30 solicitudes de diseño con IA",
+  "10 solicitudes de diseño con IA",
   "Panel personal de seguimiento",
   "Soporte y estrategia de marca",
 ];
@@ -119,15 +119,15 @@ function Checkout() {
             Activa tu <span className="wit-underline text-wit-blue">membresía</span>
           </h1>
           <p className="mt-4 text-base leading-relaxed text-wit-gray">
-            Un solo pago y tu cuenta queda lista para pedir creatividades con IA.
+            Activa tu suscripción y tu cuenta queda lista para pedir creatividades con IA.
           </p>
 
           <div className="mt-8 rounded-3xl bg-wit-navy p-7 text-white">
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/70">
               Membresía WITERS
             </p>
-            <p className="mt-3 font-wit-mono text-5xl font-semibold">$5,999</p>
-            <p className="mt-1 text-sm text-white/75">MXN. Pago único</p>
+            <p className="mt-3 font-wit-mono text-5xl font-semibold">$2,999</p>
+            <p className="mt-1 text-sm text-white/75">MXN al mes</p>
             <ul className="mt-6 space-y-3">
               {BENEFICIOS.map((b) => (
                 <li key={b} className="flex items-start gap-2.5 text-sm text-white/90">
@@ -242,7 +242,7 @@ function Checkout() {
                 disabled={loading}
                 className="mt-6 w-full rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
               >
-                {loading ? "Procesando pago..." : "Pagar $5,999 MXN"}
+                {loading ? "Procesando pago..." : "Pagar $2,999 MXN"}
               </button>
               <p className="mt-3 text-center text-[11px] leading-relaxed text-wit-gray">
                 Entorno de pago en modo de activación directa. La pasarela definitiva (Stripe o

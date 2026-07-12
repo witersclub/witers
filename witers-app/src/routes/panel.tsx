@@ -267,7 +267,7 @@ function Panel() {
               </p>
               <p className="font-wit-mono text-3xl font-semibold text-wit-ink">
                 {active ? remaining : 0}
-                <span className="text-base text-wit-gray">/{membership?.requests_quota ?? 30}</span>
+                <span className="text-base text-wit-gray">/{membership?.requests_quota ?? 10}</span>
               </p>
             </div>
             <span
@@ -283,7 +283,7 @@ function Panel() {
             <div>
               <p className="text-xl font-bold">Activa tu membresía para empezar a crear.</p>
               <p className="mt-1 text-sm text-white/70">
-                $5,999 MXN. Pago único. 30 solicitudes de diseño con IA incluidas.
+                $2,999 MXN al mes. 10 solicitudes de diseño con IA incluidas.
               </p>
             </div>
             <Link
