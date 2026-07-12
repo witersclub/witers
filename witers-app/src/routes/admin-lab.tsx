@@ -130,6 +130,14 @@ const QUESTIONS: { field: string; label: string; short: string; text: string; re
   },
 ];
 
+const ASPECT_OPTIONS: { value: string; label: string }[] = [
+  { value: "1:1", label: "Cuadrado" },
+  { value: "4:3", label: "Estándar" },
+  { value: "16:9", label: "Horizontal" },
+  { value: "3:4", label: "Vertical" },
+  { value: "9:16", label: "Historia" },
+];
+
 function buildTranscript(answers: Record<string, string>): string {
   return QUESTIONS.map((q) => {
     const v = (answers[q.field] ?? "").trim();
@@ -549,6 +557,19 @@ function AiLab() {
     </>
   );
 
+  // Formato y colores se contestan con un selector visual en vez del campo
+  // de texto/mic — más fácil para un cliente que no sabe qué es un hex o un
+  // aspect ratio, y elimina la necesidad de que la IA adivine ese dato.
+  const currentQuestion = QUESTIONS[stepIndex];
+  const activeInput =
+    currentQuestion?.field === "aspectRatio" ? (
+      <AspectRatioPicker onPick={submitAnswer} />
+    ) : currentQuestion?.field === "colors" ? (
+      <ColorsPicker onPick={submitAnswer} />
+    ) : (
+      composer
+    );
+
   if (!started) {
     return (
       <div className="wit-page min-h-dvh">
@@ -577,7 +598,16 @@ function AiLab() {
 
           {error ? <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p> : null}
 
-          <div className="mt-6 w-full">{composer}</div>
+          <div className="mt-6 w-full">{activeInput}</div>
+          {!QUESTIONS[0].required ? (
+            <button
+              type="button"
+              onClick={() => submitAnswer("")}
+              className="mt-3 text-xs font-semibold text-wit-gray hover:text-wit-ink"
+            >
+              Omitir
+            </button>
+          ) : null}
         </main>
       </div>
     );
@@ -802,7 +832,7 @@ function AiLab() {
 
           {error ? <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-600">{error}</p> : null}
 
-          <div className="mt-3">{composer}</div>
+          <div className="mt-3">{activeInput}</div>
         </div>
       </main>
     </div>
@@ -850,6 +880,98 @@ function LabRow({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">{label}</dt>
       <dd className="mt-1 whitespace-pre-wrap text-sm text-wit-ink">{value || "—"}</dd>
+    </div>
+  );
+}
+
+// Tapping a card submits straight away — no separate "confirm" step, since
+// picking a shape is a single, reversible action (Editar can always redo it).
+function AspectRatioPicker({ onPick }: { onPick: (value: string) => void }) {
+  return (
+    <div className="wit-glass grid grid-cols-3 gap-2 rounded-2xl p-3 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      {ASPECT_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onPick(opt.value)}
+          className="flex flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center transition-transform hover:scale-[1.04] active:scale-95"
+        >
+          <span
+            className="w-7 rounded-[3px] border-2 border-wit-blue bg-wit-blue/10"
+            style={{ aspectRatio: opt.value.replace(":", " / ") }}
+          />
+          <span className="text-[10px] font-semibold leading-tight text-wit-ink">{opt.label}</span>
+          <span className="text-[9px] text-wit-gray">{opt.value}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Two steps (how many, then which) instead of one screen with three color
+// wells always visible — a client with one brand color shouldn't have to
+// stare at two empty pickers wondering what to do with them.
+function ColorsPicker({ onPick }: { onPick: (value: string) => void }) {
+  const [count, setCount] = useState<number | null>(null);
+  const [colors, setColors] = useState<string[]>([]);
+
+  if (count === null) {
+    return (
+      <div className="wit-glass flex flex-col items-center gap-2.5 rounded-2xl px-4 py-3.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+        <p className="text-xs font-medium text-wit-gray">¿Cuántos colores de marca usas?</p>
+        <div className="flex gap-2.5">
+          {[1, 2, 3].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => {
+                setCount(n);
+                setColors(Array.from({ length: n }, () => "#0047FF"));
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-mist/60 text-sm font-bold text-wit-ink transition-transform hover:scale-105 hover:bg-wit-mist"
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="wit-glass flex flex-col items-center gap-3 rounded-2xl px-4 py-3.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <div className="flex gap-3">
+        {colors.map((c, i) => (
+          <label key={i} className="flex flex-col items-center gap-1">
+            <input
+              type="color"
+              aria-label={`Color ${i + 1}`}
+              value={c}
+              onChange={(ev) =>
+                setColors((prev) => prev.map((x, idx) => (idx === i ? ev.target.value : x)))
+              }
+              className="h-10 w-10 cursor-pointer rounded-full border-2 border-white shadow-[0_2px_8px_rgba(5,13,40,0.15)]"
+            />
+            <span className="font-mono text-[10px] text-wit-gray">{c.toUpperCase()}</span>
+          </label>
+        ))}
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setCount(null)}
+          className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
+        >
+          Atrás
+        </button>
+        <button
+          type="button"
+          onClick={() => onPick(colors.map((c) => c.toUpperCase()).join(", "))}
+          className="rounded-full bg-wit-blue px-5 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+        >
+          Listo
+        </button>
+      </div>
     </div>
   );
 }
