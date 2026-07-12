@@ -16,6 +16,7 @@ import {
   ProductPhotoUploadPicker,
   StylePicker,
 } from "../components/witers/lab-pickers";
+import { consumeTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe } from "../lib/witers-client";
 
 export const Route = createFileRoute("/panel")({
@@ -106,6 +107,10 @@ function Panel() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const autoOpenedRef = useRef(false);
+  // Read (and clear) once per mount — only the very first chat (chatKey
+  // still at its initial value) should inherit these, not a later
+  // conversation opened via the button.
+  const [teaserAnswers] = useState(() => consumeTeaserAnswers());
 
   const requests = useQuery({
     queryKey: ["requests"],
@@ -328,6 +333,7 @@ function Panel() {
               key={chatKey}
               disabled={!active || remaining <= 0}
               brandProfile={brandProfile}
+              initialAnswers={chatKey === 0 ? (teaserAnswers ?? undefined) : undefined}
               onCreated={() => {
                 void qc.invalidateQueries({ queryKey: ["requests"] });
                 void qc.invalidateQueries({ queryKey: ["me"] });
@@ -514,11 +520,15 @@ function AiChatRequestForm({
   onCreated,
   onClose,
   brandProfile,
+  initialAnswers,
 }: {
   disabled: boolean;
   onCreated: () => void;
   onClose: () => void;
   brandProfile: BrandProfile | null;
+  // Handed off from the homepage teaser (see teaser-handoff.ts) — only
+  // ever set for a brand-new member's very first chat.
+  initialAnswers?: Record<string, string>;
 }) {
   const [completedAnswers, setCompletedAnswers] = useState<Record<string, string> | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -604,10 +614,15 @@ function AiChatRequestForm({
         <p className="mb-2 shrink-0 rounded-xl bg-wit-blue/5 px-3 py-2 text-center text-xs font-medium text-wit-blue">
           Ya tenemos los datos de tu marca registrada — solo te preguntamos lo de esta pieza.
         </p>
+      ) : initialAnswers ? (
+        <p className="mb-2 shrink-0 rounded-xl bg-wit-blue/5 px-3 py-2 text-center text-xs font-medium text-wit-blue">
+          Seguimos justo donde lo dejaste en la página principal.
+        </p>
       ) : null}
       <ChatIntakeFlow
         questions={questions}
         pickerFor={pickerFor}
+        initialAnswers={initialAnswers}
         onComplete={(answers) => {
           // Locked fields were never asked this round, so they're not in
           // `answers` — merge them back in from the profile before this

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
 import { AspectRatioPicker, ColorsPicker, PieceTypePicker, StylePicker } from "../components/witers/lab-pickers";
+import { saveTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe } from "../lib/witers-client";
 
 export const Route = createFileRoute("/")({
@@ -419,12 +420,14 @@ function PruebaInteractiva() {
               <div className="mt-2 flex w-full flex-col gap-2">
                 <Link
                   to="/registro"
+                  onClick={() => saveTeaserAnswers(answers)}
                   className="rounded-full bg-wit-blue px-6 py-3 text-center text-sm font-bold text-white hover:bg-wit-blue-deep"
                 >
                   Crear cuenta gratis
                 </Link>
                 <Link
                   to="/ingresar"
+                  onClick={() => saveTeaserAnswers(answers)}
                   className="rounded-full border border-wit-ink/15 px-6 py-3 text-center text-sm font-bold text-wit-ink hover:bg-wit-mist/40"
                 >
                   Ya tengo cuenta

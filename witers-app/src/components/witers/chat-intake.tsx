@@ -36,6 +36,20 @@ interface SpeechRecognitionLike {
 
 export type ChatQuestion = { field: string; text: string; required: boolean };
 
+// Skips forward past any question whose field already has a known answer
+// (from initialAnswers, e.g. handed off from the homepage teaser) — not
+// just a leading run, since a pre-answered field can sit between two
+// questions that still need asking.
+function advancePastKnown(
+  questions: ChatQuestion[],
+  startIndex: number,
+  knownAnswers: Record<string, string>,
+): number {
+  let idx = startIndex;
+  while (idx < questions.length && questions[idx].field in knownAnswers) idx++;
+  return idx;
+}
+
 export function ChatBubble({
   role,
   text,
@@ -111,6 +125,7 @@ export function ChatIntakeFlow({
   externalError = null,
   eyebrow = "Creemos tu pieza juntos",
   onClose,
+  initialAnswers,
 }: {
   questions: ChatQuestion[];
   // null means "no dedicated picker for this field" — falls back to the
@@ -130,9 +145,16 @@ export function ChatIntakeFlow({
   externalError?: string | null;
   eyebrow?: string;
   onClose?: () => void;
+  // Answers already known before the conversation starts (e.g. handed off
+  // from the homepage teaser) — their questions are never asked, but still
+  // render as already-answered bubbles, same as anything answered in this
+  // session, editable the same way via press-and-hold.
+  initialAnswers?: Record<string, string>;
 }) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [stepIndex, setStepIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>(() => ({ ...initialAnswers }));
+  const [stepIndex, setStepIndex] = useState(() =>
+    advancePastKnown(questions, 0, initialAnswers ?? {}),
+  );
   const [currentAnswer, setCurrentAnswer] = useState("");
   const [typing, setTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -247,7 +269,7 @@ export function ChatIntakeFlow({
     setAnswers(nextAnswers);
     setCurrentAnswer("");
     answerRef.current = "";
-    const nextIndex = stepIndex + 1;
+    const nextIndex = advancePastKnown(questions, stepIndex + 1, nextAnswers);
     setStepIndex(nextIndex);
     setTyping(true);
     window.setTimeout(() => {
