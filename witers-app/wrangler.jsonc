@@ -7,7 +7,7 @@
   //   2. npx wrangler d1 create witers-db        → copy database_id below
   //   3. npx wrangler r2 bucket create witers-assets
   //   4. npx wrangler d1 migrations apply witers-db --remote
-  //   5. npx wrangler secret put GEMINI_API_KEY  (for AI generation, optional)
+  //   5. npx wrangler secret put OPENAI_API_KEY  (for AI intake + image generation, optional)
   "name": "witers",
 
   "main": "dist/server/server.js",
