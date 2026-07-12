@@ -162,6 +162,8 @@ function AiLab() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const answerRef = useRef("");
   const silenceTimerRef = useRef<number | null>(null);
@@ -270,6 +272,42 @@ function AiLab() {
   }
   submitAnswerRef.current = submitAnswer;
 
+  function startEditing(field: string, currentValue: string) {
+    if (listening) stopListening();
+    setError(null);
+    setEditingField(field);
+    setEditValue(currentValue);
+  }
+
+  function cancelEditing() {
+    setEditingField(null);
+    setEditValue("");
+  }
+
+  // Correcting an already-sent answer, in place — no need to redo the rest
+  // of the conversation. If the AI already generated fields from the old
+  // (wrong) transcript, that result is now stale, so it's cleared and
+  // regenerated from the corrected answers.
+  function saveEdit() {
+    const field = editingField;
+    if (!field) return;
+    const q = QUESTIONS.find((x) => x.field === field);
+    const text = editValue.trim();
+    if (q?.required && !text) {
+      setError("Este dato es necesario para continuar.");
+      return;
+    }
+    setError(null);
+    const nextAnswers = { ...answers, [field]: text };
+    setAnswers(nextAnswers);
+    setEditingField(null);
+    setEditValue("");
+    if (done && fields) {
+      setFields(null);
+      void generate(buildTranscript(nextAnswers));
+    }
+  }
+
   function restart() {
     stopListening();
     setAnswers({});
@@ -278,6 +316,8 @@ function AiLab() {
     setFields(null);
     setError(null);
     setTyping(false);
+    setEditingField(null);
+    setEditValue("");
   }
 
   // Stops the hands-free session outright — used when the admin presses
@@ -532,7 +572,57 @@ function AiLab() {
             {answeredEntries.map((e) => (
               <div key={e.field} className="flex flex-col gap-3">
                 <ChatBubble role="assistant" text={e.question} />
-                <ChatBubble role="user" text={e.answer} />
+                {editingField === e.field ? (
+                  <div className="flex flex-col items-end gap-1.5 self-end">
+                    <div className="flex w-full max-w-[230px] items-center rounded-2xl rounded-br-sm border-2 border-wit-blue bg-white px-3.5 py-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        aria-label="Editar respuesta"
+                        value={editValue}
+                        onChange={(ev) => setEditValue(ev.target.value)}
+                        onKeyDown={(ev) => {
+                          if (ev.key === "Enter") {
+                            ev.preventDefault();
+                            saveEdit();
+                          }
+                          if (ev.key === "Escape") cancelEditing();
+                        }}
+                        className="min-w-0 flex-1 border-0 bg-transparent text-sm text-wit-ink outline-none"
+                      />
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={cancelEditing}
+                        className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveEdit}
+                        className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
+                      >
+                        Guardar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <ChatBubble role="user" text={e.answer} />
+                    <button
+                      type="button"
+                      onClick={() => startEditing(e.field, answers[e.field] ?? "")}
+                      className="-mt-2 mr-1 flex items-center gap-1 self-end text-xs font-semibold text-wit-gray hover:text-wit-ink"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
+                      Editar
+                    </button>
+                  </>
+                )}
               </div>
             ))}
 
