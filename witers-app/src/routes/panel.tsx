@@ -4,18 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { WitersLogo, WMark } from "../components/witers/brand";
-import { ChatIntakeFlow } from "../components/witers/chat-intake";
+import { ChatBubble, ChatIntakeFlow } from "../components/witers/chat-intake";
 import { MicButton } from "../components/witers/mic-button";
 import {
-  AgeRangeMultiPicker,
   AspectRatioPicker,
-  AudiencePicker,
   BusinessTypeWheel,
   ColorsPicker,
   LogoUploadPicker,
-  PieceTypePicker,
   ProductPhotoUploadPicker,
-  StylePicker,
 } from "../components/witers/lab-pickers";
 import { consumeTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe } from "../lib/witers-client";
@@ -233,6 +229,22 @@ function Panel() {
       }
     : null;
   const brandProfile = brandProfileQuery.data?.profile ?? null;
+  // Every member goes through the mandatory brand-onboarding chat exactly
+  // once, before anything else in the panel — company name/colors/
+  // category/logo get locked in right here instead of trickling in from
+  // whatever a client happens to type on their first design request.
+  // Gated on brandProfileQuery having actually resolved (not just
+  // !brandProfile) so a still-loading query never flashes the gate for a
+  // returning member who already has one.
+  const needsOnboarding = brandProfileQuery.isFetched && !brandProfile;
+
+  if (brandProfileQuery.isLoading) {
+    return (
+      <div className="wit-page flex min-h-dvh items-center justify-center">
+        <div className="h-40 w-full max-w-md animate-pulse rounded-3xl bg-wit-mist/40" />
+      </div>
+    );
+  }
 
   return (
     // min-h-svh (stable "small viewport height"), not min-h-dvh — dvh
@@ -279,80 +291,94 @@ function Panel() {
       </header>
 
       <main className="mx-auto max-w-6xl px-5 py-10">
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
-              Hola, <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
-            </h1>
-            <p className="mt-2 text-base text-wit-gray">
-              Pide creatividades y da seguimiento a cada solicitud desde aquí.
-            </p>
-          </div>
-
-          <div className="wit-glass flex items-center gap-4 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
-                Solicitudes disponibles
-              </p>
-              <p className="font-wit-mono text-3xl font-semibold text-wit-ink">
-                {active ? remaining : 0}
-                <span className="text-base text-wit-gray">/{membership?.requests_quota ?? 20}</span>
-              </p>
-            </div>
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
-            >
-              {active ? "Membresía activa" : "Sin membresía"}
-            </span>
-          </div>
-        </div>
-
-        {!active ? (
-          <div className="mt-8 flex flex-col items-start gap-4 rounded-3xl bg-wit-navy p-8 text-white md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xl font-bold">Activa tu membresía para empezar a crear.</p>
-              <p className="mt-1 text-sm text-white/70">
-                $5,999 MXN al mes. 20 solicitudes de diseño con IA incluidas.
-              </p>
-            </div>
-            <Link
-              to="/checkout"
-              className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:brightness-110"
-            >
-              Quiero mi membresía
-            </Link>
-          </div>
-        ) : null}
-
-        <div className="mt-10 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
-          <PanelTab
-            active={tab === "solicitudes"}
-            onClick={() => setTab("solicitudes")}
-            label="Mis solicitudes"
-            count={rows.length}
+        {needsOnboarding ? (
+          <OnboardingGate
+            onDone={() => void qc.invalidateQueries({ queryKey: ["brand-profile"] })}
           />
-          <button
-            type="button"
-            onClick={() => setTab("nueva")}
-            className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-          >
-            ✨ Hacer solicitud
-          </button>
-        </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
+                  Hola, <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
+                </h1>
+                <p className="mt-2 text-base text-wit-gray">
+                  Pide creatividades y da seguimiento a cada solicitud desde aquí.
+                </p>
+              </div>
 
-        <div className="mt-8">
-          {tab === "nueva" ? (
-            <HablaConWitScreen onStart={openChat} />
-          ) : (
-            <RequestList rows={rows} loading={requests.isLoading} onNew={() => setTab("nueva")} />
-          )}
-        </div>
+              <div className="wit-glass flex items-center gap-4 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
+                    Solicitudes disponibles
+                  </p>
+                  <p className="font-wit-mono text-3xl font-semibold text-wit-ink">
+                    {active ? remaining : 0}
+                    <span className="text-base text-wit-gray">
+                      /{membership?.requests_quota ?? 20}
+                    </span>
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                >
+                  {active ? "Membresía activa" : "Sin membresía"}
+                </span>
+              </div>
+            </div>
+
+            {!active ? (
+              <div className="mt-8 flex flex-col items-start gap-4 rounded-3xl bg-wit-navy p-8 text-white md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xl font-bold">Activa tu membresía para empezar a crear.</p>
+                  <p className="mt-1 text-sm text-white/70">
+                    $5,999 MXN al mes. 20 solicitudes de diseño con IA incluidas.
+                  </p>
+                </div>
+                <Link
+                  to="/checkout"
+                  className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:brightness-110"
+                >
+                  Quiero mi membresía
+                </Link>
+              </div>
+            ) : null}
+
+            <div className="mt-10 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+              <PanelTab
+                active={tab === "solicitudes"}
+                onClick={() => setTab("solicitudes")}
+                label="Mis solicitudes"
+                count={rows.length}
+              />
+              <button
+                type="button"
+                onClick={() => setTab("nueva")}
+                className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+              >
+                ✨ Hacer solicitud
+              </button>
+            </div>
+
+            <div className="mt-8">
+              {tab === "nueva" ? (
+                <HablaConWitScreen onStart={openChat} />
+              ) : (
+                <RequestList
+                  rows={rows}
+                  loading={requests.isLoading}
+                  onNew={() => setTab("nueva")}
+                />
+              )}
+            </div>
+          </>
+        )}
       </main>
 
       {chatOpen
         ? createPortal(
             <div className="fixed inset-0 z-50 bg-white">
-              <AiChatRequestForm
+              <WitConversation
                 key={chatKey}
                 disabled={!active || remaining <= 0}
                 brandProfile={brandProfile}
@@ -373,6 +399,120 @@ function Panel() {
             document.body,
           )
         : null}
+    </div>
+  );
+}
+
+// Every field here maps straight onto a brand_profiles column. logoKey
+// stays required:true — same as the rest of this file's chat questions —
+// because LogoUploadPicker already has its own "No tengo logotipo"
+// checkbox as the one non-blocking escape valve; the required flag only
+// gates the generic type-or-speak composer, never a dedicated picker.
+const ONBOARDING_QUESTIONS: { field: string; text: string; required: boolean }[] = [
+  { field: "companyName", text: "¿Cuál es el nombre de tu empresa o marca?", required: true },
+  {
+    field: "colors",
+    text: "¿Tienes colores de marca que debamos usar? Si no tienes, elige los que más te gusten.",
+    required: true,
+  },
+  { field: "businessType", text: "¿En qué categoría cae tu negocio?", required: true },
+  { field: "logoKey", text: "Sube tu logotipo.", required: true },
+];
+
+// Mandatory, one-time chat that runs before anything else in the panel —
+// collects the brand identity that /api/requests used to only infer from
+// a client's very first design request. Resumable: every answer autosaves
+// to brand_onboarding_drafts (see /api/onboarding/draft), so a client who
+// closes the tab partway through picks up exactly where they left off.
+function OnboardingGate({ onDone }: { onDone: () => void }) {
+  const draftQuery = useQuery({
+    queryKey: ["onboarding-draft"],
+    queryFn: async () => {
+      const res = await fetch("/api/onboarding/draft", { credentials: "include" });
+      if (!res.ok) return { ok: false, answers: {} as Record<string, string> };
+      return (await res.json()) as { ok: boolean; answers: Record<string, string> };
+    },
+  });
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+
+  function pickerFor(field: string, onPick: (value: string) => void) {
+    switch (field) {
+      case "colors":
+        return <ColorsPicker onPick={onPick} />;
+      case "businessType":
+        return <BusinessTypeWheel onPick={onPick} />;
+      case "logoKey":
+        return <LogoUploadPicker onPick={onPick} />;
+      default:
+        return null;
+    }
+  }
+
+  async function finish(answers: Record<string, string>) {
+    setSendError(null);
+    setSending(true);
+    try {
+      const noLogo = answers.logoKey === "Sin logotipo";
+      const res = await fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          companyName: answers.companyName,
+          brandColors: answers.colors || undefined,
+          businessType: answers.businessType || undefined,
+          logoKey: noLogo ? undefined : answers.logoKey || undefined,
+          noLogo,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; message?: string };
+      if (!data.ok) {
+        setSendError(data.message ?? "Revisa tus respuestas e intenta de nuevo.");
+        setSending(false);
+        return;
+      }
+      onDone();
+    } catch {
+      setSendError("No pudimos guardar los datos de tu marca. Intenta de nuevo.");
+      setSending(false);
+    }
+  }
+
+  if (draftQuery.isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-wit-blue/20 border-t-wit-blue" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex h-[calc(100dvh-260px)] min-h-[420px] w-full max-w-2xl flex-col">
+      <p className="mb-2 shrink-0 rounded-xl bg-wit-blue/5 px-3 py-2 text-center text-xs font-medium text-wit-blue">
+        Antes de tu primera solicitud, cuéntanos de tu marca — solo te lo preguntamos una vez.
+      </p>
+      <ChatIntakeFlow
+        questions={ONBOARDING_QUESTIONS}
+        pickerFor={pickerFor}
+        initialAnswers={draftQuery.data?.answers}
+        eyebrow="Conozcamos tu marca"
+        onAnswer={(answers) => {
+          void fetch("/api/onboarding/draft", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ answers }),
+          });
+        }}
+        onComplete={(answers) => void finish(answers)}
+        pending={sending}
+        pendingLabel="Guardando los datos de tu marca..."
+        doneLabel={
+          sendError
+            ? "No pudimos guardar los datos — mantén presionada cualquier respuesta para reintentar."
+            : "Los datos de tu marca han sido creados."
+        }
+        externalError={sendError}
+      />
     </div>
   );
 }
@@ -436,68 +576,10 @@ function PanelTab({
   );
 }
 
-/* ---------- AI chat request form ---------- */
+/* ---------- Wit conversation (request creation) ---------- */
 
-// Same 14 questions the admin lab (admin-lab.tsx) prototyped — no `brief`,
-// businessType covers that ground now. Every question maps 1:1 onto a real
-// /api/requests field, so answers are used directly — no AI extraction
-// call, no extra cost.
-const ALL_CHAT_QUESTIONS: { field: string; text: string; required: boolean }[] = [
-  { field: "pieceType", text: "¿Qué tipo de pieza quieres crear hoy?", required: false },
-  { field: "aspectRatio", text: "¿Qué forma tiene la pieza que te imaginas?", required: false },
-  { field: "companyName", text: "¿Cuál es el nombre de tu empresa o marca?", required: true },
-  {
-    field: "colors",
-    text: "¿Tienes colores de marca que debamos usar? Si no tienes, elige los que más te gusten.",
-    required: true,
-  },
-  { field: "style", text: "¿Qué estilo visual te gustaría para tu pieza?", required: true },
-  { field: "businessType", text: "¿En qué categoría cae tu negocio?", required: true },
-  { field: "pieceBrief", text: "¿Qué quieres que muestre esta pieza en concreto?", required: true },
-  {
-    field: "title",
-    text: "Si le pusieras un título corto a esta pieza, ¿cuál sería?",
-    required: true,
-  },
-  { field: "audience", text: "¿A quién quieres llegarle con esta pieza?", required: true },
-  {
-    field: "ageRanges",
-    text: "¿En qué rango de edad está tu público? Elige uno o varios.",
-    required: false,
-  },
-  { field: "logoKey", text: "Sube tu logotipo.", required: true },
-  {
-    field: "productPhotoKey",
-    text: "¿Tienes una foto del producto que debamos usar?",
-    required: false,
-  },
-  {
-    field: "promoPrice",
-    text: "¿Hay algún precio o descuento que quieras destacar? Si no aplica, dime que no.",
-    required: false,
-  },
-  {
-    field: "requiredText",
-    text: "¿Hay algún texto o dato que deba aparecer sí o sí en la pieza?",
-    required: false,
-  },
-];
-
-// Once a member has a locked brand profile, company/colors/category never
-// need asking again — and the logo question drops out too, but only once
-// a real logo has actually been locked in (still asked every time before
-// that, same as a brand-new member). A profile existing at all also means
-// this isn't their first request ever, so title and age range — the two
-// questions clients skip past out of habit anyway — drop out too, to keep
-// every request after the first one quicker to fill out.
-function buildChatQuestions(profile: BrandProfile | null) {
-  if (!profile) return ALL_CHAT_QUESTIONS;
-  const skip = new Set(["companyName", "colors", "businessType", "title", "ageRanges"]);
-  if (profile.logo_key) skip.add("logoKey");
-  return ALL_CHAT_QUESTIONS.filter((q) => !skip.has(q.field));
-}
-
-// Stand-in for a skipped title question — short enough to read as a title,
+// Stand-in for a missing/empty title from the model's final answer —
+// short enough to read as a title, not a re-statement of the whole brief.
 // not a re-statement of the whole brief.
 function deriveTitle(pieceBrief: string | undefined, companyName: string | undefined): string {
   const brief = (pieceBrief ?? "").trim();
@@ -586,7 +668,47 @@ function ChatReviewBox({
   );
 }
 
-function AiChatRequestForm({
+// What the model hands back via its submit_piece_details tool call (see
+// wit-chat.server.ts) — duplicated here rather than imported from that
+// .server.ts file so nothing server-only ever risks getting pulled into
+// the client bundle.
+type WitPieceFields = {
+  title: string;
+  pieceType: string;
+  pieceBrief: string;
+  style: string;
+  audience: string;
+  ageRanges: string;
+  aspectRatio: string;
+  promoPrice: string;
+  requiredText: string;
+};
+
+type WitMessage = { role: "user" | "assistant"; content: string; widget?: "aspectRatio" };
+
+const ASPECT_RATIO_PROMPT = "¿Qué forma te imaginas para tu pieza?";
+
+// Anything handed off from the homepage teaser (see teaser-handoff.ts)
+// becomes a hidden context message — sent to the model, never rendered as
+// a bubble — instead of the old skip-a-scripted-question mechanism, since
+// the conversation itself is no longer a fixed question list.
+function buildContextPrimer(initialAnswers?: Record<string, string>): string | null {
+  if (!initialAnswers) return null;
+  const bits = Object.entries(initialAnswers)
+    .filter(([, v]) => v && v.trim())
+    .map(([k, v]) => `${k}: ${v}`);
+  if (!bits.length) return null;
+  return `Esto es lo que el cliente ya compartió en la página principal antes de registrarse — tómalo en cuenta, no lo preguntes de nuevo: ${bits.join("; ")}.`;
+}
+
+// Replaces the old scripted question list with a real, live back-and-forth
+// with ChatGPT (via /api/wit/chat) — the model decides what to ask, infers
+// the rest with its own creative/persuasive judgment, and only interrupts
+// the free-form chat once, to hand off to the existing visual
+// AspectRatioPicker for the format question. Company name/colors/category/
+// logo never come up — those are already locked in brandProfile by the
+// mandatory onboarding chat (see OnboardingGate) by the time this ever runs.
+function WitConversation({
   disabled,
   onCreated,
   onClose,
@@ -597,67 +719,122 @@ function AiChatRequestForm({
   onCreated: () => void;
   onClose: () => void;
   brandProfile: BrandProfile | null;
-  // Handed off from the homepage teaser (see teaser-handoff.ts) — only
-  // ever set for a brand-new member's very first chat.
   initialAnswers?: Record<string, string>;
 }) {
-  const [completedAnswers, setCompletedAnswers] = useState<Record<string, string> | null>(null);
+  const [contextPrimer] = useState(() => buildContextPrimer(initialAnswers));
+  const [messages, setMessages] = useState<WitMessage[]>([
+    { role: "assistant", content: "¡Hola! Cuéntame, ¿qué pieza quieres crear hoy?" },
+  ]);
+  const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [awaitingAspectRatio, setAwaitingAspectRatio] = useState(false);
+  const [pieceFields, setPieceFields] = useState<WitPieceFields | null>(null);
+  const [productPhotoKey, setProductPhotoKey] = useState<string | null>(null);
+  const [showPhotoPicker, setShowPhotoPicker] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const questions = buildChatQuestions(brandProfile);
+  // The client's own pick from AspectRatioPicker, trusted directly for the
+  // final request — never re-derived from the model's echo of it in
+  // submit_piece_details.
+  const [pickedAspectRatio, setPickedAspectRatio] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  function pickerFor(field: string, onPick: (value: string) => void) {
-    switch (field) {
-      case "pieceType":
-        return <PieceTypePicker onPick={onPick} />;
-      case "aspectRatio":
-        return <AspectRatioPicker onPick={onPick} />;
-      case "colors":
-        return <ColorsPicker onPick={onPick} />;
-      case "style":
-        return <StylePicker onPick={onPick} />;
-      case "businessType":
-        return <BusinessTypeWheel onPick={onPick} />;
-      case "audience":
-        return <AudiencePicker onPick={onPick} />;
-      case "ageRanges":
-        return <AgeRangeMultiPicker onPick={onPick} />;
-      case "logoKey":
-        return <LogoUploadPicker onPick={onPick} />;
-      case "productPhotoKey":
-        return <ProductPhotoUploadPicker onPick={onPick} />;
-      default:
-        return null;
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, typing, awaitingAspectRatio, pieceFields]);
+
+  async function askWit(nextMessages: WitMessage[]) {
+    setTyping(true);
+    setChatError(null);
+    try {
+      const apiMessages = [
+        ...(contextPrimer ? [{ role: "user" as const, content: contextPrimer }] : []),
+        ...nextMessages.map((m) => ({ role: m.role, content: m.content })),
+      ];
+      const res = await fetch("/api/wit/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: apiMessages }),
+      });
+      const data = (await res.json()) as
+        | { ok: true; kind: "message"; text: string }
+        | { ok: true; kind: "ask_aspect_ratio" }
+        | { ok: true; kind: "done"; fields: WitPieceFields }
+        | { ok: false; error: string };
+      if (!data.ok) {
+        setChatError("Wit no está disponible en este momento. Intenta de nuevo en un momento.");
+        return;
+      }
+      if (data.kind === "message") {
+        setMessages((prev) => [...prev, { role: "assistant", content: data.text }]);
+      } else if (data.kind === "ask_aspect_ratio") {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: ASPECT_RATIO_PROMPT, widget: "aspectRatio" },
+        ]);
+        setAwaitingAspectRatio(true);
+      } else {
+        setPieceFields(data.fields);
+      }
+    } catch {
+      setChatError("No pudimos hablar con Wit. Revisa tu conexión e intenta de nuevo.");
+    } finally {
+      setTyping(false);
     }
   }
 
+  function sendText(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || typing || pieceFields) return;
+    const next = [...messages, { role: "user" as const, content: trimmed }];
+    setMessages(next);
+    setInput("");
+    void askWit(next);
+  }
+
+  // The one moment this hands off to a real picker instead of free text —
+  // the client's choice both drives the visible transcript (so the model
+  // sees exactly what was picked, in its own words) and is trusted
+  // directly for the final request (see pickedAspectRatio above), never
+  // re-derived from the model's own echo of it in submit_piece_details.
+  function pickAspectRatio(value: string) {
+    setAwaitingAspectRatio(false);
+    setPickedAspectRatio(value);
+    const label = RATIO_LABEL[value] ?? value;
+    const next: WitMessage[] = [
+      ...messages,
+      { role: "user", content: `Elijo el formato: ${label}.` },
+    ];
+    setMessages(next);
+    void askWit(next);
+  }
+
   async function confirmSend() {
-    if (!completedAnswers) return;
+    if (!pieceFields) return;
     setSendError(null);
     setSending(true);
     try {
-      const noLogo = completedAnswers.logoKey === "Sin logotipo";
+      const noLogo = !brandProfile?.logo_key;
       const res = await fetch("/api/requests", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          title: completedAnswers.title,
-          companyName: completedAnswers.companyName,
-          pieceBrief: completedAnswers.pieceBrief,
-          style: completedAnswers.style || undefined,
-          // Only meaningful the very first time (seeds brand_profiles) —
-          // harmless to keep sending on later submissions since the server
-          // ignores it once a profile already exists.
-          businessType: completedAnswers.businessType || undefined,
-          aspectRatio: completedAnswers.aspectRatio || "1:1",
-          logoKey: noLogo ? undefined : completedAnswers.logoKey || undefined,
+          title:
+            pieceFields.title || deriveTitle(pieceFields.pieceBrief, brandProfile?.company_name),
+          companyName: brandProfile?.company_name,
+          pieceBrief: pieceFields.pieceBrief,
+          style: pieceFields.style || undefined,
+          businessType: brandProfile?.business_type || undefined,
+          aspectRatio: pickedAspectRatio ?? pieceFields.aspectRatio ?? "1:1",
+          logoKey: noLogo ? undefined : (brandProfile?.logo_key ?? undefined),
           noLogo,
-          productPhotoKey: completedAnswers.productPhotoKey || undefined,
-          audience: completedAnswers.audience || undefined,
-          ageRange: completedAnswers.ageRanges || undefined,
-          promoPrice: completedAnswers.promoPrice || undefined,
-          requiredText: completedAnswers.requiredText || undefined,
-          brandColors: completedAnswers.colors || undefined,
+          productPhotoKey: productPhotoKey || undefined,
+          audience: pieceFields.audience || undefined,
+          ageRange: pieceFields.ageRanges || undefined,
+          promoPrice: pieceFields.promoPrice || undefined,
+          requiredText: pieceFields.requiredText || undefined,
+          brandColors: brandProfile?.brand_colors || undefined,
         }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string; message?: string };
@@ -679,52 +856,149 @@ function AiChatRequestForm({
     }
   }
 
+  const reviewAnswers: Record<string, string> | null = pieceFields
+    ? {
+        title: pieceFields.title || deriveTitle(pieceFields.pieceBrief, brandProfile?.company_name),
+        companyName: brandProfile?.company_name ?? "",
+        pieceBrief: pieceFields.pieceBrief,
+        audience: pieceFields.audience,
+        ageRanges: pieceFields.ageRanges,
+        promoPrice: pieceFields.promoPrice,
+        requiredText: pieceFields.requiredText,
+        colors: brandProfile?.brand_colors ?? "",
+        style: pieceFields.style,
+        aspectRatio: pickedAspectRatio ?? pieceFields.aspectRatio ?? "",
+        logoKey: brandProfile?.logo_key ?? "Sin logotipo",
+        productPhotoKey: productPhotoKey ?? "",
+      }
+    : null;
+
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl flex-col overflow-hidden px-5 pb-4 pt-4">
-      {brandProfile ? (
-        <p className="mb-2 shrink-0 rounded-xl bg-wit-blue/5 px-3 py-2 text-center text-xs font-medium text-wit-blue">
-          Ya tenemos los datos de tu marca registrada — solo te preguntamos lo de esta pieza.
-        </p>
-      ) : initialAnswers ? (
-        <p className="mb-2 shrink-0 rounded-xl bg-wit-blue/5 px-3 py-2 text-center text-xs font-medium text-wit-blue">
-          Seguimos justo donde lo dejaste en la página principal.
-        </p>
+      <div className="relative flex flex-col items-center gap-1.5 pb-1 pt-1">
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar chat"
+            className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
+          >
+            ×
+          </button>
+        ) : null}
+        <div className="wit-float">
+          <WMark size={26} />
+        </div>
+        <p className="text-sm font-medium text-wit-ink">Hablando con Wit</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-3 py-4">
+          {messages.map((m, i) => (
+            <div key={i} className="flex flex-col gap-3">
+              <ChatBubble role={m.role} text={m.content} />
+              {m.widget === "aspectRatio" && awaitingAspectRatio ? (
+                <AspectRatioPicker onPick={pickAspectRatio} />
+              ) : null}
+            </div>
+          ))}
+          {typing ? <ChatBubble role="assistant" typingDots /> : null}
+          {chatError ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-600">
+              {chatError}
+            </p>
+          ) : null}
+          {pieceFields ? (
+            <>
+              <ChatBubble role="assistant" text="¡Listo! Revisa tu solicitud antes de enviarla:" />
+              {reviewAnswers ? (
+                <ChatReviewBox
+                  answers={reviewAnswers}
+                  disabled={disabled}
+                  sendError={sendError}
+                  sending={sending}
+                  onConfirm={confirmSend}
+                />
+              ) : null}
+            </>
+          ) : null}
+          <div ref={bottomRef} />
+        </div>
+      </div>
+
+      {!pieceFields ? (
+        <div className="shrink-0 border-t border-wit-ink/10 pb-4 pt-3">
+          {showPhotoPicker ? (
+            <div className="flex flex-col items-center gap-2">
+              <ProductPhotoUploadPicker
+                onPick={(key) => {
+                  setProductPhotoKey(key);
+                  setShowPhotoPicker(false);
+                  setMessages((prev) => [
+                    ...prev,
+                    { role: "user", content: "Adjunté una foto de referencia del producto." },
+                  ]);
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPhotoPicker(false)}
+                className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : awaitingAspectRatio ? null : (
+            <>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendText(input);
+                }}
+                className="wit-glass flex items-center gap-2 rounded-full p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+              >
+                <input
+                  type="text"
+                  aria-label="Tu mensaje"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  disabled={typing}
+                  placeholder="Escribe tu mensaje..."
+                  className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
+                />
+                <MicButton value={input} onChange={setInput} />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || typing}
+                  aria-label="Enviar mensaje"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wit-blue text-white transition-all hover:bg-wit-blue-deep disabled:opacity-40"
+                >
+                  <svg
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M22 2 11 13" />
+                    <path d="M22 2 15 22 11 13 2 9 22 2Z" />
+                  </svg>
+                </button>
+              </form>
+              <button
+                type="button"
+                onClick={() => setShowPhotoPicker(true)}
+                className="mt-2 block w-full text-center text-xs font-semibold text-wit-gray hover:text-wit-ink"
+              >
+                📎 Adjuntar foto de producto{productPhotoKey ? " (agregada)" : ""}
+              </button>
+            </>
+          )}
+        </div>
       ) : null}
-      <ChatIntakeFlow
-        questions={questions}
-        pickerFor={pickerFor}
-        initialAnswers={initialAnswers}
-        onComplete={(answers) => {
-          // Locked fields were never asked this round, so they're not in
-          // `answers` — merge them back in from the profile before this
-          // goes anywhere near the review box or the API. Title has no
-          // locked equivalent (it's per-request, not part of the brand),
-          // so a skipped one gets a short auto-generated stand-in instead.
-          setCompletedAnswers({
-            ...answers,
-            companyName: brandProfile?.company_name ?? answers.companyName,
-            colors: brandProfile?.brand_colors ?? answers.colors,
-            logoKey: brandProfile?.logo_key ?? answers.logoKey,
-            title: answers.title || deriveTitle(answers.pieceBrief, brandProfile?.company_name),
-          });
-          setSendError(null);
-        }}
-        pending={sending}
-        pendingLabel="Enviando tu solicitud..."
-        doneLabel="¡Listo! Revisa tu solicitud antes de enviarla:"
-        onClose={onClose}
-        resultSlot={
-          completedAnswers ? (
-            <ChatReviewBox
-              answers={completedAnswers}
-              disabled={disabled}
-              sendError={sendError}
-              sending={sending}
-              onConfirm={confirmSend}
-            />
-          ) : null
-        }
-      />
     </div>
   );
 }

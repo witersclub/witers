@@ -29,11 +29,14 @@ import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
+import { Route as ApiWitChatRouteImport } from './routes/api/wit/chat'
 import { Route as ApiPublicShowcaseImageRouteImport } from './routes/api/public/showcase-image'
 import { Route as ApiPublicShowcaseRouteImport } from './routes/api/public/showcase'
 import { Route as ApiPublicReviewsRouteImport } from './routes/api/public/reviews'
 import { Route as ApiPublicBrandsRouteImport } from './routes/api/public/brands'
 import { Route as ApiPublicBrandLogoRouteImport } from './routes/api/public/brand-logo'
+import { Route as ApiOnboardingDraftRouteImport } from './routes/api/onboarding/draft'
+import { Route as ApiOnboardingCompleteRouteImport } from './routes/api/onboarding/complete'
 import { Route as ApiDesignerRequestsRouteImport } from './routes/api/designer/requests'
 import { Route as ApiDesignerClaimRouteImport } from './routes/api/designer/claim'
 import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
@@ -154,6 +157,11 @@ const ApiBrandProfileRoute = ApiBrandProfileRouteImport.update({
   path: '/api/brand-profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWitChatRoute = ApiWitChatRouteImport.update({
+  id: '/api/wit/chat',
+  path: '/api/wit/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicShowcaseImageRoute = ApiPublicShowcaseImageRouteImport.update({
   id: '/api/public/showcase-image',
   path: '/api/public/showcase-image',
@@ -177,6 +185,16 @@ const ApiPublicBrandsRoute = ApiPublicBrandsRouteImport.update({
 const ApiPublicBrandLogoRoute = ApiPublicBrandLogoRouteImport.update({
   id: '/api/public/brand-logo',
   path: '/api/public/brand-logo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOnboardingDraftRoute = ApiOnboardingDraftRouteImport.update({
+  id: '/api/onboarding/draft',
+  path: '/api/onboarding/draft',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOnboardingCompleteRoute = ApiOnboardingCompleteRouteImport.update({
+  id: '/api/onboarding/complete',
+  path: '/api/onboarding/complete',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDesignerRequestsRoute = ApiDesignerRequestsRouteImport.update({
@@ -319,11 +337,14 @@ export interface FileRoutesByFullPath {
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/onboarding/complete': typeof ApiOnboardingCompleteRoute
+  '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
   '/api/public/brands': typeof ApiPublicBrandsRoute
   '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
+  '/api/wit/chat': typeof ApiWitChatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -365,11 +386,14 @@ export interface FileRoutesByTo {
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/onboarding/complete': typeof ApiOnboardingCompleteRoute
+  '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
   '/api/public/brands': typeof ApiPublicBrandsRoute
   '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
+  '/api/wit/chat': typeof ApiWitChatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -412,11 +436,14 @@ export interface FileRoutesById {
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/onboarding/complete': typeof ApiOnboardingCompleteRoute
+  '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
   '/api/public/brands': typeof ApiPublicBrandsRoute
   '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
+  '/api/wit/chat': typeof ApiWitChatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -460,11 +487,14 @@ export interface FileRouteTypes {
     | '/api/auth/register'
     | '/api/designer/claim'
     | '/api/designer/requests'
+    | '/api/onboarding/complete'
+    | '/api/onboarding/draft'
     | '/api/public/brand-logo'
     | '/api/public/brands'
     | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
+    | '/api/wit/chat'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -506,11 +536,14 @@ export interface FileRouteTypes {
     | '/api/auth/register'
     | '/api/designer/claim'
     | '/api/designer/requests'
+    | '/api/onboarding/complete'
+    | '/api/onboarding/draft'
     | '/api/public/brand-logo'
     | '/api/public/brands'
     | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
+    | '/api/wit/chat'
   id:
     | '__root__'
     | '/'
@@ -552,11 +585,14 @@ export interface FileRouteTypes {
     | '/api/auth/register'
     | '/api/designer/claim'
     | '/api/designer/requests'
+    | '/api/onboarding/complete'
+    | '/api/onboarding/draft'
     | '/api/public/brand-logo'
     | '/api/public/brands'
     | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
+    | '/api/wit/chat'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -599,11 +635,14 @@ export interface RootRouteChildren {
   ApiAuthRegisterRoute: typeof ApiAuthRegisterRoute
   ApiDesignerClaimRoute: typeof ApiDesignerClaimRoute
   ApiDesignerRequestsRoute: typeof ApiDesignerRequestsRoute
+  ApiOnboardingCompleteRoute: typeof ApiOnboardingCompleteRoute
+  ApiOnboardingDraftRoute: typeof ApiOnboardingDraftRoute
   ApiPublicBrandLogoRoute: typeof ApiPublicBrandLogoRoute
   ApiPublicBrandsRoute: typeof ApiPublicBrandsRoute
   ApiPublicReviewsRoute: typeof ApiPublicReviewsRoute
   ApiPublicShowcaseRoute: typeof ApiPublicShowcaseRoute
   ApiPublicShowcaseImageRoute: typeof ApiPublicShowcaseImageRoute
+  ApiWitChatRoute: typeof ApiWitChatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -748,6 +787,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBrandProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/wit/chat': {
+      id: '/api/wit/chat'
+      path: '/api/wit/chat'
+      fullPath: '/api/wit/chat'
+      preLoaderRoute: typeof ApiWitChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/showcase-image': {
       id: '/api/public/showcase-image'
       path: '/api/public/showcase-image'
@@ -781,6 +827,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/brand-logo'
       fullPath: '/api/public/brand-logo'
       preLoaderRoute: typeof ApiPublicBrandLogoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/onboarding/draft': {
+      id: '/api/onboarding/draft'
+      path: '/api/onboarding/draft'
+      fullPath: '/api/onboarding/draft'
+      preLoaderRoute: typeof ApiOnboardingDraftRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/onboarding/complete': {
+      id: '/api/onboarding/complete'
+      path: '/api/onboarding/complete'
+      fullPath: '/api/onboarding/complete'
+      preLoaderRoute: typeof ApiOnboardingCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/designer/requests': {
@@ -959,11 +1019,14 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthRegisterRoute: ApiAuthRegisterRoute,
   ApiDesignerClaimRoute: ApiDesignerClaimRoute,
   ApiDesignerRequestsRoute: ApiDesignerRequestsRoute,
+  ApiOnboardingCompleteRoute: ApiOnboardingCompleteRoute,
+  ApiOnboardingDraftRoute: ApiOnboardingDraftRoute,
   ApiPublicBrandLogoRoute: ApiPublicBrandLogoRoute,
   ApiPublicBrandsRoute: ApiPublicBrandsRoute,
   ApiPublicReviewsRoute: ApiPublicReviewsRoute,
   ApiPublicShowcaseRoute: ApiPublicShowcaseRoute,
   ApiPublicShowcaseImageRoute: ApiPublicShowcaseImageRoute,
+  ApiWitChatRoute: ApiWitChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

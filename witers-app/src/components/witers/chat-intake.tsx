@@ -126,6 +126,7 @@ export function ChatIntakeFlow({
   eyebrow = "Hagamos tu pieza juntos",
   onClose,
   initialAnswers,
+  onAnswer,
 }: {
   questions: ChatQuestion[];
   // null means "no dedicated picker for this field" — falls back to the
@@ -150,6 +151,11 @@ export function ChatIntakeFlow({
   // render as already-answered bubbles, same as anything answered in this
   // session, editable the same way via press-and-hold.
   initialAnswers?: Record<string, string>;
+  // Fired with the full current answer set after every answer (new or
+  // edited) — used to autosave progress (e.g. the mandatory brand-
+  // onboarding chat) without needing a separate persistence path bolted
+  // onto submitAnswer/saveEdit.
+  onAnswer?: (answers: Record<string, string>) => void;
 }) {
   const [answers, setAnswers] = useState<Record<string, string>>(() => ({ ...initialAnswers }));
   const [stepIndex, setStepIndex] = useState(() =>
@@ -262,6 +268,7 @@ export function ChatIntakeFlow({
     setAnswers(nextAnswers);
     setCurrentAnswer("");
     answerRef.current = "";
+    onAnswer?.(nextAnswers);
     const nextIndex = advancePastKnown(questions, stepIndex + 1, nextAnswers);
     setStepIndex(nextIndex);
     setTyping(true);
@@ -300,6 +307,7 @@ export function ChatIntakeFlow({
     setAnswers(nextAnswers);
     setEditingField(null);
     setEditValue("");
+    onAnswer?.(nextAnswers);
     if (done) onComplete(nextAnswers);
   }
 

@@ -73,3 +73,72 @@ export async function resolveBrandProfile(
   }
   return existing;
 }
+
+// Partial answers for the mandatory brand-onboarding chat (see
+// panel.tsx's OnboardingGate), saved after every answer so an abandoned
+// conversation resumes exactly where the client left it — same shape
+// ChatIntakeFlow already expects for initialAnswers.
+export async function getOnboardingDraft(userId: string): Promise<Record<string, string>> {
+  const row = await db()
+    .prepare("SELECT answers FROM brand_onboarding_drafts WHERE user_id = ?1")
+    .bind(userId)
+    .first<{ answers: string }>();
+  if (!row) return {};
+  try {
+    return JSON.parse(row.answers) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+export async function saveOnboardingDraft(
+  userId: string,
+  answers: Record<string, string>,
+): Promise<void> {
+  await db()
+    .prepare(
+      `INSERT INTO brand_onboarding_drafts (user_id, answers, updated_at)
+       VALUES (?1, ?2, datetime('now'))
+       ON CONFLICT(user_id) DO UPDATE SET answers = excluded.answers, updated_at = datetime('now')`,
+    )
+    .bind(userId, JSON.stringify(answers))
+    .run();
+}
+
+export async function clearOnboardingDraft(userId: string): Promise<void> {
+  await db().prepare("DELETE FROM brand_onboarding_drafts WHERE user_id = ?1").bind(userId).run();
+}
+
+// Finishes onboarding by writing the real, locked brand_profiles row —
+// idempotent, since a client could in theory hit this twice (e.g. a
+// double submit) or already have a profile from an old direct request.
+export async function completeOnboarding(
+  userId: string,
+  data: {
+    companyName: string;
+    brandColors: string | null;
+    businessType: string | null;
+    logoKey: string | null;
+  },
+): Promise<BrandProfile> {
+  const existing = await getBrandProfile(userId);
+  if (existing) {
+    await clearOnboardingDraft(userId);
+    return existing;
+  }
+  await db()
+    .prepare(
+      `INSERT INTO brand_profiles (user_id, company_name, brand_colors, business_type, logo_key)
+       VALUES (?1, ?2, ?3, ?4, ?5)`,
+    )
+    .bind(userId, data.companyName, data.brandColors, data.businessType, data.logoKey)
+    .run();
+  await clearOnboardingDraft(userId);
+  return {
+    user_id: userId,
+    company_name: data.companyName,
+    brand_colors: data.brandColors,
+    business_type: data.businessType,
+    logo_key: data.logoKey,
+  };
+}
