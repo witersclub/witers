@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 
 import { WitersLogo, WMark } from "../components/witers/brand";
 import { ChatIntakeFlow } from "../components/witers/chat-intake";
+import { MicButton } from "../components/witers/mic-button";
 import {
   AgeRangeMultiPicker,
   AspectRatioPicker,
@@ -333,18 +334,9 @@ function Panel() {
           <button
             type="button"
             onClick={() => setTab("nueva")}
-            className="relative -mb-px shrink-0 pb-3"
+            className="wit-glow-button -mb-px flex shrink-0 items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold text-white"
           >
-            <span className="wit-pending-glow inline-block" style={{ borderRadius: "9999px" }}>
-              <span
-                className={`wit-pending-glow-shield flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold transition-colors ${
-                  tab === "nueva" ? "bg-wit-blue text-white" : "bg-white text-wit-blue"
-                }`}
-                style={{ borderRadius: "9999px" }}
-              >
-                ✨ Hacer solicitud
-              </span>
-            </span>
+            ✨ Hacer solicitud
           </button>
         </div>
 
@@ -494,12 +486,23 @@ const ALL_CHAT_QUESTIONS: { field: string; text: string; required: boolean }[] =
 // Once a member has a locked brand profile, company/colors/category never
 // need asking again — and the logo question drops out too, but only once
 // a real logo has actually been locked in (still asked every time before
-// that, same as a brand-new member).
+// that, same as a brand-new member). A profile existing at all also means
+// this isn't their first request ever, so title and age range — the two
+// questions clients skip past out of habit anyway — drop out too, to keep
+// every request after the first one quicker to fill out.
 function buildChatQuestions(profile: BrandProfile | null) {
   if (!profile) return ALL_CHAT_QUESTIONS;
-  const skip = new Set(["companyName", "colors", "businessType"]);
+  const skip = new Set(["companyName", "colors", "businessType", "title", "ageRanges"]);
   if (profile.logo_key) skip.add("logoKey");
   return ALL_CHAT_QUESTIONS.filter((q) => !skip.has(q.field));
+}
+
+// Stand-in for a skipped title question — short enough to read as a title,
+// not a re-statement of the whole brief.
+function deriveTitle(pieceBrief: string | undefined, companyName: string | undefined): string {
+  const brief = (pieceBrief ?? "").trim();
+  if (!brief) return `Pieza para ${companyName ?? "tu marca"}`;
+  return brief.length > 60 ? `${brief.slice(0, 57).trimEnd()}...` : brief;
 }
 
 // The confirm/review box that appears in place of ChatIntakeFlow's
@@ -694,12 +697,15 @@ function AiChatRequestForm({
         onComplete={(answers) => {
           // Locked fields were never asked this round, so they're not in
           // `answers` — merge them back in from the profile before this
-          // goes anywhere near the review box or the API.
+          // goes anywhere near the review box or the API. Title has no
+          // locked equivalent (it's per-request, not part of the brand),
+          // so a skipped one gets a short auto-generated stand-in instead.
           setCompletedAnswers({
             ...answers,
             companyName: brandProfile?.company_name ?? answers.companyName,
             colors: brandProfile?.brand_colors ?? answers.colors,
             logoKey: brandProfile?.logo_key ?? answers.logoKey,
+            title: answers.title || deriveTitle(answers.pieceBrief, brandProfile?.company_name),
           });
           setSendError(null);
         }}
@@ -1957,14 +1963,21 @@ function HistoryCard({
               Qué quieres que ajustemos ({revisionsLeft}{" "}
               {revisionsLeft === 1 ? "cambio disponible" : "cambios disponibles"})
             </label>
-            <textarea
-              rows={3}
-              maxLength={1000}
-              value={revisionText}
-              onChange={(e) => setRevisionText(e.target.value)}
-              className="w-full resize-y rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
-              placeholder="Ej. cambiar el color de fondo a azul, agrandar el texto..."
-            />
+            <div className="relative">
+              <textarea
+                rows={3}
+                maxLength={1000}
+                value={revisionText}
+                onChange={(e) => setRevisionText(e.target.value)}
+                className="w-full resize-y rounded-lg border border-wit-ink/15 bg-white px-3 py-2 pr-12 text-sm outline-none focus:border-wit-blue"
+                placeholder="Ej. cambiar el color de fondo a azul, agrandar el texto..."
+              />
+              <MicButton
+                value={revisionText}
+                onChange={setRevisionText}
+                className="absolute bottom-2 right-2"
+              />
+            </div>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <button
                 type="button"
@@ -2113,24 +2126,24 @@ function RatingCircle({
         <span
           className="absolute inset-0"
           style={{
-            clipPath: filled ? CIRCLE_CLIP : STAR_CLIP,
-            backgroundColor: filled ? "#0047FF" : "#FACC15",
-            transform: filled ? "rotate(0deg)" : "rotate(-14deg)",
-            transition:
-              "clip-path 550ms cubic-bezier(0.32,1.2,0.5,1), background-color 550ms ease, transform 550ms cubic-bezier(0.32,1.2,0.5,1)",
+            clipPath: STAR_CLIP,
+            backgroundColor: "#FACC15",
+            transform: "rotate(-14deg)",
+            opacity: filled ? 0 : 1,
+            transition: "opacity 300ms ease",
           }}
         />
         <img
-          src="/assets/logo_w_white.png"
+          src="/assets/logo_w.png"
           alt=""
-          className="pointer-events-none absolute left-1/2 top-1/2 h-4 w-auto"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-6 w-auto"
           style={{
             opacity: filled ? 1 : 0,
             transform: filled
               ? "translate(-50%, -50%) scale(1)"
               : "translate(-50%, -50%) scale(0.4)",
             transition: "opacity 300ms ease, transform 300ms ease",
-            transitionDelay: filled ? "280ms" : "0ms",
+            transitionDelay: filled ? "150ms" : "0ms",
           }}
         />
       </span>
@@ -2144,14 +2157,11 @@ function RatingCircle({
   );
 }
 
-// Both shapes use the same 20 points in the same order (star edges get an
-// extra midpoint vertex, which doesn't change the star's silhouette) so the
-// browser morphs vertex by vertex into a proper-looking circle, instead of
-// stopping at a faceted decagon or just crossfading two unrelated shapes.
+// Star silhouette used for the "not picked yet" state — the picked state
+// fades it out entirely in favor of the plain blue W mark, no background
+// shape behind it.
 const STAR_CLIP =
   "polygon(50% 0%, 55.5% 17.5%, 61% 35%, 79.5% 35%, 98% 35%, 83% 46%, 68% 57%, 73.5% 74%, 79% 91%, 64.5% 80.5%, 50% 70%, 35.5% 80.5%, 21% 91%, 26.5% 74%, 32% 57%, 17% 46%, 2% 35%, 20.5% 35%, 39% 35%, 44.5% 17.5%)";
-const CIRCLE_CLIP =
-  "polygon(50% 0%, 65.45% 2.45%, 79.39% 9.55%, 90.45% 20.61%, 97.55% 34.55%, 100% 50%, 97.55% 65.45%, 90.45% 79.39%, 79.39% 90.45%, 65.45% 97.55%, 50% 100%, 34.55% 97.55%, 20.61% 90.45%, 9.55% 79.39%, 2.45% 65.45%, 0% 50%, 2.45% 34.55%, 9.55% 20.61%, 20.61% 9.55%, 34.55% 2.45%)";
 
 function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: () => void }) {
   const [step, setStep] = useState<"rate" | "feedback" | "done">("rate");
@@ -2187,12 +2197,9 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
     // the screen moves on — otherwise the transition happens in the same
     // paint and it looks like nothing happened.
     await wait(750);
-    if (n === 5) {
-      await submit(n);
-      setStep("done");
-    } else {
-      setStep("feedback");
-    }
+    // Every rating (5 stars included) gets the same chance to leave a
+    // comment now — it used to skip straight to "done" at 5.
+    setStep("feedback");
     setPicking(false);
   }
 
@@ -2231,14 +2238,24 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
           </>
         ) : step === "feedback" ? (
           <>
-            <h3 className="text-lg font-bold text-wit-ink">¿Cómo podemos mejorar?</h3>
-            <p className="mt-1 text-sm text-wit-gray">Cuéntanos qué fue lo que no te gustó.</p>
+            <h3 className="text-lg font-bold text-wit-ink">
+              {rating === 5 ? "¿Qué fue lo que más te gustó?" : "¿Cómo podemos mejorar?"}
+            </h3>
+            <p className="mt-1 text-sm text-wit-gray">
+              {rating === 5
+                ? "Nos encantaría saber qué te encantó de tu pieza."
+                : "Cuéntanos qué fue lo que no te gustó."}
+            </p>
             <textarea
               rows={4}
               maxLength={1000}
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Tu comentario nos ayuda a mejorar (opcional)"
+              placeholder={
+                rating === 5
+                  ? "Tu comentario nos ayuda a seguir así (opcional)"
+                  : "Tu comentario nos ayuda a mejorar (opcional)"
+              }
               className="mt-4 w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-sm outline-none focus:border-wit-blue"
             />
             <button
@@ -2254,8 +2271,8 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
           <>
             {rating === 5 ? (
               <>
-                <p className="text-4xl">🎉</p>
-                <h3 className="mt-3 text-lg font-bold text-wit-ink">¡Qué gusto!</h3>
+                <p className="text-4xl">✨</p>
+                <h3 className="mt-3 text-lg font-bold text-wit-ink">Gracias</h3>
                 <p className="mt-2 text-sm text-wit-gray">
                   Nos encanta que tu pieza haya quedado tal como la imaginabas. Gracias por confiar
                   en WITERS.

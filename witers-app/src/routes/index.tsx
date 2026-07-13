@@ -378,6 +378,7 @@ const PRUEBA_STEPS = [
 ] as const;
 
 function PruebaInteractiva() {
+  const [started, setStarted] = useState(false);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const done = step >= PRUEBA_STEPS.length;
@@ -410,7 +411,23 @@ function PruebaInteractiva() {
         </h2>
 
         <div className="wit-glass mt-8 rounded-3xl p-6 shadow-[0_20px_50px_rgba(5,13,40,0.08)]">
-          {!done ? (
+          {!started ? (
+            <div className="flex flex-col items-center gap-6 py-4 text-center">
+              <div className="wit-float">
+                <WMark size={34} />
+              </div>
+              <p className="max-w-xs text-sm text-wit-gray">
+                Cuéntanos qué quieres crear hoy y armamos tu pieza juntos.
+              </p>
+              <button
+                type="button"
+                onClick={() => setStarted(true)}
+                className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
+              >
+                ✨ Habla con Wit ✨
+              </button>
+            </div>
+          ) : !done ? (
             <>
               <div className="mb-5 flex items-start gap-2">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-wit-blue/10 text-wit-blue">

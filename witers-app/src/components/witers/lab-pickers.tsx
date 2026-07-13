@@ -14,7 +14,14 @@ export const ASPECT_OPTIONS: { value: string; label: string }[] = [
   { value: "9:16", label: "Historia" },
 ];
 
-export const PIECE_TYPE_OPTIONS = ["Instagram", "Historia", "Facebook", "Banner web", "Impreso", "Otro"];
+export const PIECE_TYPE_OPTIONS = [
+  "Instagram",
+  "Historia",
+  "Facebook",
+  "Banner web",
+  "Impreso",
+  "Otro",
+];
 
 // No real photography to preview each style with, so each swatch is a small
 // CSS treatment that evokes the vibe instead: minimalista plain, elegante
@@ -37,7 +44,11 @@ export function PieceTypePicker({ onPick }: { onPick: (value: string) => void })
           key={opt}
           type="button"
           onClick={() => onPick(opt)}
-          className="rounded-full bg-wit-mist/50 px-4 py-2 text-xs font-semibold text-wit-ink transition-transform hover:scale-[1.03] hover:bg-wit-mist active:scale-95"
+          className={`rounded-full px-4 py-2 text-xs font-semibold transition-transform hover:scale-[1.03] active:scale-95 ${
+            opt === "Otro"
+              ? "bg-wit-blue text-white hover:bg-wit-blue-deep"
+              : "bg-wit-mist/50 text-wit-ink hover:bg-wit-mist"
+          }`}
         >
           {opt}
         </button>
@@ -58,7 +69,9 @@ export function StylePicker({ onPick }: { onPick: (value: string) => void }) {
           onClick={() => onPick(opt.value)}
           className="flex flex-col items-center gap-1.5 transition-transform hover:scale-[1.05] active:scale-95"
         >
-          <span className={`h-12 w-12 rounded-xl shadow-[0_8px_20px_rgba(5,13,40,0.15)] ${opt.swatchClass}`} />
+          <span
+            className={`h-12 w-12 rounded-xl shadow-[0_8px_20px_rgba(5,13,40,0.15)] ${opt.swatchClass}`}
+          />
           <span className="max-w-[4.5rem] text-center text-[10px] font-semibold leading-tight text-wit-gray">
             {opt.value}
           </span>
@@ -188,13 +201,27 @@ export function ColorsPicker({ onPick }: { onPick: (value: string) => void }) {
 // service actually sees, with "Otro" (typed free text) as the escape
 // valve for the long tail instead of trying to enumerate every business.
 export const BUSINESS_INDUSTRIES: { value: string; types: string[] }[] = [
-  { value: "Alimentos y bebidas", types: ["Restaurante", "Cafetería", "Panadería / Repostería", "Bar", "Catering"] },
-  { value: "Salud y bienestar", types: ["Spa / Centro de bienestar", "Consultorio médico", "Clínica dental", "Psicología / Terapia"] },
+  {
+    value: "Alimentos y bebidas",
+    types: ["Restaurante", "Cafetería", "Panadería / Repostería", "Bar", "Catering"],
+  },
+  {
+    value: "Salud y bienestar",
+    types: [
+      "Spa / Centro de bienestar",
+      "Consultorio médico",
+      "Clínica dental",
+      "Psicología / Terapia",
+    ],
+  },
   { value: "Belleza", types: ["Salón de belleza", "Barbería", "Nail spa"] },
   { value: "Fitness", types: ["Gimnasio", "Yoga / Pilates", "Entrenador personal"] },
   { value: "Moda y retail", types: ["Tienda de ropa", "Joyería", "Tienda en línea"] },
   { value: "Educación", types: ["Academia / Curso", "Guardería"] },
-  { value: "Servicios profesionales", types: ["Consultoría / Contabilidad", "Bufete legal", "Agencia de marketing"] },
+  {
+    value: "Servicios profesionales",
+    types: ["Consultoría / Contabilidad", "Bufete legal", "Agencia de marketing"],
+  },
   { value: "Bienes raíces y construcción", types: ["Inmobiliaria", "Construcción / Remodelación"] },
   { value: "Automotriz", types: ["Taller mecánico"] },
   { value: "Eventos", types: ["Organización de eventos", "Fotografía / Video"] },
@@ -276,7 +303,8 @@ function playWheelTick() {
   }
   try {
     const Ctx =
-      window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctx) return;
     if (!wheelAudioCtx) wheelAudioCtx = new Ctx();
     if (wheelAudioCtx.state === "suspended") void wheelAudioCtx.resume();
@@ -350,7 +378,9 @@ export function AudiencePicker({ onPick }: { onPick: (value: string) => void }) 
             <span className="wit-float text-wit-blue">
               <AudienceIcon value={opt} />
             </span>
-            <span className="text-center text-[10px] font-semibold leading-tight text-wit-gray">{opt}</span>
+            <span className="text-center text-[10px] font-semibold leading-tight text-wit-gray">
+              {opt}
+            </span>
           </button>
         ))}
       </div>
@@ -384,7 +414,9 @@ export function AgeRangeMultiPicker({ onPick }: { onPick: (value: string) => voi
             type="button"
             onClick={() => toggle(chip)}
             className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-              selected.includes(chip) ? "bg-wit-blue text-white" : "bg-wit-mist/50 text-wit-ink hover:bg-wit-mist"
+              selected.includes(chip)
+                ? "bg-wit-blue text-white"
+                : "bg-wit-mist/50 text-wit-ink hover:bg-wit-mist"
             }`}
           >
             {chip}
@@ -548,7 +580,10 @@ function WheelPicker({
   function handleScroll() {
     const el = containerRef.current;
     if (!el) return;
-    const index = Math.max(0, Math.min(items.length - 1, Math.round(el.scrollTop / WHEEL_ITEM_HEIGHT)));
+    const index = Math.max(
+      0,
+      Math.min(items.length - 1, Math.round(el.scrollTop / WHEEL_ITEM_HEIGHT)),
+    );
     if (index !== centeredRef.current) {
       centeredRef.current = index;
       setCenteredIndex(index);
@@ -574,7 +609,9 @@ function WheelPicker({
           key={item}
           style={{ height: WHEEL_ITEM_HEIGHT, scrollSnapAlign: "center" }}
           className={`flex items-center justify-center px-2 text-center transition-all duration-150 ${
-            i === centeredIndex ? "text-sm font-bold text-wit-ink" : "text-xs font-medium text-wit-gray opacity-50"
+            i === centeredIndex
+              ? "text-sm font-bold text-wit-ink"
+              : "text-xs font-medium text-wit-gray opacity-50"
           }`}
         >
           {item}

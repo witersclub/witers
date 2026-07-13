@@ -123,7 +123,7 @@ export function ChatIntakeFlow({
   resultSlot = null,
   restart,
   externalError = null,
-  eyebrow = "Creemos tu pieza juntos",
+  eyebrow = "Hagamos tu pieza juntos",
   onClose,
   initialAnswers,
 }: {
