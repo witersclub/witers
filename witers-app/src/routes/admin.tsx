@@ -584,7 +584,6 @@ function RequestCard({ row }: { row: AdminRequest }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState(row.admin_note ?? "");
-  const [approveCode, setApproveCode] = useState("");
 
   const { drafts, results } = (() => {
     if (!row.results_json) return { drafts: [] as ResultItem[], results: [] as ResultItem[] };
@@ -659,27 +658,18 @@ function RequestCard({ row }: { row: AdminRequest }) {
   }
 
   async function approve() {
-    if (!approveCode.trim()) {
-      setMsg("Escribe tu código de aprobación.");
-      return;
-    }
     setBusy("approve");
     setMsg(null);
     try {
       const res = await fetch("/api/admin/approve-result", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ requestId: row.id, code: approveCode }),
+        body: JSON.stringify({ requestId: row.id }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string };
+      const data = (await res.json()) as { ok: boolean };
       setMsg(
-        data.ok
-          ? "Aprobado y entregado al cliente."
-          : data.error === "codigo_incorrecto"
-            ? "Código incorrecto."
-            : "No pudimos aprobarlo. Intenta de nuevo.",
+        data.ok ? "Aprobado y entregado al cliente." : "No pudimos aprobarlo. Intenta de nuevo.",
       );
-      if (data.ok) setApproveCode("");
       await refresh();
     } catch {
       setMsg("No pudimos aprobarlo. Intenta de nuevo.");
@@ -936,14 +926,7 @@ function RequestCard({ row }: { row: AdminRequest }) {
               );
             })}
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <input
-              type="password"
-              value={approveCode}
-              onChange={(e) => setApproveCode(e.target.value)}
-              placeholder="Tu código de aprobación"
-              className="min-w-0 flex-1 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
-            />
+          <div className="mt-3">
             <button
               type="button"
               disabled={busy !== null}
