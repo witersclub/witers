@@ -61,7 +61,13 @@ export function buildDesignPrompt(input: DesignPromptInput): string {
     parts.push(`Usa esta paleta de colores de marca de forma consistente: ${input.brandColors}.`);
   if (input.promoPrice) parts.push(`Destaca este precio o promoción: "${input.promoPrice}".`);
   if (input.requiredText)
-    parts.push(`Debe incluir textualmente este dato: "${input.requiredText}".`);
+    // Respuesta cruda del cliente, tal como la escribió — puede venir
+    // coloquial ("sí, de 12,000 a 5,999"). No se le dice a la IA que la
+    // trate como texto literal a propósito: polish-prompt.server.ts es
+    // quien decide qué extraer y qué es muletilla desechable.
+    parts.push(
+      `Otro dato que el cliente pidió que apareciera en la pieza: "${input.requiredText}".`,
+    );
 
   parts.push(
     "Redacta tú el copy final del anuncio (texto en español, corto y persuasivo) a partir de esta información — el cliente no escribió el texto exacto, solo el contenido que debe comunicarse.",
