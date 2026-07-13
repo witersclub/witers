@@ -7,10 +7,7 @@ import { WitersLogo } from "../components/witers/brand";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
-    meta: [
-      { title: "Administración. WITERS" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Administración. WITERS" }, { name: "robots", content: "noindex" }],
   }),
   component: Admin,
 });
@@ -118,7 +115,9 @@ function Admin() {
     enabled: Boolean(platform.data),
     refetchInterval: 30_000,
   });
-  const [tab, setTab] = useState<"solicitudes" | "usuarios" | "pagos" | "diseñadores">("solicitudes");
+  const [tab, setTab] = useState<"solicitudes" | "usuarios" | "pagos" | "diseñadores">(
+    "solicitudes",
+  );
 
   if (platform.isLoading) {
     return (
@@ -195,7 +194,9 @@ function Admin() {
           <StatCard
             label="Ingresos (MXN)"
             value={`$${(
-              (data?.payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount_mxn, 0) ?? 0)
+              data?.payments
+                .filter((p) => p.status === "paid")
+                .reduce((s, p) => s + p.amount_mxn, 0) ?? 0
             ).toLocaleString("es-MX")}`}
           />
         </div>
@@ -207,7 +208,9 @@ function Admin() {
               type="button"
               onClick={() => setTab(t)}
               className={`-mb-px border-b-2 px-4 py-3 text-sm font-semibold capitalize transition-colors ${
-                tab === t ? "border-wit-blue text-wit-blue" : "border-transparent text-wit-gray hover:text-wit-ink"
+                tab === t
+                  ? "border-wit-blue text-wit-blue"
+                  : "border-transparent text-wit-gray hover:text-wit-ink"
               }`}
             >
               {t}
@@ -285,7 +288,9 @@ function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
       {shown.length === 0 ? (
         <div className="wit-glass mt-6 rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
           <p className="text-base font-semibold text-wit-ink">
-            {tab === "pendientes" ? "No hay solicitudes pendientes." : "Aún no hay solicitudes finalizadas."}
+            {tab === "pendientes"
+              ? "No hay solicitudes pendientes."
+              : "Aún no hay solicitudes finalizadas."}
           </p>
         </div>
       ) : (
@@ -319,7 +324,9 @@ function AdminSubTab({
       type="button"
       onClick={onClick}
       className={`relative -mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-bold transition-colors ${
-        active ? "border-wit-blue text-wit-blue" : "border-transparent text-wit-gray hover:text-wit-ink"
+        active
+          ? "border-wit-blue text-wit-blue"
+          : "border-transparent text-wit-gray hover:text-wit-ink"
       }`}
     >
       {label}
@@ -377,7 +384,8 @@ function PendingRequestCard({ row }: { row: AdminRequest }) {
         <p className="truncate text-sm font-bold text-wit-ink">{row.title}</p>
         <p className="mt-0.5 text-xs text-wit-gray">
           {row.aspect_ratio}
-          {row.style ? ` · ${row.style}` : ""} · {new Date(row.created_at + "Z").toLocaleString("es-MX")}
+          {row.style ? ` · ${row.style}` : ""} ·{" "}
+          {new Date(row.created_at + "Z").toLocaleString("es-MX")}
         </p>
       </div>
       <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${statusCls}`}>
@@ -468,7 +476,9 @@ function FinishedRequestCard({ row }: { row: AdminRequest }) {
       return null;
     }
   })();
-  const thumbHref = thumb ? (thumb.image_url ?? `/api/file?key=${encodeURIComponent(thumb.r2_key ?? "")}`) : null;
+  const thumbHref = thumb
+    ? (thumb.image_url ?? `/api/file?key=${encodeURIComponent(thumb.r2_key ?? "")}`)
+    : null;
 
   if (expanded) {
     return (
@@ -582,7 +592,10 @@ function RequestCard({ row }: { row: AdminRequest }) {
       const all = (JSON.parse(row.results_json) as ResultItem[]).filter(
         (x) => x && (x.image_url || x.r2_key),
       );
-      return { drafts: all.filter((x) => x.kind === "draft"), results: all.filter((x) => x.kind !== "draft") };
+      return {
+        drafts: all.filter((x) => x.kind === "draft"),
+        results: all.filter((x) => x.kind !== "draft"),
+      };
     } catch {
       return { drafts: [] as ResultItem[], results: [] as ResultItem[] };
     }
@@ -604,7 +617,9 @@ function RequestCard({ row }: { row: AdminRequest }) {
         ? ` Dirigido a personas de ${row.age_range} años.`
         : "";
     const promo = row.promo_price ? ` Precio/descuento a destacar: ${row.promo_price}.` : "";
-    const requiredText = row.required_text ? ` Dato extra del cliente: "${row.required_text}".` : "";
+    const requiredText = row.required_text
+      ? ` Dato extra del cliente: "${row.required_text}".`
+      : "";
     const colors = row.brand_colors ? ` Paleta de colores de marca: ${row.brand_colors}.` : "";
     const ratio = RATIO_PROMPT[row.aspect_ratio] ?? row.aspect_ratio;
     const hasFiles = row.logo_key || row.product_photo_key || row.reference_key;
@@ -619,6 +634,27 @@ function RequestCard({ row }: { row: AdminRequest }) {
       setMsg("Prompt copiado al portapapeles.");
     } catch {
       setMsg("No pudimos copiar. Selecciona el texto manualmente.");
+    }
+  }
+
+  async function generateDraft() {
+    setBusy("generate");
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId: row.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      setMsg(
+        data.ok ? "Nuevo borrador generado." : "No pudimos generar la imagen. Intenta de nuevo.",
+      );
+      await refresh();
+    } catch {
+      setMsg("No pudimos generar la imagen. Intenta de nuevo.");
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -734,6 +770,18 @@ function RequestCard({ row }: { row: AdminRequest }) {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            disabled={busy !== null}
+            onClick={generateDraft}
+            className="rounded-full border border-wit-blue/30 bg-wit-blue/5 px-3 py-1.5 text-xs font-semibold text-wit-blue hover:border-wit-blue disabled:opacity-50"
+          >
+            {busy === "generate"
+              ? "Generando..."
+              : drafts.length > 0
+                ? "Regenerar con IA"
+                : "Generar con IA"}
+          </button>
+          <button
+            type="button"
             onClick={copyInfo}
             className="rounded-full border border-wit-ink/15 px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
           >
@@ -766,7 +814,9 @@ function RequestCard({ row }: { row: AdminRequest }) {
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
             Qué quiere el cliente en esta pieza
           </p>
-          <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium text-wit-ink">{row.piece_brief}</p>
+          <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium text-wit-ink">
+            {row.piece_brief}
+          </p>
         </div>
       ) : null}
 
@@ -789,13 +839,17 @@ function RequestCard({ row }: { row: AdminRequest }) {
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl bg-wit-ice p-4 text-sm sm:grid-cols-4">
           {row.audience ? (
             <div>
-              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">Público</dt>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
+                Público
+              </dt>
               <dd className="mt-0.5 text-wit-ink">{row.audience}</dd>
             </div>
           ) : null}
           {row.age_range ? (
             <div>
-              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">Edad</dt>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
+                Edad
+              </dt>
               <dd className="mt-0.5 text-wit-ink">{row.age_range}</dd>
             </div>
           ) : null}
@@ -817,7 +871,9 @@ function RequestCard({ row }: { row: AdminRequest }) {
           ) : null}
           {row.brand_colors ? (
             <div>
-              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">Colores</dt>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
+                Colores
+              </dt>
               <dd className="mt-1 flex gap-1.5">
                 {row.brand_colors.split(",").map((c) => (
                   <span
@@ -855,8 +911,18 @@ function RequestCard({ row }: { row: AdminRequest }) {
               const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
               return (
                 <div key={res.id} className="space-y-1.5">
-                  <a href={href} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-amber-300">
-                    <img src={href} alt="Borrador generado" className="aspect-square w-full object-cover" loading="lazy" />
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block overflow-hidden rounded-lg border border-amber-300"
+                  >
+                    <img
+                      src={href}
+                      alt="Borrador generado"
+                      className="aspect-square w-full object-cover"
+                      loading="lazy"
+                    />
                   </a>
                   <button
                     type="button"
@@ -895,8 +961,19 @@ function RequestCard({ row }: { row: AdminRequest }) {
           {results.map((res) => {
             const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
             return (
-              <a key={res.id} href={href} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-wit-ink/10">
-                <img src={href} alt="Resultado entregado" className="aspect-square w-full object-cover" loading="lazy" />
+              <a
+                key={res.id}
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                className="block overflow-hidden rounded-lg border border-wit-ink/10"
+              >
+                <img
+                  src={href}
+                  alt="Resultado entregado"
+                  className="aspect-square w-full object-cover"
+                  loading="lazy"
+                />
               </a>
             );
           })}
@@ -973,7 +1050,9 @@ function RequestCard({ row }: { row: AdminRequest }) {
         </>
       )}
 
-      {msg ? <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p> : null}
+      {msg ? (
+        <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p>
+      ) : null}
     </article>
   );
 }
@@ -1025,8 +1104,7 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
       <section className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
         <h2 className="text-base font-bold text-wit-ink">Crear cuenta de diseñador</h2>
         <p className="mt-1 text-sm text-wit-gray">
-          Tú eliges la contraseña y se la compartes directamente — el diseñador no se registra
-          solo.
+          Tú eliges la contraseña y se la compartes directamente — el diseñador no se registra solo.
         </p>
         <form onSubmit={createDesigner} className="mt-4 grid gap-3 sm:grid-cols-3">
           <input
@@ -1063,7 +1141,9 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
             {busy ? "Creando..." : "Crear diseñador"}
           </button>
         </form>
-        {msg ? <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p> : null}
+        {msg ? (
+          <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p>
+        ) : null}
       </section>
 
       <div className="wit-glass overflow-x-auto rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
@@ -1189,7 +1269,9 @@ function EditDesignerModal({
   }
 
   async function deactivate() {
-    if (!window.confirm(`¿Dar de baja a ${designer.name}? Ya no podrá iniciar sesión como diseñador.`)) {
+    if (
+      !window.confirm(`¿Dar de baja a ${designer.name}? Ya no podrá iniciar sesión como diseñador.`)
+    ) {
       return;
     }
     setRemoving(true);
@@ -1270,7 +1352,9 @@ function EditDesignerModal({
             </select>
           </div>
 
-          {msg ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{msg}</p> : null}
+          {msg ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{msg}</p>
+          ) : null}
 
           <div className="flex items-center gap-3 pt-1">
             <button
@@ -1353,7 +1437,9 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
               <td className="px-5 py-3.5 font-wit-mono">
                 {u.requests_used ?? 0}/{u.requests_quota ?? 0}
               </td>
-              <td className="px-5 py-3.5 font-wit-mono">${u.total_paid_mxn.toLocaleString("es-MX")}</td>
+              <td className="px-5 py-3.5 font-wit-mono">
+                ${u.total_paid_mxn.toLocaleString("es-MX")}
+              </td>
               <td className="px-5 py-3.5 text-xs text-wit-gray">
                 {new Date(u.created_at + "Z").toLocaleDateString("es-MX")}
               </td>
@@ -1541,12 +1627,14 @@ function EditUserModal({
 
         <p className="mt-5 text-xs font-bold uppercase tracking-wide text-wit-gray">Marca</p>
         <p className="mt-1 text-xs text-wit-gray">
-          Estos datos quedan fijos para el cliente desde su primera solicitud — solo un administrador
-          puede cambiarlos.
+          Estos datos quedan fijos para el cliente desde su primera solicitud — solo un
+          administrador puede cambiarlos.
         </p>
         <form onSubmit={save} className="mt-4 space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-wit-gray">Nombre de la empresa</label>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">
+              Nombre de la empresa
+            </label>
             <input
               type="text"
               required
@@ -1569,7 +1657,9 @@ function EditUserModal({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-wit-gray">Categoría de negocio</label>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">
+              Categoría de negocio
+            </label>
             <input
               type="text"
               value={businessType}
@@ -1625,7 +1715,9 @@ function EditUserModal({
             ) : null}
           </div>
 
-          {msg ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{msg}</p> : null}
+          {msg ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{msg}</p>
+          ) : null}
 
           <div className="flex items-center gap-3 pt-1">
             <button
@@ -1686,4 +1778,3 @@ function PaymentsTable({ rows }: { rows: AdminPayment[] }) {
     </div>
   );
 }
-

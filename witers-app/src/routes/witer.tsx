@@ -6,10 +6,7 @@ import { WitersLogo } from "../components/witers/brand";
 
 export const Route = createFileRoute("/witer")({
   head: () => ({
-    meta: [
-      { title: "Diseñadores. WITERS" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Diseñadores. WITERS" }, { name: "robots", content: "noindex" }],
   }),
   component: DesignerPanel,
 });
@@ -187,7 +184,9 @@ function DesignerPanel() {
                 {shown.length === 0 ? (
                   <div className="wit-glass mt-6 rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
                     <p className="text-base font-semibold text-wit-ink">
-                      {tab === "pendientes" ? "No hay solicitudes pendientes." : "Aún no hay solicitudes finalizadas."}
+                      {tab === "pendientes"
+                        ? "No hay solicitudes pendientes."
+                        : "Aún no hay solicitudes finalizadas."}
                     </p>
                   </div>
                 ) : (
@@ -228,7 +227,9 @@ function DesignerTab({
       type="button"
       onClick={onClick}
       className={`relative -mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-bold transition-colors ${
-        active ? "border-wit-blue text-wit-blue" : "border-transparent text-wit-gray hover:text-wit-ink"
+        active
+          ? "border-wit-blue text-wit-blue"
+          : "border-transparent text-wit-gray hover:text-wit-ink"
       }`}
     >
       {label}
@@ -317,7 +318,8 @@ function PendingCompactCard({ row, me }: { row: DesignerRequest; me: string }) {
         <p className="truncate text-sm font-bold text-wit-ink">{row.title}</p>
         <p className="mt-0.5 text-xs text-wit-gray">
           {row.aspect_ratio}
-          {row.style ? ` · ${row.style}` : ""} · {new Date(row.created_at + "Z").toLocaleString("es-MX")}
+          {row.style ? ` · ${row.style}` : ""} ·{" "}
+          {new Date(row.created_at + "Z").toLocaleString("es-MX")}
         </p>
       </div>
       {!claimed ? (
@@ -369,7 +371,9 @@ function FinishedRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
       return null;
     }
   })();
-  const thumbHref = thumb ? (thumb.image_url ?? `/api/file?key=${encodeURIComponent(thumb.r2_key ?? "")}`) : null;
+  const thumbHref = thumb
+    ? (thumb.image_url ?? `/api/file?key=${encodeURIComponent(thumb.r2_key ?? "")}`)
+    : null;
 
   if (expanded) {
     return (
@@ -424,16 +428,18 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const results = (() => {
+  const allResults = (() => {
     if (!row.results_json) return [] as ResultItem[];
     try {
       return (JSON.parse(row.results_json) as ResultItem[]).filter(
-        (x) => x && x.kind !== "draft" && (x.image_url || x.r2_key),
+        (x) => x && (x.image_url || x.r2_key),
       );
     } catch {
       return [];
     }
   })();
+  const results = allResults.filter((x) => x.kind !== "draft");
+  const drafts = allResults.filter((x) => x.kind === "draft");
 
   const mine = row.claimed_by === me;
   const claimed = Boolean(row.claimed_by);
@@ -461,6 +467,27 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
     }
   }
 
+  async function generateDraft() {
+    setBusy("generate");
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId: row.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      setMsg(
+        data.ok ? "Nuevo borrador generado." : "No pudimos generar la imagen. Intenta de nuevo.",
+      );
+      await refresh();
+    } catch {
+      setMsg("No pudimos generar la imagen. Intenta de nuevo.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function buildBasePrompt(): string {
     const company = row.company_name
       ? ` La empresa se llama "${row.company_name}"${row.product_name ? ` y el producto "${row.product_name}"` : ""}, ambos deben aparecer en la pieza.`
@@ -473,7 +500,9 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
         ? ` Dirigido a personas de ${row.age_range} años.`
         : "";
     const promo = row.promo_price ? ` Precio/descuento a destacar: ${row.promo_price}.` : "";
-    const requiredText = row.required_text ? ` Dato extra del cliente: "${row.required_text}".` : "";
+    const requiredText = row.required_text
+      ? ` Dato extra del cliente: "${row.required_text}".`
+      : "";
     const colors = row.brand_colors ? ` Paleta de colores de marca: ${row.brand_colors}.` : "";
     const ratio = RATIO_PROMPT[row.aspect_ratio] ?? row.aspect_ratio;
     const hasFiles = row.logo_key || row.product_photo_key || row.reference_key;
@@ -566,6 +595,18 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={generateDraft}
+            className="rounded-full border border-wit-blue/30 bg-wit-blue/5 px-3 py-1.5 text-xs font-semibold text-wit-blue hover:border-wit-blue disabled:opacity-50"
+          >
+            {busy === "generate"
+              ? "Generando..."
+              : drafts.length > 0
+                ? "Regenerar con IA"
+                : "Generar con IA"}
+          </button>
           <div className="relative">
             <button
               type="button"
@@ -603,7 +644,9 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
             Qué quiere el cliente en esta pieza
           </p>
-          <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium text-wit-ink">{row.piece_brief}</p>
+          <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium text-wit-ink">
+            {row.piece_brief}
+          </p>
         </div>
       ) : null}
 
@@ -660,13 +703,17 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl bg-wit-ice p-4 text-sm sm:grid-cols-4">
           {row.audience ? (
             <div>
-              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">Público</dt>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
+                Público
+              </dt>
               <dd className="mt-0.5 text-wit-ink">{row.audience}</dd>
             </div>
           ) : null}
           {row.age_range ? (
             <div>
-              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">Edad</dt>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
+                Edad
+              </dt>
               <dd className="mt-0.5 text-wit-ink">{row.age_range}</dd>
             </div>
           ) : null}
@@ -688,7 +735,9 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
           ) : null}
           {row.brand_colors ? (
             <div>
-              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">Colores</dt>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
+                Colores
+              </dt>
               <dd className="mt-1 flex gap-1.5">
                 {row.brand_colors.split(",").map((c) => (
                   <span
@@ -716,13 +765,53 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
         </div>
       ) : null}
 
+      {drafts.length > 0 ? (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-amber-700">
+            Borrador generado con IA — pendiente de aprobación de un administrador
+          </p>
+          <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
+            {drafts.map((res) => {
+              const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
+              return (
+                <a
+                  key={res.id}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block overflow-hidden rounded-lg border border-amber-300"
+                >
+                  <img
+                    src={href}
+                    alt="Borrador generado con IA"
+                    className="aspect-square w-full object-cover"
+                    loading="lazy"
+                  />
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       {results.length > 0 ? (
         <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
           {results.map((res) => {
             const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
             return (
-              <a key={res.id} href={href} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-wit-ink/10">
-                <img src={href} alt="Resultado entregado" className="aspect-square w-full object-cover" loading="lazy" />
+              <a
+                key={res.id}
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                className="block overflow-hidden rounded-lg border border-wit-ink/10"
+              >
+                <img
+                  src={href}
+                  alt="Resultado entregado"
+                  className="aspect-square w-full object-cover"
+                  loading="lazy"
+                />
               </a>
             );
           })}
@@ -813,7 +902,9 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
         </>
       )}
 
-      {msg ? <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p> : null}
+      {msg ? (
+        <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p>
+      ) : null}
     </article>
   );
 }

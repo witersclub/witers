@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { resolveBrandProfile } from "../../lib/brand-profile.server";
+import { buildDesignPrompt } from "../../lib/design-prompt.server";
+import { generateDraftForRequest } from "../../lib/generate-draft.server";
 import { notifyStaffNewRequest } from "../../lib/mail.server";
 import { db, getMembership, getSessionUser, json } from "../../lib/witers-auth.server";
 
@@ -143,6 +145,33 @@ export const Route = createFileRoute("/api/requests")({
           companyName: brand.company_name,
           panelUrl: "https://witers.com/witer",
         });
+
+        // Generate a first AI draft right away so it's waiting in the staff
+        // panels for approval — never sent to the client automatically. A
+        // failure here (missing API key, OpenAI down, timeout) must never
+        // break request creation, which has already succeeded above.
+        try {
+          const prompt = buildDesignPrompt({
+            companyName: brand.company_name,
+            productName: parsed.data.productName?.trim() || null,
+            pieceBrief: parsed.data.pieceBrief.trim(),
+            style: parsed.data.style?.trim() || null,
+            audience: parsed.data.audience?.trim() || null,
+            ageRange: parsed.data.ageRange ?? null,
+            brandColors: brand.brand_colors,
+            promoPrice: parsed.data.promoPrice?.trim() || null,
+            requiredText: parsed.data.requiredText?.trim() || null,
+            aspectRatio: parsed.data.aspectRatio,
+            hasLogo: Boolean(brand.logo_key),
+            businessType: brand.business_type,
+          });
+          const result = await generateDraftForRequest(id, prompt, parsed.data.aspectRatio);
+          if (!result.ok) {
+            console.info("[api/requests] auto draft generation failed", result.error);
+          }
+        } catch (err) {
+          console.info("[api/requests] auto draft generation threw", err);
+        }
 
         return json({ ok: true, id });
       },
