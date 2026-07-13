@@ -106,6 +106,7 @@ function Panel() {
   // get back to their solicitudes.
   const [chatOpen, setChatOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0);
+  const [justSent, setJustSent] = useState(false);
   const autoOpenedRef = useRef(false);
   // Read (and clear) once per mount — only the very first chat (chatKey
   // still at its initial value) should inherit these, not a later
@@ -231,6 +232,25 @@ function Panel() {
 
   return (
     <div className="wit-page min-h-dvh">
+      {justSent ? (
+        <div className="wit-rise fixed inset-x-0 top-5 z-50 flex justify-center px-5">
+          <div className="flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(5,13,40,0.25)]">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+            Enviado
+          </div>
+        </div>
+      ) : null}
       <header className="wit-glass border-b border-wit-ink/10">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <Link to="/">
@@ -341,6 +361,8 @@ function Panel() {
                 setChatOpen(false);
                 setChatKey((k) => k + 1);
                 setTab("solicitudes");
+                setJustSent(true);
+                window.setTimeout(() => setJustSent(false), 3000);
               }}
               onClose={() => setChatOpen(false)}
             />
@@ -514,12 +536,13 @@ function ChatReviewBox({
           label="Formato"
           value={RATIO_LABEL[answers.aspectRatio ?? ""] ?? answers.aspectRatio ?? "Cuadrado"}
         />
-        <PreviewRow
-          label="Logotipo"
-          value={answers.logoKey === "Sin logotipo" ? "No tiene logotipo" : "Logotipo recibido"}
-        />
+        {answers.logoKey && answers.logoKey !== "Sin logotipo" ? (
+          <PreviewImageRow label="Logotipo" fileKey={answers.logoKey} />
+        ) : (
+          <PreviewRow label="Logotipo" value="No tiene logotipo" />
+        )}
         {answers.productPhotoKey ? (
-          <PreviewRow label="Foto del producto" value="Foto recibida" />
+          <PreviewImageRow label="Foto del producto" fileKey={answers.productPhotoKey} />
         ) : null}
       </dl>
 
@@ -1476,6 +1499,26 @@ function PreviewRow({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">{label}</dt>
       <dd className="mt-1 whitespace-pre-wrap text-sm text-wit-ink">{value}</dd>
+    </div>
+  );
+}
+
+// Same shape as PreviewRow, but for logoKey/productPhotoKey — an actual
+// thumbnail of what was uploaded reads a lot more like confirmation than
+// the word "recibido" ever did.
+function PreviewImageRow({ label, fileKey }: { label: string; fileKey: string }) {
+  const href = `/api/file?key=${encodeURIComponent(fileKey)}`;
+  return (
+    <div>
+      <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">{label}</dt>
+      <dd className="mt-1.5">
+        <img
+          src={href}
+          alt={label}
+          className="h-16 w-16 rounded-lg border border-wit-ink/10 object-cover"
+          loading="lazy"
+        />
+      </dd>
     </div>
   );
 }

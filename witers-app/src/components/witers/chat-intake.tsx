@@ -397,7 +397,15 @@ export function ChatIntakeFlow({
           type="text"
           aria-label="Tu respuesta"
           value={currentAnswer}
-          onChange={(e) => setCurrentAnswer(e.target.value)}
+          onChange={(e) => {
+            // Keep the ref the mic's onresult callback builds on top of in
+            // sync with manual edits too — otherwise, if the mic is still
+            // listening in the background while the client types by hand,
+            // the next speech event (even just background noise) overwrites
+            // whatever they just typed with stale dictation state.
+            answerRef.current = e.target.value;
+            setCurrentAnswer(e.target.value);
+          }}
           disabled={done}
           placeholder={done ? "" : "Escribe o presiona el micrófono..."}
           className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
