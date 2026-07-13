@@ -3,8 +3,8 @@ import { z } from "zod";
 
 import { resolveBrandProfile } from "../../lib/brand-profile.server";
 import { buildDesignPrompt } from "../../lib/design-prompt.server";
-import { generateDraftForRequest } from "../../lib/generate-draft.server";
 import { notifyStaffNewRequest } from "../../lib/mail.server";
+import { polishPromptWithAI } from "../../lib/polish-prompt.server";
 import { db, getMembership, getSessionUser, json } from "../../lib/witers-auth.server";
 
 const createSchema = z
@@ -146,12 +146,12 @@ export const Route = createFileRoute("/api/requests")({
           panelUrl: "https://witers.com/witer",
         });
 
-        // Generate a first AI draft right away so it's waiting in the staff
-        // panels for approval — never sent to the client automatically. A
-        // failure here (missing API key, OpenAI down, timeout) must never
-        // break request creation, which has already succeeded above.
+        // Run the locally-built prompt through a real ChatGPT completion so
+        // staff get something professionally worded (spelling fixed, phrasing
+        // tightened) waiting for them instead of the raw templated version —
+        // never blocks the response above if it's slow or fails.
         try {
-          const prompt = buildDesignPrompt({
+          const rawPrompt = buildDesignPrompt({
             companyName: brand.company_name,
             productName: parsed.data.productName?.trim() || null,
             pieceBrief: parsed.data.pieceBrief.trim(),
@@ -165,12 +165,17 @@ export const Route = createFileRoute("/api/requests")({
             hasLogo: Boolean(brand.logo_key),
             businessType: brand.business_type,
           });
-          const result = await generateDraftForRequest(id, prompt, parsed.data.aspectRatio);
-          if (!result.ok) {
-            console.info("[api/requests] auto draft generation failed", result.error);
+          const result = await polishPromptWithAI(rawPrompt);
+          if (result.ok) {
+            await db()
+              .prepare("UPDATE design_requests SET ai_prompt = ?2 WHERE id = ?1")
+              .bind(id, result.prompt)
+              .run();
+          } else {
+            console.info("[api/requests] prompt polish failed", result.error);
           }
         } catch (err) {
-          console.info("[api/requests] auto draft generation threw", err);
+          console.info("[api/requests] prompt polish threw", err);
         }
 
         return json({ ok: true, id });

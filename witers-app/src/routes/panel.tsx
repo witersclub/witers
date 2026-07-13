@@ -231,7 +231,12 @@ function Panel() {
   const brandProfile = brandProfileQuery.data?.profile ?? null;
 
   return (
-    <div className="wit-page min-h-dvh">
+    // min-h-svh (stable "small viewport height"), not min-h-dvh — dvh
+    // recalculates continuously as the on-screen keyboard's height shifts
+    // (e.g. the predictive-text bar changing as you type), which was
+    // forcing a layout reflow on close to every keystroke while answering
+    // the AI chat and reading as the whole page "jumping."
+    <div className="wit-page min-h-svh">
       {justSent ? (
         <div className="wit-rise fixed inset-x-0 top-5 z-50 flex justify-center px-5">
           <div className="flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(5,13,40,0.25)]">

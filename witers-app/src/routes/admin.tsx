@@ -57,6 +57,10 @@ type AdminRequest = {
   user_name: string;
   claimed_by_name: string | null;
   results_json: string | null;
+  // ChatGPT-polished version of the prompt below — spelling/wording
+  // cleaned up. Null until that background call finishes (or if it never
+  // ran/failed), in which case copyInfo() falls back to building it locally.
+  ai_prompt: string | null;
 };
 
 type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
@@ -626,34 +630,16 @@ function RequestCard({ row }: { row: AdminRequest }) {
       ? " El cliente adjuntó logo y/o foto de producto — descárgalos desde el panel y súbelos junto con este prompt si tu herramienta de IA lo permite."
       : "";
 
-    const prompt = `Creatividad publicitaria profesional de alta calidad. ${row.brief}${company}${pieceBrief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio. Usa ${ratio}.${reference}`;
+    const localPrompt = `Creatividad publicitaria profesional de alta calidad. ${row.brief}${company}${pieceBrief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio. Usa ${ratio}.${reference}`;
+    // Prefer the ChatGPT-polished version — falls back to the locally-built
+    // one only if that background call never finished or failed.
+    const prompt = row.ai_prompt ?? localPrompt;
 
     try {
       await navigator.clipboard.writeText(prompt);
       setMsg("Prompt copiado al portapapeles.");
     } catch {
       setMsg("No pudimos copiar. Selecciona el texto manualmente.");
-    }
-  }
-
-  async function generateDraft() {
-    setBusy("generate");
-    setMsg(null);
-    try {
-      const res = await fetch("/api/admin/generate", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ requestId: row.id }),
-      });
-      const data = (await res.json()) as { ok: boolean };
-      setMsg(
-        data.ok ? "Nuevo borrador generado." : "No pudimos generar la imagen. Intenta de nuevo.",
-      );
-      await refresh();
-    } catch {
-      setMsg("No pudimos generar la imagen. Intenta de nuevo.");
-    } finally {
-      setBusy(null);
     }
   }
 
@@ -758,18 +744,6 @@ function RequestCard({ row }: { row: AdminRequest }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={generateDraft}
-            className="rounded-full border border-wit-blue/30 bg-wit-blue/5 px-3 py-1.5 text-xs font-semibold text-wit-blue hover:border-wit-blue disabled:opacity-50"
-          >
-            {busy === "generate"
-              ? "Generando..."
-              : drafts.length > 0
-                ? "Regenerar con IA"
-                : "Generar con IA"}
-          </button>
           <button
             type="button"
             onClick={copyInfo}

@@ -39,6 +39,10 @@ type DesignerRequest = {
   claimed_by: string | null;
   claimed_by_name: string | null;
   results_json: string | null;
+  // ChatGPT-polished version of the prompt below — spelling/wording
+  // cleaned up. Null until that background call finishes (or if it never
+  // ran/failed), in which case copyInfo() falls back to building it locally.
+  ai_prompt: string | null;
 };
 
 const RATIO_PROMPT: Record<string, string> = {
@@ -467,27 +471,6 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
     }
   }
 
-  async function generateDraft() {
-    setBusy("generate");
-    setMsg(null);
-    try {
-      const res = await fetch("/api/admin/generate", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ requestId: row.id }),
-      });
-      const data = (await res.json()) as { ok: boolean };
-      setMsg(
-        data.ok ? "Nuevo borrador generado." : "No pudimos generar la imagen. Intenta de nuevo.",
-      );
-      await refresh();
-    } catch {
-      setMsg("No pudimos generar la imagen. Intenta de nuevo.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   async function approve() {
     setBusy("approve");
     setMsg(null);
@@ -564,7 +547,9 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
   }
 
   async function copyInfo() {
-    await copyText(buildBasePrompt(), "base");
+    // Prefer the ChatGPT-polished version — falls back to the locally-built
+    // one only if that background call never finished or failed.
+    await copyText(row.ai_prompt ?? buildBasePrompt(), "base");
   }
 
   async function copyRevisionPrompt(note: string, n: number) {
@@ -635,18 +620,6 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={generateDraft}
-            className="rounded-full border border-wit-blue/30 bg-wit-blue/5 px-3 py-1.5 text-xs font-semibold text-wit-blue hover:border-wit-blue disabled:opacity-50"
-          >
-            {busy === "generate"
-              ? "Generando..."
-              : drafts.length > 0
-                ? "Regenerar con IA"
-                : "Generar con IA"}
-          </button>
           <div className="relative">
             <button
               type="button"
