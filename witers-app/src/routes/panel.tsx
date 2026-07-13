@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { WitersLogo } from "../components/witers/brand";
+import { WitersLogo, WMark } from "../components/witers/brand";
 import { ChatIntakeFlow } from "../components/witers/chat-intake";
 import {
   AgeRangeMultiPicker,
@@ -147,7 +147,10 @@ function Panel() {
     if (autoOpenedRef.current) return;
     if (!requests.isFetched) return;
     autoOpenedRef.current = true;
-    if ((requests.data?.requests ?? []).length === 0) setChatOpen(true);
+    // Lands them on the "Habla con Wit" screen rather than opening the chat
+    // outright — a brand-new client's first look at the panel should still
+    // be the glowing tab + button moment, not skip straight past it.
+    if ((requests.data?.requests ?? []).length === 0) setTab("nueva");
   }, [requests.isFetched, requests.data]);
 
   function openChat() {
@@ -320,75 +323,88 @@ function Panel() {
           </div>
         ) : null}
 
-        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-b border-wit-ink/10 pb-0">
-          <div className="flex gap-2">
-            <PanelTab
-              active={!chatOpen && tab === "solicitudes"}
-              onClick={() => {
-                setChatOpen(false);
-                setTab("solicitudes");
-              }}
-              label="Mis solicitudes"
-              count={rows.length}
-            />
-            <PanelTab
-              active={!chatOpen && tab === "nueva"}
-              onClick={() => {
-                setChatOpen(false);
-                setTab("nueva");
-              }}
-              label="+ Nueva solicitud"
-            />
-          </div>
-          <button type="button" onClick={openChat} className="mb-2 shrink-0">
+        <div className="mt-10 flex flex-wrap items-center gap-3 border-b border-wit-ink/10 pb-0">
+          <PanelTab
+            active={tab === "solicitudes"}
+            onClick={() => setTab("solicitudes")}
+            label="Mis solicitudes"
+            count={rows.length}
+          />
+          <button
+            type="button"
+            onClick={() => setTab("nueva")}
+            className="relative -mb-px shrink-0 pb-3"
+          >
             <span className="wit-pending-glow inline-block" style={{ borderRadius: "9999px" }}>
               <span
-                className="wit-pending-glow-shield flex items-center gap-1.5 bg-white px-4 py-2 text-xs font-bold text-wit-blue"
+                className={`wit-pending-glow-shield flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold transition-colors ${
+                  tab === "nueva" ? "bg-wit-blue text-white" : "bg-white text-wit-blue"
+                }`}
                 style={{ borderRadius: "9999px" }}
               >
-                ✨ Chat IA
+                ✨ Hacer solicitud
               </span>
             </span>
           </button>
         </div>
 
         <div className="mt-8">
-          {chatOpen ? (
-            <AiChatRequestForm
-              key={chatKey}
-              disabled={!active || remaining <= 0}
-              brandProfile={brandProfile}
-              initialAnswers={chatKey === 0 ? (teaserAnswers ?? undefined) : undefined}
-              onCreated={() => {
-                void qc.invalidateQueries({ queryKey: ["requests"] });
-                void qc.invalidateQueries({ queryKey: ["me"] });
-                void qc.invalidateQueries({ queryKey: ["brand-profile"] });
-                setChatOpen(false);
-                setChatKey((k) => k + 1);
-                setTab("solicitudes");
-                setJustSent(true);
-                window.setTimeout(() => setJustSent(false), 3000);
-              }}
-              onClose={() => setChatOpen(false)}
-            />
-          ) : tab === "nueva" ? (
-            <NewRequestForm
-              disabled={!active || remaining <= 0}
-              previousLogoKey={previousLogoKey}
-              previousAnswers={previousAnswers}
-              brandProfile={brandProfile}
-              onCreated={() => {
-                void qc.invalidateQueries({ queryKey: ["requests"] });
-                void qc.invalidateQueries({ queryKey: ["me"] });
-                void qc.invalidateQueries({ queryKey: ["brand-profile"] });
-                setTab("solicitudes");
-              }}
-            />
+          {tab === "nueva" ? (
+            <HablaConWitScreen onStart={openChat} />
           ) : (
             <RequestList rows={rows} loading={requests.isLoading} onNew={() => setTab("nueva")} />
           )}
         </div>
       </main>
+
+      {chatOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-50 bg-white">
+              <AiChatRequestForm
+                key={chatKey}
+                disabled={!active || remaining <= 0}
+                brandProfile={brandProfile}
+                initialAnswers={chatKey === 0 ? (teaserAnswers ?? undefined) : undefined}
+                onCreated={() => {
+                  void qc.invalidateQueries({ queryKey: ["requests"] });
+                  void qc.invalidateQueries({ queryKey: ["me"] });
+                  void qc.invalidateQueries({ queryKey: ["brand-profile"] });
+                  setChatOpen(false);
+                  setChatKey((k) => k + 1);
+                  setTab("solicitudes");
+                  setJustSent(true);
+                  window.setTimeout(() => setJustSent(false), 3000);
+                }}
+                onClose={() => setChatOpen(false)}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+// The interstitial that opens when the "✨ Hacer solicitud" tab is
+// selected — a deliberate extra tap before the chat itself, so every
+// client (not just brand-new ones) sees this moment instead of only
+// stumbling into it once.
+function HablaConWitScreen({ onStart }: { onStart: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-8 rounded-3xl bg-wit-ice py-20 text-center">
+      <div className="wit-float">
+        <WMark size={44} />
+      </div>
+      <p className="max-w-xs text-base text-wit-gray">
+        Cuéntanos qué quieres crear hoy y armamos tu pieza juntos.
+      </p>
+      <button
+        type="button"
+        onClick={onStart}
+        className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
+      >
+        ✨ Habla con Wit ✨
+      </button>
     </div>
   );
 }
@@ -661,7 +677,7 @@ function AiChatRequestForm({
   }
 
   return (
-    <div className="wit-glass flex h-[min(700px,78vh)] flex-col overflow-hidden rounded-3xl px-5 pb-4 pt-2 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+    <div className="mx-auto flex h-full w-full max-w-3xl flex-col overflow-hidden px-5 pb-4 pt-4">
       {brandProfile ? (
         <p className="mb-2 shrink-0 rounded-xl bg-wit-blue/5 px-3 py-2 text-center text-xs font-medium text-wit-blue">
           Ya tenemos los datos de tu marca registrada — solo te preguntamos lo de esta pieza.

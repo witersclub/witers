@@ -16,6 +16,7 @@
   /* WITERS brand tokens */
   --color-wit-blue: #0047ff;
   --color-wit-blue-deep: #0034bd;
+  --color-wit-pink: #ff3fb0;
   --color-wit-navy: #050d28;
   --color-wit-navy-soft: #0b1740;
   --color-wit-ice: #f7f8fa;
@@ -227,6 +228,39 @@
 @keyframes wit-glow-spin {
   to {
     --wit-glow-angle: 360deg;
+  }
+}
+
+/* "Habla con Wit" — the button itself is an animated blue-to-pink
+   gradient that keeps drifting, plus a blurred halo of the same gradient
+   sitting behind it (the ::before), so it reads as lit from the inside
+   rather than just colored. */
+.wit-glow-button {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(120deg, var(--color-wit-blue), var(--color-wit-pink), var(--color-wit-blue));
+  background-size: 200% 200%;
+  animation: wit-glow-shift 4.5s ease-in-out infinite;
+}
+.wit-glow-button::before {
+  content: "";
+  position: absolute;
+  inset: -22px;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(120deg, var(--color-wit-blue), var(--color-wit-pink), var(--color-wit-blue));
+  background-size: 200% 200%;
+  filter: blur(28px);
+  opacity: 0.6;
+  animation: wit-glow-shift 4.5s ease-in-out infinite;
+}
+@keyframes wit-glow-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
   }
 }
 
