@@ -625,12 +625,11 @@ function RequestCard({ row }: { row: AdminRequest }) {
       : "";
     const colors = row.brand_colors ? ` Paleta de colores de marca: ${row.brand_colors}.` : "";
     const ratio = RATIO_PROMPT[row.aspect_ratio] ?? row.aspect_ratio;
-    const hasFiles = row.logo_key || row.product_photo_key || row.reference_key;
-    const reference = hasFiles
-      ? " El cliente adjuntó logo y/o foto de producto — descárgalos desde el panel y súbelos junto con este prompt si tu herramienta de IA lo permite."
-      : "";
-
-    const localPrompt = `Creatividad publicitaria profesional de alta calidad. ${row.brief}${company}${pieceBrief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio. Usa ${ratio}.${reference}`;
+    // No reference-download reminder baked in here on purpose — this text
+    // gets pasted straight into an image-generating AI, which can't act on
+    // a note addressed to the designer. The actual files are already
+    // visible with their own download links right below this button.
+    const localPrompt = `Creatividad publicitaria profesional de alta calidad. ${row.brief}${company}${pieceBrief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio. Usa ${ratio}.`;
     // Prefer the ChatGPT-polished version — falls back to the locally-built
     // one only if that background call never finished or failed.
     const prompt = row.ai_prompt ?? localPrompt;
