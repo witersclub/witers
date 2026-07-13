@@ -164,7 +164,6 @@ export function ChatIntakeFlow({
   const [menuField, setMenuField] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const answerRef = useRef("");
-  const silenceTimerRef = useRef<number | null>(null);
   const manualStopRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -235,7 +234,6 @@ export function ChatIntakeFlow({
   useEffect(() => {
     const killMic = () => {
       manualStopRef.current = true;
-      if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
       recognitionRef.current?.abort();
       recognitionRef.current = null;
     };
@@ -246,14 +244,9 @@ export function ChatIntakeFlow({
     };
   }, []);
 
-  // The mic session spans the whole conversation now (no stop-between-
-  // questions), so its callbacks are wired up once and must always see the
-  // latest state — refs kept in sync every render, read from inside those
-  // callbacks instead of stale closures.
-  const submitAnswerRef = useRef((_text: string) => {});
-  const stepIndexRef = useRef(stepIndex);
+  // recognition.onend (below) needs to know whether we're done without
+  // closing over a stale value — kept in sync every render.
   const doneRef = useRef(done);
-  stepIndexRef.current = stepIndex;
   doneRef.current = done;
 
   function submitAnswer(rawText: string) {
@@ -277,7 +270,6 @@ export function ChatIntakeFlow({
       if (nextIndex >= questions.length) onComplete(nextAnswers);
     }, 550);
   }
-  submitAnswerRef.current = submitAnswer;
 
   function startEditing(field: string, currentValue: string) {
     if (listening) stopListening();
@@ -311,16 +303,13 @@ export function ChatIntakeFlow({
     if (done) onComplete(nextAnswers);
   }
 
-  // Stops the hands-free session outright — used when the client presses
-  // the mic to cut it off, types an answer instead, or skips a question.
-  // Does NOT fire on the silence-triggered auto-advance between questions,
-  // which is the whole point: the mic stays open across the conversation.
+  // Stops the mic outright — used when the client presses the mic to pause
+  // dictation, submits an answer, or leaves the page. Never submits by
+  // itself: the transcript stays in currentAnswer until the client presses
+  // Enviar, so a pause mid-thought never gets cut off and attributed to the
+  // wrong question.
   function stopListening() {
     manualStopRef.current = true;
-    if (silenceTimerRef.current) {
-      window.clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
     if (recognitionRef.current) {
       const rec = recognitionRef.current;
       rec.onend = null;
@@ -330,22 +319,6 @@ export function ChatIntakeFlow({
       rec.abort();
     }
     setListening(false);
-  }
-
-  // ~0.8s of silence after the last thing heard = "done answering this
-  // one," so we submit whatever was said and move to the next question
-  // without the client ever touching the mic again.
-  function scheduleSilenceCheck() {
-    if (silenceTimerRef.current) window.clearTimeout(silenceTimerRef.current);
-    silenceTimerRef.current = window.setTimeout(() => {
-      const text = answerRef.current.trim();
-      if (!text) return;
-      const wasLast = stepIndexRef.current >= questions.length - 1;
-      answerRef.current = "";
-      setCurrentAnswer("");
-      submitAnswerRef.current(text);
-      if (wasLast) stopListening();
-    }, 800);
   }
 
   function startListening() {
@@ -372,7 +345,6 @@ export function ChatIntakeFlow({
       }
       if (finalChunk) answerRef.current = (answerRef.current + " " + finalChunk).trim();
       setCurrentAnswer((answerRef.current + " " + interim).trim());
-      scheduleSilenceCheck();
     };
     recognition.onerror = (event) => {
       if (event.error === "no-speech") return;
@@ -394,16 +366,13 @@ export function ChatIntakeFlow({
     setListening(true);
   }
 
+  // Toggling the mic only starts/pauses dictation — it never submits. The
+  // client decides when an answer is finished by pressing Enviar, which
+  // stays available (alongside the mic) for as long as there's text.
   function toggleMic() {
     setError(null);
     if (listening) {
-      const text = answerRef.current.trim();
       stopListening();
-      if (text) {
-        answerRef.current = "";
-        setCurrentAnswer("");
-        submitAnswer(text);
-      }
       return;
     }
     manualStopRef.current = false;
@@ -411,7 +380,8 @@ export function ChatIntakeFlow({
     startListening();
   }
 
-  const showSend = !listening && currentAnswer.trim().length > 0;
+  const showSend = currentAnswer.trim().length > 0;
+  const showMicToggle = !showSend || listening;
 
   const composer = (
     <>
@@ -447,56 +417,63 @@ export function ChatIntakeFlow({
               <path d="M5 13l4 4L19 7" />
             </svg>
           </div>
-        ) : showSend ? (
-          <button
-            type="submit"
-            aria-label="Enviar respuesta"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wit-blue text-white transition-all hover:bg-wit-blue-deep"
-          >
-            <svg
-              width="17"
-              height="17"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M22 2 11 13" />
-              <path d="M22 2 15 22 11 13 2 9 22 2Z" />
-            </svg>
-          </button>
         ) : (
-          <button
-            type="button"
-            onClick={toggleMic}
-            aria-label={listening ? "Detener micrófono" : "Activar micrófono"}
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all ${
-              listening
-                ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_6px_rgba(239,68,68,0.15)]"
-                : "bg-wit-blue text-white hover:bg-wit-blue-deep"
-            }`}
-          >
-            <svg
-              width="17"
-              height="17"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
-            </svg>
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {showMicToggle ? (
+              <button
+                type="button"
+                onClick={toggleMic}
+                aria-label={listening ? "Pausar micrófono" : "Activar micrófono"}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all ${
+                  listening
+                    ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_6px_rgba(239,68,68,0.15)]"
+                    : "bg-wit-blue text-white hover:bg-wit-blue-deep"
+                }`}
+              >
+                <svg
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
+                </svg>
+              </button>
+            ) : null}
+            {showSend ? (
+              <button
+                type="submit"
+                aria-label="Enviar respuesta"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wit-blue text-white transition-all hover:bg-wit-blue-deep"
+              >
+                <svg
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M22 2 11 13" />
+                  <path d="M22 2 15 22 11 13 2 9 22 2Z" />
+                </svg>
+              </button>
+            ) : null}
+          </div>
         )}
       </form>
       {listening ? (
         <p className="mt-1.5 text-center text-[11px] text-wit-gray">
-          Te escucho — sigue hablando, yo voy avanzando
+          {showSend
+            ? "Te escucho — sigue hablando o pulsa enviar cuando termines"
+            : "Te escucho — sigue hablando"}
         </p>
       ) : null}
     </>
