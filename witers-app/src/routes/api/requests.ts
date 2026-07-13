@@ -34,6 +34,40 @@ const createSchema = z
     path: ["logoKey"],
   });
 
+// Turns the first validation failure into a message a client can actually
+// act on — "revisa tus respuestas" alone doesn't say which answer or why,
+// which is exactly what silently swallowing this used to do.
+const FIELD_LABELS: Record<string, string> = {
+  title: "El título",
+  companyName: "El nombre de la empresa",
+  productName: "El nombre del producto",
+  pieceBrief: "La descripción de la pieza",
+  style: "El estilo",
+  audience: "El público objetivo",
+  ageRange: "El rango de edad",
+  requiredText: "El mensaje o dato extra",
+  brandColors: "Los colores de marca",
+  promoPrice: "El precio o promoción",
+  logoKey: "El logotipo",
+  aspectRatio: "El formato",
+};
+
+function describeValidationError(error: z.ZodError): string {
+  const issue = error.issues[0];
+  if (!issue) return "Revisa tus respuestas e intenta de nuevo.";
+  const label = FIELD_LABELS[String(issue.path[0] ?? "")] ?? "Una de tus respuestas";
+  // Phrased without a gendered adjective ("corto/a", "largo/a") on purpose —
+  // FIELD_LABELS mixes masculine and feminine nouns, and this reads fine
+  // either way instead of needing a per-field grammatical gender table.
+  if (issue.code === "too_big") {
+    return `${label} supera el máximo de ${issue.maximum} caracteres.`;
+  }
+  if (issue.code === "too_small") {
+    return `${label} no llega al mínimo de ${issue.minimum} caracteres.`;
+  }
+  return `${label}: ${issue.message}`;
+}
+
 export const Route = createFileRoute("/api/requests")({
   server: {
     handlers: {
@@ -84,7 +118,10 @@ export const Route = createFileRoute("/api/requests")({
 
         const parsed = createSchema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) {
-          return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
+          return json(
+            { ok: false, error: "datos_invalidos", message: describeValidationError(parsed.error) },
+            { status: 400 },
+          );
         }
 
         // One membership serves one business: company name, brand colors,

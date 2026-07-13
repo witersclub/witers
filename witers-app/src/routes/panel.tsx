@@ -660,14 +660,14 @@ function AiChatRequestForm({
           brandColors: completedAnswers.colors || undefined,
         }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string };
+      const data = (await res.json()) as { ok: boolean; error?: string; message?: string };
       if (!data.ok) {
         setSendError(
           data.error === "sin_saldo"
             ? "Ya usaste todas tus solicitudes disponibles."
             : data.error === "sin_membresia"
               ? "Necesitas una membresía activa para enviar solicitudes."
-              : "Revisa tus respuestas e intenta de nuevo.",
+              : (data.message ?? "Revisa tus respuestas e intenta de nuevo."),
         );
         return;
       }
