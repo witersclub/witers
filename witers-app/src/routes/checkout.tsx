@@ -9,7 +9,7 @@ export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [
       { title: "Activa tu membresía. WITERS" },
-      { name: "description", content: "Activa tu membresía WITERS por $2,999 MXN al mes." },
+      { name: "description", content: "Activa tu membresía WITERS por $5,999 MXN al mes." },
     ],
   }),
   component: Checkout,
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/checkout")({
 
 const BENEFICIOS = [
   "Acceso completo a la comunidad",
-  "10 solicitudes de diseño con IA",
+  "20 solicitudes de diseño con IA",
   "Panel personal de seguimiento",
   "Soporte y estrategia de marca",
 ];
@@ -126,12 +126,22 @@ function Checkout() {
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/70">
               Membresía WITERS
             </p>
-            <p className="mt-3 font-wit-mono text-5xl font-semibold">$2,999</p>
+            <p className="mt-3 font-wit-mono text-5xl font-semibold">$5,999</p>
             <p className="mt-1 text-sm text-white/75">MXN al mes</p>
             <ul className="mt-6 space-y-3">
               {BENEFICIOS.map((b) => (
                 <li key={b} className="flex items-start gap-2.5 text-sm text-white/90">
-                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="#7da2ff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="#7da2ff"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="mt-0.5 shrink-0"
+                  >
                     <path d="M3.5 10.5 8 15l8.5-9.5" />
                   </svg>
                   {b}
@@ -153,7 +163,10 @@ function Checkout() {
               </Link>
             </div>
           ) : (
-            <form onSubmit={pay} className="rounded-3xl bg-white p-8 shadow-[0_20px_60px_rgba(5,13,40,0.08)]">
+            <form
+              onSubmit={pay}
+              className="rounded-3xl bg-white p-8 shadow-[0_20px_60px_rgba(5,13,40,0.08)]"
+            >
               <h2 className="text-xl font-bold text-wit-ink">Datos de pago</h2>
               <p className="mt-1 text-xs text-wit-gray">
                 Pago seguro con tarjeta de crédito o débito.
@@ -161,7 +174,10 @@ function Checkout() {
 
               <div className="mt-6 space-y-4">
                 <div>
-                  <label htmlFor="cname" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+                  <label
+                    htmlFor="cname"
+                    className="mb-1.5 block text-sm font-semibold text-wit-ink"
+                  >
                     Nombre en la tarjeta
                   </label>
                   <input
@@ -189,7 +205,10 @@ function Checkout() {
                     onChange={(e) =>
                       setCard({
                         ...card,
-                        number: e.target.value.replace(/[^\d]/g, "").replace(/(\d{4})(?=\d)/g, "$1 ").slice(0, 19),
+                        number: e.target.value
+                          .replace(/[^\d]/g, "")
+                          .replace(/(\d{4})(?=\d)/g, "$1 ")
+                          .slice(0, 19),
                       })
                     }
                     className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 font-wit-mono text-base outline-none focus:border-wit-blue"
@@ -198,7 +217,10 @@ function Checkout() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="cexp" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+                    <label
+                      htmlFor="cexp"
+                      className="mb-1.5 block text-sm font-semibold text-wit-ink"
+                    >
                       Vencimiento
                     </label>
                     <input
@@ -209,7 +231,10 @@ function Checkout() {
                       onChange={(e) =>
                         setCard({
                           ...card,
-                          exp: e.target.value.replace(/[^\d]/g, "").replace(/(\d{2})(?=\d)/, "$1/").slice(0, 5),
+                          exp: e.target.value
+                            .replace(/[^\d]/g, "")
+                            .replace(/(\d{2})(?=\d)/, "$1/")
+                            .slice(0, 5),
                         })
                       }
                       className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 font-wit-mono text-base outline-none focus:border-wit-blue"
@@ -217,7 +242,10 @@ function Checkout() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="ccvc" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+                    <label
+                      htmlFor="ccvc"
+                      className="mb-1.5 block text-sm font-semibold text-wit-ink"
+                    >
                       CVC
                     </label>
                     <input
@@ -225,7 +253,9 @@ function Checkout() {
                       type="password"
                       required
                       value={card.cvc}
-                      onChange={(e) => setCard({ ...card, cvc: e.target.value.replace(/[^\d]/g, "").slice(0, 4) })}
+                      onChange={(e) =>
+                        setCard({ ...card, cvc: e.target.value.replace(/[^\d]/g, "").slice(0, 4) })
+                      }
                       className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 font-wit-mono text-base outline-none focus:border-wit-blue"
                       placeholder="123"
                     />
@@ -242,7 +272,7 @@ function Checkout() {
                 disabled={loading}
                 className="mt-6 w-full rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
               >
-                {loading ? "Procesando pago..." : "Pagar $2,999 MXN"}
+                {loading ? "Procesando pago..." : "Pagar $5,999 MXN"}
               </button>
               <p className="mt-3 text-center text-[11px] leading-relaxed text-wit-gray">
                 Entorno de pago en modo de activación directa. La pasarela definitiva (Stripe o
@@ -255,4 +285,3 @@ function Checkout() {
     </div>
   );
 }
-

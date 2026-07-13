@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
-import { AspectRatioPicker, ColorsPicker, PieceTypePicker, StylePicker } from "../components/witers/lab-pickers";
+import {
+  AspectRatioPicker,
+  ColorsPicker,
+  PieceTypePicker,
+  StylePicker,
+} from "../components/witers/lab-pickers";
 import { saveTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe } from "../lib/witers-client";
 
@@ -128,8 +133,8 @@ function Hero() {
           .
         </h1>
         <p className="wit-rise wit-rise-d2 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-wit-gray">
-          Estrategia, diseño y tecnología para marcas que quieren dejar huella. Únete a la comunidad y
-          empieza a crear hoy.
+          Estrategia, diseño y tecnología para marcas que quieren dejar huella. Únete a la comunidad
+          y empieza a crear hoy.
         </p>
         <div className="wit-rise wit-rise-d2 mt-9 flex flex-col items-center gap-5">
           <Link
@@ -137,7 +142,17 @@ function Hero() {
             className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-8 py-4 text-base font-bold uppercase tracking-[0.06em] text-white shadow-[0_18px_40px_rgba(0,71,255,0.38)] transition-all duration-200 hover:shadow-[0_22px_48px_rgba(0,71,255,0.48)] active:scale-[0.98]"
           >
             Unirme ahora
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1"
+            >
               <path d="M3 13 13 3M13 3H6M13 3v7" />
             </svg>
           </Link>
@@ -252,9 +267,12 @@ function Testimonios() {
   return (
     <section className="relative overflow-hidden bg-white py-20 md:py-28">
       <div className="px-5 md:px-[110px]">
-        <p className="text-center text-sm font-bold uppercase tracking-[0.3em] text-wit-blue">Resultados reales</p>
+        <p className="text-center text-sm font-bold uppercase tracking-[0.3em] text-wit-blue">
+          Resultados reales
+        </p>
         <h2 className="mt-2 text-center text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
-          Lo que dicen quienes ya <span className="wit-underline italic text-wit-blue">confiaron en nosotros</span>.
+          Lo que dicen quienes ya{" "}
+          <span className="wit-underline italic text-wit-blue">confiaron en nosotros</span>.
         </h2>
       </div>
 
@@ -283,7 +301,9 @@ function Testimonios() {
                   </span>
                   <p className="text-xs font-bold text-wit-ink">
                     {r.first_name}
-                    {r.company_name ? <span className="font-normal text-wit-gray"> — {r.company_name}</span> : null}
+                    {r.company_name ? (
+                      <span className="font-normal text-wit-gray"> — {r.company_name}</span>
+                    ) : null}
                   </p>
                 </div>
               </div>
@@ -459,7 +479,17 @@ function CtaFinal() {
           className="group inline-flex shrink-0 items-center gap-2.5 rounded-full border border-wit-ink/15 bg-white px-7 py-3.5 text-sm font-bold uppercase tracking-[0.08em] text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.08)] transition-all duration-200 hover:bg-wit-ink hover:text-white active:scale-[0.98]"
         >
           Hablemos de tu proyecto
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1"
+          >
             <path d="M3 13 13 3M13 3H6M13 3v7" />
           </svg>
         </Link>
@@ -470,13 +500,13 @@ function CtaFinal() {
 
 /* ---------------- 9. MEMBRESÍA ---------------- */
 
-const PRECIO_MENSUAL = 2999;
-const PRECIO_ANUAL = 30000; // facturado una vez al año
+const PRECIO_MENSUAL = 5999;
+const PRECIO_ANUAL = 50000; // facturado una vez al año
 
 const BENEFICIOS = [
   "Acceso completo a la comunidad WITERS",
   "Creatividades publicitarias generadas con inteligencia artificial",
-  "10 solicitudes de diseño incluidas en tu membresía",
+  "20 solicitudes de diseño incluidas en tu membresía",
   "Panel personal para dar seguimiento a cada petición",
   "Resultados en alta resolución, listos para tus campañas",
   "Soporte y acompañamiento de estrategia de marca",
@@ -602,11 +632,11 @@ function Membresia() {
 const FAQS = [
   {
     q: "¿Qué incluye la membresía?",
-    a: "Acceso a la comunidad WITERS y a la plataforma de creatividades con IA: 10 solicitudes de diseño, panel personal de seguimiento, resultados descargables en alta resolución y acompañamiento de estrategia de marca.",
+    a: "Acceso a la comunidad WITERS y a la plataforma de creatividades con IA: 20 solicitudes de diseño, panel personal de seguimiento, resultados descargables en alta resolución y acompañamiento de estrategia de marca.",
   },
   {
     q: "¿Cómo se paga?",
-    a: "Con tarjeta de crédito o débito desde la propia plataforma. Puedes elegir el plan mensual de $2,999 MXN al mes, o el plan anual de $30,000 MXN al año (equivalente a $2,500 al mes). Tu cuenta se activa de inmediato. Pronto también aceptaremos Mercado Pago.",
+    a: "Con tarjeta de crédito o débito desde la propia plataforma. Puedes elegir el plan mensual de $5,999 MXN al mes, o el plan anual de $50,000 MXN al año (equivalente a $4,167 al mes). Tu cuenta se activa de inmediato. Pronto también aceptaremos Mercado Pago.",
   },
   {
     q: "¿Cómo uso la plataforma?",
@@ -666,4 +696,3 @@ function Faq() {
     </section>
   );
 }
-

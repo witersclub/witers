@@ -6,8 +6,8 @@ import { db, json, requireAdminUser } from "../../../lib/witers-auth.server";
 // Mirrors the sandbox checkout's activation (api/checkout.ts) — same plan,
 // price, and quota — for clients who paid outside the app (bank transfer,
 // in person, etc.) and need an admin to flip their membership on by hand.
-const PRICE_MXN = 2999;
-const QUOTA = 10;
+const PRICE_MXN = 5999;
+const QUOTA = 20;
 
 const schema = z.object({
   userId: z.string().uuid(),

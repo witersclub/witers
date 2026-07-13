@@ -267,7 +267,7 @@ function Panel() {
               </p>
               <p className="font-wit-mono text-3xl font-semibold text-wit-ink">
                 {active ? remaining : 0}
-                <span className="text-base text-wit-gray">/{membership?.requests_quota ?? 10}</span>
+                <span className="text-base text-wit-gray">/{membership?.requests_quota ?? 20}</span>
               </p>
             </div>
             <span
@@ -283,7 +283,7 @@ function Panel() {
             <div>
               <p className="text-xl font-bold">Activa tu membresía para empezar a crear.</p>
               <p className="mt-1 text-sm text-white/70">
-                $2,999 MXN al mes. 10 solicitudes de diseño con IA incluidas.
+                $5,999 MXN al mes. 20 solicitudes de diseño con IA incluidas.
               </p>
             </div>
             <Link
@@ -358,11 +358,7 @@ function Panel() {
               }}
             />
           ) : (
-            <RequestList
-              rows={rows}
-              loading={requests.isLoading}
-              onNew={() => setTab("nueva")}
-            />
+            <RequestList rows={rows} loading={requests.isLoading} onNew={() => setTab("nueva")} />
           )}
         </div>
       </main>
@@ -386,7 +382,9 @@ function PanelTab({
       type="button"
       onClick={onClick}
       className={`relative -mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-bold transition-colors ${
-        active ? "border-wit-blue text-wit-blue" : "border-transparent text-wit-gray hover:text-wit-ink"
+        active
+          ? "border-wit-blue text-wit-blue"
+          : "border-transparent text-wit-gray hover:text-wit-ink"
       }`}
     >
       {label}
@@ -421,17 +419,33 @@ const ALL_CHAT_QUESTIONS: { field: string; text: string; required: boolean }[] =
   { field: "style", text: "¿Qué estilo visual te gustaría para tu pieza?", required: true },
   { field: "businessType", text: "¿En qué categoría cae tu negocio?", required: true },
   { field: "pieceBrief", text: "¿Qué quieres que muestre esta pieza en concreto?", required: true },
-  { field: "title", text: "Si le pusieras un título corto a esta pieza, ¿cuál sería?", required: true },
+  {
+    field: "title",
+    text: "Si le pusieras un título corto a esta pieza, ¿cuál sería?",
+    required: true,
+  },
   { field: "audience", text: "¿A quién quieres llegarle con esta pieza?", required: true },
-  { field: "ageRanges", text: "¿En qué rango de edad está tu público? Elige uno o varios.", required: false },
+  {
+    field: "ageRanges",
+    text: "¿En qué rango de edad está tu público? Elige uno o varios.",
+    required: false,
+  },
   { field: "logoKey", text: "Sube tu logotipo.", required: true },
-  { field: "productPhotoKey", text: "¿Tienes una foto del producto que debamos usar?", required: false },
+  {
+    field: "productPhotoKey",
+    text: "¿Tienes una foto del producto que debamos usar?",
+    required: false,
+  },
   {
     field: "promoPrice",
     text: "¿Hay algún precio o descuento que quieras destacar? Si no aplica, dime que no.",
     required: false,
   },
-  { field: "requiredText", text: "¿Hay algún texto o dato que deba aparecer sí o sí en la pieza?", required: false },
+  {
+    field: "requiredText",
+    text: "¿Hay algún texto o dato que deba aparecer sí o sí en la pieza?",
+    required: false,
+  },
 ];
 
 // Once a member has a locked brand profile, company/colors/category never
@@ -474,10 +488,16 @@ function ChatReviewBox({
         <PreviewRow label="Qué quieres que salga en esta pieza" value={answers.pieceBrief ?? ""} />
         {answers.audience ? <PreviewRow label="Público objetivo" value={answers.audience} /> : null}
         {answers.ageRanges ? <PreviewRow label="Rango de edad" value={answers.ageRanges} /> : null}
-        {answers.promoPrice ? <PreviewRow label="Precio o descuento" value={answers.promoPrice} /> : null}
-        {answers.requiredText ? <PreviewRow label="Mensaje o dato extra" value={answers.requiredText} /> : null}
+        {answers.promoPrice ? (
+          <PreviewRow label="Precio o descuento" value={answers.promoPrice} />
+        ) : null}
+        {answers.requiredText ? (
+          <PreviewRow label="Mensaje o dato extra" value={answers.requiredText} />
+        ) : null}
         <div>
-          <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">Colores de marca</dt>
+          <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+            Colores de marca
+          </dt>
           <dd className="mt-1.5 flex gap-2">
             {colorList.map((c) => (
               <span
@@ -498,10 +518,14 @@ function ChatReviewBox({
           label="Logotipo"
           value={answers.logoKey === "Sin logotipo" ? "No tiene logotipo" : "Logotipo recibido"}
         />
-        {answers.productPhotoKey ? <PreviewRow label="Foto del producto" value="Foto recibida" /> : null}
+        {answers.productPhotoKey ? (
+          <PreviewRow label="Foto del producto" value="Foto recibida" />
+        ) : null}
       </dl>
 
-      {sendError ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{sendError}</p> : null}
+      {sendError ? (
+        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{sendError}</p>
+      ) : null}
 
       <button
         type="button"
@@ -657,7 +681,13 @@ function AiChatRequestForm({
 
 /* ---------- new request form ---------- */
 
-const STYLE_CHIPS = ["Minimalista", "Premium / Elegante", "Colorido", "Corporativo", "Divertido / Bold"];
+const STYLE_CHIPS = [
+  "Minimalista",
+  "Premium / Elegante",
+  "Colorido",
+  "Corporativo",
+  "Divertido / Bold",
+];
 const AGE_CHIPS = ["18-24", "25-34", "35-44", "45-54", "55+"];
 const RATIO_LABEL: Record<string, string> = {
   "1:1": "Cuadrado",
@@ -748,7 +778,11 @@ function NewRequestForm({
   // form's state to match instead of leaving the (disabled) fields empty.
   useEffect(() => {
     if (!brandProfile) return;
-    setForm((f) => (f.companyName === brandProfile.company_name ? f : { ...f, companyName: brandProfile.company_name }));
+    setForm((f) =>
+      f.companyName === brandProfile.company_name
+        ? f
+        : { ...f, companyName: brandProfile.company_name },
+    );
     if (brandProfile.brand_colors) {
       const locked = brandProfile.brand_colors
         .split(",")
@@ -761,8 +795,7 @@ function NewRequestForm({
   function suggestionHandlers(key: keyof PreviousAnswers) {
     return {
       onFocus: () => setActiveSuggestion(key),
-      onBlur: () =>
-        setTimeout(() => setActiveSuggestion((cur) => (cur === key ? null : cur)), 150),
+      onBlur: () => setTimeout(() => setActiveSuggestion((cur) => (cur === key ? null : cur)), 150),
     };
   }
 
@@ -907,18 +940,27 @@ function NewRequestForm({
       <section className="wit-glass h-fit rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
         <h2 className="text-xl font-bold text-wit-ink">Revisa tu solicitud</h2>
         <p className="mt-1 text-sm text-wit-gray">
-          Confirma que todo esté correcto antes de enviarla — usa una de tus solicitudes disponibles.
+          Confirma que todo esté correcto antes de enviarla — usa una de tus solicitudes
+          disponibles.
         </p>
 
         <dl className="mt-6 space-y-4">
           <PreviewRow label="Título" value={form.title} />
           <PreviewRow label="Nombre comercial / empresa" value={form.companyName} />
-          {form.productName ? <PreviewRow label="Nombre del producto" value={form.productName} /> : null}
+          {form.productName ? (
+            <PreviewRow label="Nombre del producto" value={form.productName} />
+          ) : null}
           <PreviewRow label="Qué quieres que salga en esta pieza" value={form.pieceBrief} />
           {form.audience ? <PreviewRow label="Público objetivo" value={form.audience} /> : null}
-          {ageRanges.length ? <PreviewRow label="Rango de edad" value={ageRanges.join(", ")} /> : null}
-          {form.promoPrice ? <PreviewRow label="Precio o descuento" value={form.promoPrice} /> : null}
-          {form.requiredText ? <PreviewRow label="Mensaje o dato extra" value={form.requiredText} /> : null}
+          {ageRanges.length ? (
+            <PreviewRow label="Rango de edad" value={ageRanges.join(", ")} />
+          ) : null}
+          {form.promoPrice ? (
+            <PreviewRow label="Precio o descuento" value={form.promoPrice} />
+          ) : null}
+          {form.requiredText ? (
+            <PreviewRow label="Mensaje o dato extra" value={form.requiredText} />
+          ) : null}
           <div>
             <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
               Colores de marca
@@ -948,10 +990,14 @@ function NewRequestForm({
                     : (logoFile?.name ?? "")
             }
           />
-          {productPhotoFile ? <PreviewRow label="Foto del producto" value={productPhotoFile.name} /> : null}
+          {productPhotoFile ? (
+            <PreviewRow label="Foto del producto" value={productPhotoFile.name} />
+          ) : null}
         </dl>
 
-        {error ? <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p> : null}
+        {error ? (
+          <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
+        ) : null}
 
         <div className="mt-6 flex gap-3">
           <button
@@ -1098,12 +1144,16 @@ function NewRequestForm({
             placeholder="Ej. mujeres emprendedoras, dueños de restaurantes..."
           />
           {activeSuggestion === "audience" && previousAnswers?.audience ? (
-            <FieldSuggestion text={previousAnswers.audience} onPick={() => pickSuggestion("audience")} />
+            <FieldSuggestion
+              text={previousAnswers.audience}
+              onPick={() => pickSuggestion("audience")}
+            />
           ) : null}
         </div>
         <div>
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
-            Rango de edad <span className="font-normal text-wit-gray">(opcional, elige uno o varios)</span>
+            Rango de edad{" "}
+            <span className="font-normal text-wit-gray">(opcional, elige uno o varios)</span>
           </p>
           <div className="flex flex-wrap gap-2">
             {AGE_CHIPS.map((a) => (
@@ -1171,7 +1221,9 @@ function NewRequestForm({
         <div>
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
             Colores de marca{" "}
-            {brandProfile ? null : <span className="font-normal text-wit-gray">(hasta 3, opcional)</span>}
+            {brandProfile ? null : (
+              <span className="font-normal text-wit-gray">(hasta 3, opcional)</span>
+            )}
           </p>
           {brandProfile ? (
             <div className="flex flex-wrap items-center gap-3">
@@ -1188,7 +1240,10 @@ function NewRequestForm({
           ) : (
             <div className="flex flex-wrap items-center gap-3">
               {colors.map((c, i) => (
-                <div key={i} className="relative flex items-center gap-1.5 rounded-xl border border-wit-ink/15 py-1 pl-1 pr-2">
+                <div
+                  key={i}
+                  className="relative flex items-center gap-1.5 rounded-xl border border-wit-ink/15 py-1 pl-1 pr-2"
+                >
                   <input
                     type="color"
                     value={/^#[0-9A-Fa-f]{6}$/.test(c) ? c : "#000000"}
@@ -1263,7 +1318,10 @@ function NewRequestForm({
               placeholder="U otro estilo en tus palabras..."
             />
             {activeSuggestion === "style" && previousAnswers?.style ? (
-              <FieldSuggestion text={previousAnswers.style} onPick={() => pickSuggestion("style")} />
+              <FieldSuggestion
+                text={previousAnswers.style}
+                onPick={() => pickSuggestion("style")}
+              />
             ) : null}
           </div>
         </div>
@@ -1321,7 +1379,10 @@ function NewRequestForm({
           )}
         </div>
         <div>
-          <label htmlFor="rproductphoto" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+          <label
+            htmlFor="rproductphoto"
+            className="mb-1.5 block text-sm font-semibold text-wit-ink"
+          >
             Foto del producto <span className="font-normal text-wit-gray">(opcional)</span>
           </label>
           <input
@@ -1348,11 +1409,7 @@ function NewRequestForm({
                 }`}
               >
                 <span className="flex h-7 w-7 items-center justify-center">
-                  <RatioSwatch
-                    w={r.w}
-                    h={r.h}
-                    active={form.aspectRatio === r.value}
-                  />
+                  <RatioSwatch w={r.w} h={r.h} active={form.aspectRatio === r.value} />
                 </span>
                 <span
                   className={`font-wit-mono text-xs font-bold ${
@@ -1366,7 +1423,9 @@ function NewRequestForm({
             ))}
           </div>
         </div>
-        {error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p> : null}
+        {error ? (
+          <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
+        ) : null}
         {okMsg ? (
           <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{okMsg}</p>
         ) : null}
@@ -1388,7 +1447,15 @@ function NewRequestForm({
   );
 }
 
-function ChipButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function ChipButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
@@ -1538,7 +1605,9 @@ function RequestEntry({ row: r }: { row: RequestRow }) {
           })}
         </p>
       </div>
-      <span className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
+      <span
+        className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}
+      >
         {r.status === "en_proceso" ? <Spinner cls="border-amber-600" /> : null}
         {st.label}
       </span>
@@ -1677,7 +1746,9 @@ function HistoryCard({
     <article className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base font-bold text-wit-ink">{r.title}</h3>
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}
+        >
           {r.status === "en_proceso" ? <Spinner cls="border-amber-600" /> : null}
           {st.label}
         </span>
@@ -1695,7 +1766,10 @@ function HistoryCard({
         {steps.map((s, i) => {
           const isLast = i === steps.length - 1;
           return (
-            <div key={s.label} className="flex items-center gap-3 rounded-xl bg-wit-ice/60 px-4 py-2.5">
+            <div
+              key={s.label}
+              className="flex items-center gap-3 rounded-xl bg-wit-ice/60 px-4 py-2.5"
+            >
               {isLast && r.status === "en_proceso" ? (
                 <Spinner />
               ) : isLast && r.status === "rechazada" ? (
@@ -1789,7 +1863,9 @@ function HistoryCard({
                 onClick={() => setLightbox({ src: href, download: downloadHref })}
                 className="group relative block overflow-hidden rounded-xl border border-wit-ink/10"
               >
-                <span className="block transition-transform duration-300 group-hover:scale-105">{img}</span>
+                <span className="block transition-transform duration-300 group-hover:scale-105">
+                  {img}
+                </span>
                 <span className="absolute inset-x-0 bottom-0 bg-wit-navy/80 px-2 py-1.5 text-center text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
                   {r.status === "completada" ? "Ver y descargar" : "Ver imagen"}
                 </span>
@@ -1814,7 +1890,8 @@ function HistoryCard({
         showRevisionForm ? (
           <div className="mt-4 rounded-xl bg-wit-ice p-4">
             <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-              Qué quieres que ajustemos ({revisionsLeft} {revisionsLeft === 1 ? "cambio disponible" : "cambios disponibles"})
+              Qué quieres que ajustemos ({revisionsLeft}{" "}
+              {revisionsLeft === 1 ? "cambio disponible" : "cambios disponibles"})
             </label>
             <textarea
               rows={3}
@@ -1863,7 +1940,8 @@ function HistoryCard({
                 }}
                 className="rounded-full border border-wit-ink/15 px-4 py-2 text-sm font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
               >
-                Solicitar cambio ({revisionsLeft} {revisionsLeft === 1 ? "disponible" : "disponibles"})
+                Solicitar cambio ({revisionsLeft}{" "}
+                {revisionsLeft === 1 ? "disponible" : "disponibles"})
               </button>
             ) : null}
             {msg ? <p className="w-full text-sm text-red-600">{msg}</p> : null}
@@ -1908,7 +1986,10 @@ function ImageLightbox({
       className="fixed inset-0 z-50 flex items-center justify-center bg-wit-navy/90 p-5"
       onClick={onClose}
     >
-      <div className="flex max-h-full max-w-3xl flex-col items-center" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex max-h-full max-w-3xl flex-col items-center"
+        onClick={(e) => e.stopPropagation()}
+      >
         <img
           src={src}
           alt={alt}
@@ -1981,7 +2062,9 @@ function RatingCircle({
           className="pointer-events-none absolute left-1/2 top-1/2 h-4 w-auto"
           style={{
             opacity: filled ? 1 : 0,
-            transform: filled ? "translate(-50%, -50%) scale(1)" : "translate(-50%, -50%) scale(0.4)",
+            transform: filled
+              ? "translate(-50%, -50%) scale(1)"
+              : "translate(-50%, -50%) scale(0.4)",
             transition: "opacity 300ms ease, transform 300ms ease",
             transitionDelay: filled ? "280ms" : "0ms",
           }}
@@ -2006,13 +2089,7 @@ const STAR_CLIP =
 const CIRCLE_CLIP =
   "polygon(50% 0%, 65.45% 2.45%, 79.39% 9.55%, 90.45% 20.61%, 97.55% 34.55%, 100% 50%, 97.55% 65.45%, 90.45% 79.39%, 79.39% 90.45%, 65.45% 97.55%, 50% 100%, 34.55% 97.55%, 20.61% 90.45%, 9.55% 79.39%, 2.45% 65.45%, 0% 50%, 2.45% 34.55%, 9.55% 20.61%, 20.61% 9.55%, 34.55% 2.45%)";
 
-function SatisfactionSurvey({
-  requestId,
-  onDone,
-}: {
-  requestId: string;
-  onDone: () => void;
-}) {
+function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: () => void }) {
   const [step, setStep] = useState<"rate" | "feedback" | "done">("rate");
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState<number | null>(null);
@@ -2116,8 +2193,8 @@ function SatisfactionSurvey({
                 <p className="text-4xl">🎉</p>
                 <h3 className="mt-3 text-lg font-bold text-wit-ink">¡Qué gusto!</h3>
                 <p className="mt-2 text-sm text-wit-gray">
-                  Nos encanta que tu pieza haya quedado tal como la imaginabas. Gracias por confiar en
-                  WITERS.
+                  Nos encanta que tu pieza haya quedado tal como la imaginabas. Gracias por confiar
+                  en WITERS.
                 </p>
               </>
             ) : (
@@ -2141,4 +2218,3 @@ function SatisfactionSurvey({
     </div>
   );
 }
-
