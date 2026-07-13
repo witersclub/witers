@@ -1,9 +1,11 @@
-// Builds the actual prompt handed to OpenAI's image model from everything a
-// client already told us — company, brief, style, audience, colors, promo
-// text — so nobody has to hand-write or copy-paste a prompt anymore. Used
-// both automatically (right after a client submits a request) and manually
-// (a staff "Generar de nuevo" button), so the wording stays identical
-// either way.
+// Builds the raw, factual prompt from everything a client told us —
+// company, brief, style, audience, colors, promo text, and which reference
+// files they uploaded — so nobody has to hand-write one. This is only the
+// input to polish-prompt.server.ts's ChatGPT call, not the final text a
+// designer ever sees: it states facts plainly and leaves *how* to phrase
+// and use them (e.g. what to do about an uploaded logo) to that call's
+// system prompt, so that reasoning lives in one place instead of being
+// duplicated per field here.
 
 export type DesignPromptInput = {
   companyName: string | null;
@@ -17,6 +19,7 @@ export type DesignPromptInput = {
   requiredText: string | null;
   aspectRatio: string;
   hasLogo: boolean;
+  hasProductPhoto: boolean;
   businessType: string | null;
 };
 
@@ -68,11 +71,9 @@ export function buildDesignPrompt(input: DesignPromptInput): string {
   );
   parts.push(`Formato: ${RATIO_PROMPT[input.aspectRatio] ?? input.aspectRatio}.`);
 
-  if (input.hasLogo) {
-    parts.push(
-      "La marca ya cuenta con logotipo propio — dale a la tipografía y a los colores un tratamiento acorde a una marca ya establecida, aunque el logo exacto no pueda insertarse en esta imagen.",
-    );
-  }
+  if (input.hasLogo) parts.push("El cliente ya cuenta con un logotipo oficial de marca.");
+  if (input.hasProductPhoto)
+    parts.push("El cliente proporcionó una foto de referencia del producto.");
 
   return parts.join(" ");
 }

@@ -163,6 +163,7 @@ export const Route = createFileRoute("/api/requests")({
             requiredText: parsed.data.requiredText?.trim() || null,
             aspectRatio: parsed.data.aspectRatio,
             hasLogo: Boolean(brand.logo_key),
+            hasProductPhoto: Boolean(parsed.data.productPhotoKey),
             businessType: brand.business_type,
           });
           const result = await polishPromptWithAI(rawPrompt);
