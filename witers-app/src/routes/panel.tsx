@@ -324,7 +324,7 @@ function Panel() {
           </div>
         ) : null}
 
-        <div className="mt-10 flex flex-wrap items-center gap-3 border-b border-wit-ink/10 pb-0">
+        <div className="mt-10 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
           <PanelTab
             active={tab === "solicitudes"}
             onClick={() => setTab("solicitudes")}
