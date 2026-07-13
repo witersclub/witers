@@ -324,6 +324,81 @@ function Testimonios() {
 // appear, and the whole section hides itself rather than show a placeholder.
 type Brand = { company_name: string; logo_key: string };
 
+// Splits the brand list round-robin across a fixed number of ticker slots
+// (mobile view) — slot i gets brands[i], brands[i+slotCount], ... — so each
+// slot cycles through roughly its own share instead of all slots repeating
+// the same sequence.
+function buildTickerSlots(list: Brand[], slotCount: number): Brand[][] {
+  const slots: Brand[][] = Array.from({ length: slotCount }, () => []);
+  list.forEach((b, i) => slots[i % slotCount].push(b));
+  return slots;
+}
+
+// A logo repeated this many times lets the ticker just keep counting
+// forward through a long, flattened copy of its slot's list instead of
+// ever needing to loop back to index 0 — which would either snap
+// backwards or need a fake reset-without-transition trick. At one flip
+// every 2.6s this covers well over two minutes of continuous display,
+// far longer than this decorative bar is realistically left open for.
+const TICKER_REPEATS = 60;
+const TICKER_INTERVAL_MS = 2600;
+// Must match the h-14 class on both the slot and each stacked logo below —
+// kept as a plain px constant (not a CSS %) because the inner column's own
+// height is TICKER_REPEATS times taller than one slot, so a `translateY`
+// percentage would be relative to that whole stack (thousands of px), not
+// to a single logo step.
+const TICKER_SLOT_HEIGHT_PX = 56;
+
+// One vertical "ticker" slot for the mobile trust bar — a fixed-height,
+// overflow-hidden window holding a tall column of stacked logos; sliding
+// that column up by one logo-height at a time is what makes the current
+// logo look like it slides away upward as the next one slides up into its
+// place. `offsetMs` staggers each slot's first flip so the three don't all
+// turn over in lockstep.
+function BrandTickerSlot({ brands, offsetMs }: { brands: Brand[]; offsetMs: number }) {
+  const [index, setIndex] = useState(0);
+  const items =
+    brands.length > 1 ? Array.from({ length: TICKER_REPEATS }, () => brands).flat() : brands;
+
+  useEffect(() => {
+    if (brands.length <= 1) return;
+    let interval: number | undefined;
+    const kickoff = window.setTimeout(() => {
+      setIndex((i) => Math.min(i + 1, items.length - 1));
+      interval = window.setInterval(() => {
+        setIndex((i) => Math.min(i + 1, items.length - 1));
+      }, TICKER_INTERVAL_MS);
+    }, offsetMs);
+    return () => {
+      window.clearTimeout(kickoff);
+      if (interval) window.clearInterval(interval);
+    };
+    // items.length is derived from brands and stable for the slot's lifetime
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brands.length, offsetMs]);
+
+  if (brands.length === 0) return null;
+
+  return (
+    <div className="h-14 w-24 shrink-0 overflow-hidden">
+      <div
+        className="transition-transform duration-700 ease-in-out"
+        style={{ transform: `translateY(-${index * TICKER_SLOT_HEIGHT_PX}px)` }}
+      >
+        {items.map((b, i) => (
+          <img
+            key={i}
+            src={`/api/public/brand-logo?key=${encodeURIComponent(b.logo_key)}`}
+            alt={b.company_name}
+            loading="lazy"
+            className="h-14 w-24 object-contain grayscale"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MarcasQueConfian() {
   const brands = useQuery({
     queryKey: ["public-brands"],
@@ -338,21 +413,35 @@ function MarcasQueConfian() {
   const list = brands.data?.brands ?? [];
   if (list.length === 0) return null;
 
+  const slots = buildTickerSlots(list, Math.min(3, list.length));
+
   return (
     <section className="relative bg-white py-16 md:py-20">
       <div className="px-5 md:px-[110px]">
         <p className="text-center text-base text-wit-gray">
           Marcas que ya confían en <strong className="text-wit-ink">WITERS</strong>
         </p>
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-x-14 gap-y-8">
+
+        {/* Desktop/tablet: every brand, always a single straight row — never
+            wraps to a second line. overflow-x-auto is just a safety net for
+            a long list on a narrower desktop width, not the intended look. */}
+        <div className="mt-10 hidden flex-nowrap items-center justify-center gap-x-14 overflow-x-auto md:flex">
           {list.map((b) => (
             <img
               key={b.logo_key}
               src={`/api/public/brand-logo?key=${encodeURIComponent(b.logo_key)}`}
               alt={b.company_name}
               loading="lazy"
-              className="h-10 w-auto max-w-[160px] object-contain grayscale"
+              className="h-14 w-auto max-w-[180px] shrink-0 object-contain grayscale"
             />
+          ))}
+        </div>
+
+        {/* Mobile: only 3 logos on screen at once, large, each cycling
+            through its share of the rest via the vertical ticker above. */}
+        <div className="mt-10 flex items-center justify-center gap-8 md:hidden">
+          {slots.map((slotBrands, i) => (
+            <BrandTickerSlot key={i} brands={slotBrands} offsetMs={i * 900} />
           ))}
         </div>
       </div>
