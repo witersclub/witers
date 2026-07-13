@@ -334,7 +334,7 @@ function Panel() {
           <button
             type="button"
             onClick={() => setTab("nueva")}
-            className="wit-glow-button -mb-px flex shrink-0 items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold text-white"
+            className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
           >
             ✨ Hacer solicitud
           </button>
