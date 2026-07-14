@@ -14,8 +14,6 @@ export type BrandProfile = {
   business_type: string | null;
   logo_key: string | null;
   brand_manual_key: string | null;
-  logo_updated_at: string | null;
-  colors_updated_at: string | null;
 };
 
 export async function getBrandProfile(userId: string): Promise<BrandProfile | null> {
@@ -64,8 +62,6 @@ export async function resolveBrandProfile(
       business_type: submitted.businessType,
       logo_key: submitted.logoKey,
       brand_manual_key: null,
-      logo_updated_at: null,
-      colors_updated_at: null,
     };
   }
   if (!existing.logo_key && submitted.logoKey) {
@@ -147,46 +143,14 @@ export async function completeOnboarding(
     business_type: data.businessType,
     logo_key: data.logoKey,
     brand_manual_key: null,
-    logo_updated_at: null,
-    colors_updated_at: null,
   };
 }
 
-// 30-day cooldown between deliberate logo/colors changes made from
-// "Activos de marca" — enforced here rather than only in the UI, so a
-// direct API call can't skip it. The point isn't to stop a legitimate
-// rebrand (that's still free the first time, and again after 30 days) —
-// it's to make "swap brand identity before every request for a different
-// business" impractical, which is the actual abuse this guards against.
-export const BRAND_ASSET_COOLDOWN_DAYS = 30;
-
-// lastChangedAt is a D1 datetime('now') string ("YYYY-MM-DD HH:MM:SS",
-// UTC) or null if there's no deliberate change yet — a first-ever edit is
-// always allowed regardless of how long the profile itself has existed.
-export function brandAssetCooldownDaysLeft(lastChangedAt: string | null): number {
-  if (!lastChangedAt) return 0;
-  const last = new Date(`${lastChangedAt.replace(" ", "T")}Z`).getTime();
-  const dayMs = 24 * 60 * 60 * 1000;
-  const remainingMs = BRAND_ASSET_COOLDOWN_DAYS * dayMs - (Date.now() - last);
-  return remainingMs > 0 ? Math.ceil(remainingMs / dayMs) : 0;
-}
-
-// Both called from the panel's "Activos de marca" section — unlike the
-// company name/colors lock above, a member can freely (re)upload their own
-// logo or brand manual any time; there's no business reason to block them
-// from replacing their own asset. logo_updated_at only moves here, never
-// from resolveBrandProfile's own "fill in a still-empty logo" case, so
-// that one-time initial capture never itself starts the cooldown clock —
-// only a deliberate edit through this function does.
-export async function setBrandLogo(userId: string, logoKey: string): Promise<void> {
-  await db()
-    .prepare(
-      "UPDATE brand_profiles SET logo_key = ?2, logo_updated_at = datetime('now'), updated_at = datetime('now') WHERE user_id = ?1",
-    )
-    .bind(userId, logoKey)
-    .run();
-}
-
+// Called from the panel's "Activos de marca" section — a member can freely
+// (re)upload their own brand manual any time; there's no business reason
+// to block them from replacing their own asset. Logo is deliberately NOT
+// here: it stays fixed once set, changed only through support (see
+// panel.tsx's LogoCard "Solicitar cambio de logotipo").
 export async function setBrandManual(userId: string, manualKey: string): Promise<void> {
   await db()
     .prepare(
@@ -196,14 +160,13 @@ export async function setBrandManual(userId: string, manualKey: string): Promise
     .run();
 }
 
-// Also freely editable from "Activos de marca" — colors are technically
-// covered by the brand manual too, but the client asked for them to be
-// manageable as their own thing in the same section. Same cooldown-clock
-// reasoning as setBrandLogo above.
+// Colors are technically covered by the brand manual too, but the client
+// asked for them to be manageable as their own thing in the same section —
+// and, unlike the logo, freely editable any time, no restrictions.
 export async function setBrandColors(userId: string, colors: string): Promise<void> {
   await db()
     .prepare(
-      "UPDATE brand_profiles SET brand_colors = ?2, colors_updated_at = datetime('now'), updated_at = datetime('now') WHERE user_id = ?1",
+      "UPDATE brand_profiles SET brand_colors = ?2, updated_at = datetime('now') WHERE user_id = ?1",
     )
     .bind(userId, colors)
     .run();

@@ -1,18 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import {
-  brandAssetCooldownDaysLeft,
-  getBrandProfile,
-  setBrandColors,
-} from "../../lib/brand-profile.server";
+import { getBrandProfile, setBrandColors } from "../../lib/brand-profile.server";
 import { getSessionUser, json } from "../../lib/witers-auth.server";
 
 const schema = z.object({ colors: z.string().min(1).max(60) });
 
 // Lets a member update their own brand colors from the panel's "Activos de
-// marca" section — same "the owner can freely replace their own asset,
-// rate-limited" reasoning as the logo endpoint next to this one.
+// marca" section — freely, any time, no restrictions (unlike the logo,
+// which stays fixed once set — see panel.tsx's LogoCard).
 export const Route = createFileRoute("/api/brand-profile-colors")({
   server: {
     handlers: {
@@ -22,11 +18,6 @@ export const Route = createFileRoute("/api/brand-profile-colors")({
 
         const profile = await getBrandProfile(user.id);
         if (!profile) return json({ ok: false, error: "falta_marca" }, { status: 409 });
-
-        const daysLeft = brandAssetCooldownDaysLeft(profile.colors_updated_at);
-        if (daysLeft > 0) {
-          return json({ ok: false, error: "en_espera", diasRestantes: daysLeft }, { status: 429 });
-        }
 
         const parsed = schema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });

@@ -73,24 +73,7 @@ type BrandProfile = {
   business_type: string | null;
   logo_key: string | null;
   brand_manual_key: string | null;
-  logo_updated_at: string | null;
-  colors_updated_at: string | null;
 };
-
-// Client-side mirror of brand-profile.server.ts's brandAssetCooldownDaysLeft
-// — duplicated rather than imported so nothing server-only risks getting
-// pulled into the client bundle (same reasoning as WitPieceFields above).
-// Only used to show the right message before the client even tries; the
-// server enforces the same 30-day rule independently, so this can never be
-// the actual gate, just the friendlier copy of it.
-const BRAND_ASSET_COOLDOWN_DAYS = 30;
-function cooldownDaysLeft(lastChangedAt: string | null): number {
-  if (!lastChangedAt) return 0;
-  const last = new Date(`${lastChangedAt.replace(" ", "T")}Z`).getTime();
-  const dayMs = 24 * 60 * 60 * 1000;
-  const remainingMs = BRAND_ASSET_COOLDOWN_DAYS * dayMs - (Date.now() - last);
-  return remainingMs > 0 ? Math.ceil(remainingMs / dayMs) : 0;
-}
 
 type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
 
@@ -681,6 +664,9 @@ function CampanasComingSoon() {
 // file goes through a confirm step with the 30-day-cooldown notice instead
 // of jumping straight to a file picker; a first-ever upload (fileKey still
 // null) is always immediate regardless.
+// Used only by Manual de marca now — freely upload/replace any time, no
+// restrictions. Logotipo has its own dedicated LogoCard below instead: the
+// logo stays fixed once set, changed only by asking support.
 function BrandAssetCard({
   title,
   description,
@@ -690,7 +676,6 @@ function BrandAssetCard({
   uploadEndpoint,
   accept,
   acceptHint,
-  cooldownLastChangedAt,
 }: {
   title: string;
   description: string;
@@ -700,14 +685,9 @@ function BrandAssetCard({
   uploadEndpoint: string;
   accept: string;
   acceptHint: string;
-  cooldownLastChangedAt?: string | null;
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<"idle" | "confirm" | "editing">("idle");
-  const gated = cooldownLastChangedAt !== undefined && Boolean(fileKey);
-  const daysLeft = gated ? cooldownDaysLeft(cooldownLastChangedAt ?? null) : 0;
-  const showPicker = !gated || step === "editing";
 
   async function handleFile(file: File | null) {
     if (!file) return;
@@ -724,16 +704,11 @@ function BrandAssetCard({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ key }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string; diasRestantes?: number };
+      const data = (await res.json()) as { ok: boolean };
       if (!data.ok) {
-        setError(
-          data.error === "en_espera"
-            ? `Ya cambiaste tu ${title.toLowerCase()} hace poco. Podrás cambiarlo de nuevo en ${data.diasRestantes} ${data.diasRestantes === 1 ? "día" : "días"}.`
-            : "No pudimos guardar el archivo. Intenta de nuevo.",
-        );
+        setError("No pudimos guardar el archivo. Intenta de nuevo.");
         return;
       }
-      setStep("idle");
       onUploaded();
     } finally {
       setUploading(false);
@@ -786,63 +761,83 @@ function BrandAssetCard({
         </p>
       )}
 
-      {gated && step === "confirm" ? (
-        <div className="mt-4 rounded-2xl bg-wit-ice p-4 text-sm text-wit-ink">
-          <p>
-            Solo puedes cambiar tu {title.toLowerCase()} una vez cada {BRAND_ASSET_COOLDOWN_DAYS}{" "}
-            días. ¿Quieres continuar?
-          </p>
-          <div className="mt-3 flex gap-3">
-            <button
-              type="button"
-              onClick={() => setStep("idle")}
-              className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep("editing")}
-              className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
-            >
-              Sí, continuar
-            </button>
-          </div>
-        </div>
-      ) : gated && daysLeft > 0 ? (
-        <p className="mt-4 text-xs text-wit-gray">
-          Podrás cambiar tu {title.toLowerCase()} de nuevo en {daysLeft}{" "}
-          {daysLeft === 1 ? "día" : "días"}.
-        </p>
-      ) : gated && step === "idle" ? (
-        <button
-          type="button"
-          onClick={() => setStep("confirm")}
-          className="mt-4 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
-        >
-          Editar {title.toLowerCase()}
-        </button>
-      ) : null}
-
-      {showPicker && !(gated && daysLeft > 0) ? (
-        <>
-          <label className="mt-4 block">
-            <span className="sr-only">
-              {fileKey ? `Reemplazar ${title.toLowerCase()}` : `Subir ${title.toLowerCase()}`}
-            </span>
-            <input
-              type="file"
-              accept={accept}
-              disabled={uploading}
-              onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
-              className="block w-full text-xs text-wit-gray file:mr-3 file:rounded-full file:border-0 file:bg-wit-blue file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-wit-blue-deep disabled:opacity-50"
-            />
-          </label>
-          <p className="mt-1.5 text-[11px] text-wit-gray">{acceptHint}</p>
-        </>
-      ) : null}
+      <label className="mt-4 block">
+        <span className="sr-only">
+          {fileKey ? `Reemplazar ${title.toLowerCase()}` : `Subir ${title.toLowerCase()}`}
+        </span>
+        <input
+          type="file"
+          accept={accept}
+          disabled={uploading}
+          onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
+          className="block w-full text-xs text-wit-gray file:mr-3 file:rounded-full file:border-0 file:bg-wit-blue file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-wit-blue-deep disabled:opacity-50"
+        />
+      </label>
+      <p className="mt-1.5 text-[11px] text-wit-gray">{acceptHint}</p>
       {uploading ? <p className="mt-2 text-xs font-semibold text-wit-blue">Subiendo...</p> : null}
       {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
+// Unlike colors/manual, the logo stays fixed once set — there's no upload
+// control here at all. "Solicitar cambio de logotipo" is a placeholder for
+// the support chat this'll eventually hand off to (not built yet); for now
+// it just points the client at email instead of pretending there's a real
+// flow behind it.
+function LogoCard({ fileKey }: { fileKey: string | null }) {
+  const [requested, setRequested] = useState(false);
+
+  return (
+    <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      <p className="text-lg font-bold text-wit-ink">Logotipo</p>
+      <p className="mt-1 text-sm text-wit-gray">
+        El logotipo que usamos en cada pieza que creamos para ti.
+      </p>
+
+      {fileKey ? (
+        <div className="mt-5 flex items-center gap-4 rounded-2xl border border-wit-ink/10 p-4">
+          <img
+            src={`/api/file?key=${encodeURIComponent(fileKey)}`}
+            alt="Logotipo"
+            className="h-16 w-16 shrink-0 rounded-xl border border-wit-ink/10 object-cover"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-wit-ink">Archivo guardado</p>
+            <a
+              href={`/api/file?key=${encodeURIComponent(fileKey)}&download=1`}
+              className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
+            >
+              Descargar
+            </a>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
+          Aún no tienes logotipo guardado.
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setRequested(true)}
+        className="mt-4 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
+      >
+        Solicitar cambio de logotipo
+      </button>
+      {requested ? (
+        <p className="mt-3 rounded-xl bg-wit-ice px-3.5 py-2.5 text-xs text-wit-ink">
+          Muy pronto vas a poder platicar esto directo con soporte desde aquí. Mientras tanto,
+          escríbenos a{" "}
+          <a
+            href="mailto:hola@witers.com"
+            className="font-semibold text-wit-blue hover:text-wit-blue-deep"
+          >
+            hola@witers.com
+          </a>
+          .
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -854,19 +849,13 @@ function BrandAssetCard({
 // answering the colors question anywhere else in the app.
 function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }) {
   const qc = useQueryClient();
-  // idle → confirm (only reachable when colors already exist) → editing.
-  // A first-ever pick skips straight from idle to the picker, same as
-  // BrandAssetCard's first-ever upload.
-  const [step, setStep] = useState<"idle" | "confirm" | "editing">("idle");
+  const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const colorList = (brandProfile?.brand_colors ?? "")
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean);
-  const hasColors = colorList.length > 0;
-  const daysLeft = hasColors ? cooldownDaysLeft(brandProfile?.colors_updated_at ?? null) : 0;
-  const showPicker = !hasColors || step === "editing";
 
   async function save(value: string) {
     setError(null);
@@ -877,16 +866,12 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ colors: value }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string; diasRestantes?: number };
+      const data = (await res.json()) as { ok: boolean };
       if (!data.ok) {
-        setError(
-          data.error === "en_espera"
-            ? `Ya cambiaste tus colores hace poco. Podrás cambiarlos de nuevo en ${data.diasRestantes} ${data.diasRestantes === 1 ? "día" : "días"}.`
-            : "No pudimos guardar tus colores. Intenta de nuevo.",
-        );
+        setError("No pudimos guardar tus colores. Intenta de nuevo.");
         return;
       }
-      setStep("idle");
+      setEditing(false);
       void qc.invalidateQueries({ queryKey: ["brand-profile"] });
     } finally {
       setSaving(false);
@@ -900,18 +885,18 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
         Los colores que usamos en cada pieza que creamos para ti.
       </p>
 
-      {showPicker ? (
+      {editing ? (
         <div className="mt-5">
           <ColorsPicker onPick={(v) => void save(v)} />
           <button
             type="button"
-            onClick={() => setStep("idle")}
+            onClick={() => setEditing(false)}
             className="mx-auto mt-3 block text-xs font-semibold text-wit-gray hover:text-wit-ink"
           >
             Cancelar
           </button>
         </div>
-      ) : hasColors ? (
+      ) : colorList.length ? (
         <div className="mt-5 flex flex-wrap items-center gap-2.5">
           {colorList.map((c) => (
             <span
@@ -922,42 +907,19 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
             />
           ))}
         </div>
-      ) : null}
-
-      {hasColors && step === "confirm" ? (
-        <div className="mt-4 rounded-2xl bg-wit-ice p-4 text-sm text-wit-ink">
-          <p>
-            Solo puedes cambiar tus colores una vez cada {BRAND_ASSET_COOLDOWN_DAYS} días. ¿Quieres
-            continuar?
-          </p>
-          <div className="mt-3 flex gap-3">
-            <button
-              type="button"
-              onClick={() => setStep("idle")}
-              className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep("editing")}
-              className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
-            >
-              Sí, continuar
-            </button>
-          </div>
-        </div>
-      ) : hasColors && daysLeft > 0 ? (
-        <p className="mt-4 text-xs text-wit-gray">
-          Podrás cambiar tus colores de nuevo en {daysLeft} {daysLeft === 1 ? "día" : "días"}.
+      ) : (
+        <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
+          Aún no tienes colores de marca guardados.
         </p>
-      ) : hasColors && step === "idle" ? (
+      )}
+
+      {!editing ? (
         <button
           type="button"
-          onClick={() => setStep("confirm")}
+          onClick={() => setEditing(true)}
           className="mt-4 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
         >
-          Editar colores
+          {colorList.length ? "Editar colores" : "Elegir colores"}
         </button>
       ) : null}
       {saving ? <p className="mt-2 text-xs font-semibold text-wit-blue">Guardando...</p> : null}
@@ -976,17 +938,7 @@ function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null })
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       <BrandColorsCard brandProfile={brandProfile} />
-      <BrandAssetCard
-        title="Logotipo"
-        description="El logotipo que usamos en cada pieza que creamos para ti."
-        fileKey={brandProfile?.logo_key ?? null}
-        isPdf={false}
-        onUploaded={refresh}
-        uploadEndpoint="/api/brand-profile-logo"
-        accept="image/png,image/jpeg,image/webp"
-        acceptHint="PNG, JPG o WebP, máx. 15 MB"
-        cooldownLastChangedAt={brandProfile?.logo_updated_at ?? null}
-      />
+      <LogoCard fileKey={brandProfile?.logo_key ?? null} />
       <BrandAssetCard
         title="Manual de marca"
         description="Tus lineamientos de marca — colores, tipografías, uso del logo."
