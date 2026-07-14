@@ -13,6 +13,7 @@ export type BrandProfile = {
   brand_colors: string | null;
   business_type: string | null;
   logo_key: string | null;
+  brand_manual_key: string | null;
 };
 
 export async function getBrandProfile(userId: string): Promise<BrandProfile | null> {
@@ -60,6 +61,7 @@ export async function resolveBrandProfile(
       brand_colors: submitted.brandColors,
       business_type: submitted.businessType,
       logo_key: submitted.logoKey,
+      brand_manual_key: null,
     };
   }
   if (!existing.logo_key && submitted.logoKey) {
@@ -140,5 +142,28 @@ export async function completeOnboarding(
     brand_colors: data.brandColors,
     business_type: data.businessType,
     logo_key: data.logoKey,
+    brand_manual_key: null,
   };
+}
+
+// Both called from the panel's "Activos de marca" section — unlike the
+// company name/colors lock above, a member can freely (re)upload their own
+// logo or brand manual any time; there's no business reason to block them
+// from replacing their own asset.
+export async function setBrandLogo(userId: string, logoKey: string): Promise<void> {
+  await db()
+    .prepare(
+      "UPDATE brand_profiles SET logo_key = ?2, updated_at = datetime('now') WHERE user_id = ?1",
+    )
+    .bind(userId, logoKey)
+    .run();
+}
+
+export async function setBrandManual(userId: string, manualKey: string): Promise<void> {
+  await db()
+    .prepare(
+      "UPDATE brand_profiles SET brand_manual_key = ?2, updated_at = datetime('now') WHERE user_id = ?1",
+    )
+    .bind(userId, manualKey)
+    .run();
 }

@@ -12,6 +12,7 @@ import {
   ColorsPicker,
   LogoUploadPicker,
   ProductPhotoUploadPicker,
+  uploadReferenceFile,
 } from "../components/witers/lab-pickers";
 import { consumeTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe } from "../lib/witers-client";
@@ -71,6 +72,7 @@ type BrandProfile = {
   brand_colors: string | null;
   business_type: string | null;
   logo_key: string | null;
+  brand_manual_key: string | null;
 };
 
 type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
@@ -96,6 +98,10 @@ function Panel() {
   const me = useMe();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  // Top-level areas of the panel — Creatividad wraps everything that
+  // existed before this section was introduced (solicitudes + hacer
+  // solicitud); Activos de marca and Campañas are new.
+  const [section, setSection] = useState<"creatividad" | "activos" | "campanas">("creatividad");
   const [tab, setTab] = useState<"solicitudes" | "nueva">("solicitudes");
   // The chat is a takeover of the content area, not a third tab — a totally
   // new client (no requests yet) lands straight on it; a returning one opens
@@ -344,33 +350,47 @@ function Panel() {
               </div>
             ) : null}
 
-            <div className="mt-10 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
-              <PanelTab
-                active={tab === "solicitudes"}
-                onClick={() => setTab("solicitudes")}
-                label="Mis solicitudes"
-                count={rows.length}
-              />
-              <button
-                type="button"
-                onClick={() => setTab("nueva")}
-                className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-              >
-                ✨ Hacer solicitud
-              </button>
-            </div>
+            <SectionNav section={section} onChange={setSection} />
 
-            <div className="mt-8">
-              {tab === "nueva" ? (
-                <HablaConWitScreen onStart={openChat} />
-              ) : (
-                <RequestList
-                  rows={rows}
-                  loading={requests.isLoading}
-                  onNew={() => setTab("nueva")}
-                />
-              )}
-            </div>
+            {section === "creatividad" ? (
+              <>
+                <div className="mt-6 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+                  <PanelTab
+                    active={tab === "solicitudes"}
+                    onClick={() => setTab("solicitudes")}
+                    label="Mis solicitudes"
+                    count={rows.length}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setTab("nueva")}
+                    className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+                  >
+                    ✨ Hacer solicitud
+                  </button>
+                </div>
+
+                <div className="mt-8">
+                  {tab === "nueva" ? (
+                    <HablaConWitScreen onStart={openChat} />
+                  ) : (
+                    <RequestList
+                      rows={rows}
+                      loading={requests.isLoading}
+                      onNew={() => setTab("nueva")}
+                    />
+                  )}
+                </div>
+              </>
+            ) : section === "activos" ? (
+              <div className="mt-8">
+                <ActivosDeMarca brandProfile={brandProfile} />
+              </div>
+            ) : (
+              <div className="mt-8">
+                <CampanasComingSoon />
+              </div>
+            )}
           </>
         )}
       </main>
@@ -573,6 +593,228 @@ function PanelTab({
         </span>
       ) : null}
     </button>
+  );
+}
+
+/* ---------- top-level panel sections ---------- */
+
+const SECTIONS: { id: "creatividad" | "activos" | "campanas"; label: string }[] = [
+  { id: "creatividad", label: "Creatividad" },
+  { id: "activos", label: "Activos de marca" },
+  { id: "campanas", label: "Campañas" },
+];
+
+// The panel's primary navigation — one level above "Mis solicitudes / Hacer
+// solicitud", which now only lives inside "Creatividad". Styled as a
+// segmented control (not the underline tabs used one level down) so it
+// reads as the main way to move around the panel, not a peer of the
+// sub-tabs underneath it.
+function SectionNav({
+  section,
+  onChange,
+}: {
+  section: "creatividad" | "activos" | "campanas";
+  onChange: (section: "creatividad" | "activos" | "campanas") => void;
+}) {
+  return (
+    <div className="wit-glass mt-8 inline-flex gap-1 rounded-2xl p-1 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      {SECTIONS.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => onChange(s.id)}
+          className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+            section === s.id
+              ? "bg-wit-blue text-white"
+              : "text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
+          }`}
+        >
+          {s.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// "Campañas" doesn't exist yet — Meta ads is a whole separate technical
+// track (connecting an ad account, App Review, etc.) tackled later on its
+// own. This is the fully-designed placeholder so the rest of the panel
+// restructure can ship now without pretending the feature is live.
+function CampanasComingSoon() {
+  return (
+    <div className="wit-glass flex flex-col items-center gap-4 rounded-3xl px-6 py-20 text-center">
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z" />
+          <path d="M16 8a5 5 0 0 1 0 8M19 5a9 9 0 0 1 0 14" />
+        </svg>
+      </span>
+      <p className="text-lg font-bold text-wit-ink">Campañas</p>
+      <p className="max-w-sm text-sm text-wit-gray">
+        Muy pronto vas a poder conectar tu cuenta publicitaria y lanzar pauta directo desde aquí,
+        usando las piezas que ya creaste con nosotros.
+      </p>
+      <span className="rounded-full bg-wit-mist/60 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-wit-gray">
+        Estará disponible próximamente
+      </span>
+    </div>
+  );
+}
+
+/* ---------- activos de marca ---------- */
+
+function BrandAssetCard({
+  title,
+  description,
+  fileKey,
+  isPdf,
+  onUploaded,
+  uploadEndpoint,
+  accept,
+  acceptHint,
+}: {
+  title: string;
+  description: string;
+  fileKey: string | null;
+  isPdf: boolean;
+  onUploaded: () => void;
+  uploadEndpoint: string;
+  accept: string;
+  acceptHint: string;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFile(file: File | null) {
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const key = await uploadReferenceFile(file);
+      if (!key) {
+        setError(`No pudimos subir el archivo (${acceptHint}).`);
+        return;
+      }
+      const res = await fetch(uploadEndpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) {
+        setError("No pudimos guardar el archivo. Intenta de nuevo.");
+        return;
+      }
+      onUploaded();
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      <p className="text-lg font-bold text-wit-ink">{title}</p>
+      <p className="mt-1 text-sm text-wit-gray">{description}</p>
+
+      {fileKey ? (
+        <div className="mt-5 flex items-center gap-4 rounded-2xl border border-wit-ink/10 p-4">
+          {isPdf ? (
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-wit-blue/10 text-wit-blue">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                <path d="M14 2v6h6" />
+              </svg>
+            </span>
+          ) : (
+            <img
+              src={`/api/file?key=${encodeURIComponent(fileKey)}`}
+              alt={title}
+              className="h-16 w-16 shrink-0 rounded-xl border border-wit-ink/10 object-cover"
+            />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-wit-ink">Archivo guardado</p>
+            <a
+              href={`/api/file?key=${encodeURIComponent(fileKey)}&download=1`}
+              className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
+            >
+              Descargar
+            </a>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
+          Aún no tienes {title.toLowerCase()} guardado.
+        </p>
+      )}
+
+      <label className="mt-4 block">
+        <span className="sr-only">
+          {fileKey ? `Reemplazar ${title.toLowerCase()}` : `Subir ${title.toLowerCase()}`}
+        </span>
+        <input
+          type="file"
+          accept={accept}
+          disabled={uploading}
+          onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
+          className="block w-full text-xs text-wit-gray file:mr-3 file:rounded-full file:border-0 file:bg-wit-blue file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-wit-blue-deep disabled:opacity-50"
+        />
+      </label>
+      <p className="mt-1.5 text-[11px] text-wit-gray">{acceptHint}</p>
+      {uploading ? <p className="mt-2 text-xs font-semibold text-wit-blue">Subiendo...</p> : null}
+      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
+function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null }) {
+  const qc = useQueryClient();
+
+  function refresh() {
+    void qc.invalidateQueries({ queryKey: ["brand-profile"] });
+  }
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <BrandAssetCard
+        title="Logotipo"
+        description="El logotipo que usamos en cada pieza que creamos para ti."
+        fileKey={brandProfile?.logo_key ?? null}
+        isPdf={false}
+        onUploaded={refresh}
+        uploadEndpoint="/api/brand-profile-logo"
+        accept="image/png,image/jpeg,image/webp"
+        acceptHint="PNG, JPG o WebP, máx. 15 MB"
+      />
+      <BrandAssetCard
+        title="Manual de marca"
+        description="Tus lineamientos de marca — colores, tipografías, uso del logo."
+        fileKey={brandProfile?.brand_manual_key ?? null}
+        isPdf={true}
+        onUploaded={refresh}
+        uploadEndpoint="/api/brand-profile-manual"
+        accept="application/pdf"
+        acceptHint="PDF, máx. 15 MB"
+      />
+    </div>
   );
 }
 

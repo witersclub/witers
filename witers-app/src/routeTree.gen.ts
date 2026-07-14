@@ -28,6 +28,8 @@ import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-rev
 import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
+import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
+import { Route as ApiBrandProfileLogoRouteImport } from './routes/api/brand-profile-logo'
 import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
 import { Route as ApiWitChatRouteImport } from './routes/api/wit/chat'
 import { Route as ApiPublicShowcaseImageRouteImport } from './routes/api/public/showcase-image'
@@ -150,6 +152,16 @@ const ApiCloseRequestRoute = ApiCloseRequestRouteImport.update({
 const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   id: '/api/checkout',
   path: '/api/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBrandProfileManualRoute = ApiBrandProfileManualRouteImport.update({
+  id: '/api/brand-profile-manual',
+  path: '/api/brand-profile-manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBrandProfileLogoRoute = ApiBrandProfileLogoRouteImport.update({
+  id: '/api/brand-profile-logo',
+  path: '/api/brand-profile-logo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBrandProfileRoute = ApiBrandProfileRouteImport.update({
@@ -310,6 +322,8 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
+  '/api/brand-profile-logo': typeof ApiBrandProfileLogoRoute
+  '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -359,6 +373,8 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
+  '/api/brand-profile-logo': typeof ApiBrandProfileLogoRoute
+  '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -409,6 +425,8 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
+  '/api/brand-profile-logo': typeof ApiBrandProfileLogoRoute
+  '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -460,6 +478,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/witer'
     | '/api/brand-profile'
+    | '/api/brand-profile-logo'
+    | '/api/brand-profile-manual'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -509,6 +529,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/witer'
     | '/api/brand-profile'
+    | '/api/brand-profile-logo'
+    | '/api/brand-profile-manual'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -558,6 +580,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/witer'
     | '/api/brand-profile'
+    | '/api/brand-profile-logo'
+    | '/api/brand-profile-manual'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -608,6 +632,8 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WiterRoute: typeof WiterRoute
   ApiBrandProfileRoute: typeof ApiBrandProfileRoute
+  ApiBrandProfileLogoRoute: typeof ApiBrandProfileLogoRoute
+  ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiCloseRequestRoute: typeof ApiCloseRequestRoute
   ApiFileRoute: typeof ApiFileRoute
@@ -778,6 +804,20 @@ declare module '@tanstack/react-router' {
       path: '/api/checkout'
       fullPath: '/api/checkout'
       preLoaderRoute: typeof ApiCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/brand-profile-manual': {
+      id: '/api/brand-profile-manual'
+      path: '/api/brand-profile-manual'
+      fullPath: '/api/brand-profile-manual'
+      preLoaderRoute: typeof ApiBrandProfileManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/brand-profile-logo': {
+      id: '/api/brand-profile-logo'
+      path: '/api/brand-profile-logo'
+      fullPath: '/api/brand-profile-logo'
+      preLoaderRoute: typeof ApiBrandProfileLogoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/brand-profile': {
@@ -992,6 +1032,8 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WiterRoute: WiterRoute,
   ApiBrandProfileRoute: ApiBrandProfileRoute,
+  ApiBrandProfileLogoRoute: ApiBrandProfileLogoRoute,
+  ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiCloseRequestRoute: ApiCloseRequestRoute,
   ApiFileRoute: ApiFileRoute,

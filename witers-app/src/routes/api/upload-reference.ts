@@ -3,8 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { bindings } from "../../lib/bindings.server";
 import { getSessionUser, json } from "../../lib/witers-auth.server";
 
-const MAX_BYTES = 8 * 1024 * 1024;
-const ALLOWED = ["image/png", "image/jpeg", "image/webp"];
+// 15MB (not the usual 8) to leave room for a real brand-manual PDF, which
+// tends to run heavier than a plain reference image.
+const MAX_BYTES = 15 * 1024 * 1024;
+// application/pdf covers the "Manual de marca" upload in the panel's
+// "Activos de marca" section — everything else here is a reference image.
+const ALLOWED = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
 
 export const Route = createFileRoute("/api/upload-reference")({
   server: {
@@ -28,7 +32,14 @@ export const Route = createFileRoute("/api/upload-reference")({
           return json({ ok: false, error: "muy_grande" }, { status: 400 });
         }
 
-        const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+        const ext =
+          file.type === "image/png"
+            ? "png"
+            : file.type === "image/webp"
+              ? "webp"
+              : file.type === "application/pdf"
+                ? "pdf"
+                : "jpg";
         const key = `refs/${user.id}/${crypto.randomUUID()}.${ext}`;
         await STORAGE.put(key, (await file.arrayBuffer()) as ArrayBuffer, {
           httpMetadata: { contentType: file.type },
@@ -39,4 +50,3 @@ export const Route = createFileRoute("/api/upload-reference")({
     },
   },
 });
-
