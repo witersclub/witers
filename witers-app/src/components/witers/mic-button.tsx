@@ -42,6 +42,11 @@ export function MicButton({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const baseRef = useRef("");
   const manualStopRef = useRef(false);
+  // Tracks the last value *we* pushed via onChange, so the effect below can
+  // tell "the parent changed value out from under us" (manual typing while
+  // idle, or clearing the field after sending) apart from just seeing back
+  // the value we ourselves just emitted.
+  const lastEmittedRef = useRef(value);
 
   useEffect(() => {
     return () => {
@@ -50,6 +55,22 @@ export function MicButton({
       recognitionRef.current = null;
     };
   }, []);
+
+  // Keeps dictation honest whenever the field changes for a reason that
+  // didn't come from us — most importantly, the caller clearing it right
+  // after sending. Without this, a still-listening mic keeps building on
+  // its own stale internal copy of the text and stomps the just-cleared
+  // field with what was already sent as soon as the next speech event
+  // fires. If the field was cleared out while we're still listening,
+  // there's nothing left to dictate onto for a message that already went
+  // out, so stop instead of continuing to accumulate into a dead session.
+  useEffect(() => {
+    if (value === lastEmittedRef.current) return;
+    baseRef.current = value;
+    lastEmittedRef.current = value;
+    if (value === "" && listening) stopListening();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 
   function stopListening() {
     manualStopRef.current = true;
@@ -64,7 +85,13 @@ export function MicButton({
     setListening(false);
   }
 
-  function startListening() {
+  // Resumes/continues an in-progress dictation — used both for the first
+  // start and for Chrome's own automatic reconnects (a long or idle
+  // continuous session can end on its own). Deliberately never re-syncs
+  // baseRef from the `value` prop: only reads baseRef.current (a ref, so
+  // never stale across renders) and appends to it, so an automatic
+  // reconnect can never discard what's already been dictated.
+  function startRecognition() {
     const w = window as unknown as {
       SpeechRecognition?: new () => SpeechRecognitionLike;
       webkitSpeechRecognition?: new () => SpeechRecognitionLike;
@@ -72,7 +99,6 @@ export function MicButton({
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!Ctor) return;
     manualStopRef.current = false;
-    baseRef.current = value;
     const recognition = new Ctor();
     recognition.lang = "es-MX";
     recognition.continuous = true;
@@ -86,7 +112,9 @@ export function MicButton({
         else interim += r[0].transcript;
       }
       if (finalChunk) baseRef.current = (baseRef.current + " " + finalChunk).trim();
-      onChange((baseRef.current + " " + interim).trim());
+      const next = (baseRef.current + " " + interim).trim();
+      lastEmittedRef.current = next;
+      onChange(next);
     };
     recognition.onerror = (event) => {
       if (event.error === "no-speech") return;
@@ -95,11 +123,19 @@ export function MicButton({
     };
     recognition.onend = () => {
       setListening(false);
-      if (!manualStopRef.current) startListening();
+      if (!manualStopRef.current) startRecognition();
     };
     recognitionRef.current = recognition;
     recognition.start();
     setListening(true);
+  }
+
+  // The button's own entry point — syncs baseRef from whatever's currently
+  // in the field (text typed by hand, or a fresh/cleared field) before
+  // beginning a new dictation session.
+  function startListening() {
+    baseRef.current = value;
+    startRecognition();
   }
 
   return (
