@@ -54,7 +54,7 @@ export function SiteHeader() {
           {!signedIn ? (
             <Link
               to="/ingresar"
-              className="inline-flex items-center rounded-full border border-wit-ink/20 px-5 py-2.5 text-sm font-semibold text-wit-ink transition-colors duration-200 hover:border-wit-blue hover:text-wit-blue"
+              className="inline-flex items-center rounded-full border border-wit-blue px-5 py-2.5 text-sm font-semibold text-wit-ink transition-colors duration-200 hover:bg-wit-blue/5 hover:text-wit-blue"
             >
               Ingresar
             </Link>
@@ -71,7 +71,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-2 md:hidden">
           <Link
             to={signedIn ? "/panel" : "/ingresar"}
-            className="inline-flex items-center rounded-full border border-wit-ink/20 px-3.5 py-2 text-xs font-semibold text-wit-ink transition-colors duration-200 hover:border-wit-blue hover:text-wit-blue"
+            className="inline-flex items-center rounded-full border border-wit-blue px-3.5 py-2 text-xs font-semibold text-wit-ink transition-colors duration-200 hover:bg-wit-blue/5 hover:text-wit-blue"
           >
             {signedIn ? "Mi panel" : "Ingresar"}
           </Link>
