@@ -102,7 +102,11 @@ function Panel() {
   // existed before this section was introduced (solicitudes + hacer
   // solicitud); Activos de marca and Campañas are new.
   const [section, setSection] = useState<"creatividad" | "activos" | "campanas">("creatividad");
-  const [tab, setTab] = useState<"solicitudes" | "nueva">("solicitudes");
+  // "Hacer solicitud" is the default landing tab for every visit, not just
+  // a brand-new client's — creating a piece is the panel's main job, so it
+  // should be the first thing anyone sees, not something they have to
+  // switch to.
+  const [tab, setTab] = useState<"solicitudes" | "nueva">("nueva");
   // The chat is a takeover of the content area, not a third tab — a totally
   // new client (no requests yet) lands straight on it; a returning one opens
   // it with the glowing "Chat IA" button and closes it (or taps a tab) to
@@ -110,7 +114,6 @@ function Panel() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const [justSent, setJustSent] = useState(false);
-  const autoOpenedRef = useRef(false);
   // Read (and clear) once per mount — only the very first chat (chatKey
   // still at its initial value) should inherit these, not a later
   // conversation opened via the button.
@@ -138,23 +141,6 @@ function Panel() {
     },
     enabled: Boolean(me.data?.ok),
   });
-
-  // Once we actually know whether this client has any past requests, open
-  // the chat automatically for a brand-new one — but only the first time
-  // per visit, so it doesn't keep popping back open after they close it.
-  // isFetched (not isLoading) is the right gate here: the query starts out
-  // disabled until `me` resolves, and isLoading reads false while disabled
-  // — checking that instead would fire this before the request list (or
-  // even the session) has actually loaded.
-  useEffect(() => {
-    if (autoOpenedRef.current) return;
-    if (!requests.isFetched) return;
-    autoOpenedRef.current = true;
-    // Lands them on the "Habla con Wit" screen rather than opening the chat
-    // outright — a brand-new client's first look at the panel should still
-    // be the glowing tab + button moment, not skip straight past it.
-    if ((requests.data?.requests ?? []).length === 0) setTab("nueva");
-  }, [requests.isFetched, requests.data]);
 
   function openChat() {
     setChatKey((k) => k + 1);
@@ -355,12 +341,6 @@ function Panel() {
             {section === "creatividad" ? (
               <>
                 <div className="mt-6 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
-                  <PanelTab
-                    active={tab === "solicitudes"}
-                    onClick={() => setTab("solicitudes")}
-                    label="Mis solicitudes"
-                    count={rows.length}
-                  />
                   <button
                     type="button"
                     onClick={() => setTab("nueva")}
@@ -368,6 +348,12 @@ function Panel() {
                   >
                     ✨ Hacer solicitud
                   </button>
+                  <PanelTab
+                    active={tab === "solicitudes"}
+                    onClick={() => setTab("solicitudes")}
+                    label="Mis solicitudes"
+                    count={rows.length}
+                  />
                 </div>
 
                 <div className="mt-8">
