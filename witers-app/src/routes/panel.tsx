@@ -785,6 +785,92 @@ function BrandAssetCard({
   );
 }
 
+// Colors are technically part of the brand manual, but the client wanted
+// them manageable as their own card in this section too — not just buried
+// inside a PDF. Reuses the same ColorsPicker every chat flow already uses,
+// so picking/editing colors here looks and works exactly the same as
+// answering the colors question anywhere else in the app.
+function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }) {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const colorList = (brandProfile?.brand_colors ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+
+  async function save(value: string) {
+    setError(null);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/brand-profile-colors", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ colors: value }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) {
+        setError("No pudimos guardar tus colores. Intenta de nuevo.");
+        return;
+      }
+      setEditing(false);
+      void qc.invalidateQueries({ queryKey: ["brand-profile"] });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      <p className="text-lg font-bold text-wit-ink">Colores de marca</p>
+      <p className="mt-1 text-sm text-wit-gray">
+        Los colores que usamos en cada pieza que creamos para ti.
+      </p>
+
+      {editing ? (
+        <div className="mt-5">
+          <ColorsPicker onPick={(v) => void save(v)} />
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="mx-auto mt-3 block text-xs font-semibold text-wit-gray hover:text-wit-ink"
+          >
+            Cancelar
+          </button>
+        </div>
+      ) : colorList.length ? (
+        <div className="mt-5 flex flex-wrap items-center gap-2.5">
+          {colorList.map((c) => (
+            <span
+              key={c}
+              title={c}
+              className="h-9 w-9 rounded-full border-2 border-white shadow-[0_2px_8px_rgba(5,13,40,0.15)]"
+              style={{ backgroundColor: c }}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
+          Aún no tienes colores de marca guardados.
+        </p>
+      )}
+
+      {!editing ? (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="mt-4 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
+        >
+          {colorList.length ? "Editar colores" : "Elegir colores"}
+        </button>
+      ) : null}
+      {saving ? <p className="mt-2 text-xs font-semibold text-wit-blue">Guardando...</p> : null}
+      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
 function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null }) {
   const qc = useQueryClient();
 
@@ -793,7 +879,8 @@ function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null })
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <BrandColorsCard brandProfile={brandProfile} />
       <BrandAssetCard
         title="Logotipo"
         description="El logotipo que usamos en cada pieza que creamos para ti."

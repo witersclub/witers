@@ -30,6 +30,7 @@ import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
 import { Route as ApiBrandProfileLogoRouteImport } from './routes/api/brand-profile-logo'
+import { Route as ApiBrandProfileColorsRouteImport } from './routes/api/brand-profile-colors'
 import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
 import { Route as ApiWitChatRouteImport } from './routes/api/wit/chat'
 import { Route as ApiPublicShowcaseImageRouteImport } from './routes/api/public/showcase-image'
@@ -162,6 +163,11 @@ const ApiBrandProfileManualRoute = ApiBrandProfileManualRouteImport.update({
 const ApiBrandProfileLogoRoute = ApiBrandProfileLogoRouteImport.update({
   id: '/api/brand-profile-logo',
   path: '/api/brand-profile-logo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBrandProfileColorsRoute = ApiBrandProfileColorsRouteImport.update({
+  id: '/api/brand-profile-colors',
+  path: '/api/brand-profile-colors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBrandProfileRoute = ApiBrandProfileRouteImport.update({
@@ -322,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
+  '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-logo': typeof ApiBrandProfileLogoRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/checkout': typeof ApiCheckoutRoute
@@ -373,6 +380,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
+  '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-logo': typeof ApiBrandProfileLogoRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/checkout': typeof ApiCheckoutRoute
@@ -425,6 +433,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
+  '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-logo': typeof ApiBrandProfileLogoRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/checkout': typeof ApiCheckoutRoute
@@ -478,6 +487,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/witer'
     | '/api/brand-profile'
+    | '/api/brand-profile-colors'
     | '/api/brand-profile-logo'
     | '/api/brand-profile-manual'
     | '/api/checkout'
@@ -529,6 +539,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/witer'
     | '/api/brand-profile'
+    | '/api/brand-profile-colors'
     | '/api/brand-profile-logo'
     | '/api/brand-profile-manual'
     | '/api/checkout'
@@ -580,6 +591,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/witer'
     | '/api/brand-profile'
+    | '/api/brand-profile-colors'
     | '/api/brand-profile-logo'
     | '/api/brand-profile-manual'
     | '/api/checkout'
@@ -632,6 +644,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WiterRoute: typeof WiterRoute
   ApiBrandProfileRoute: typeof ApiBrandProfileRoute
+  ApiBrandProfileColorsRoute: typeof ApiBrandProfileColorsRoute
   ApiBrandProfileLogoRoute: typeof ApiBrandProfileLogoRoute
   ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
@@ -818,6 +831,13 @@ declare module '@tanstack/react-router' {
       path: '/api/brand-profile-logo'
       fullPath: '/api/brand-profile-logo'
       preLoaderRoute: typeof ApiBrandProfileLogoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/brand-profile-colors': {
+      id: '/api/brand-profile-colors'
+      path: '/api/brand-profile-colors'
+      fullPath: '/api/brand-profile-colors'
+      preLoaderRoute: typeof ApiBrandProfileColorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/brand-profile': {
@@ -1032,6 +1052,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WiterRoute: WiterRoute,
   ApiBrandProfileRoute: ApiBrandProfileRoute,
+  ApiBrandProfileColorsRoute: ApiBrandProfileColorsRoute,
   ApiBrandProfileLogoRoute: ApiBrandProfileLogoRoute,
   ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,

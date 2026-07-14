@@ -167,3 +167,15 @@ export async function setBrandManual(userId: string, manualKey: string): Promise
     .bind(userId, manualKey)
     .run();
 }
+
+// Also freely editable from "Activos de marca" — colors are technically
+// covered by the brand manual too, but the client asked for them to be
+// manageable as their own thing in the same section.
+export async function setBrandColors(userId: string, colors: string): Promise<void> {
+  await db()
+    .prepare(
+      "UPDATE brand_profiles SET brand_colors = ?2, updated_at = datetime('now') WHERE user_id = ?1",
+    )
+    .bind(userId, colors)
+    .run();
+}
