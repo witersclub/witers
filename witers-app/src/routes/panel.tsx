@@ -97,6 +97,13 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   rechazada: { label: "Rechazada", cls: "bg-red-50 text-red-600" },
 };
 
+type PautaRequestInfo = {
+  id: string;
+  title: string;
+  imageHref: string;
+  ageRangeDefault: string | null;
+};
+
 function Panel() {
   const me = useMe();
   const navigate = useNavigate();
@@ -117,6 +124,11 @@ function Panel() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const [justSent, setJustSent] = useState(false);
+  // "Quiero pautar" is a full-screen takeover like the Wit chat, not an
+  // inline form in Mis solicitudes — clicking it jumps straight to the
+  // Campañas tab (so that's what's underneath once the builder closes)
+  // and opens the interactive builder for that specific request.
+  const [pautaRequest, setPautaRequest] = useState<PautaRequestInfo | null>(null);
   // Read (and clear) once per mount — only the very first chat (chatKey
   // still at its initial value) should inherit these, not a later
   // conversation opened via the button.
@@ -148,6 +160,11 @@ function Panel() {
   function openChat() {
     setChatKey((k) => k + 1);
     setChatOpen(true);
+  }
+
+  function openPauta(info: PautaRequestInfo) {
+    setSection("campanas");
+    setPautaRequest(info);
   }
 
   async function logout() {
@@ -368,6 +385,7 @@ function Panel() {
                       loading={requests.isLoading}
                       onNew={() => setTab("nueva")}
                       pageId={brandProfile?.meta_page_id ?? null}
+                      onPautar={openPauta}
                     />
                   )}
                 </div>
@@ -408,6 +426,22 @@ function Panel() {
                   window.setTimeout(() => setJustSent(false), 3000);
                 }}
                 onClose={() => setChatOpen(false)}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {pautaRequest
+        ? createPortal(
+            <div className="fixed inset-0 z-50 bg-white">
+              <PautaBuilder
+                request={pautaRequest}
+                onClose={() => setPautaRequest(null)}
+                onCreated={() => {
+                  void qc.invalidateQueries({ queryKey: ["campaigns"] });
+                  setPautaRequest(null);
+                }}
               />
             </div>,
             document.body,
@@ -761,6 +795,478 @@ function CampanasPanel() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ---------- pauta interactiva ----------
+
+type CampaignObjectiveUI = "trafico" | "interaccion" | "ventas";
+
+const OBJECTIVE_OPTIONS: { value: CampaignObjectiveUI; label: string; hint: string }[] = [
+  { value: "trafico", label: "🔗 Tráfico", hint: "Lleva gente a tu Página o Instagram" },
+  { value: "interaccion", label: "💬 Interacción", hint: "Más comentarios, likes y compartidos" },
+  { value: "ventas", label: "🛒 Ventas", hint: "Clic directo a tu WhatsApp" },
+];
+
+function parseAgeRangeClient(ageRange: string | null): { min: number; max: number } {
+  const numbers = (ageRange ?? "").match(/\d+/g)?.map(Number) ?? [];
+  if (numbers.length === 0) return { min: 18, max: 65 };
+  const min = Math.max(13, Math.min(...numbers));
+  const max = Math.min(65, Math.max(...numbers));
+  return { min: min <= max ? min : 18, max: max >= min ? max : 65 };
+}
+
+function buildDefaultAdMessages(title: string): [string, string, string] {
+  return [`Me interesa ${title}`, `Quiero saber más sobre ${title}`, `Puedo apartar ${title}`];
+}
+
+type LocationHit = { key: string; name: string; type: string; region: string | null };
+type InterestHit = { id: string; name: string; audienceSize: number | null };
+
+// Full-screen takeover, same pattern as WitConversation — the image on the
+// left, the campaign form on the right. Every numeric field is kept as a
+// raw string in state (not coerced with Number() on every keystroke) —
+// see the daily-budget fix this mirrors: converting on every keystroke
+// forces the field to "0" the instant it's cleared and jumbles whatever's
+// typed next.
+function PautaBuilder({
+  request,
+  onClose,
+  onCreated,
+}: {
+  request: PautaRequestInfo;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [objective, setObjective] = useState<CampaignObjectiveUI>("interaccion");
+  const [dailyBudget, setDailyBudget] = useState("100");
+  const [durationDays, setDurationDays] = useState("7");
+  const defaultAge = parseAgeRangeClient(request.ageRangeDefault);
+  const [ageMin, setAgeMin] = useState(String(defaultAge.min));
+  const [ageMax, setAgeMax] = useState(String(defaultAge.max));
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState<LocationHit[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<LocationHit | null>(null);
+  const [radiusKm, setRadiusKm] = useState("10");
+  const [interestQuery, setInterestQuery] = useState("");
+  const [interestResults, setInterestResults] = useState<InterestHit[]>([]);
+  const [selectedInterests, setSelectedInterests] = useState<InterestHit[]>([]);
+  const [adMessages, setAdMessages] = useState<[string, string, string]>(
+    buildDefaultAdMessages(request.title),
+  );
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [step, setStep] = useState<"form" | "sending" | "done">("form");
+  const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!locationQuery.trim() || selectedLocation) {
+      setLocationResults([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      void fetch(`/api/meta-location-search?q=${encodeURIComponent(locationQuery)}`, {
+        credentials: "include",
+      })
+        .then((res) => res.json())
+        .then((data: { ok: boolean; results?: LocationHit[] }) => {
+          if (data.ok) setLocationResults(data.results ?? []);
+        })
+        .catch(() => setLocationResults([]));
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [locationQuery, selectedLocation]);
+
+  useEffect(() => {
+    if (!interestQuery.trim()) {
+      setInterestResults([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      void fetch(`/api/meta-interest-search?q=${encodeURIComponent(interestQuery)}`, {
+        credentials: "include",
+      })
+        .then((res) => res.json())
+        .then((data: { ok: boolean; results?: InterestHit[] }) => {
+          if (data.ok) setInterestResults(data.results ?? []);
+        })
+        .catch(() => setInterestResults([]));
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [interestQuery]);
+
+  function addInterest(hit: InterestHit) {
+    setSelectedInterests((prev) => (prev.some((i) => i.id === hit.id) ? prev : [...prev, hit]));
+    setInterestQuery("");
+    setInterestResults([]);
+  }
+
+  async function submit() {
+    const budgetMxn = Number(dailyBudget);
+    if (!Number.isFinite(budgetMxn) || budgetMxn < 20) {
+      setError("El presupuesto diario debe ser de al menos $20 MXN.");
+      return;
+    }
+    const days = Number(durationDays);
+    if (!Number.isInteger(days) || days < 1) {
+      setError("La duración debe ser de al menos 1 día.");
+      return;
+    }
+    const min = Number(ageMin);
+    const max = Number(ageMax);
+    if (!Number.isInteger(min) || !Number.isInteger(max) || min < 13 || max > 65 || min > max) {
+      setError("Revisa el rango de edad (13 a 65).");
+      return;
+    }
+    if (objective === "ventas" && !whatsappNumber.trim()) {
+      setError("Escribe el número de WhatsApp para anuncios de Ventas.");
+      return;
+    }
+    const messages = adMessages.map((m) => m.trim()).filter(Boolean);
+    if (messages.length === 0) {
+      setError("Escribe al menos un mensaje para el anuncio.");
+      return;
+    }
+
+    setStep("sending");
+    setError(null);
+    try {
+      const res = await fetch("/api/campaigns-create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          requestId: request.id,
+          objective,
+          dailyBudgetMxn: budgetMxn,
+          durationDays: days,
+          ageMin: min,
+          ageMax: max,
+          locationKey: selectedLocation?.key,
+          radiusKm: selectedLocation ? Number(radiusKm) : undefined,
+          interestIds: selectedInterests.map((i) => i.id),
+          adMessages: messages,
+          whatsappNumber: objective === "ventas" ? whatsappNumber.trim() : undefined,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string; warning?: string | null };
+      if (!data.ok) {
+        setError(
+          data.error === "sin_pieza_final"
+            ? "Aún no hay una pieza final para esta solicitud."
+            : data.error === "solicitud_no_terminada"
+              ? "Esta solicitud todavía no está terminada."
+              : data.error === "pagina_no_conectada"
+                ? "Tu Página de Facebook aún no está conectada. Contáctanos para activarla."
+                : // Anything else is a real Meta/config error — show the raw
+                  // code so it's diagnosable from a screenshot instead of
+                  // swallowed into a generic "try again."
+                  `No pudimos crear la campaña${data.error ? ` (${data.error})` : ""}. Intenta de nuevo.`,
+        );
+        setStep("form");
+        return;
+      }
+      setWarning(data.warning ?? null);
+      setStep("done");
+    } catch {
+      setError("No pudimos crear la campaña. Intenta de nuevo.");
+      setStep("form");
+    }
+  }
+
+  return (
+    <div className="mx-auto flex h-full w-full max-w-6xl flex-col overflow-hidden px-5 pb-4 pt-4">
+      <div className="relative flex flex-col items-center gap-1.5 pb-1 pt-1">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar"
+          className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
+        >
+          ×
+        </button>
+        <div className="wit-float">
+          <WMark size={26} />
+        </div>
+        <p className="text-sm font-medium text-wit-ink">Pauta interactiva</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-4">
+        <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-2">
+          <div>
+            <div className="sticky top-0 overflow-hidden rounded-2xl border border-wit-ink/10">
+              <img
+                src={request.imageHref}
+                alt={`Resultado de ${request.title}`}
+                className="w-full object-cover"
+              />
+            </div>
+            <p className="mt-2 text-center text-sm font-semibold text-wit-ink">{request.title}</p>
+          </div>
+
+          {step === "done" ? (
+            <div className="rounded-2xl bg-wit-ice p-6 text-sm text-wit-ink">
+              <p className="font-bold">✓ Tu campaña se creó en pausa.</p>
+              <p className="mt-1 text-xs text-wit-gray">
+                {warning ?? "Actívala desde Meta Ads Manager cuando quieras que empiece a correr."}
+              </p>
+              <button
+                type="button"
+                onClick={onCreated}
+                className="mt-4 rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep"
+              >
+                Ver en Campañas
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+                  Objetivo de la campaña
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {OBJECTIVE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setObjective(opt.value)}
+                      className={`rounded-xl border px-2 py-2.5 text-center text-xs font-bold transition-colors ${
+                        objective === opt.value
+                          ? "border-wit-blue bg-wit-blue/10 text-wit-blue"
+                          : "border-wit-ink/15 text-wit-gray hover:border-wit-ink/30"
+                      }`}
+                    >
+                      <span className="block">{opt.label}</span>
+                      <span className="mt-0.5 block text-[10px] font-normal leading-tight">
+                        {opt.hint}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {objective === "ventas" ? (
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+                    Tu número de WhatsApp
+                  </label>
+                  <input
+                    type="tel"
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    placeholder="Ej. 5512345678"
+                    className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                  />
+                  <p className="mt-1 text-[11px] text-wit-gray">
+                    Al darle clic al anuncio, la gente abrirá un chat directo contigo en WhatsApp.
+                  </p>
+                </div>
+              ) : null}
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+                  Presupuesto diario (MXN)
+                </label>
+                <input
+                  type="number"
+                  min={20}
+                  value={dailyBudget}
+                  onChange={(e) => setDailyBudget(e.target.value)}
+                  className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+                  Duración (días)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={90}
+                  value={durationDays}
+                  onChange={(e) => setDurationDays(e.target.value)}
+                  className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+                  Ubicación
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={locationQuery}
+                    onChange={(e) => {
+                      setLocationQuery(e.target.value);
+                      setSelectedLocation(null);
+                    }}
+                    placeholder="Ciudad, colonia o código postal"
+                    className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                  />
+                  {locationResults.length > 0 && !selectedLocation ? (
+                    <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-wit-ink/10 bg-white shadow-lg">
+                      {locationResults.map((loc) => (
+                        <button
+                          key={loc.key}
+                          type="button"
+                          onClick={() => {
+                            setSelectedLocation(loc);
+                            setLocationQuery(loc.name);
+                            setLocationResults([]);
+                          }}
+                          className="block w-full px-3 py-2 text-left text-sm hover:bg-wit-mist/50"
+                        >
+                          {loc.name}
+                          {loc.region ? (
+                            <span className="text-wit-gray"> · {loc.region}</span>
+                          ) : null}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                {selectedLocation ? (
+                  <div className="mt-2 flex items-center gap-3">
+                    <span className="text-xs text-wit-gray">Radio: {radiusKm} km</span>
+                    <input
+                      type="range"
+                      min={5}
+                      max={50}
+                      step={5}
+                      value={radiusKm}
+                      onChange={(e) => setRadiusKm(e.target.value)}
+                      className="flex-1"
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-1 text-[11px] text-wit-gray">
+                    Déjalo vacío para llegar a todo México, o busca una ciudad/colonia para acotar
+                    con un radio.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+                  Rango de edad
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={13}
+                    max={65}
+                    value={ageMin}
+                    onChange={(e) => setAgeMin(e.target.value)}
+                    className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                  />
+                  <span className="text-sm text-wit-gray">a</span>
+                  <input
+                    type="number"
+                    min={13}
+                    max={65}
+                    value={ageMax}
+                    onChange={(e) => setAgeMax(e.target.value)}
+                    className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+                  Segmentación (intereses)
+                </label>
+                <input
+                  type="text"
+                  value={interestQuery}
+                  onChange={(e) => setInterestQuery(e.target.value)}
+                  placeholder="Ej. moda, fitness, restaurantes..."
+                  className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                />
+                {interestResults.length > 0 ? (
+                  <div className="mt-1 overflow-hidden rounded-lg border border-wit-ink/10 bg-white shadow-lg">
+                    {interestResults.map((hit) => (
+                      <button
+                        key={hit.id}
+                        type="button"
+                        onClick={() => addInterest(hit)}
+                        className="block w-full px-3 py-2 text-left text-sm hover:bg-wit-mist/50"
+                      >
+                        {hit.name}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {selectedInterests.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {selectedInterests.map((i) => (
+                      <button
+                        key={i.id}
+                        type="button"
+                        onClick={() =>
+                          setSelectedInterests((prev) => prev.filter((x) => x.id !== i.id))
+                        }
+                        className="rounded-full bg-wit-blue/10 px-3 py-1 text-xs font-semibold text-wit-blue hover:bg-wit-blue/20"
+                      >
+                        {i.name} ×
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+                  Mensajes del anuncio
+                </label>
+                <div className="space-y-2">
+                  {adMessages.map((msg, i) => (
+                    <input
+                      key={i}
+                      type="text"
+                      maxLength={500}
+                      value={msg}
+                      onChange={(e) =>
+                        setAdMessages((prev) => {
+                          const next = [...prev] as [string, string, string];
+                          next[i] = e.target.value;
+                          return next;
+                        })
+                      }
+                      className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                    />
+                  ))}
+                </div>
+                <p className="mt-1 text-[11px] text-wit-gray">
+                  Cada mensaje se convierte en su propio anuncio dentro de la campaña, para probar
+                  cuál funciona mejor.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  disabled={step === "sending"}
+                  onClick={() => void submit()}
+                  className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+                >
+                  {step === "sending" ? "Creando..." : "Crear campaña (en pausa)"}
+                </button>
+                <button
+                  type="button"
+                  disabled={step === "sending"}
+                  onClick={onClose}
+                  className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
+                >
+                  Cancelar
+                </button>
+              </div>
+              {error ? <p className="text-xs text-red-600">{error}</p> : null}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -2361,11 +2867,13 @@ function RequestList({
   loading,
   onNew,
   pageId,
+  onPautar,
 }: {
   rows: RequestRow[];
   loading: boolean;
   onNew: () => void;
   pageId: string | null;
+  onPautar: (info: PautaRequestInfo) => void;
 }) {
   return (
     <section>
@@ -2392,7 +2900,7 @@ function RequestList({
       ) : (
         <div className="space-y-4">
           {rows.map((r) => (
-            <RequestEntry key={r.id} row={r} pageId={pageId} />
+            <RequestEntry key={r.id} row={r} pageId={pageId} onPautar={onPautar} />
           ))}
         </div>
       )}
@@ -2405,7 +2913,15 @@ function RequestList({
 // worked on, or already closed out — collapses to a simple row, same
 // declutter pattern as the designer/admin panels. Only "en_proceso" gets
 // the rotating border: it's the one nobody's finished yet.
-function RequestEntry({ row: r, pageId }: { row: RequestRow; pageId: string | null }) {
+function RequestEntry({
+  row: r,
+  pageId,
+  onPautar,
+}: {
+  row: RequestRow;
+  pageId: string | null;
+  onPautar: (info: PautaRequestInfo) => void;
+}) {
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   // Owned here, not inside HistoryCard: closing the request flips its
@@ -2430,7 +2946,12 @@ function RequestEntry({ row: r, pageId }: { row: RequestRow; pageId: string | nu
   if (r.status === "completada" || showSurvey) {
     return (
       <>
-        <HistoryCard row={r} pageId={pageId} onDownloadFinalized={() => setShowSurvey(true)} />
+        <HistoryCard
+          row={r}
+          pageId={pageId}
+          onDownloadFinalized={() => setShowSurvey(true)}
+          onPautar={onPautar}
+        />
         {survey}
       </>
     );
@@ -2446,7 +2967,7 @@ function RequestEntry({ row: r, pageId }: { row: RequestRow; pageId: string | nu
         >
           ← Ocultar detalle
         </button>
-        <HistoryCard row={r} pageId={pageId} />
+        <HistoryCard row={r} pageId={pageId} onPautar={onPautar} />
       </div>
     );
   }
@@ -2508,70 +3029,19 @@ function Spinner({ cls = "border-wit-blue" }: { cls?: string }) {
   );
 }
 
-// Turns a finished piece into a real Meta campaign — always created
-// PAUSED (see /api/campaigns-create), so nothing ever spends without the
-// client explicitly turning it on later from Ads Manager. Only rendered
-// by HistoryCard once there's an actual delivered file to advertise.
-// pageConnected reflects brand_profiles.meta_page_id: each client pautas
-// from their own Facebook Page (no shared/default one), set only by an
-// admin once it's connected — until then this stays blocked.
-function PautarButton({ requestId, pageConnected }: { requestId: string; pageConnected: boolean }) {
-  const qc = useQueryClient();
-  const [step, setStep] = useState<"idle" | "form" | "sending" | "done">("idle");
-  // Kept as the raw typed string, not a number — converting on every
-  // keystroke (via Number(e.target.value)) forced the field to "0" the
-  // instant it was cleared, which then jumbled whatever was typed next
-  // (e.g. "20" landing as "020"). Only parsed to a number at submit time.
-  const [dailyBudget, setDailyBudget] = useState("100");
-  const [adMessage, setAdMessage] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [warning, setWarning] = useState<string | null>(null);
-
-  async function submit() {
-    const budgetMxn = Number(dailyBudget);
-    if (!Number.isFinite(budgetMxn) || budgetMxn < 20) {
-      setError("El presupuesto diario debe ser de al menos $20 MXN.");
-      return;
-    }
-    setStep("sending");
-    setError(null);
-    try {
-      const res = await fetch("/api/campaigns-create", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          requestId,
-          dailyBudgetMxn: budgetMxn,
-          adMessage: adMessage.trim() || undefined,
-        }),
-      });
-      const data = (await res.json()) as { ok: boolean; error?: string; warning?: string | null };
-      if (!data.ok) {
-        setError(
-          data.error === "sin_pieza_final"
-            ? "Aún no hay una pieza final para esta solicitud."
-            : data.error === "solicitud_no_terminada"
-              ? "Esta solicitud todavía no está terminada."
-              : data.error === "pagina_no_conectada"
-                ? "Tu Página de Facebook aún no está conectada. Contáctanos para activarla."
-                : // Anything else is a real Meta/config error (missing env var,
-                  // Graph API rejection, etc.) — show the raw code so it's
-                  // diagnosable from a screenshot instead of swallowed into a
-                  // generic "try again" that hides what actually broke.
-                  `No pudimos crear la campaña${data.error ? ` (${data.error})` : ""}. Intenta de nuevo.`,
-        );
-        setStep("form");
-        return;
-      }
-      setWarning(data.warning ?? null);
-      setStep("done");
-      void qc.invalidateQueries({ queryKey: ["campaigns"] });
-    } catch {
-      setError("No pudimos crear la campaña. Intenta de nuevo.");
-      setStep("form");
-    }
-  }
-
+// The entry point into the full-screen Pauta interactiva (see
+// PautaBuilder below) — nothing about the campaign itself lives here
+// anymore, it just decides whether to show the button or the "not
+// connected yet" notice. pageConnected reflects brand_profiles.meta_page_id:
+// each client pautas from their own Facebook Page (no shared/default one),
+// set only by an admin once it's connected — until then this stays blocked.
+function PautarEntryPoint({
+  pageConnected,
+  onClick,
+}: {
+  pageConnected: boolean;
+  onClick: () => void;
+}) {
   if (!pageConnected) {
     return (
       <div className="mt-3 rounded-xl bg-wit-mist/50 px-4 py-3 text-xs text-wit-gray">
@@ -2583,72 +3053,14 @@ function PautarButton({ requestId, pageConnected }: { requestId: string; pageCon
     );
   }
 
-  if (step === "idle") {
-    return (
-      <button
-        type="button"
-        onClick={() => setStep("form")}
-        className="mt-3 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
-      >
-        📣 Quiero pautar
-      </button>
-    );
-  }
-
-  if (step === "done") {
-    return (
-      <div className="mt-3 rounded-xl bg-wit-ice p-4 text-sm text-wit-ink">
-        <p className="font-bold">✓ Tu campaña se creó en pausa.</p>
-        <p className="mt-1 text-xs text-wit-gray">
-          {warning ?? "Actívala desde Meta Ads Manager cuando quieras que empiece a correr."}
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="mt-3 rounded-xl bg-wit-ice p-4">
-      <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-        Presupuesto diario (MXN)
-      </label>
-      <input
-        type="number"
-        min={20}
-        value={dailyBudget}
-        onChange={(e) => setDailyBudget(e.target.value)}
-        className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
-      />
-      <label className="mb-1.5 mt-3 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-        Texto del anuncio (opcional)
-      </label>
-      <textarea
-        rows={2}
-        maxLength={500}
-        value={adMessage}
-        onChange={(e) => setAdMessage(e.target.value)}
-        placeholder="Si lo dejas vacío, usamos el título de tu solicitud."
-        className="w-full resize-y rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
-      />
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          disabled={step === "sending"}
-          onClick={() => void submit()}
-          className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
-        >
-          {step === "sending" ? "Creando..." : "Crear campaña (en pausa)"}
-        </button>
-        <button
-          type="button"
-          disabled={step === "sending"}
-          onClick={() => setStep("idle")}
-          className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
-        >
-          Cancelar
-        </button>
-      </div>
-      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-3 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
+    >
+      📣 Quiero pautar
+    </button>
   );
 }
 
@@ -2656,10 +3068,12 @@ function HistoryCard({
   row: r,
   pageId,
   onDownloadFinalized,
+  onPautar,
 }: {
   row: RequestRow;
   pageId: string | null;
   onDownloadFinalized?: () => void;
+  onPautar: (info: PautaRequestInfo) => void;
 }) {
   const qc = useQueryClient();
   const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.en_proceso;
@@ -2903,7 +3317,20 @@ function HistoryCard({
       ) : null}
 
       {latestResult && (r.status === "completada" || r.status === "cerrada") ? (
-        <PautarButton requestId={r.id} pageConnected={Boolean(pageId)} />
+        <PautarEntryPoint
+          pageConnected={Boolean(pageId)}
+          onClick={() => {
+            const href =
+              latestResult.image_url ??
+              `/api/file?key=${encodeURIComponent(latestResult.r2_key ?? "")}`;
+            onPautar({
+              id: r.id,
+              title: r.title,
+              imageHref: href,
+              ageRangeDefault: r.age_range,
+            });
+          }}
+        />
       ) : null}
 
       {sentMsg ? (

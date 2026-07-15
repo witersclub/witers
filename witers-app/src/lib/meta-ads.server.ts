@@ -1,7 +1,7 @@
 // Talks to Meta's Marketing API (Graph API) to turn a finished WITERS piece
-// into a real (but paused, never auto-activated) ad campaign — the
-// "Quiero pautar" button in panel.tsx. Uses a Business Portfolio System
-// User token (META_ACCESS_TOKEN), not per-client OAuth: every campaign is
+// into a real (but paused, never auto-activated) ad campaign — the "Pauta
+// interactiva" screen in panel.tsx. Uses a Business Portfolio System User
+// token (META_ACCESS_TOKEN), not per-client OAuth: every campaign is
 // created in WITERS's own connected ad account (shared), following the
 // "manual connection, few clients" approach agreed on before building this.
 // The Facebook Page, unlike the ad account, is per-client (each client's
@@ -78,30 +78,126 @@ async function graphRequest<T>(
   }
 }
 
-// Mexico-only targeting for now (matches the MXN pricing used everywhere
-// else in the app) — age range parsed from the client's own answer when
-// they created the piece (e.g. "25-34, 35-44"), falling back to a broad
-// default when that wasn't collected or doesn't parse.
-function parseAgeRange(ageRange: string | null): { min: number; max: number } {
-  const numbers = (ageRange ?? "").match(/\d+/g)?.map(Number) ?? [];
-  if (numbers.length === 0) return { min: 18, max: 65 };
-  const min = Math.max(13, Math.min(...numbers));
-  const max = Math.min(65, Math.max(...numbers));
-  return { min: min <= max ? min : 18, max: max >= min ? max : 65 };
+// ---------- targeting search (location + interest autocomplete) ----------
+
+export type LocationSuggestion = { key: string; name: string; type: string; region: string | null };
+
+// Meta's own place search (city/neighborhood/zip) — the same one Ads
+// Manager itself uses, so there's no need for a separate geocoding service
+// or street addresses. The chosen key gets a radius attached at campaign
+// creation time (geo_locations.cities[].radius), same mechanism real
+// campaigns use for "exact location + radius" targeting.
+export async function searchMetaLocations(
+  query: string,
+): Promise<{ ok: true; data: LocationSuggestion[] } | { ok: false; error: string }> {
+  const config = getMetaConfig();
+  if ("error" in config) return { ok: false, error: config.error };
+  const res = await graphRequest<{
+    data: Array<{ key: string; name: string; type: string; region?: string }>;
+  }>(
+    "/search",
+    config.accessToken,
+    {
+      type: "adgeolocation",
+      q: query,
+      location_types: ["city", "neighborhood", "zip"],
+      limit: 8,
+    },
+    "GET",
+  );
+  if (!res.ok) return { ok: false, error: res.error };
+  return {
+    ok: true,
+    data: res.data.data.map((r) => ({
+      key: r.key,
+      name: r.name,
+      type: r.type,
+      region: r.region ?? null,
+    })),
+  };
+}
+
+export type InterestSuggestion = { id: string; name: string; audienceSize: number | null };
+
+export async function searchMetaInterests(
+  query: string,
+): Promise<{ ok: true; data: InterestSuggestion[] } | { ok: false; error: string }> {
+  const config = getMetaConfig();
+  if ("error" in config) return { ok: false, error: config.error };
+  const res = await graphRequest<{
+    data: Array<{ id: string; name: string; audience_size_lower_bound?: number }>;
+  }>("/search", config.accessToken, { type: "adinterest", q: query, limit: 10 }, "GET");
+  if (!res.ok) return { ok: false, error: res.error };
+  return {
+    ok: true,
+    data: res.data.data.map((r) => ({
+      id: r.id,
+      name: r.name,
+      audienceSize: r.audience_size_lower_bound ?? null,
+    })),
+  };
+}
+
+// ---------- campaign creation ----------
+
+export type CampaignObjective = "trafico" | "interaccion" | "ventas";
+
+// Maps our 3 client-facing objectives to Meta's real ODAX objective +
+// optimization goal. "Ventas" deliberately does NOT use Meta's official
+// Click-to-WhatsApp ad type (destination_type: WHATSAPP) — that requires
+// the client to verify their WhatsApp number with Meta first (an OTP sent
+// to their own phone, which we can't do on their behalf). Instead it's a
+// plain link-click campaign pointed at a wa.me link, same practical result
+// (clicking the ad opens a WhatsApp chat) with zero extra setup per client.
+function resolveObjective(objective: CampaignObjective): {
+  metaObjective: string;
+  optimizationGoal: string;
+} {
+  switch (objective) {
+    case "trafico":
+    case "ventas":
+      return { metaObjective: "OUTCOME_TRAFFIC", optimizationGoal: "LINK_CLICKS" };
+    case "interaccion":
+      return { metaObjective: "OUTCOME_ENGAGEMENT", optimizationGoal: "POST_ENGAGEMENT" };
+  }
+}
+
+function resolveDestinationLink(
+  objective: CampaignObjective,
+  pageId: string,
+  whatsappNumber: string | null,
+): string {
+  if (objective === "ventas" && whatsappNumber) {
+    const digits = whatsappNumber.replace(/[^\d]/g, "");
+    return `https://wa.me/${digits}`;
+  }
+  return `https://www.facebook.com/${pageId}`;
 }
 
 export type CreatePausedCampaignInput = {
   requestTitle: string;
-  audience: string | null;
-  ageRange: string | null;
+  objective: CampaignObjective;
   dailyBudgetCents: number;
+  // How many days the ad set should run before it auto-stops.
+  durationDays: number;
   imageBytesBase64: string;
   imageContentType: string;
-  adMessage: string;
+  // 1-3 ad copy variants — each becomes its own paused ad in the same ad
+  // set, so Meta can split-test them once the client turns it on.
+  adMessages: string[];
+  ageMin: number;
+  ageMax: number;
+  // Meta's own city/neighborhood/zip search result key (see
+  // searchMetaLocations) — null falls back to all of Mexico.
+  locationKey: string | null;
+  radiusKm: number | null;
+  interestIds: string[];
   // The client's own connected Facebook Page (brand_profiles.meta_page_id)
   // — required. Callers must confirm it's set before calling this at all;
   // see /api/campaigns-create's "pagina_no_conectada" check.
   pageId: string;
+  // Required only when objective === "ventas".
+  whatsappNumber: string | null;
 };
 
 export type CreatePausedCampaignResult =
@@ -109,52 +205,66 @@ export type CreatePausedCampaignResult =
       ok: true;
       campaignId: string;
       adsetId: string;
-      adId: string | null;
-      // Set when everything up to the ad set worked but the final ad
-      // (which needs a connected Facebook Page) couldn't be created —
-      // the campaign/ad set still exist and are visible in Ads Manager.
+      adIds: string[];
+      // Set when everything up to the ad set worked but not every ad
+      // variant could be created — the campaign/ad set (and whichever ads
+      // did work) still exist and are visible in Ads Manager.
       warning?: string;
     }
   | { ok: false; error: string };
 
-// Orchestrates campaign → ad set → image upload → creative → ad, all
-// created with status PAUSED. The caller has already confirmed the client
-// has a connected Page (input.pageId), so once the ad set succeeds this
-// runs straight through to a finished ad — no "missing Page" branch.
+// Orchestrates campaign → ad set → image upload → one ad per copy variant,
+// all created with status PAUSED. The caller has already confirmed the
+// client has a connected Page (input.pageId) and, for "ventas", a WhatsApp
+// number, so once the ad set succeeds this runs straight through.
 export async function createPausedCampaignForRequest(
   input: CreatePausedCampaignInput,
 ): Promise<CreatePausedCampaignResult> {
   const config = getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
   const { accessToken, adAccountId } = config;
-  const { pageId } = input;
+  const { pageId, objective } = input;
   const act = `act_${adAccountId}`;
+  const { metaObjective, optimizationGoal } = resolveObjective(objective);
 
   const campaign = await graphRequest<{ id: string }>(`/${act}/campaigns`, accessToken, {
     name: `WITERS — ${input.requestTitle}`,
-    objective: "OUTCOME_ENGAGEMENT",
+    objective: metaObjective,
     status: "PAUSED",
     special_ad_categories: [],
   });
   if (!campaign.ok) return { ok: false, error: campaign.error };
 
-  const { min, max } = parseAgeRange(input.ageRange);
+  const now = new Date();
+  const endTime = new Date(now.getTime() + input.durationDays * 24 * 60 * 60 * 1000);
+  const geoLocations =
+    input.locationKey && input.radiusKm
+      ? {
+          cities: [{ key: input.locationKey, radius: input.radiusKm, distance_unit: "kilometer" }],
+        }
+      : { countries: ["MX"] };
+
   const adset = await graphRequest<{ id: string }>(`/${act}/adsets`, accessToken, {
     name: `WITERS — ${input.requestTitle}`,
     campaign_id: campaign.data.id,
     daily_budget: input.dailyBudgetCents,
+    start_time: now.toISOString(),
+    end_time: endTime.toISOString(),
     billing_event: "IMPRESSIONS",
-    optimization_goal: "POST_ENGAGEMENT",
+    optimization_goal: optimizationGoal,
     bid_strategy: "LOWEST_COST_WITHOUT_CAP",
-    // Required by Meta whenever optimization_goal is POST_ENGAGEMENT — it
-    // needs to know which Page's post it's optimizing engagement for.
-    // Omitting this is what was failing every real attempt with a generic
-    // "Invalid parameter".
-    promoted_object: { page_id: pageId },
+    // Required whenever optimization_goal is POST_ENGAGEMENT — it needs to
+    // know which Page's post it's optimizing engagement for. Omitting this
+    // for "interacción" campaigns is what used to fail with "Invalid
+    // parameter" on every real attempt.
+    ...(objective === "interaccion" ? { promoted_object: { page_id: pageId } } : {}),
     targeting: {
-      geo_locations: { countries: ["MX"] },
-      age_min: min,
-      age_max: max,
+      geo_locations: geoLocations,
+      age_min: input.ageMin,
+      age_max: input.ageMax,
+      ...(input.interestIds.length
+        ? { flexible_spec: [{ interests: input.interestIds.map((id) => ({ id })) }] }
+        : {}),
     },
     status: "PAUSED",
   });
@@ -163,7 +273,7 @@ export async function createPausedCampaignForRequest(
       ok: true,
       campaignId: campaign.data.id,
       adsetId: "",
-      adId: null,
+      adIds: [],
       warning: `La campaña se creó, pero el conjunto de anuncios falló: ${adset.error}`,
     };
   }
@@ -178,7 +288,7 @@ export async function createPausedCampaignForRequest(
       ok: true,
       campaignId: campaign.data.id,
       adsetId: adset.data.id,
-      adId: null,
+      adIds: [],
       warning: `La campaña y el conjunto de anuncios se crearon, pero no pudimos subir la imagen: ${imageUpload.error}`,
     };
   }
@@ -188,46 +298,51 @@ export async function createPausedCampaignForRequest(
       ok: true,
       campaignId: campaign.data.id,
       adsetId: adset.data.id,
-      adId: null,
+      adIds: [],
       warning:
         "La campaña y el conjunto de anuncios se crearon, pero la imagen no se pudo procesar.",
     };
   }
 
-  const creative = await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
-    name: `WITERS — ${input.requestTitle}`,
-    object_story_spec: {
-      page_id: pageId,
-      link_data: {
-        image_hash: imageHash,
-        message: input.adMessage,
-        link: `https://www.facebook.com/${pageId}`,
+  const link = resolveDestinationLink(objective, pageId, input.whatsappNumber);
+  const adIds: string[] = [];
+  const failures: string[] = [];
+
+  // One ad per copy variant, all in the same (paused) ad set — lets the
+  // client split-test the 3 messages once they turn the ad set on, instead
+  // of us guessing which one performs best.
+  for (const [i, message] of input.adMessages.entries()) {
+    const creative = await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
+      name: `WITERS — ${input.requestTitle} — variante ${i + 1}`,
+      object_story_spec: {
+        page_id: pageId,
+        link_data: { image_hash: imageHash, message, link },
       },
-    },
-  });
-  if (!creative.ok) {
-    return {
-      ok: true,
-      campaignId: campaign.data.id,
-      adsetId: adset.data.id,
-      adId: null,
-      warning: `La campaña y el conjunto de anuncios se crearon, pero el anuncio falló: ${creative.error}`,
-    };
+    });
+    if (!creative.ok) {
+      failures.push(`variante ${i + 1} (creativo): ${creative.error}`);
+      continue;
+    }
+    const ad = await graphRequest<{ id: string }>(`/${act}/ads`, accessToken, {
+      name: `WITERS — ${input.requestTitle} — variante ${i + 1}`,
+      adset_id: adset.data.id,
+      creative: { creative_id: creative.data.id },
+      status: "PAUSED",
+    });
+    if (!ad.ok) {
+      failures.push(`variante ${i + 1} (anuncio): ${ad.error}`);
+      continue;
+    }
+    adIds.push(ad.data.id);
   }
 
-  const ad = await graphRequest<{ id: string }>(`/${act}/ads`, accessToken, {
-    name: `WITERS — ${input.requestTitle}`,
-    adset_id: adset.data.id,
-    creative: { creative_id: creative.data.id },
-    status: "PAUSED",
-  });
-  if (!ad.ok) {
+  if (adIds.length === 0) {
     return {
       ok: true,
       campaignId: campaign.data.id,
       adsetId: adset.data.id,
-      adId: null,
-      warning: `La campaña y el conjunto de anuncios se crearon, pero el anuncio final falló: ${ad.error}`,
+      adIds: [],
+      warning: `La campaña y el conjunto de anuncios se crearon, pero ningún anuncio se pudo generar: ${failures.join("; ")}`,
     };
   }
 
@@ -235,7 +350,8 @@ export async function createPausedCampaignForRequest(
     ok: true,
     campaignId: campaign.data.id,
     adsetId: adset.data.id,
-    adId: ad.data.id,
+    adIds,
+    warning: failures.length ? `Algunas variantes fallaron: ${failures.join("; ")}` : undefined,
   };
 }
 

@@ -7,28 +7,38 @@ import { getBrandProfile } from "../../lib/brand-profile.server";
 import { createPausedCampaignForRequest } from "../../lib/meta-ads.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
-const schema = z.object({
-  requestId: z.string().min(1),
-  // Pesos MXN per day (whole or with cents), converted to centavos below —
-  // matches how prices already read elsewhere in the app (e.g. $5,999 MXN).
-  dailyBudgetMxn: z.number().min(20).max(50_000),
-  adMessage: z.string().max(500).optional(),
-});
+const schema = z
+  .object({
+    requestId: z.string().min(1),
+    objective: z.enum(["trafico", "interaccion", "ventas"]),
+    // Pesos MXN per day (whole or with cents), converted to centavos below
+    // — matches how prices already read elsewhere in the app.
+    dailyBudgetMxn: z.number().min(20).max(50_000),
+    durationDays: z.number().int().min(1).max(90),
+    ageMin: z.number().int().min(13).max(65),
+    ageMax: z.number().int().min(13).max(65),
+    // A Meta location-search result key (see /api/meta-location-search) —
+    // omitted means "all of Mexico," same as before this feature.
+    locationKey: z.string().min(1).optional(),
+    radiusKm: z.number().min(5).max(50).optional(),
+    interestIds: z.array(z.string().min(1)).max(10).default([]),
+    adMessages: z.array(z.string().min(1).max(500)).min(1).max(3),
+    // Required only for "ventas" (drives the wa.me link) — the client
+    // types it themselves each time, it's not stored on their profile.
+    whatsappNumber: z.string().min(6).max(20).optional(),
+  })
+  .refine((v) => v.ageMin <= v.ageMax, { message: "rango_edad_invalido" })
+  .refine((v) => v.objective !== "ventas" || Boolean(v.whatsappNumber), {
+    message: "falta_whatsapp",
+  });
 
-type RequestRow = {
-  id: string;
-  user_id: string;
-  title: string;
-  audience: string | null;
-  age_range: string | null;
-  status: string;
-};
+type RequestRow = { id: string; user_id: string; title: string; status: string };
 type ResultRow = { r2_key: string | null; image_url: string | null };
 
-// Turns a finished piece into a real (paused) Meta campaign — "Quiero
-// pautar" in panel.tsx. Never activates anything; the client reviews and
-// turns it on later from Ads Manager (or from Campañas, once that's wired
-// to do more than show status).
+// Turns a finished piece into a real (paused) Meta campaign — the "Pauta
+// interactiva" screen in panel.tsx. Never activates anything; the client
+// reviews and turns it on later from Ads Manager (or from Campañas, once
+// that's wired to do more than show status).
 export const Route = createFileRoute("/api/campaigns-create")({
   server: {
     handlers: {
@@ -40,9 +50,7 @@ export const Route = createFileRoute("/api/campaigns-create")({
         if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
 
         const reqRow = await db()
-          .prepare(
-            "SELECT id, user_id, title, audience, age_range, status FROM design_requests WHERE id = ?1",
-          )
+          .prepare("SELECT id, user_id, title, status FROM design_requests WHERE id = ?1")
           .bind(parsed.data.requestId)
           .first<RequestRow>();
         if (!reqRow || reqRow.user_id !== user.id) {
@@ -85,13 +93,19 @@ export const Route = createFileRoute("/api/campaigns-create")({
 
         const result = await createPausedCampaignForRequest({
           requestTitle: reqRow.title,
-          audience: reqRow.audience,
-          ageRange: reqRow.age_range,
+          objective: parsed.data.objective,
           dailyBudgetCents: Math.round(parsed.data.dailyBudgetMxn * 100),
+          durationDays: parsed.data.durationDays,
           imageBytesBase64,
           imageContentType,
-          adMessage: parsed.data.adMessage?.trim() || reqRow.title,
+          adMessages: parsed.data.adMessages,
+          ageMin: parsed.data.ageMin,
+          ageMax: parsed.data.ageMax,
+          locationKey: parsed.data.locationKey ?? null,
+          radiusKm: parsed.data.radiusKm ?? null,
+          interestIds: parsed.data.interestIds,
           pageId: brandProfile.meta_page_id,
+          whatsappNumber: parsed.data.whatsappNumber ?? null,
         });
 
         if (!result.ok) {
@@ -111,8 +125,11 @@ export const Route = createFileRoute("/api/campaigns-create")({
             user.id,
             result.campaignId,
             result.adsetId,
-            result.adId,
-            "OUTCOME_ENGAGEMENT",
+            // Several ads (one per copy variant) now, so this holds a JSON
+            // array instead of a single id — nothing reads it back yet,
+            // it's kept for bookkeeping/support lookups in Ads Manager.
+            JSON.stringify(result.adIds),
+            parsed.data.objective,
             Math.round(parsed.data.dailyBudgetMxn * 100),
           )
           .run();

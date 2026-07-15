@@ -25,6 +25,8 @@ import { Route as ApiUploadReferenceRouteImport } from './routes/api/upload-refe
 import { Route as ApiSubmitSatisfactionRouteImport } from './routes/api/submit-satisfaction'
 import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
+import { Route as ApiMetaLocationSearchRouteImport } from './routes/api/meta-location-search'
+import { Route as ApiMetaInterestSearchRouteImport } from './routes/api/meta-interest-search'
 import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
@@ -139,6 +141,16 @@ const ApiRequestsRoute = ApiRequestsRouteImport.update({
 const ApiRequestRevisionRoute = ApiRequestRevisionRouteImport.update({
   id: '/api/request-revision',
   path: '/api/request-revision',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMetaLocationSearchRoute = ApiMetaLocationSearchRouteImport.update({
+  id: '/api/meta-location-search',
+  path: '/api/meta-location-search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMetaInterestSearchRoute = ApiMetaInterestSearchRouteImport.update({
+  id: '/api/meta-interest-search',
+  path: '/api/meta-interest-search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFileRoute = ApiFileRouteImport.update({
@@ -341,6 +353,8 @@ export interface FileRoutesByFullPath {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
+  '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
+  '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
@@ -394,6 +408,8 @@ export interface FileRoutesByTo {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
+  '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
+  '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
@@ -448,6 +464,8 @@ export interface FileRoutesById {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
+  '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
+  '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
@@ -503,6 +521,8 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
+    | '/api/meta-interest-search'
+    | '/api/meta-location-search'
     | '/api/request-revision'
     | '/api/requests'
     | '/api/submit-satisfaction'
@@ -556,6 +576,8 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
+    | '/api/meta-interest-search'
+    | '/api/meta-location-search'
     | '/api/request-revision'
     | '/api/requests'
     | '/api/submit-satisfaction'
@@ -609,6 +631,8 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
+    | '/api/meta-interest-search'
+    | '/api/meta-location-search'
     | '/api/request-revision'
     | '/api/requests'
     | '/api/submit-satisfaction'
@@ -663,6 +687,8 @@ export interface RootRouteChildren {
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiCloseRequestRoute: typeof ApiCloseRequestRoute
   ApiFileRoute: typeof ApiFileRoute
+  ApiMetaInterestSearchRoute: typeof ApiMetaInterestSearchRoute
+  ApiMetaLocationSearchRoute: typeof ApiMetaLocationSearchRoute
   ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
   ApiRequestsRoute: typeof ApiRequestsRoute
   ApiSubmitSatisfactionRoute: typeof ApiSubmitSatisfactionRoute
@@ -809,6 +835,20 @@ declare module '@tanstack/react-router' {
       path: '/api/request-revision'
       fullPath: '/api/request-revision'
       preLoaderRoute: typeof ApiRequestRevisionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/meta-location-search': {
+      id: '/api/meta-location-search'
+      path: '/api/meta-location-search'
+      fullPath: '/api/meta-location-search'
+      preLoaderRoute: typeof ApiMetaLocationSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/meta-interest-search': {
+      id: '/api/meta-interest-search'
+      path: '/api/meta-interest-search'
+      fullPath: '/api/meta-interest-search'
+      preLoaderRoute: typeof ApiMetaInterestSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/file': {
@@ -1079,6 +1119,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiCloseRequestRoute: ApiCloseRequestRoute,
   ApiFileRoute: ApiFileRoute,
+  ApiMetaInterestSearchRoute: ApiMetaInterestSearchRoute,
+  ApiMetaLocationSearchRoute: ApiMetaLocationSearchRoute,
   ApiRequestRevisionRoute: ApiRequestRevisionRoute,
   ApiRequestsRoute: ApiRequestsRoute,
   ApiSubmitSatisfactionRoute: ApiSubmitSatisfactionRoute,
