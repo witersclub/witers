@@ -26,7 +26,9 @@ export function getMetaConfig(): MetaConfig | { error: string } {
   return { accessToken, adAccountId };
 }
 
-type GraphError = { error?: { message?: string; type?: string; code?: number } };
+type GraphError = {
+  error?: { message?: string; type?: string; code?: number; error_user_msg?: string };
+};
 
 async function graphRequest<T>(
   path: string,
@@ -60,8 +62,11 @@ async function graphRequest<T>(
     }
     const json = (await response.json().catch(() => ({}))) as T & GraphError;
     if (!response.ok || json.error) {
-      const detail = json.error?.message ?? `HTTP ${response.status}`;
-      console.info("[meta-ads] graph error", path, detail);
+      // error_user_msg (when Meta sets it) is the human-readable reason —
+      // "message" alone is often as generic as "Invalid parameter", which
+      // isn't enough to diagnose which field was wrong.
+      const detail = json.error?.error_user_msg ?? json.error?.message ?? `HTTP ${response.status}`;
+      console.info("[meta-ads] graph error", path, JSON.stringify(json.error));
       return { ok: false, error: detail };
     }
     return { ok: true, data: json };
@@ -141,6 +146,11 @@ export async function createPausedCampaignForRequest(
     billing_event: "IMPRESSIONS",
     optimization_goal: "POST_ENGAGEMENT",
     bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+    // Required by Meta whenever optimization_goal is POST_ENGAGEMENT — it
+    // needs to know which Page's post it's optimizing engagement for.
+    // Omitting this is what was failing every real attempt with a generic
+    // "Invalid parameter".
+    promoted_object: { page_id: pageId },
     targeting: {
       geo_locations: { countries: ["MX"] },
       age_min: min,
