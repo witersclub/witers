@@ -3600,7 +3600,6 @@ function RatingCircle({
           style={{
             clipPath: STAR_CLIP,
             backgroundColor: "#FACC15",
-            transform: "rotate(-14deg)",
             opacity: filled ? 0 : 1,
             transition: "opacity 300ms ease",
           }}
@@ -3682,7 +3681,7 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-wit-navy/70 p-5">
-      <div className="wit-glass w-full max-w-sm rounded-3xl p-7 text-center shadow-2xl">
+      <div className="w-full max-w-sm rounded-3xl bg-white p-7 text-center shadow-2xl">
         {step === "rate" ? (
           <>
             <h3 className="text-lg font-bold text-wit-ink">
