@@ -3954,6 +3954,12 @@ function HistoryCard({
       const data = (await res.json()) as { ok: boolean };
       if (data.ok) {
         await qc.invalidateQueries({ queryKey: ["requests"] });
+        // "Correcto, finalizar solicitud" is just as much a satisfaction
+        // signal as clicking download inside the lightbox — a client who
+        // clicks this (very plausibly after approving a revision, since
+        // it reads as the "I'm done" button) was never getting the survey
+        // at all, only the download path triggered it.
+        if (!alreadyRated) onDownloadFinalized?.();
       } else {
         setMsg("No pudimos finalizar la solicitud. Intenta de nuevo.");
       }
