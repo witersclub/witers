@@ -26,6 +26,9 @@ const schema = z
     // Required only for "ventas" (drives the wa.me link) — the client
     // types it themselves each time, it's not stored on their profile.
     whatsappNumber: z.string().min(6).max(20).optional(),
+    // Optional, only meaningful for "trafico" — omitted means the ad
+    // points to the client's Facebook Page ("sus redes") instead.
+    websiteUrl: z.string().url().max(300).optional(),
   })
   .refine((v) => v.ageMin <= v.ageMax, { message: "rango_edad_invalido" })
   .refine((v) => v.objective !== "ventas" || Boolean(v.whatsappNumber), {
@@ -106,6 +109,7 @@ export const Route = createFileRoute("/api/campaigns-create")({
           interestIds: parsed.data.interestIds,
           pageId: brandProfile.meta_page_id,
           whatsappNumber: parsed.data.whatsappNumber ?? null,
+          websiteUrl: parsed.data.websiteUrl ?? null,
         });
 
         if (!result.ok) {

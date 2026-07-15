@@ -856,6 +856,10 @@ function PautaBuilder({
     buildDefaultAdMessages(request.title),
   );
   const [whatsappNumber, setWhatsappNumber] = useState("");
+  // Only meaningful for "trafico" — "redes" (default) points the ad at the
+  // client's own Facebook Page, "web" points it at a site they type in.
+  const [trafficDestination, setTrafficDestination] = useState<"redes" | "web">("redes");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [step, setStep] = useState<"form" | "sending" | "done">("form");
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
@@ -923,6 +927,10 @@ function PautaBuilder({
       setError("Escribe el número de WhatsApp para anuncios de Ventas.");
       return;
     }
+    if (objective === "trafico" && trafficDestination === "web" && !websiteUrl.trim()) {
+      setError("Escribe la URL de tu página web, o elige llevar el tráfico a tus redes.");
+      return;
+    }
     const messages = adMessages.map((m) => m.trim()).filter(Boolean);
     if (messages.length === 0) {
       setError("Escribe al menos un mensaje para el anuncio.");
@@ -947,6 +955,8 @@ function PautaBuilder({
           interestIds: selectedInterests.map((i) => i.id),
           adMessages: messages,
           whatsappNumber: objective === "ventas" ? whatsappNumber.trim() : undefined,
+          websiteUrl:
+            objective === "trafico" && trafficDestination === "web" ? websiteUrl.trim() : undefined,
         }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string; warning?: string | null };
@@ -1060,6 +1070,51 @@ function PautaBuilder({
                   <p className="mt-1 text-[11px] text-wit-gray">
                     Al darle clic al anuncio, la gente abrirá un chat directo contigo en WhatsApp.
                   </p>
+                </div>
+              ) : null}
+
+              {objective === "trafico" ? (
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+                    ¿A dónde llevamos el tráfico?
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTrafficDestination("redes")}
+                      className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
+                        trafficDestination === "redes"
+                          ? "border-wit-blue bg-wit-blue/10 text-wit-blue"
+                          : "border-wit-ink/15 text-wit-gray hover:border-wit-ink/30"
+                      }`}
+                    >
+                      Mis redes sociales
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTrafficDestination("web")}
+                      className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
+                        trafficDestination === "web"
+                          ? "border-wit-blue bg-wit-blue/10 text-wit-blue"
+                          : "border-wit-ink/15 text-wit-gray hover:border-wit-ink/30"
+                      }`}
+                    >
+                      Mi página web
+                    </button>
+                  </div>
+                  {trafficDestination === "web" ? (
+                    <input
+                      type="url"
+                      value={websiteUrl}
+                      onChange={(e) => setWebsiteUrl(e.target.value)}
+                      placeholder="https://tu-sitio.com"
+                      className="mt-2 w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                    />
+                  ) : (
+                    <p className="mt-1 text-[11px] text-wit-gray">
+                      El clic lleva a tu Página de Facebook.
+                    </p>
+                  )}
                 </div>
               ) : null}
 

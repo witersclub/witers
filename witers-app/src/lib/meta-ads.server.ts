@@ -166,11 +166,16 @@ function resolveDestinationLink(
   objective: CampaignObjective,
   pageId: string,
   whatsappNumber: string | null,
+  websiteUrl: string | null,
 ): string {
   if (objective === "ventas" && whatsappNumber) {
     const digits = whatsappNumber.replace(/[^\d]/g, "");
     return `https://wa.me/${digits}`;
   }
+  // "Tráfico" can go to the client's own website when they have one —
+  // falls back to their Facebook Page (their "redes") otherwise, same as
+  // every other objective.
+  if (objective === "trafico" && websiteUrl) return websiteUrl;
   return `https://www.facebook.com/${pageId}`;
 }
 
@@ -198,6 +203,9 @@ export type CreatePausedCampaignInput = {
   pageId: string;
   // Required only when objective === "ventas".
   whatsappNumber: string | null;
+  // Optional, only used when objective === "trafico" — the client's own
+  // site. Null/omitted falls back to their Facebook Page as the destination.
+  websiteUrl: string | null;
 };
 
 export type CreatePausedCampaignResult =
@@ -259,12 +267,11 @@ export async function createPausedCampaignForRequest(
     // parameter" on every real attempt.
     ...(objective === "interaccion" ? { promoted_object: { page_id: pageId } } : {}),
     targeting: {
-      // No client has an Instagram account connected to their Page (we
-      // never collect one) — without this, Meta's automatic placements
-      // would still try Instagram/Audience Network/Messenger, which are
-      // either ineligible or untested for these accounts. Facebook-only
-      // keeps delivery to exactly what's actually set up: the Page itself.
-      publisher_platforms: ["facebook"],
+      // Deliberately left on Meta's automatic placements (Facebook +
+      // Instagram + the rest) rather than restricted to Facebook only —
+      // no client has an Instagram account explicitly connected here, but
+      // Instagram delivery is still wanted to see how it performs in
+      // practice for Pages that do have one linked in Meta's own system.
       geo_locations: geoLocations,
       age_min: input.ageMin,
       age_max: input.ageMax,
@@ -310,7 +317,7 @@ export async function createPausedCampaignForRequest(
     };
   }
 
-  const link = resolveDestinationLink(objective, pageId, input.whatsappNumber);
+  const link = resolveDestinationLink(objective, pageId, input.whatsappNumber, input.websiteUrl);
   const adIds: string[] = [];
   const failures: string[] = [];
 
