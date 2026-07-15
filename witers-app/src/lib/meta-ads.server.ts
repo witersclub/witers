@@ -104,6 +104,11 @@ export async function searchMetaLocations(
       // enum entry here made the whole search request fail every time,
       // which is why nothing was ever showing up.
       location_types: ["city", "zip"],
+      // Without this, a zip search matches globally — e.g. "05348" returned
+      // a São Paulo, Brazil match ahead of the Mexican one. Every WITERS
+      // client is a Mexican business (see COUNTRY_CODES in panel.tsx), so
+      // scope results to Mexico. Revisit if/when clients outside MX exist.
+      country_code: "MX",
       limit: 8,
     },
     "GET",
