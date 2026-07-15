@@ -89,6 +89,12 @@ export type LocationSuggestion = { key: string; name: string; type: string; regi
 // campaigns use for "exact location + radius" targeting.
 export async function searchMetaLocations(
   query: string,
+  // ISO 3166-1 alpha-2 (e.g. "MX"). Without this, a zip search matches
+  // globally — "05348" returned a São Paulo, Brazil match ahead of the
+  // Mexican one — so the client picks a country (default México) instead
+  // of it being hardcoded, since a client may legitimately want to target
+  // a different country from where WITERS itself operates.
+  countryCode: string,
 ): Promise<{ ok: true; data: LocationSuggestion[] } | { ok: false; error: string }> {
   const config = getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
@@ -104,11 +110,7 @@ export async function searchMetaLocations(
       // enum entry here made the whole search request fail every time,
       // which is why nothing was ever showing up.
       location_types: ["city", "zip"],
-      // Without this, a zip search matches globally — e.g. "05348" returned
-      // a São Paulo, Brazil match ahead of the Mexican one. Every WITERS
-      // client is a Mexican business (see COUNTRY_CODES in panel.tsx), so
-      // scope results to Mexico. Revisit if/when clients outside MX exist.
-      country_code: "MX",
+      country_code: countryCode,
       limit: 8,
     },
     "GET",

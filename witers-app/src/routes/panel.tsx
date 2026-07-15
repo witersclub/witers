@@ -895,6 +895,25 @@ const COUNTRY_CODES = [
   { code: "+58", flag: "🇻🇪", name: "Venezuela" },
 ];
 
+// Same country list as COUNTRY_CODES, but ISO 3166-1 alpha-2 for Meta's
+// location search country_code param instead of phone calling codes —
+// defaults to México but is switchable, since a client may want to target
+// a different country than the one WITERS itself operates from.
+const LOCATION_COUNTRIES = [
+  { code: "MX", flag: "🇲🇽", name: "México" },
+  { code: "US", flag: "🇺🇸", name: "Estados Unidos" },
+  { code: "ES", flag: "🇪🇸", name: "España" },
+  { code: "CO", flag: "🇨🇴", name: "Colombia" },
+  { code: "AR", flag: "🇦🇷", name: "Argentina" },
+  { code: "CL", flag: "🇨🇱", name: "Chile" },
+  { code: "PE", flag: "🇵🇪", name: "Perú" },
+  { code: "EC", flag: "🇪🇨", name: "Ecuador" },
+  { code: "GT", flag: "🇬🇹", name: "Guatemala" },
+  { code: "CR", flag: "🇨🇷", name: "Costa Rica" },
+  { code: "PA", flag: "🇵🇦", name: "Panamá" },
+  { code: "VE", flag: "🇻🇪", name: "Venezuela" },
+];
+
 const BUDGET_CHIPS = [
   { value: "50", icon: "💵", label: "$50 / día" },
   { value: "100", icon: "💰", label: "$100 / día" },
@@ -1108,6 +1127,7 @@ function PautaBuilder({
   const [budgetCustomOpen, setBudgetCustomOpen] = useState(false);
   const [durationCustomOpen, setDurationCustomOpen] = useState(false);
   const [locationAdvancedOpen, setLocationAdvancedOpen] = useState(false);
+  const [locationCountry, setLocationCountry] = useState(LOCATION_COUNTRIES[0].code);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationResults, setLocationResults] = useState<LocationHit[]>([]);
   const [locationSearchError, setLocationSearchError] = useState<string | null>(null);
@@ -1213,9 +1233,10 @@ function PautaBuilder({
       return;
     }
     const timer = setTimeout(() => {
-      void fetch(`/api/meta-location-search?q=${encodeURIComponent(locationQuery)}`, {
-        credentials: "include",
-      })
+      void fetch(
+        `/api/meta-location-search?q=${encodeURIComponent(locationQuery)}&country=${locationCountry}`,
+        { credentials: "include" },
+      )
         .then((res) => res.json())
         .then((data: { ok: boolean; results?: LocationHit[]; error?: string }) => {
           if (data.ok) {
@@ -1232,7 +1253,7 @@ function PautaBuilder({
         });
     }, 350);
     return () => clearTimeout(timer);
-  }, [locationQuery, selectedLocation]);
+  }, [locationQuery, selectedLocation, locationCountry]);
 
   useEffect(() => {
     if (!interestQuery.trim()) {
@@ -1631,6 +1652,24 @@ function PautaBuilder({
                 </div>
                 {locationAdvancedOpen ? (
                   <div>
+                    <label className="mb-1 block text-[11px] font-bold text-wit-gray">
+                      País donde buscar
+                    </label>
+                    <select
+                      value={locationCountry}
+                      onChange={(e) => {
+                        setLocationCountry(e.target.value);
+                        setSelectedLocation(null);
+                      }}
+                      aria-label="País de la ubicación"
+                      className="mb-2 w-full rounded-lg border border-wit-ink/15 bg-white px-2 py-2 text-base outline-none focus:border-wit-blue"
+                    >
+                      {LOCATION_COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.flag} {c.name}
+                        </option>
+                      ))}
+                    </select>
                     <div className="relative">
                       <input
                         type="text"

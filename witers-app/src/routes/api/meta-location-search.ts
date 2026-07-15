@@ -18,7 +18,13 @@ export const Route = createFileRoute("/api/meta-location-search")({
         const q = (url.searchParams.get("q") ?? "").trim();
         if (q.length < 2) return json({ ok: true, results: [] });
 
-        const result = await searchMetaLocations(q);
+        // 2-letter ISO code from the client's country picker; only accept
+        // the shape (never trust arbitrary query params as-is) and default
+        // to México, since that's every current client's home market.
+        const rawCountry = (url.searchParams.get("country") ?? "").trim().toUpperCase();
+        const countryCode = /^[A-Z]{2}$/.test(rawCountry) ? rawCountry : "MX";
+
+        const result = await searchMetaLocations(q, countryCode);
         if (!result.ok) return json({ ok: false, error: result.error }, { status: 502 });
         return json({ ok: true, results: result.data });
       },
