@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { WitersLogo, WMark } from "../components/witers/brand";
@@ -846,10 +846,20 @@ function CampanasPanel() {
 
 type CampaignObjectiveUI = "trafico" | "interaccion" | "ventas";
 
-const OBJECTIVE_OPTIONS: { value: CampaignObjectiveUI; label: string; hint: string }[] = [
-  { value: "trafico", label: "🔗 Tráfico", hint: "Lleva gente a tu Página o Instagram" },
-  { value: "interaccion", label: "💬 Interacción", hint: "Más comentarios, likes y compartidos" },
-  { value: "ventas", label: "🛒 Ventas", hint: "Clic directo a tu WhatsApp" },
+const OBJECTIVE_OPTIONS: {
+  value: CampaignObjectiveUI;
+  icon: string;
+  label: string;
+  hint: string;
+}[] = [
+  { value: "trafico", icon: "🔗", label: "Tráfico", hint: "Lleva gente a tu Página o Instagram" },
+  {
+    value: "interaccion",
+    icon: "💬",
+    label: "Interacción",
+    hint: "Más comentarios, likes y compartidos",
+  },
+  { value: "ventas", icon: "🛒", label: "Ventas", hint: "Clic directo a tu WhatsApp" },
 ];
 
 function parseAgeRangeClient(ageRange: string | null): { min: number; max: number } {
@@ -885,6 +895,176 @@ const COUNTRY_CODES = [
   { code: "+58", flag: "🇻🇪", name: "Venezuela" },
 ];
 
+const BUDGET_CHIPS = [
+  { value: "50", icon: "💵", label: "$50 / día" },
+  { value: "100", icon: "💰", label: "$100 / día" },
+  { value: "200", icon: "🤑", label: "$200 / día" },
+  { value: "300", icon: "💸", label: "$300 / día" },
+  { value: "500", icon: "🏦", label: "$500 / día" },
+];
+
+const DURATION_CHIPS = [
+  { value: "3", icon: "⚡", label: "3 días" },
+  { value: "7", icon: "📅", label: "1 semana" },
+  { value: "14", icon: "🗓️", label: "2 semanas" },
+  { value: "30", icon: "📆", label: "1 mes" },
+];
+
+const PAUTA_AGE_CHIPS = [
+  { min: 18, max: 24, icon: "🧑‍🎓", label: "18 a 24" },
+  { min: 25, max: 34, icon: "🧑‍💼", label: "25 a 34" },
+  { min: 35, max: 44, icon: "🧑‍🔧", label: "35 a 44" },
+  { min: 45, max: 54, icon: "🧑‍🦳", label: "45 a 54" },
+  { min: 55, max: 65, icon: "👴", label: "55 a 65" },
+  { min: 18, max: 65, icon: "🌍", label: "Todas las edades" },
+];
+
+// Curated so the client never has to type — each icon resolves itself into
+// a real Meta interest via the same search the free-text box uses. If
+// Facebook's search doesn't answer (token/permissions/outage), the category
+// just reports "no se pudo" and the campaign proceeds with broad targeting
+// instead of leaving the client stuck on a dead search box.
+const INTEREST_CATEGORIES = [
+  { query: "moda", icon: "🛍️", label: "Moda y compras" },
+  { query: "restaurantes", icon: "🍽️", label: "Restaurantes" },
+  { query: "fitness", icon: "💪", label: "Fitness" },
+  { query: "belleza", icon: "💄", label: "Belleza" },
+  { query: "decoración del hogar", icon: "🏠", label: "Hogar" },
+  { query: "crianza", icon: "👨‍👩‍👧", label: "Familia" },
+  { query: "tecnología", icon: "💻", label: "Tecnología" },
+  { query: "automóviles", icon: "🚗", label: "Autos" },
+  { query: "viajes", icon: "✈️", label: "Viajes" },
+  { query: "mascotas", icon: "🐾", label: "Mascotas" },
+  { query: "emprendimiento", icon: "🏢", label: "Negocios" },
+  { query: "bienes raíces", icon: "🏡", label: "Bienes raíces" },
+];
+
+type CategoryStatus = "idle" | "loading" | "ok" | "empty" | "error";
+type CategoryState = Record<string, { status: CategoryStatus; interestId?: string }>;
+
+type WizardStepId =
+  | "objetivo"
+  | "destino"
+  | "whatsapp"
+  | "presupuesto"
+  | "duracion"
+  | "ubicacion"
+  | "edad"
+  | "segmentacion"
+  | "mensajes";
+
+function buildWizardSteps(objective: CampaignObjectiveUI): WizardStepId[] {
+  const steps: WizardStepId[] = ["objetivo"];
+  if (objective === "trafico") steps.push("destino");
+  if (objective === "ventas") steps.push("whatsapp");
+  steps.push("presupuesto", "duracion", "ubicacion", "edad", "segmentacion", "mensajes");
+  return steps;
+}
+
+// A big, tappable, illustrated answer — "dummy-proof" per spec: no typing,
+// no ambiguity, just an icon and a label. The gentle .wit-float bob (offset
+// per card via `delay`) is what makes a grid of these read as "floating
+// icons" instead of a flat button row.
+function IconChoice({
+  icon,
+  label,
+  sublabel,
+  selected,
+  onClick,
+  delay = 0,
+}: {
+  icon: string;
+  label: string;
+  sublabel?: string;
+  selected?: boolean;
+  onClick: () => void;
+  delay?: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{ animationDelay: `${delay}ms` }}
+      className={`wit-float flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-4 text-center transition-colors ${
+        selected
+          ? "border-wit-blue bg-wit-blue/10"
+          : "border-wit-ink/12 bg-white hover:border-wit-ink/25"
+      }`}
+    >
+      <span className="text-3xl">{icon}</span>
+      <span className={`text-xs font-bold ${selected ? "text-wit-blue" : "text-wit-ink"}`}>
+        {label}
+      </span>
+      {sublabel ? (
+        <span className="text-[10px] font-normal leading-tight text-wit-gray">{sublabel}</span>
+      ) : null}
+    </button>
+  );
+}
+
+// One question at a time, mirroring ChatIntakeFlow's conversational feel —
+// a progress line, the question with a big leading icon, and Atrás/Siguiente
+// navigation. Picking an answer usually advances on its own; Siguiente is
+// the manual fallback (default values, custom entry, going back to confirm).
+function WizardShell({
+  qIndex,
+  total,
+  icon,
+  question,
+  children,
+  onBack,
+  onNext,
+  nextLabel = "Siguiente",
+  nextDisabled = false,
+  hideNext = false,
+}: {
+  qIndex: number;
+  total: number;
+  icon: string;
+  question: string;
+  children: React.ReactNode;
+  onBack: () => void;
+  onNext: () => void;
+  nextLabel?: string;
+  nextDisabled?: boolean;
+  hideNext?: boolean;
+}) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="mb-4">
+        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+          Pregunta {qIndex + 1} de {total}
+        </p>
+        <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-wit-ink">
+          <span className="text-2xl">{icon}</span> {question}
+        </h2>
+      </div>
+      <div className="flex-1">{children}</div>
+      <div className="mt-5 flex items-center gap-3">
+        {qIndex > 0 ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
+          >
+            ← Atrás
+          </button>
+        ) : null}
+        {!hideNext ? (
+          <button
+            type="button"
+            disabled={nextDisabled}
+            onClick={onNext}
+            className="ml-auto rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-40"
+          >
+            {nextLabel}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 // Full-screen takeover, same pattern as WitConversation — the image on the
 // left, the campaign form on the right. Every numeric field is kept as a
 // raw string in state (not coerced with Number() on every keystroke) —
@@ -906,6 +1086,12 @@ function PautaBuilder({
   const defaultAge = parseAgeRangeClient(request.ageRangeDefault);
   const [ageMin, setAgeMin] = useState(String(defaultAge.min));
   const [ageMax, setAgeMax] = useState(String(defaultAge.max));
+  const [ageCustomOpen, setAgeCustomOpen] = useState(
+    () => !PAUTA_AGE_CHIPS.some((c) => c.min === defaultAge.min && c.max === defaultAge.max),
+  );
+  const [budgetCustomOpen, setBudgetCustomOpen] = useState(false);
+  const [durationCustomOpen, setDurationCustomOpen] = useState(false);
+  const [locationAdvancedOpen, setLocationAdvancedOpen] = useState(false);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationResults, setLocationResults] = useState<LocationHit[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<LocationHit | null>(null);
@@ -913,6 +1099,8 @@ function PautaBuilder({
   const [interestQuery, setInterestQuery] = useState("");
   const [interestResults, setInterestResults] = useState<InterestHit[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<InterestHit[]>([]);
+  const [interestAdvancedOpen, setInterestAdvancedOpen] = useState(false);
+  const [categoryState, setCategoryState] = useState<CategoryState>({});
   const [adMessages, setAdMessages] = useState<[string, string, string]>(
     buildDefaultAdMessages(request.title),
   );
@@ -922,9 +1110,53 @@ function PautaBuilder({
   // client's own Facebook Page, "web" points it at a site they type in.
   const [trafficDestination, setTrafficDestination] = useState<"redes" | "web">("redes");
   const [websiteUrl, setWebsiteUrl] = useState("");
-  const [step, setStep] = useState<"form" | "sending" | "done">("form");
+  const [phase, setPhase] = useState<"wizard" | "sending" | "done">("wizard");
+  const [qIndex, setQIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+
+  const steps = useMemo(() => buildWizardSteps(objective), [objective]);
+  useEffect(() => {
+    setQIndex((i) => Math.min(i, steps.length - 1));
+  }, [steps.length]);
+  const currentStepId = steps[qIndex];
+
+  function goNext() {
+    setQIndex((i) => Math.min(i + 1, steps.length - 1));
+  }
+  function goBack() {
+    setQIndex((i) => Math.max(i - 1, 0));
+  }
+
+  function toggleInterestCategory(cat: (typeof INTEREST_CATEGORIES)[number]) {
+    const cur = categoryState[cat.query];
+    if (cur?.status === "ok" && cur.interestId) {
+      const id = cur.interestId;
+      setSelectedInterests((prev) => prev.filter((i) => i.id !== id));
+      setCategoryState((prev) => ({ ...prev, [cat.query]: { status: "idle" } }));
+      return;
+    }
+    setCategoryState((prev) => ({ ...prev, [cat.query]: { status: "loading" } }));
+    void fetch(`/api/meta-interest-search?q=${encodeURIComponent(cat.query)}`, {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data: { ok: boolean; results?: InterestHit[] }) => {
+        const hit = data.ok ? data.results?.[0] : undefined;
+        if (hit) {
+          setSelectedInterests((prev) =>
+            prev.some((i) => i.id === hit.id) ? prev : [...prev, hit],
+          );
+          setCategoryState((prev) => ({
+            ...prev,
+            [cat.query]: { status: "ok", interestId: hit.id },
+          }));
+        } else {
+          setCategoryState((prev) => ({ ...prev, [cat.query]: { status: "empty" } }));
+        }
+      })
+      .catch(() => setCategoryState((prev) => ({ ...prev, [cat.query]: { status: "error" } })));
+  }
 
   useEffect(() => {
     if (!locationQuery.trim() || selectedLocation) {
@@ -999,7 +1231,7 @@ function PautaBuilder({
       return;
     }
 
-    setStep("sending");
+    setPhase("sending");
     setError(null);
     try {
       const res = await fetch("/api/campaigns-create", {
@@ -1036,14 +1268,14 @@ function PautaBuilder({
                   // swallowed into a generic "try again."
                   `No pudimos crear la campaña${data.error ? ` (${data.error})` : ""}. Intenta de nuevo.`,
         );
-        setStep("form");
+        setPhase("wizard");
         return;
       }
       setWarning(data.warning ?? null);
-      setStep("done");
+      setPhase("done");
     } catch {
       setError("No pudimos crear la campaña. Intenta de nuevo.");
-      setStep("form");
+      setPhase("wizard");
     }
   }
 
@@ -1077,7 +1309,7 @@ function PautaBuilder({
             <p className="mt-2 text-center text-sm font-semibold text-wit-ink">{request.title}</p>
           </div>
 
-          {step === "done" ? (
+          {phase === "done" ? (
             <div className="rounded-2xl bg-wit-ice p-6 text-sm text-wit-ink">
               <p className="font-bold">✓ Tu campaña se creó en pausa.</p>
               <p className="mt-1 text-xs text-wit-gray">
@@ -1091,247 +1323,425 @@ function PautaBuilder({
                 Ver en Campañas
               </button>
             </div>
-          ) : (
-            <div className="space-y-5">
-              <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-                  Objetivo de la campaña
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {OBJECTIVE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setObjective(opt.value)}
-                      className={`rounded-xl border px-2 py-2.5 text-center text-xs font-bold transition-colors ${
-                        objective === opt.value
-                          ? "border-wit-blue bg-wit-blue/10 text-wit-blue"
-                          : "border-wit-ink/15 text-wit-gray hover:border-wit-ink/30"
-                      }`}
-                    >
-                      <span className="block">{opt.label}</span>
-                      <span className="mt-0.5 block text-[10px] font-normal leading-tight">
-                        {opt.hint}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {objective === "ventas" ? (
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-                    Tu número de WhatsApp
-                  </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={whatsappCountryCode}
-                      onChange={(e) => setWhatsappCountryCode(e.target.value)}
-                      aria-label="Código de país"
-                      className="shrink-0 rounded-lg border border-wit-ink/15 bg-white px-2 py-2 text-sm outline-none focus:border-wit-blue"
-                    >
-                      {COUNTRY_CODES.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.flag} {c.code}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="tel"
-                      value={whatsappNumber}
-                      onChange={(e) => setWhatsappNumber(e.target.value)}
-                      placeholder="Ej. 5512345678"
-                      className="w-full min-w-0 flex-1 rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
-                    />
-                  </div>
-                  <p className="mt-1 text-[11px] text-wit-gray">
-                    Al darle clic al anuncio, la gente abrirá un chat directo contigo en WhatsApp.
-                  </p>
-                </div>
-              ) : null}
-
-              {objective === "trafico" ? (
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-                    ¿A dónde llevamos el tráfico?
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setTrafficDestination("redes")}
-                      className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
-                        trafficDestination === "redes"
-                          ? "border-wit-blue bg-wit-blue/10 text-wit-blue"
-                          : "border-wit-ink/15 text-wit-gray hover:border-wit-ink/30"
-                      }`}
-                    >
-                      Mis redes sociales
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTrafficDestination("web")}
-                      className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
-                        trafficDestination === "web"
-                          ? "border-wit-blue bg-wit-blue/10 text-wit-blue"
-                          : "border-wit-ink/15 text-wit-gray hover:border-wit-ink/30"
-                      }`}
-                    >
-                      Mi página web
-                    </button>
-                  </div>
-                  {trafficDestination === "web" ? (
-                    <input
-                      type="url"
-                      value={websiteUrl}
-                      onChange={(e) => setWebsiteUrl(e.target.value)}
-                      placeholder="https://tu-sitio.com"
-                      className="mt-2 w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
-                    />
-                  ) : (
-                    <p className="mt-1 text-[11px] text-wit-gray">
-                      El clic lleva a tu Página de Facebook.
-                    </p>
-                  )}
-                </div>
-              ) : null}
-
-              <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-                  Presupuesto diario (MXN)
-                </label>
-                <input
-                  type="number"
-                  min={20}
-                  value={dailyBudget}
-                  onChange={(e) => setDailyBudget(e.target.value)}
-                  className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-                  Duración (días)
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={90}
-                  value={durationDays}
-                  onChange={(e) => setDurationDays(e.target.value)}
-                  className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-                  Ubicación
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={locationQuery}
-                    onChange={(e) => {
-                      setLocationQuery(e.target.value);
-                      setSelectedLocation(null);
+          ) : phase === "sending" ? (
+            <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center">
+              <div className="wit-float text-4xl">🚀</div>
+              <p className="text-sm font-bold text-wit-ink">Creando tu campaña...</p>
+              <p className="text-xs text-wit-gray">Esto toma unos segundos.</p>
+            </div>
+          ) : currentStepId === "objetivo" ? (
+            <WizardShell
+              qIndex={qIndex}
+              total={steps.length}
+              icon="🎯"
+              question="¿Qué quieres lograr con esta campaña?"
+              onBack={goBack}
+              onNext={goNext}
+            >
+              <div className="grid grid-cols-3 gap-3">
+                {OBJECTIVE_OPTIONS.map((opt, i) => (
+                  <IconChoice
+                    key={opt.value}
+                    icon={opt.icon}
+                    label={opt.label}
+                    sublabel={opt.hint}
+                    selected={objective === opt.value}
+                    delay={i * 120}
+                    onClick={() => {
+                      setObjective(opt.value);
+                      goNext();
                     }}
-                    placeholder="Ciudad, colonia o código postal"
-                    className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
                   />
-                  {locationResults.length > 0 && !selectedLocation ? (
-                    <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-wit-ink/10 bg-white shadow-lg">
-                      {locationResults.map((loc) => (
-                        <button
-                          key={loc.key}
-                          type="button"
-                          onClick={() => {
-                            setSelectedLocation(loc);
-                            setLocationQuery(loc.name);
-                            setLocationResults([]);
-                          }}
-                          className="block w-full px-3 py-2 text-left text-sm hover:bg-wit-mist/50"
-                        >
-                          {loc.name}
-                          {loc.region ? (
-                            <span className="text-wit-gray"> · {loc.region}</span>
-                          ) : null}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-                {selectedLocation ? (
-                  <div className="mt-2 flex items-center gap-3">
-                    <span className="text-xs text-wit-gray">Radio: {radiusKm} km</span>
-                    <input
-                      type="range"
-                      min={5}
-                      max={50}
-                      step={5}
-                      value={radiusKm}
-                      onChange={(e) => setRadiusKm(e.target.value)}
-                      className="flex-1"
-                    />
-                  </div>
-                ) : (
-                  <p className="mt-1 text-[11px] text-wit-gray">
-                    Déjalo vacío para llegar a todo México, o busca una ciudad/colonia para acotar
-                    con un radio.
-                  </p>
-                )}
+                ))}
               </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-                  Rango de edad
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={13}
-                    max={65}
-                    value={ageMin}
-                    onChange={(e) => setAgeMin(e.target.value)}
-                    className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+            </WizardShell>
+          ) : currentStepId === "destino" ? (
+            <WizardShell
+              qIndex={qIndex}
+              total={steps.length}
+              icon="🚦"
+              question="¿A dónde llevamos el tráfico?"
+              onBack={goBack}
+              onNext={goNext}
+              nextDisabled={trafficDestination === "web" && !websiteUrl.trim()}
+            >
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <IconChoice
+                    icon="📱"
+                    label="Mis redes sociales"
+                    sublabel="A tu Página / Instagram"
+                    selected={trafficDestination === "redes"}
+                    onClick={() => {
+                      setTrafficDestination("redes");
+                      goNext();
+                    }}
                   />
-                  <span className="text-sm text-wit-gray">a</span>
-                  <input
-                    type="number"
-                    min={13}
-                    max={65}
-                    value={ageMax}
-                    onChange={(e) => setAgeMax(e.target.value)}
-                    className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                  <IconChoice
+                    icon="🌐"
+                    label="Mi página web"
+                    delay={120}
+                    selected={trafficDestination === "web"}
+                    onClick={() => setTrafficDestination("web")}
                   />
                 </div>
+                {trafficDestination === "web" ? (
+                  <input
+                    type="url"
+                    autoFocus
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="https://tu-sitio.com"
+                    className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
+                  />
+                ) : null}
               </div>
-
+            </WizardShell>
+          ) : currentStepId === "whatsapp" ? (
+            <WizardShell
+              qIndex={qIndex}
+              total={steps.length}
+              icon="💬"
+              question="¿A qué WhatsApp llegan tus clientes?"
+              onBack={goBack}
+              onNext={goNext}
+              nextDisabled={!whatsappNumber.trim()}
+            >
               <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-                  Segmentación (intereses)
-                </label>
-                <input
-                  type="text"
-                  value={interestQuery}
-                  onChange={(e) => setInterestQuery(e.target.value)}
-                  placeholder="Ej. moda, fitness, restaurantes..."
-                  className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
-                />
-                {interestResults.length > 0 ? (
-                  <div className="mt-1 overflow-hidden rounded-lg border border-wit-ink/10 bg-white shadow-lg">
-                    {interestResults.map((hit) => (
-                      <button
-                        key={hit.id}
-                        type="button"
-                        onClick={() => addInterest(hit)}
-                        className="block w-full px-3 py-2 text-left text-sm hover:bg-wit-mist/50"
-                      >
-                        {hit.name}
-                      </button>
+                <div className="flex gap-2">
+                  <select
+                    value={whatsappCountryCode}
+                    onChange={(e) => setWhatsappCountryCode(e.target.value)}
+                    aria-label="Código de país"
+                    className="shrink-0 rounded-lg border border-wit-ink/15 bg-white px-2 py-2 text-base outline-none focus:border-wit-blue"
+                  >
+                    {COUNTRY_CODES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.flag} {c.code}
+                      </option>
                     ))}
+                  </select>
+                  <input
+                    type="tel"
+                    autoFocus
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    placeholder="Ej. 5512345678"
+                    className="w-full min-w-0 flex-1 rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
+                  />
+                </div>
+                <p className="mt-2 text-[11px] text-wit-gray">
+                  Al darle clic al anuncio, la gente abrirá un chat directo contigo en WhatsApp.
+                </p>
+              </div>
+            </WizardShell>
+          ) : currentStepId === "presupuesto" ? (
+            <WizardShell
+              qIndex={qIndex}
+              total={steps.length}
+              icon="💵"
+              question="¿Cuánto quieres invertir al día?"
+              onBack={goBack}
+              onNext={goNext}
+              nextDisabled={!Number.isFinite(Number(dailyBudget)) || Number(dailyBudget) < 20}
+            >
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  {BUDGET_CHIPS.map((chip, i) => (
+                    <IconChoice
+                      key={chip.value}
+                      icon={chip.icon}
+                      label={chip.label}
+                      selected={!budgetCustomOpen && dailyBudget === chip.value}
+                      delay={i * 100}
+                      onClick={() => {
+                        setDailyBudget(chip.value);
+                        setBudgetCustomOpen(false);
+                        goNext();
+                      }}
+                    />
+                  ))}
+                  <IconChoice
+                    icon="✏️"
+                    label="Otro monto"
+                    selected={budgetCustomOpen}
+                    delay={BUDGET_CHIPS.length * 100}
+                    onClick={() => setBudgetCustomOpen(true)}
+                  />
+                </div>
+                {budgetCustomOpen ? (
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-wit-gray">
+                      Presupuesto diario (MXN)
+                    </label>
+                    <input
+                      type="number"
+                      autoFocus
+                      min={20}
+                      value={dailyBudget}
+                      onChange={(e) => setDailyBudget(e.target.value)}
+                      className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
+                    />
+                    <p className="mt-1 text-[11px] text-wit-gray">Mínimo $20 MXN al día.</p>
                   </div>
                 ) : null}
+              </div>
+            </WizardShell>
+          ) : currentStepId === "duracion" ? (
+            <WizardShell
+              qIndex={qIndex}
+              total={steps.length}
+              icon="📅"
+              question="¿Cuánto tiempo debe correr la campaña?"
+              onBack={goBack}
+              onNext={goNext}
+              nextDisabled={!Number.isInteger(Number(durationDays)) || Number(durationDays) < 1}
+            >
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  {DURATION_CHIPS.map((chip, i) => (
+                    <IconChoice
+                      key={chip.value}
+                      icon={chip.icon}
+                      label={chip.label}
+                      selected={!durationCustomOpen && durationDays === chip.value}
+                      delay={i * 100}
+                      onClick={() => {
+                        setDurationDays(chip.value);
+                        setDurationCustomOpen(false);
+                        goNext();
+                      }}
+                    />
+                  ))}
+                  <IconChoice
+                    icon="✏️"
+                    label="Otra duración"
+                    selected={durationCustomOpen}
+                    delay={DURATION_CHIPS.length * 100}
+                    onClick={() => setDurationCustomOpen(true)}
+                  />
+                </div>
+                {durationCustomOpen ? (
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-wit-gray">
+                      Duración (días)
+                    </label>
+                    <input
+                      type="number"
+                      autoFocus
+                      min={1}
+                      max={90}
+                      value={durationDays}
+                      onChange={(e) => setDurationDays(e.target.value)}
+                      className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </WizardShell>
+          ) : currentStepId === "ubicacion" ? (
+            <WizardShell
+              qIndex={qIndex}
+              total={steps.length}
+              icon="📍"
+              question="¿A quién le mostramos el anuncio, por ubicación?"
+              onBack={goBack}
+              onNext={goNext}
+            >
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <IconChoice
+                    icon="🇲🇽"
+                    label="Todo México"
+                    sublabel="Recomendado"
+                    selected={!selectedLocation}
+                    onClick={() => {
+                      setSelectedLocation(null);
+                      setLocationQuery("");
+                      setLocationAdvancedOpen(false);
+                      goNext();
+                    }}
+                  />
+                  <IconChoice
+                    icon="📍"
+                    label={selectedLocation ? selectedLocation.name : "Elegir una ciudad"}
+                    sublabel={selectedLocation ? "Toca para cambiar" : "Busca por ciudad o CP"}
+                    delay={120}
+                    selected={Boolean(selectedLocation)}
+                    onClick={() => setLocationAdvancedOpen(true)}
+                  />
+                </div>
+                {locationAdvancedOpen ? (
+                  <div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        autoFocus
+                        value={locationQuery}
+                        onChange={(e) => {
+                          setLocationQuery(e.target.value);
+                          setSelectedLocation(null);
+                        }}
+                        placeholder="Ciudad o código postal"
+                        className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
+                      />
+                      {locationResults.length > 0 && !selectedLocation ? (
+                        <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-wit-ink/10 bg-white shadow-lg">
+                          {locationResults.map((loc) => (
+                            <button
+                              key={loc.key}
+                              type="button"
+                              onClick={() => {
+                                setSelectedLocation(loc);
+                                setLocationQuery(loc.name);
+                                setLocationResults([]);
+                              }}
+                              className="block w-full px-3 py-2 text-left text-sm hover:bg-wit-mist/50"
+                            >
+                              {loc.name}
+                              {loc.region ? (
+                                <span className="text-wit-gray"> · {loc.region}</span>
+                              ) : null}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                    {selectedLocation ? (
+                      <div className="mt-3 flex items-center gap-3">
+                        <span className="text-xs text-wit-gray">Radio: {radiusKm} km</span>
+                        <input
+                          type="range"
+                          min={5}
+                          max={50}
+                          step={5}
+                          value={radiusKm}
+                          onChange={(e) => setRadiusKm(e.target.value)}
+                          className="flex-1"
+                        />
+                      </div>
+                    ) : locationQuery.trim() && locationResults.length === 0 ? (
+                      <p className="mt-2 text-[11px] text-amber-600">
+                        No encontramos esa ubicación en Facebook en este momento. Puedes intentar de
+                        nuevo o seguir con "Todo México".
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-[11px] text-wit-gray">
+                        Escribe el nombre de una ciudad o un código postal.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </WizardShell>
+          ) : currentStepId === "edad" ? (
+            <WizardShell
+              qIndex={qIndex}
+              total={steps.length}
+              icon="🎂"
+              question="¿A qué edades le hablamos?"
+              onBack={goBack}
+              onNext={goNext}
+              nextDisabled={
+                !Number.isInteger(Number(ageMin)) ||
+                !Number.isInteger(Number(ageMax)) ||
+                Number(ageMin) < 13 ||
+                Number(ageMax) > 65 ||
+                Number(ageMin) > Number(ageMax)
+              }
+            >
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  {PAUTA_AGE_CHIPS.map((chip, i) => (
+                    <IconChoice
+                      key={chip.label}
+                      icon={chip.icon}
+                      label={chip.label}
+                      selected={
+                        !ageCustomOpen && Number(ageMin) === chip.min && Number(ageMax) === chip.max
+                      }
+                      delay={i * 100}
+                      onClick={() => {
+                        setAgeMin(String(chip.min));
+                        setAgeMax(String(chip.max));
+                        setAgeCustomOpen(false);
+                        goNext();
+                      }}
+                    />
+                  ))}
+                  <IconChoice
+                    icon="✏️"
+                    label="Personalizar"
+                    selected={ageCustomOpen}
+                    delay={PAUTA_AGE_CHIPS.length * 100}
+                    onClick={() => setAgeCustomOpen(true)}
+                  />
+                </div>
+                {ageCustomOpen ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      autoFocus
+                      min={13}
+                      max={65}
+                      value={ageMin}
+                      onChange={(e) => setAgeMin(e.target.value)}
+                      className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
+                    />
+                    <span className="text-sm text-wit-gray">a</span>
+                    <input
+                      type="number"
+                      min={13}
+                      max={65}
+                      value={ageMax}
+                      onChange={(e) => setAgeMax(e.target.value)}
+                      className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </WizardShell>
+          ) : currentStepId === "segmentacion" ? (
+            <WizardShell
+              qIndex={qIndex}
+              total={steps.length}
+              icon="🧲"
+              question="¿A quién le interesa esto?"
+              onBack={goBack}
+              onNext={goNext}
+            >
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <IconChoice
+                    icon="🌎"
+                    label="Todas las personas"
+                    sublabel="Recomendado si no sabes"
+                    selected={selectedInterests.length === 0}
+                    onClick={() => {
+                      setSelectedInterests([]);
+                      setCategoryState({});
+                      goNext();
+                    }}
+                  />
+                  {INTEREST_CATEGORIES.map((cat, i) => {
+                    const st = categoryState[cat.query]?.status ?? "idle";
+                    return (
+                      <IconChoice
+                        key={cat.query}
+                        icon={st === "loading" ? "⏳" : cat.icon}
+                        label={cat.label}
+                        sublabel={
+                          st === "empty" || st === "error" ? "No disponible ahora" : undefined
+                        }
+                        selected={st === "ok"}
+                        delay={(i + 1) * 90}
+                        onClick={() => toggleInterestCategory(cat)}
+                      />
+                    );
+                  })}
+                </div>
                 {selectedInterests.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1.5">
                     {selectedInterests.map((i) => (
                       <button
                         key={i.id}
@@ -1346,12 +1756,54 @@ function PautaBuilder({
                     ))}
                   </div>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={() => setInterestAdvancedOpen((v) => !v)}
+                  className="text-xs font-semibold text-wit-gray underline hover:text-wit-ink"
+                >
+                  {interestAdvancedOpen ? "Ocultar búsqueda" : "Buscar algo específico"}
+                </button>
+                {interestAdvancedOpen ? (
+                  <div>
+                    <input
+                      type="text"
+                      value={interestQuery}
+                      onChange={(e) => setInterestQuery(e.target.value)}
+                      placeholder="Ej. yoga, mariscos, bodas..."
+                      className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
+                    />
+                    {interestResults.length > 0 ? (
+                      <div className="mt-1 overflow-hidden rounded-lg border border-wit-ink/10 bg-white shadow-lg">
+                        {interestResults.map((hit) => (
+                          <button
+                            key={hit.id}
+                            type="button"
+                            onClick={() => addInterest(hit)}
+                            className="block w-full px-3 py-2 text-left text-sm hover:bg-wit-mist/50"
+                          >
+                            {hit.name}
+                          </button>
+                        ))}
+                      </div>
+                    ) : interestQuery.trim() ? (
+                      <p className="mt-2 text-[11px] text-wit-gray">Buscando en Facebook...</p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
-
+            </WizardShell>
+          ) : (
+            <WizardShell
+              qIndex={qIndex}
+              total={steps.length}
+              icon="📝"
+              question="Estos son los mensajes de tu anuncio"
+              onBack={goBack}
+              onNext={() => void submit()}
+              nextLabel="Crear campaña (en pausa)"
+              nextDisabled={adMessages.every((m) => !m.trim())}
+            >
               <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-                  Mensajes del anuncio
-                </label>
                 <div className="space-y-2">
                   {adMessages.map((msg, i) => (
                     <input
@@ -1366,36 +1818,17 @@ function PautaBuilder({
                           return next;
                         })
                       }
-                      className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                      className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
                     />
                   ))}
                 </div>
-                <p className="mt-1 text-[11px] text-wit-gray">
+                <p className="mt-2 text-[11px] text-wit-gray">
                   Cada mensaje se convierte en su propio anuncio dentro de la campaña, para probar
                   cuál funciona mejor.
                 </p>
+                {error ? <p className="mt-3 text-xs text-red-600">{error}</p> : null}
               </div>
-
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  type="button"
-                  disabled={step === "sending"}
-                  onClick={() => void submit()}
-                  className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
-                >
-                  {step === "sending" ? "Creando..." : "Crear campaña (en pausa)"}
-                </button>
-                <button
-                  type="button"
-                  disabled={step === "sending"}
-                  onClick={onClose}
-                  className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
-                >
-                  Cancelar
-                </button>
-              </div>
-              {error ? <p className="text-xs text-red-600">{error}</p> : null}
-            </div>
+            </WizardShell>
           )}
         </div>
       </div>

@@ -100,7 +100,10 @@ export async function searchMetaLocations(
     {
       type: "adgeolocation",
       q: query,
-      location_types: ["city", "neighborhood", "zip"],
+      // "neighborhood" isn't a real Meta location_types value — an invalid
+      // enum entry here made the whole search request fail every time,
+      // which is why nothing was ever showing up.
+      location_types: ["city", "zip"],
       limit: 8,
     },
     "GET",
