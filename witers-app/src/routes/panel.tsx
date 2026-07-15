@@ -996,6 +996,7 @@ function IconChoice({
   selected,
   onClick,
   delay = 0,
+  compact = false,
 }: {
   icon: string;
   label: string;
@@ -1003,20 +1004,28 @@ function IconChoice({
   selected?: boolean;
   onClick: () => void;
   delay?: number;
+  // Smaller padding/icon/text for grids with a lot of options at once
+  // (e.g. segmentación's dozen interest categories) — the default size
+  // reads as oversized once there are more than 5-6 cards on screen.
+  compact?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       style={{ animationDelay: `${delay}ms` }}
-      className={`wit-float-soft flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-4 text-center transition-colors ${
+      className={`wit-float-soft flex flex-col items-center rounded-2xl border text-center transition-colors ${
+        compact ? "gap-0.5 px-1.5 py-2.5" : "gap-1.5 px-3 py-4"
+      } ${
         selected
           ? "border-wit-blue bg-wit-blue/10"
           : "border-wit-ink/12 bg-white hover:border-wit-ink/25"
       }`}
     >
-      <span className="text-3xl">{icon}</span>
-      <span className={`text-xs font-bold ${selected ? "text-wit-blue" : "text-wit-ink"}`}>
+      <span className={compact ? "text-xl" : "text-3xl"}>{icon}</span>
+      <span
+        className={`font-bold ${compact ? "text-[11px]" : "text-xs"} ${selected ? "text-wit-blue" : "text-wit-ink"}`}
+      >
         {label}
       </span>
       {sublabel ? (
@@ -1035,6 +1044,7 @@ function WizardShell({
   total,
   icon,
   question,
+  subtitle,
   children,
   onBack,
   onNext,
@@ -1046,6 +1056,10 @@ function WizardShell({
   total: number;
   icon: string;
   question: string;
+  // A plain-language helper line under the question — for questions that
+  // use marketing/ads vocabulary a client setting up their own campaign
+  // may not know, spelling out what to actually think about in practice.
+  subtitle?: string;
   children: React.ReactNode;
   onBack: () => void;
   onNext: () => void;
@@ -1062,6 +1076,7 @@ function WizardShell({
         <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-wit-ink">
           <span className="text-2xl">{icon}</span> {question}
         </h2>
+        {subtitle ? <p className="mt-1 text-xs text-wit-gray">{subtitle}</p> : null}
       </div>
       <div className="flex-1">{children}</div>
       <div className="mt-5 flex items-center gap-3">
@@ -1808,16 +1823,17 @@ function PautaBuilder({
               qIndex={qIndex}
               total={steps.length}
               icon="🧲"
-              question="¿A quién le interesa esto?"
+              question="¿Qué le interesa a tu cliente?"
+              subtitle="💡 Piensa: ¿qué crees que tu cliente ideal está viendo en su teléfono justo ahora?"
               onBack={goBack}
               onNext={goNext}
             >
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-4 gap-2">
                   <IconChoice
+                    compact
                     icon="🌎"
                     label="Todas las personas"
-                    sublabel="Recomendado si no sabes"
                     selected={selectedInterests.length === 0}
                     onClick={() => {
                       setSelectedInterests([]);
@@ -1829,16 +1845,10 @@ function PautaBuilder({
                     const st = categoryState[cat.query]?.status ?? "idle";
                     return (
                       <IconChoice
+                        compact
                         key={cat.query}
                         icon={st === "loading" ? "⏳" : cat.icon}
                         label={cat.label}
-                        sublabel={
-                          st === "empty"
-                            ? "Sin resultados"
-                            : st === "error"
-                              ? "No disponible ahora"
-                              : undefined
-                        }
                         selected={st === "ok"}
                         delay={(i + 1) * 90}
                         onClick={() => toggleInterestCategory(cat)}
@@ -1884,14 +1894,22 @@ function PautaBuilder({
                 <button
                   type="button"
                   onClick={() => setInterestAdvancedOpen((v) => !v)}
-                  className="text-xs font-semibold text-wit-gray underline hover:text-wit-ink"
+                  className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
+                    interestAdvancedOpen
+                      ? "border-wit-blue bg-wit-blue/10 text-wit-blue"
+                      : "border-wit-ink/15 text-wit-ink hover:border-wit-blue/50"
+                  }`}
                 >
-                  {interestAdvancedOpen ? "Ocultar búsqueda" : "Buscar algo específico"}
+                  🔍 {interestAdvancedOpen ? "Ocultar búsqueda" : "Buscar algo más específico"}
+                  <span className="ml-auto text-[11px] font-normal text-wit-gray">
+                    Lista real de Facebook
+                  </span>
                 </button>
                 {interestAdvancedOpen ? (
                   <div>
                     <input
                       type="text"
+                      autoFocus
                       value={interestQuery}
                       onChange={(e) => setInterestQuery(e.target.value)}
                       placeholder="Ej. yoga, mariscos, bodas..."
