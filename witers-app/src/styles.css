@@ -278,6 +278,22 @@
   }
 }
 
+/* Same idea but barely-there — for grids of many icon buttons at once
+   (the pauta wizard's answer cards), where the full -7px bob across a
+   dozen buttons reads as distracting motion instead of a quiet detail. */
+.wit-float-soft {
+  animation: wit-float-soft 4.2s ease-in-out infinite;
+}
+@keyframes wit-float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
 .wit-underline {
   position: relative;
   display: inline-block;

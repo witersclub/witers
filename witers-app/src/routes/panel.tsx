@@ -940,7 +940,10 @@ const INTEREST_CATEGORIES = [
 ];
 
 type CategoryStatus = "idle" | "loading" | "ok" | "empty" | "error";
-type CategoryState = Record<string, { status: CategoryStatus; interestId?: string }>;
+type CategoryState = Record<
+  string,
+  { status: CategoryStatus; interestId?: string; error?: string }
+>;
 
 type WizardStepId =
   | "objetivo"
@@ -962,9 +965,11 @@ function buildWizardSteps(objective: CampaignObjectiveUI): WizardStepId[] {
 }
 
 // A big, tappable, illustrated answer — "dummy-proof" per spec: no typing,
-// no ambiguity, just an icon and a label. The gentle .wit-float bob (offset
-// per card via `delay`) is what makes a grid of these read as "floating
-// icons" instead of a flat button row.
+// no ambiguity, just an icon and a label. The barely-there .wit-float-soft
+// bob (offset per card via `delay`) is what makes a grid of these read as
+// "floating icons" instead of a flat button row — deliberately much
+// smaller than .wit-float's usual -7px, since that amount of motion across
+// a whole grid of buttons reads as distracting rather than a quiet detail.
 function IconChoice({
   icon,
   label,
@@ -985,7 +990,7 @@ function IconChoice({
       type="button"
       onClick={onClick}
       style={{ animationDelay: `${delay}ms` }}
-      className={`wit-float flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-4 text-center transition-colors ${
+      className={`wit-float-soft flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-4 text-center transition-colors ${
         selected
           ? "border-wit-blue bg-wit-blue/10"
           : "border-wit-ink/12 bg-white hover:border-wit-ink/25"
@@ -1089,11 +1094,23 @@ function PautaBuilder({
   const [ageCustomOpen, setAgeCustomOpen] = useState(
     () => !PAUTA_AGE_CHIPS.some((c) => c.min === defaultAge.min && c.max === defaultAge.max),
   );
+  // Age chips are multi-select — picking more than one (e.g. 25-34 and
+  // 45-54) merges into a single continuous min/max span, since a Meta ad
+  // set only takes one age_min/age_max, not disjoint brackets.
+  const [selectedAgeChips, setSelectedAgeChips] = useState<Set<string>>(
+    () =>
+      new Set(
+        PAUTA_AGE_CHIPS.filter((c) => c.min === defaultAge.min && c.max === defaultAge.max).map(
+          (c) => c.label,
+        ),
+      ),
+  );
   const [budgetCustomOpen, setBudgetCustomOpen] = useState(false);
   const [durationCustomOpen, setDurationCustomOpen] = useState(false);
   const [locationAdvancedOpen, setLocationAdvancedOpen] = useState(false);
   const [locationQuery, setLocationQuery] = useState("");
   const [locationResults, setLocationResults] = useState<LocationHit[]>([]);
+  const [locationSearchError, setLocationSearchError] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<LocationHit | null>(null);
   const [radiusKm, setRadiusKm] = useState("10");
   const [interestQuery, setInterestQuery] = useState("");
@@ -1128,6 +1145,23 @@ function PautaBuilder({
     setQIndex((i) => Math.max(i - 1, 0));
   }
 
+  function toggleAgeChip(chip: (typeof PAUTA_AGE_CHIPS)[number]) {
+    setAgeCustomOpen(false);
+    setSelectedAgeChips((prev) => {
+      const next = new Set(prev);
+      if (next.has(chip.label)) next.delete(chip.label);
+      else next.add(chip.label);
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    if (selectedAgeChips.size === 0) return;
+    const chosen = PAUTA_AGE_CHIPS.filter((c) => selectedAgeChips.has(c.label));
+    setAgeMin(String(Math.min(...chosen.map((c) => c.min))));
+    setAgeMax(String(Math.max(...chosen.map((c) => c.max))));
+  }, [selectedAgeChips]);
+
   function toggleInterestCategory(cat: (typeof INTEREST_CATEGORIES)[number]) {
     const cur = categoryState[cat.query];
     if (cur?.status === "ok" && cur.interestId) {
@@ -1141,7 +1175,7 @@ function PautaBuilder({
       credentials: "include",
     })
       .then((res) => res.json())
-      .then((data: { ok: boolean; results?: InterestHit[] }) => {
+      .then((data: { ok: boolean; results?: InterestHit[]; error?: string }) => {
         const hit = data.ok ? data.results?.[0] : undefined;
         if (hit) {
           setSelectedInterests((prev) =>
@@ -1151,16 +1185,31 @@ function PautaBuilder({
             ...prev,
             [cat.query]: { status: "ok", interestId: hit.id },
           }));
-        } else {
+        } else if (data.ok) {
+          // Real search, genuinely zero matches for this category.
           setCategoryState((prev) => ({ ...prev, [cat.query]: { status: "empty" } }));
+        } else {
+          // Facebook's search itself failed (token/permissions/outage) —
+          // keep the raw code so it's diagnosable from a screenshot instead
+          // of looking identical to "no matches."
+          setCategoryState((prev) => ({
+            ...prev,
+            [cat.query]: { status: "error", error: data.error },
+          }));
         }
       })
-      .catch(() => setCategoryState((prev) => ({ ...prev, [cat.query]: { status: "error" } })));
+      .catch(() =>
+        setCategoryState((prev) => ({
+          ...prev,
+          [cat.query]: { status: "error", error: "conexión" },
+        })),
+      );
   }
 
   useEffect(() => {
     if (!locationQuery.trim() || selectedLocation) {
       setLocationResults([]);
+      setLocationSearchError(null);
       return;
     }
     const timer = setTimeout(() => {
@@ -1168,10 +1217,19 @@ function PautaBuilder({
         credentials: "include",
       })
         .then((res) => res.json())
-        .then((data: { ok: boolean; results?: LocationHit[] }) => {
-          if (data.ok) setLocationResults(data.results ?? []);
+        .then((data: { ok: boolean; results?: LocationHit[]; error?: string }) => {
+          if (data.ok) {
+            setLocationResults(data.results ?? []);
+            setLocationSearchError(null);
+          } else {
+            setLocationResults([]);
+            setLocationSearchError(data.error ?? "error");
+          }
         })
-        .catch(() => setLocationResults([]));
+        .catch(() => {
+          setLocationResults([]);
+          setLocationSearchError("conexión");
+        });
     }, 350);
     return () => clearTimeout(timer);
   }, [locationQuery, selectedLocation]);
@@ -1622,8 +1680,9 @@ function PautaBuilder({
                       </div>
                     ) : locationQuery.trim() && locationResults.length === 0 ? (
                       <p className="mt-2 text-[11px] text-amber-600">
-                        No encontramos esa ubicación en Facebook en este momento. Puedes intentar de
-                        nuevo o seguir con "Todo México".
+                        {locationSearchError
+                          ? `Facebook no respondió a la búsqueda (${locationSearchError}). Puedes intentar de nuevo o seguir con "Todo México".`
+                          : 'No encontramos esa ubicación en Facebook. Puedes intentar de nuevo o seguir con "Todo México".'}
                       </p>
                     ) : (
                       <p className="mt-2 text-[11px] text-wit-gray">
@@ -1643,6 +1702,7 @@ function PautaBuilder({
               onBack={goBack}
               onNext={goNext}
               nextDisabled={
+                (!ageCustomOpen && selectedAgeChips.size === 0) ||
                 !Number.isInteger(Number(ageMin)) ||
                 !Number.isInteger(Number(ageMax)) ||
                 Number(ageMin) < 13 ||
@@ -1651,22 +1711,18 @@ function PautaBuilder({
               }
             >
               <div className="space-y-4">
+                <p className="text-[11px] text-wit-gray">
+                  Puedes elegir más de un rango — se combinan en uno solo.
+                </p>
                 <div className="grid grid-cols-3 gap-3">
                   {PAUTA_AGE_CHIPS.map((chip, i) => (
                     <IconChoice
                       key={chip.label}
                       icon={chip.icon}
                       label={chip.label}
-                      selected={
-                        !ageCustomOpen && Number(ageMin) === chip.min && Number(ageMax) === chip.max
-                      }
+                      selected={!ageCustomOpen && selectedAgeChips.has(chip.label)}
                       delay={i * 100}
-                      onClick={() => {
-                        setAgeMin(String(chip.min));
-                        setAgeMax(String(chip.max));
-                        setAgeCustomOpen(false);
-                        goNext();
-                      }}
+                      onClick={() => toggleAgeChip(chip)}
                     />
                   ))}
                   <IconChoice
@@ -1674,7 +1730,10 @@ function PautaBuilder({
                     label="Personalizar"
                     selected={ageCustomOpen}
                     delay={PAUTA_AGE_CHIPS.length * 100}
-                    onClick={() => setAgeCustomOpen(true)}
+                    onClick={() => {
+                      setAgeCustomOpen(true);
+                      setSelectedAgeChips(new Set());
+                    }}
                   />
                 </div>
                 {ageCustomOpen ? (
@@ -1698,6 +1757,10 @@ function PautaBuilder({
                       className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
                     />
                   </div>
+                ) : selectedAgeChips.size > 0 ? (
+                  <p className="text-xs font-semibold text-wit-ink">
+                    Tu rango: {ageMin} a {ageMax} años
+                  </p>
                 ) : null}
               </div>
             </WizardShell>
@@ -1731,7 +1794,11 @@ function PautaBuilder({
                         icon={st === "loading" ? "⏳" : cat.icon}
                         label={cat.label}
                         sublabel={
-                          st === "empty" || st === "error" ? "No disponible ahora" : undefined
+                          st === "empty"
+                            ? "Sin resultados"
+                            : st === "error"
+                              ? "No disponible ahora"
+                              : undefined
                         }
                         selected={st === "ok"}
                         delay={(i + 1) * 90}
@@ -1740,6 +1807,25 @@ function PautaBuilder({
                     );
                   })}
                 </div>
+                {(() => {
+                  // Surface Facebook's actual error code (not just "no
+                  // disponible") so a screenshot of this screen is enough
+                  // to diagnose a token/permission problem, the same way
+                  // campaigns-create already does for submit errors.
+                  const codes = Array.from(
+                    new Set(
+                      Object.values(categoryState)
+                        .filter((s) => s.status === "error" && s.error)
+                        .map((s) => s.error as string),
+                    ),
+                  );
+                  return codes.length > 0 ? (
+                    <p className="text-[11px] text-amber-600">
+                      Facebook no respondió a la búsqueda ({codes.join(", ")}). Puedes seguir con
+                      "Todas las personas" mientras lo revisamos.
+                    </p>
+                  ) : null;
+                })()}
                 {selectedInterests.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedInterests.map((i) => (
