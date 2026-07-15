@@ -408,7 +408,13 @@ function Panel() {
             <div className="fixed inset-0 z-50 bg-white">
               <WitConversation
                 key={chatKey}
-                disabled={!active || remaining <= 0}
+                disabledReason={
+                  !active
+                    ? "Tu membresía no está activa todavía."
+                    : remaining <= 0
+                      ? "Ya usaste todas tus solicitudes disponibles este mes."
+                      : null
+                }
                 brandProfile={brandProfile}
                 initialAnswers={chatKey === 0 ? (teaserAnswers ?? undefined) : undefined}
                 recentRequestTitles={rows
@@ -1711,17 +1717,22 @@ function deriveTitle(pieceBrief: string | undefined, companyName: string | undef
 // correct an answer (not a second "editar" flow bolted onto this box).
 function ChatReviewBox({
   answers,
-  disabled,
+  disabledReason,
   sendError,
   sending,
   onConfirm,
 }: {
   answers: Record<string, string>;
-  disabled: boolean;
+  // Why the submit button can't be used right now (no active membership,
+  // no quota left) — shown right above it instead of just quietly greying
+  // it out, which left a fully-filled-out request with no explanation for
+  // why "Confirmar y enviar" wouldn't respond to a tap.
+  disabledReason: string | null;
   sendError: string | null;
   sending: boolean;
   onConfirm: () => void;
 }) {
+  const disabled = Boolean(disabledReason);
   const colorList = (answers.colors ?? "")
     .split(",")
     .map((c) => c.trim())
@@ -1772,6 +1783,11 @@ function ChatReviewBox({
 
       {sendError ? (
         <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{sendError}</p>
+      ) : null}
+      {disabledReason ? (
+        <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          {disabledReason}
+        </p>
       ) : null}
 
       <button
@@ -1848,14 +1864,14 @@ function buildContextPrimer(
 // logo never come up — those are already locked in brandProfile by the
 // mandatory onboarding chat (see OnboardingGate) by the time this ever runs.
 function WitConversation({
-  disabled,
+  disabledReason,
   onCreated,
   onClose,
   brandProfile,
   initialAnswers,
   recentRequestTitles,
 }: {
-  disabled: boolean;
+  disabledReason: string | null;
   onCreated: () => void;
   onClose: () => void;
   brandProfile: BrandProfile | null;
@@ -1889,12 +1905,17 @@ function WitConversation({
   // Grows the box downward as the client types/dictates, so everything
   // stays visible instead of scrolling out of view inside a fixed box —
   // capped so a very long message still gets its own internal scroll
-  // instead of swallowing the screen.
+  // instead of swallowing the screen. Growing it alone isn't enough
+  // though: nothing else scrolls to follow it, so the client had to drag
+  // the screen down by hand to see what they'd just typed. scrollIntoView
+  // brings it back into view as it grows, same as the message list itself
+  // already does when a new bubble arrives.
   useEffect(() => {
     const el = composerRef.current;
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+    el.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [input]);
 
   async function askWit(nextMessages: WitMessage[]) {
@@ -2067,7 +2088,7 @@ function WitConversation({
               {reviewAnswers ? (
                 <ChatReviewBox
                   answers={reviewAnswers}
-                  disabled={disabled}
+                  disabledReason={disabledReason}
                   sendError={sendError}
                   sending={sending}
                   onConfirm={confirmSend}
