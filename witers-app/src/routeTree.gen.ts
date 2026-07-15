@@ -28,6 +28,8 @@ import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-rev
 import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
+import { Route as ApiCampaignsCreateRouteImport } from './routes/api/campaigns-create'
+import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
 import { Route as ApiBrandProfileColorsRouteImport } from './routes/api/brand-profile-colors'
 import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
@@ -152,6 +154,16 @@ const ApiCloseRequestRoute = ApiCloseRequestRouteImport.update({
 const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   id: '/api/checkout',
   path: '/api/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCampaignsCreateRoute = ApiCampaignsCreateRouteImport.update({
+  id: '/api/campaigns-create',
+  path: '/api/campaigns-create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCampaignsRoute = ApiCampaignsRouteImport.update({
+  id: '/api/campaigns',
+  path: '/api/campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBrandProfileManualRoute = ApiBrandProfileManualRouteImport.update({
@@ -324,6 +336,8 @@ export interface FileRoutesByFullPath {
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
+  '/api/campaigns': typeof ApiCampaignsRoute
+  '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -375,6 +389,8 @@ export interface FileRoutesByTo {
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
+  '/api/campaigns': typeof ApiCampaignsRoute
+  '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -427,6 +443,8 @@ export interface FileRoutesById {
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
+  '/api/campaigns': typeof ApiCampaignsRoute
+  '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -480,6 +498,8 @@ export interface FileRouteTypes {
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
     | '/api/brand-profile-manual'
+    | '/api/campaigns'
+    | '/api/campaigns-create'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -531,6 +551,8 @@ export interface FileRouteTypes {
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
     | '/api/brand-profile-manual'
+    | '/api/campaigns'
+    | '/api/campaigns-create'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -582,6 +604,8 @@ export interface FileRouteTypes {
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
     | '/api/brand-profile-manual'
+    | '/api/campaigns'
+    | '/api/campaigns-create'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -634,6 +658,8 @@ export interface RootRouteChildren {
   ApiBrandProfileRoute: typeof ApiBrandProfileRoute
   ApiBrandProfileColorsRoute: typeof ApiBrandProfileColorsRoute
   ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
+  ApiCampaignsRoute: typeof ApiCampaignsRoute
+  ApiCampaignsCreateRoute: typeof ApiCampaignsCreateRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiCloseRequestRoute: typeof ApiCloseRequestRoute
   ApiFileRoute: typeof ApiFileRoute
@@ -804,6 +830,20 @@ declare module '@tanstack/react-router' {
       path: '/api/checkout'
       fullPath: '/api/checkout'
       preLoaderRoute: typeof ApiCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/campaigns-create': {
+      id: '/api/campaigns-create'
+      path: '/api/campaigns-create'
+      fullPath: '/api/campaigns-create'
+      preLoaderRoute: typeof ApiCampaignsCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/campaigns': {
+      id: '/api/campaigns'
+      path: '/api/campaigns'
+      fullPath: '/api/campaigns'
+      preLoaderRoute: typeof ApiCampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/brand-profile-manual': {
@@ -1034,6 +1074,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBrandProfileRoute: ApiBrandProfileRoute,
   ApiBrandProfileColorsRoute: ApiBrandProfileColorsRoute,
   ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
+  ApiCampaignsRoute: ApiCampaignsRoute,
+  ApiCampaignsCreateRoute: ApiCampaignsCreateRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiCloseRequestRoute: ApiCloseRequestRoute,
   ApiFileRoute: ApiFileRoute,

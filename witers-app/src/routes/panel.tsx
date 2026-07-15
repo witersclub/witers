@@ -374,7 +374,7 @@ function Panel() {
               </div>
             ) : (
               <div className="mt-8">
-                <CampanasComingSoon />
+                <CampanasPanel />
               </div>
             )}
           </>
@@ -622,36 +622,137 @@ function SectionNav({
   );
 }
 
-// "Campañas" doesn't exist yet — Meta ads is a whole separate technical
-// track (connecting an ad account, App Review, etc.) tackled later on its
-// own. This is the fully-designed placeholder so the rest of the panel
-// restructure can ship now without pretending the feature is live.
-function CampanasComingSoon() {
+const CAMPAIGN_ICON = (
+  <svg
+    width="26"
+    height="26"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z" />
+    <path d="M16 8a5 5 0 0 1 0 8M19 5a9 9 0 0 1 0 14" />
+  </svg>
+);
+
+const CAMPAIGN_STATUS_LABEL: Record<string, { label: string; cls: string }> = {
+  ACTIVE: { label: "Activa", cls: "bg-emerald-50 text-emerald-700" },
+  PAUSED: { label: "Pausada", cls: "bg-amber-50 text-amber-700" },
+  DELETED: { label: "Eliminada", cls: "bg-red-50 text-red-600" },
+  ARCHIVED: { label: "Archivada", cls: "bg-wit-mist/60 text-wit-gray" },
+};
+
+type Campaign = {
+  id: string;
+  requestId: string;
+  requestTitle: string;
+  dailyBudgetCents: number;
+  createdAt: string;
+  metaStatus: string;
+  spend: string | null;
+  impressions: string | null;
+  clicks: string | null;
+  reach: string | null;
+  insightError: string | null;
+};
+
+function CampaignStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="wit-glass flex flex-col items-center gap-4 rounded-3xl px-6 py-20 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
-        <svg
-          width="26"
-          height="26"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z" />
-          <path d="M16 8a5 5 0 0 1 0 8M19 5a9 9 0 0 1 0 14" />
-        </svg>
-      </span>
-      <p className="text-lg font-bold text-wit-ink">Campañas</p>
-      <p className="max-w-sm text-sm text-wit-gray">
-        Muy pronto vas a poder conectar tu cuenta publicitaria y lanzar pauta directo desde aquí,
-        usando las piezas que ya creaste con nosotros.
-      </p>
-      <span className="rounded-full bg-wit-mist/60 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-wit-gray">
-        Estará disponible próximamente
-      </span>
+    <div className="rounded-xl bg-wit-ice/60 px-3 py-2.5">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-wit-gray">{label}</p>
+      <p className="mt-0.5 text-sm font-bold text-wit-ink">{value}</p>
+    </div>
+  );
+}
+
+// Real campaign list now — refreshes every time this mounts, and every 60s
+// while it's open, matching the "se actualiza sola, no empujado al
+// instante" explanation given for how Meta itself reports ad performance.
+function CampanasPanel() {
+  const campaigns = useQuery({
+    queryKey: ["campaigns"],
+    queryFn: async () => {
+      const res = await fetch("/api/campaigns", { credentials: "include" });
+      if (!res.ok) return { ok: false, campaigns: [] as Campaign[] };
+      return (await res.json()) as { ok: boolean; campaigns: Campaign[] };
+    },
+    refetchInterval: 60_000,
+  });
+  const rows = campaigns.data?.campaigns ?? [];
+
+  if (campaigns.isLoading) {
+    return (
+      <div className="space-y-4">
+        {[0, 1].map((i) => (
+          <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />
+        ))}
+      </div>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="wit-glass flex flex-col items-center gap-4 rounded-3xl px-6 py-20 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
+          {CAMPAIGN_ICON}
+        </span>
+        <p className="text-lg font-bold text-wit-ink">Aún no tienes campañas</p>
+        <p className="max-w-sm text-sm text-wit-gray">
+          Ve a una pieza terminada en "Mis solicitudes" y dale clic en "Quiero pautar" para crear tu
+          primera campaña.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {rows.map((c) => {
+        const st = CAMPAIGN_STATUS_LABEL[c.metaStatus] ?? {
+          label: c.metaStatus,
+          cls: "bg-wit-mist/60 text-wit-gray",
+        };
+        return (
+          <div
+            key={c.id}
+            className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-base font-bold text-wit-ink">{c.requestTitle}</h3>
+              <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
+                {st.label}
+              </span>
+            </div>
+            <p className="mt-1.5 text-xs text-wit-gray">
+              Presupuesto: ${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/día
+            </p>
+            {c.insightError ? (
+              <p className="mt-3 text-xs text-red-600">
+                No pudimos leer sus métricas: {c.insightError}
+              </p>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <CampaignStat
+                  label="Gastado"
+                  value={`$${Number(c.spend ?? 0).toLocaleString("es-MX")}`}
+                />
+                <CampaignStat
+                  label="Alcance"
+                  value={Number(c.reach ?? 0).toLocaleString("es-MX")}
+                />
+                <CampaignStat
+                  label="Impresiones"
+                  value={Number(c.impressions ?? 0).toLocaleString("es-MX")}
+                />
+                <CampaignStat label="Clics" value={Number(c.clicks ?? 0).toLocaleString("es-MX")} />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -2353,6 +2454,121 @@ function Spinner({ cls = "border-wit-blue" }: { cls?: string }) {
   );
 }
 
+// Turns a finished piece into a real Meta campaign — always created
+// PAUSED (see /api/campaigns-create), so nothing ever spends without the
+// client explicitly turning it on later from Ads Manager. Only rendered
+// by HistoryCard once there's an actual delivered file to advertise.
+function PautarButton({ requestId }: { requestId: string }) {
+  const qc = useQueryClient();
+  const [step, setStep] = useState<"idle" | "form" | "sending" | "done">("idle");
+  const [dailyBudget, setDailyBudget] = useState(100);
+  const [adMessage, setAdMessage] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+
+  async function submit() {
+    setStep("sending");
+    setError(null);
+    try {
+      const res = await fetch("/api/campaigns-create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          dailyBudgetMxn: dailyBudget,
+          adMessage: adMessage.trim() || undefined,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string; warning?: string | null };
+      if (!data.ok) {
+        setError(
+          data.error === "sin_pieza_final"
+            ? "Aún no hay una pieza final para esta solicitud."
+            : data.error === "solicitud_no_terminada"
+              ? "Esta solicitud todavía no está terminada."
+              : "No pudimos crear la campaña. Intenta de nuevo.",
+        );
+        setStep("form");
+        return;
+      }
+      setWarning(data.warning ?? null);
+      setStep("done");
+      void qc.invalidateQueries({ queryKey: ["campaigns"] });
+    } catch {
+      setError("No pudimos crear la campaña. Intenta de nuevo.");
+      setStep("form");
+    }
+  }
+
+  if (step === "idle") {
+    return (
+      <button
+        type="button"
+        onClick={() => setStep("form")}
+        className="mt-3 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
+      >
+        📣 Quiero pautar
+      </button>
+    );
+  }
+
+  if (step === "done") {
+    return (
+      <div className="mt-3 rounded-xl bg-wit-ice p-4 text-sm text-wit-ink">
+        <p className="font-bold">✓ Tu campaña se creó en pausa.</p>
+        <p className="mt-1 text-xs text-wit-gray">
+          {warning ?? "Actívala desde Meta Ads Manager cuando quieras que empiece a correr."}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-xl bg-wit-ice p-4">
+      <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+        Presupuesto diario (MXN)
+      </label>
+      <input
+        type="number"
+        min={20}
+        value={dailyBudget}
+        onChange={(e) => setDailyBudget(Number(e.target.value))}
+        className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+      />
+      <label className="mb-1.5 mt-3 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+        Texto del anuncio (opcional)
+      </label>
+      <textarea
+        rows={2}
+        maxLength={500}
+        value={adMessage}
+        onChange={(e) => setAdMessage(e.target.value)}
+        placeholder="Si lo dejas vacío, usamos el título de tu solicitud."
+        className="w-full resize-y rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+      />
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          disabled={step === "sending"}
+          onClick={() => void submit()}
+          className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+        >
+          {step === "sending" ? "Creando..." : "Crear campaña (en pausa)"}
+        </button>
+        <button
+          type="button"
+          disabled={step === "sending"}
+          onClick={() => setStep("idle")}
+          className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
+        >
+          Cancelar
+        </button>
+      </div>
+      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
 function HistoryCard({
   row: r,
   onDownloadFinalized,
@@ -2599,6 +2815,10 @@ function HistoryCard({
             );
           })()}
         </div>
+      ) : null}
+
+      {latestResult && (r.status === "completada" || r.status === "cerrada") ? (
+        <PautarButton requestId={r.id} />
       ) : null}
 
       {sentMsg ? (
