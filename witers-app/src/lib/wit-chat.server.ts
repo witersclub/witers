@@ -156,6 +156,24 @@ type OpenAiToolCall = {
 type OpenAiMessage = { content?: string | null; tool_calls?: OpenAiToolCall[] };
 type OpenAiChatResponse = { choices?: Array<{ message?: OpenAiMessage }> };
 
+// tool_choice: "auto" means the model isn't actually forced to call
+// show_aspect_ratio_picker just because the system prompt tells it to —
+// in practice it sometimes writes the format question out as plain text
+// instead (either listing the ratios, or just announcing "te muestro las
+// opciones:" and stopping there with nothing after it). Either way the
+// client is left staring at unclickable text with no picker, and has to
+// type a guess to get unstuck. This catches both patterns after the fact
+// and forces the real picker instead of trusting the model got it right.
+function looksLikeAspectRatioAnnouncement(text: string): boolean {
+  const t = text.toLowerCase();
+  const mentionsFormat = /\bformato\b|proporci[oó]n/.test(t);
+  if (!mentionsFormat) return false;
+  const promisesOrLists =
+    /(te muestro|aqu[ií] tienes|estas son las opciones|opciones:|qu[eé] formato)/.test(t);
+  const mentionsRatios = /(1:1|4:3|3:4|16:9|9:16|cuadrado|vertical|horizontal)/.test(t);
+  return promisesOrLists || mentionsRatios;
+}
+
 export async function runWitChat(
   history: WitChatMessage[],
   brand: WitBrandContext,
@@ -227,5 +245,8 @@ export async function runWitChat(
 
   const text = message.content?.trim();
   if (!text) return { ok: false, error: "sin_resultado" };
+  if (looksLikeAspectRatioAnnouncement(text)) {
+    return { ok: true, kind: "ask_aspect_ratio" };
+  }
   return { ok: true, kind: "message", text };
 }

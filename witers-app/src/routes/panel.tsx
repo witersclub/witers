@@ -1880,23 +1880,10 @@ function WitConversation({
   // submit_piece_details.
   const [pickedAspectRatio, setPickedAspectRatio] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, typing, awaitingAspectRatio, pieceFields]);
-
-  // A single-line input scrolls its own text sideways once it's full, which
-  // is exactly what made dictated text seem to "disappear" mid-sentence —
-  // this grows the box downward instead (capped so it can't swallow the
-  // screen), so everything dictated (or typed) stays visible without the
-  // client having to scroll the field itself back into view.
-  useEffect(() => {
-    const el = composerRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
-  }, [input]);
 
   async function askWit(nextMessages: WitMessage[]) {
     setTyping(true);
@@ -2112,8 +2099,7 @@ function WitConversation({
                 className="wit-glass flex items-end gap-2 rounded-3xl p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
               >
                 <textarea
-                  ref={composerRef}
-                  rows={1}
+                  rows={2}
                   maxLength={2000}
                   aria-label="Tu mensaje"
                   value={input}
@@ -2126,7 +2112,13 @@ function WitConversation({
                   }}
                   disabled={typing}
                   placeholder="Escribe tu mensaje..."
-                  className="max-h-[120px] min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent py-2.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
+                  // Fixed height (not auto-growing) — growing the box every
+                  // few characters shifted everything else on screen and
+                  // felt jumpy, especially with the keyboard already open.
+                  // Text that runs past 2 lines scrolls inside the field
+                  // itself (the browser keeps the caret in view as you
+                  // type/dictate), so nothing gets visually cut off either.
+                  className="h-16 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent py-2.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
                 />
                 <MicButton value={input} onChange={setInput} />
                 <button
