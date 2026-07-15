@@ -416,7 +416,10 @@ export function ChatIntakeFlow({
           }}
           disabled={done}
           placeholder={done ? "" : "Escribe o presiona el micrófono..."}
-          className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
+          // text-base (16px), not text-sm — iOS Safari auto-zooms the whole
+          // page on focus for any input under 16px, forcing an awkward
+          // manual pinch-to-zoom-out afterward.
+          className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-base text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
         />
         {done ? (
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
@@ -586,7 +589,7 @@ export function ChatIntakeFlow({
                         }
                         if (ev.key === "Escape") cancelEditing();
                       }}
-                      className="min-w-0 flex-1 border-0 bg-transparent text-sm text-wit-ink outline-none"
+                      className="min-w-0 flex-1 border-0 bg-transparent text-base text-wit-ink outline-none"
                     />
                   </div>
                   <div className="flex gap-3">

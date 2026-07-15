@@ -1880,10 +1880,22 @@ function WitConversation({
   // submit_piece_details.
   const [pickedAspectRatio, setPickedAspectRatio] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, typing, awaitingAspectRatio, pieceFields]);
+
+  // Grows the box downward as the client types/dictates, so everything
+  // stays visible instead of scrolling out of view inside a fixed box —
+  // capped so a very long message still gets its own internal scroll
+  // instead of swallowing the screen.
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [input]);
 
   async function askWit(nextMessages: WitMessage[]) {
     setTyping(true);
@@ -2099,7 +2111,8 @@ function WitConversation({
                 className="wit-glass flex items-end gap-2 rounded-3xl p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
               >
                 <textarea
-                  rows={2}
+                  ref={composerRef}
+                  rows={1}
                   maxLength={2000}
                   aria-label="Tu mensaje"
                   value={input}
@@ -2112,13 +2125,11 @@ function WitConversation({
                   }}
                   disabled={typing}
                   placeholder="Escribe tu mensaje..."
-                  // Fixed height (not auto-growing) — growing the box every
-                  // few characters shifted everything else on screen and
-                  // felt jumpy, especially with the keyboard already open.
-                  // Text that runs past 2 lines scrolls inside the field
-                  // itself (the browser keeps the caret in view as you
-                  // type/dictate), so nothing gets visually cut off either.
-                  className="h-16 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent py-2.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
+                  // text-base (16px), not text-sm — iOS Safari auto-zooms
+                  // the ENTIRE page on focus for any input under 16px, which
+                  // is what was actually forcing a manual pinch-to-zoom-out
+                  // afterward, not the box's own size.
+                  className="max-h-[160px] min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent py-2.5 text-base text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
                 />
                 <MicButton value={input} onChange={setInput} />
                 <button
