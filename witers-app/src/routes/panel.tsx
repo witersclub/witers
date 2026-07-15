@@ -2545,7 +2545,11 @@ function PautarButton({ requestId, pageConnected }: { requestId: string; pageCon
               ? "Esta solicitud todavía no está terminada."
               : data.error === "pagina_no_conectada"
                 ? "Tu Página de Facebook aún no está conectada. Contáctanos para activarla."
-                : "No pudimos crear la campaña. Intenta de nuevo.",
+                : // Anything else is a real Meta/config error (missing env var,
+                  // Graph API rejection, etc.) — show the raw code so it's
+                  // diagnosable from a screenshot instead of swallowed into a
+                  // generic "try again" that hides what actually broke.
+                  `No pudimos crear la campaña${data.error ? ` (${data.error})` : ""}. Intenta de nuevo.`,
         );
         setStep("form");
         return;
