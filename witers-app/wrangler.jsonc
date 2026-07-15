@@ -23,7 +23,17 @@
     "not_found_handling": "none"
   },
 
-  "vars": { "HF_ENV": "prod", "APP_SLUG": "witers" },
+  // META_AD_ACCOUNT_ID lives here (not as a dashboard-only var) because
+  // `wrangler deploy` overwrites a Worker's plain-text vars with exactly
+  // this object on every deploy — anything added by hand in the Cloudflare
+  // dashboard but missing from this list gets silently wiped on the next
+  // push. It's not sensitive (just an ad account number, not a
+  // credential), so it's safe to commit; META_ACCESS_TOKEN stays a
+  // dashboard/CLI Secret instead, since those persist across deploys and
+  // this one actually is sensitive. This is WITERS's own shared ad
+  // account — every client's campaign is created here (see
+  // meta-ads.server.ts); it is NOT per-client.
+  "vars": { "HF_ENV": "prod", "APP_SLUG": "witers", "META_AD_ACCOUNT_ID": "1528358221731960" },
 
   "d1_databases": [
     {
