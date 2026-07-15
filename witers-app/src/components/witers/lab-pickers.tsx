@@ -161,6 +161,9 @@ export function ColorsPicker({ onPick }: { onPick: (value: string) => void }) {
 
   return (
     <div className="wit-glass flex flex-col items-center gap-3 rounded-2xl px-4 py-3.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <p className="text-xs font-medium text-wit-gray">
+        👆 Toca cada círculo para elegir tu color — vienen en azul solo de ejemplo.
+      </p>
       <div className="flex gap-3">
         {colors.map((c, i) => (
           <label key={i} className="flex flex-col items-center gap-1">

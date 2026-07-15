@@ -473,6 +473,7 @@ const ONBOARDING_QUESTIONS: { field: string; text: string; required: boolean }[]
 // to brand_onboarding_drafts (see /api/onboarding/draft), so a client who
 // closes the tab partway through picks up exactly where they left off.
 function OnboardingGate({ onDone }: { onDone: () => void }) {
+  const qc = useQueryClient();
   const draftQuery = useQuery({
     queryKey: ["onboarding-draft"],
     queryFn: async () => {
@@ -483,6 +484,14 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
   });
   const [sendError, setSendError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  // Kept so a failed save can be retried with the exact same answers
+  // instead of forcing the client to redo the whole conversation (which
+  // for logoKey would mean re-uploading the file).
+  const [lastAnswers, setLastAnswers] = useState<Record<string, string> | null>(null);
+  // Bumped on a full restart to remount ChatIntakeFlow with a clean slate —
+  // the component only resets its own internal state (answers, step) on
+  // mount, there's no other way to force that from outside.
+  const [resetKey, setResetKey] = useState(0);
 
   function pickerFor(field: string, onPick: (value: string) => void) {
     switch (field) {
@@ -498,6 +507,7 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
   }
 
   async function finish(answers: Record<string, string>) {
+    setLastAnswers(answers);
     setSendError(null);
     setSending(true);
     try {
@@ -526,6 +536,20 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
     }
   }
 
+  // The nuclear option, for when retrying the same answers doesn't help
+  // (e.g. the logo itself needs to be re-uploaded) — wipes the autosaved
+  // draft and remounts the chat completely empty.
+  async function restart() {
+    setSendError(null);
+    setSending(false);
+    setLastAnswers(null);
+    await fetch("/api/onboarding/draft", { method: "DELETE", credentials: "include" }).catch(
+      () => null,
+    );
+    await qc.invalidateQueries({ queryKey: ["onboarding-draft"] });
+    setResetKey((k) => k + 1);
+  }
+
   if (draftQuery.isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -540,6 +564,7 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
         Antes de tu primera solicitud, cuéntanos de tu marca — solo te lo preguntamos una vez.
       </p>
       <ChatIntakeFlow
+        key={resetKey}
         questions={ONBOARDING_QUESTIONS}
         pickerFor={pickerFor}
         initialAnswers={draftQuery.data?.answers}
@@ -556,10 +581,22 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
         pendingLabel="Guardando los datos de tu marca..."
         doneLabel={
           sendError
-            ? "No pudimos guardar los datos — mantén presionada cualquier respuesta para reintentar."
+            ? "No pudimos guardar los datos de tu marca."
             : "Los datos de tu marca han sido creados."
         }
         externalError={sendError}
+        restart={() => void restart()}
+        resultSlot={
+          sendError ? (
+            <button
+              type="button"
+              onClick={() => lastAnswers && void finish(lastAnswers)}
+              className="-mt-2 ml-8 self-start rounded-full bg-wit-blue px-5 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
+            >
+              Reintentar
+            </button>
+          ) : null
+        }
       />
     </div>
   );

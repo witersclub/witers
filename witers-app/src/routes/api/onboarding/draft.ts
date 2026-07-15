@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { getOnboardingDraft, saveOnboardingDraft } from "../../../lib/brand-profile.server";
+import {
+  clearOnboardingDraft,
+  getOnboardingDraft,
+  saveOnboardingDraft,
+} from "../../../lib/brand-profile.server";
 import { getSessionUser, json } from "../../../lib/witers-auth.server";
 
 const saveSchema = z.object({
@@ -27,6 +31,15 @@ export const Route = createFileRoute("/api/onboarding/draft")({
         const parsed = saveSchema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
         await saveOnboardingDraft(user.id, parsed.data.answers);
+        return json({ ok: true });
+      },
+      // "Nueva conversación" — a client stuck on a bad answer (or a save
+      // that failed for a reason retrying alone won't fix) can wipe the
+      // autosaved draft and start the onboarding chat over from scratch.
+      DELETE: async ({ request }) => {
+        const user = await getSessionUser(request);
+        if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
+        await clearOnboardingDraft(user.id);
         return json({ ok: true });
       },
     },
