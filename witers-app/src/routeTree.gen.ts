@@ -27,6 +27,7 @@ import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
 import { Route as ApiMetaLocationSearchRouteImport } from './routes/api/meta-location-search'
 import { Route as ApiMetaInterestSearchRouteImport } from './routes/api/meta-interest-search'
+import { Route as ApiGeocodeRouteImport } from './routes/api/geocode'
 import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
@@ -151,6 +152,11 @@ const ApiMetaLocationSearchRoute = ApiMetaLocationSearchRouteImport.update({
 const ApiMetaInterestSearchRoute = ApiMetaInterestSearchRouteImport.update({
   id: '/api/meta-interest-search',
   path: '/api/meta-interest-search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGeocodeRoute = ApiGeocodeRouteImport.update({
+  id: '/api/geocode',
+  path: '/api/geocode',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFileRoute = ApiFileRouteImport.update({
@@ -353,6 +359,7 @@ export interface FileRoutesByFullPath {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
+  '/api/geocode': typeof ApiGeocodeRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -408,6 +415,7 @@ export interface FileRoutesByTo {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
+  '/api/geocode': typeof ApiGeocodeRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -464,6 +472,7 @@ export interface FileRoutesById {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
+  '/api/geocode': typeof ApiGeocodeRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -521,6 +530,7 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
+    | '/api/geocode'
     | '/api/meta-interest-search'
     | '/api/meta-location-search'
     | '/api/request-revision'
@@ -576,6 +586,7 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
+    | '/api/geocode'
     | '/api/meta-interest-search'
     | '/api/meta-location-search'
     | '/api/request-revision'
@@ -631,6 +642,7 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
+    | '/api/geocode'
     | '/api/meta-interest-search'
     | '/api/meta-location-search'
     | '/api/request-revision'
@@ -687,6 +699,7 @@ export interface RootRouteChildren {
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiCloseRequestRoute: typeof ApiCloseRequestRoute
   ApiFileRoute: typeof ApiFileRoute
+  ApiGeocodeRoute: typeof ApiGeocodeRoute
   ApiMetaInterestSearchRoute: typeof ApiMetaInterestSearchRoute
   ApiMetaLocationSearchRoute: typeof ApiMetaLocationSearchRoute
   ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
@@ -849,6 +862,13 @@ declare module '@tanstack/react-router' {
       path: '/api/meta-interest-search'
       fullPath: '/api/meta-interest-search'
       preLoaderRoute: typeof ApiMetaInterestSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/geocode': {
+      id: '/api/geocode'
+      path: '/api/geocode'
+      fullPath: '/api/geocode'
+      preLoaderRoute: typeof ApiGeocodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/file': {
@@ -1119,6 +1139,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiCloseRequestRoute: ApiCloseRequestRoute,
   ApiFileRoute: ApiFileRoute,
+  ApiGeocodeRoute: ApiGeocodeRoute,
   ApiMetaInterestSearchRoute: ApiMetaInterestSearchRoute,
   ApiMetaLocationSearchRoute: ApiMetaLocationSearchRoute,
   ApiRequestRevisionRoute: ApiRequestRevisionRoute,

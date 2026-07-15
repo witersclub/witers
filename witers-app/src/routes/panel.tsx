@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type * as LeafletNS from "leaflet";
 
 import { WitersLogo, WMark } from "../components/witers/brand";
 import { ChatBubble, ChatIntakeFlow } from "../components/witers/chat-intake";
@@ -1104,6 +1105,80 @@ function WizardShell({
   );
 }
 
+// Visual radius picker for the ubicación step — a real OpenStreetMap tile
+// map with a dot at the (approximate, geocoded purely for display —
+// see geocode.server.ts) center and a circle sized to radiusKm, so a
+// client can actually see how big an area they're choosing instead of
+// just reading a number next to a slider. Uses circleMarker (SVG, no
+// icon image) instead of L.marker specifically to sidestep Leaflet's
+// classic bundler-breaks-the-default-marker-icon-path problem.
+function LocationRadiusMap({ lat, lon, radiusKm }: { lat: number; lon: number; radiusKm: number }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<LeafletNS.Map | null>(null);
+  const circleRef = useRef<LeafletNS.Circle | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let cancelled = false;
+    // Leaflet (~150KB) is loaded on demand here, not imported at module
+    // scope — otherwise it'd ship in every /panel page load, not just the
+    // moments someone's actually picking a campaign location.
+    void Promise.all([import("leaflet"), import("leaflet/dist/leaflet.css")]).then(([leaflet]) => {
+      if (cancelled || !containerRef.current) return;
+      const map = leaflet.map(containerRef.current, { zoomControl: false }).setView([lat, lon], 11);
+      leaflet
+        .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 18,
+          attribution: "&copy; OpenStreetMap contributors",
+        })
+        .addTo(map);
+      leaflet
+        .circleMarker([lat, lon], {
+          radius: 6,
+          color: "#0047ff",
+          fillColor: "#0047ff",
+          fillOpacity: 1,
+          weight: 2,
+        })
+        .addTo(map);
+      const circle = leaflet
+        .circle([lat, lon], {
+          radius: radiusKm * 1000,
+          color: "#0047ff",
+          fillColor: "#0047ff",
+          fillOpacity: 0.12,
+          weight: 1.5,
+        })
+        .addTo(map);
+      map.fitBounds(circle.getBounds(), { padding: [20, 20] });
+      mapRef.current = map;
+      circleRef.current = circle;
+    });
+    return () => {
+      cancelled = true;
+      mapRef.current?.remove();
+      mapRef.current = null;
+      circleRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- radiusKm changes are handled by the effect below, not a full remount
+  }, [lat, lon]);
+
+  useEffect(() => {
+    const circle = circleRef.current;
+    const map = mapRef.current;
+    if (!circle || !map) return;
+    circle.setRadius(radiusKm * 1000);
+    map.fitBounds(circle.getBounds(), { padding: [20, 20] });
+  }, [radiusKm]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-56 w-full overflow-hidden rounded-xl border border-wit-ink/10"
+    />
+  );
+}
+
 // Full-screen takeover, same pattern as WitConversation — the image on the
 // left, the campaign form on the right. Every numeric field is kept as a
 // raw string in state (not coerced with Number() on every keystroke) —
@@ -1148,6 +1223,8 @@ function PautaBuilder({
   const [locationSearchError, setLocationSearchError] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<LocationHit | null>(null);
   const [radiusKm, setRadiusKm] = useState("10");
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lon: number } | null>(null);
+  const [mapLoading, setMapLoading] = useState(false);
   const [interestQuery, setInterestQuery] = useState("");
   const [interestResults, setInterestResults] = useState<InterestHit[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<InterestHit[]>([]);
@@ -1269,6 +1346,32 @@ function PautaBuilder({
     }, 350);
     return () => clearTimeout(timer);
   }, [locationQuery, selectedLocation, locationCountry]);
+
+  // Fires once per location pick (not per keystroke) — fine for
+  // Nominatim's fair-use rate limit. Purely for the map preview; if it
+  // fails, the radius slider still works without a map (graceful
+  // degradation, same pattern as the interest/location search errors).
+  useEffect(() => {
+    if (!selectedLocation) {
+      setMapCenter(null);
+      return;
+    }
+    setMapLoading(true);
+    void fetch(
+      `/api/geocode?q=${encodeURIComponent(selectedLocation.name)}&country=${locationCountry}`,
+      { credentials: "include" },
+    )
+      .then((res) => res.json())
+      .then((data: { ok: boolean; lat?: number; lon?: number }) => {
+        setMapCenter(
+          data.ok && typeof data.lat === "number" && typeof data.lon === "number"
+            ? { lat: data.lat, lon: data.lon }
+            : null,
+        );
+      })
+      .catch(() => setMapCenter(null))
+      .finally(() => setMapLoading(false));
+  }, [selectedLocation, locationCountry]);
 
   useEffect(() => {
     if (!interestQuery.trim()) {
@@ -1720,17 +1823,30 @@ function PautaBuilder({
                       ) : null}
                     </div>
                     {selectedLocation ? (
-                      <div className="mt-3 flex items-center gap-3">
-                        <span className="text-xs text-wit-gray">Radio: {radiusKm} km</span>
-                        <input
-                          type="range"
-                          min={5}
-                          max={50}
-                          step={5}
-                          value={radiusKm}
-                          onChange={(e) => setRadiusKm(e.target.value)}
-                          className="flex-1"
-                        />
+                      <div className="mt-3 space-y-2">
+                        {mapCenter ? (
+                          <LocationRadiusMap
+                            lat={mapCenter.lat}
+                            lon={mapCenter.lon}
+                            radiusKm={Number(radiusKm)}
+                          />
+                        ) : mapLoading ? (
+                          <div className="flex h-56 items-center justify-center rounded-xl border border-wit-ink/10 bg-wit-mist/30 text-xs text-wit-gray">
+                            Cargando mapa...
+                          </div>
+                        ) : null}
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-wit-gray">Radio: {radiusKm} km</span>
+                          <input
+                            type="range"
+                            min={5}
+                            max={50}
+                            step={5}
+                            value={radiusKm}
+                            onChange={(e) => setRadiusKm(e.target.value)}
+                            className="flex-1"
+                          />
+                        </div>
                       </div>
                     ) : locationQuery.trim() && locationResults.length === 0 ? (
                       <p className="mt-2 text-[11px] text-amber-600">
