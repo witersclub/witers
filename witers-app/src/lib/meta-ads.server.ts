@@ -259,6 +259,12 @@ export async function createPausedCampaignForRequest(
     // parameter" on every real attempt.
     ...(objective === "interaccion" ? { promoted_object: { page_id: pageId } } : {}),
     targeting: {
+      // No client has an Instagram account connected to their Page (we
+      // never collect one) — without this, Meta's automatic placements
+      // would still try Instagram/Audience Network/Messenger, which are
+      // either ineligible or untested for these accounts. Facebook-only
+      // keeps delivery to exactly what's actually set up: the Page itself.
+      publisher_platforms: ["facebook"],
       geo_locations: geoLocations,
       age_min: input.ageMin,
       age_max: input.ageMax,
