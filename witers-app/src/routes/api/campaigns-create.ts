@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { Buffer } from "node:buffer";
 
 import { bindings } from "../../lib/bindings.server";
 import { getBrandProfile } from "../../lib/brand-profile.server";
@@ -76,7 +77,10 @@ export const Route = createFileRoute("/api/campaigns-create")({
         const obj = await STORAGE.get(resultRow.r2_key);
         if (!obj) return json({ ok: false, error: "archivo_no_encontrado" }, { status: 404 });
         const bytes = await obj.arrayBuffer();
-        const imageBytesBase64 = btoa(String.fromCharCode(...new Uint8Array(bytes)));
+        // Spreading a large Uint8Array into String.fromCharCode(...) blows
+        // the call stack for real design files (a few hundred KB+) — this
+        // is what "RangeError: Maximum call stack size exceeded" was.
+        const imageBytesBase64 = Buffer.from(bytes).toString("base64");
         const imageContentType = obj.httpMetadata?.contentType ?? "image/png";
 
         const result = await createPausedCampaignForRequest({
