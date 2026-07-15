@@ -148,6 +148,35 @@ export async function searchMetaInterests(
   };
 }
 
+// The same "sugerencias" Meta's own Ads Manager shows right after you add
+// an interest — takes the interests already picked and returns related
+// ones, so the client doesn't have to guess synonyms (e.g. picking
+// "Negocios" surfaces "Emprendimiento", "Pequeña empresa", etc. on its
+// own). Note this endpoint takes interest *names*, not IDs.
+export async function suggestMetaInterests(
+  interestNames: string[],
+): Promise<{ ok: true; data: InterestSuggestion[] } | { ok: false; error: string }> {
+  const config = getMetaConfig();
+  if ("error" in config) return { ok: false, error: config.error };
+  const res = await graphRequest<{
+    data: Array<{ id: string; name: string; audience_size_lower_bound?: number }>;
+  }>(
+    "/search",
+    config.accessToken,
+    { type: "adinterestsuggestion", interest_list: interestNames, limit: 10 },
+    "GET",
+  );
+  if (!res.ok) return { ok: false, error: res.error };
+  return {
+    ok: true,
+    data: res.data.data.map((r) => ({
+      id: r.id,
+      name: r.name,
+      audienceSize: r.audience_size_lower_bound ?? null,
+    })),
+  };
+}
+
 // ---------- campaign creation ----------
 
 export type CampaignObjective = "trafico" | "interaccion" | "ventas";

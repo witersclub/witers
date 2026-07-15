@@ -26,6 +26,7 @@ import { Route as ApiSubmitSatisfactionRouteImport } from './routes/api/submit-s
 import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
 import { Route as ApiMetaLocationSearchRouteImport } from './routes/api/meta-location-search'
+import { Route as ApiMetaInterestSuggestionsRouteImport } from './routes/api/meta-interest-suggestions'
 import { Route as ApiMetaInterestSearchRouteImport } from './routes/api/meta-interest-search'
 import { Route as ApiGeocodeRouteImport } from './routes/api/geocode'
 import { Route as ApiFileRouteImport } from './routes/api/file'
@@ -149,6 +150,12 @@ const ApiMetaLocationSearchRoute = ApiMetaLocationSearchRouteImport.update({
   path: '/api/meta-location-search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMetaInterestSuggestionsRoute =
+  ApiMetaInterestSuggestionsRouteImport.update({
+    id: '/api/meta-interest-suggestions',
+    path: '/api/meta-interest-suggestions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiMetaInterestSearchRoute = ApiMetaInterestSearchRouteImport.update({
   id: '/api/meta-interest-search',
   path: '/api/meta-interest-search',
@@ -361,6 +368,7 @@ export interface FileRoutesByFullPath {
   '/api/file': typeof ApiFileRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
+  '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -417,6 +425,7 @@ export interface FileRoutesByTo {
   '/api/file': typeof ApiFileRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
+  '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -474,6 +483,7 @@ export interface FileRoutesById {
   '/api/file': typeof ApiFileRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
+  '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -532,6 +542,7 @@ export interface FileRouteTypes {
     | '/api/file'
     | '/api/geocode'
     | '/api/meta-interest-search'
+    | '/api/meta-interest-suggestions'
     | '/api/meta-location-search'
     | '/api/request-revision'
     | '/api/requests'
@@ -588,6 +599,7 @@ export interface FileRouteTypes {
     | '/api/file'
     | '/api/geocode'
     | '/api/meta-interest-search'
+    | '/api/meta-interest-suggestions'
     | '/api/meta-location-search'
     | '/api/request-revision'
     | '/api/requests'
@@ -644,6 +656,7 @@ export interface FileRouteTypes {
     | '/api/file'
     | '/api/geocode'
     | '/api/meta-interest-search'
+    | '/api/meta-interest-suggestions'
     | '/api/meta-location-search'
     | '/api/request-revision'
     | '/api/requests'
@@ -701,6 +714,7 @@ export interface RootRouteChildren {
   ApiFileRoute: typeof ApiFileRoute
   ApiGeocodeRoute: typeof ApiGeocodeRoute
   ApiMetaInterestSearchRoute: typeof ApiMetaInterestSearchRoute
+  ApiMetaInterestSuggestionsRoute: typeof ApiMetaInterestSuggestionsRoute
   ApiMetaLocationSearchRoute: typeof ApiMetaLocationSearchRoute
   ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
   ApiRequestsRoute: typeof ApiRequestsRoute
@@ -855,6 +869,13 @@ declare module '@tanstack/react-router' {
       path: '/api/meta-location-search'
       fullPath: '/api/meta-location-search'
       preLoaderRoute: typeof ApiMetaLocationSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/meta-interest-suggestions': {
+      id: '/api/meta-interest-suggestions'
+      path: '/api/meta-interest-suggestions'
+      fullPath: '/api/meta-interest-suggestions'
+      preLoaderRoute: typeof ApiMetaInterestSuggestionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/meta-interest-search': {
@@ -1141,6 +1162,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFileRoute: ApiFileRoute,
   ApiGeocodeRoute: ApiGeocodeRoute,
   ApiMetaInterestSearchRoute: ApiMetaInterestSearchRoute,
+  ApiMetaInterestSuggestionsRoute: ApiMetaInterestSuggestionsRoute,
   ApiMetaLocationSearchRoute: ApiMetaLocationSearchRoute,
   ApiRequestRevisionRoute: ApiRequestRevisionRoute,
   ApiRequestsRoute: ApiRequestsRoute,

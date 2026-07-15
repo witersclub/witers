@@ -3,6 +3,39 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type * as LeafletNS from "leaflet";
+import {
+  Briefcase,
+  Building2,
+  Cake,
+  Calendar,
+  Car,
+  Dumbbell,
+  FileText,
+  Globe,
+  Home,
+  Laptop,
+  Link2,
+  Loader2,
+  Magnet,
+  MapPin,
+  MessageCircle,
+  PawPrint,
+  Pencil,
+  Plane,
+  Rocket,
+  Route as RouteIcon,
+  Search,
+  ShoppingBag,
+  ShoppingCart,
+  Smartphone,
+  Sparkles,
+  Target,
+  User,
+  Users,
+  UtensilsCrossed,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 
 import { WitersLogo, WMark } from "../components/witers/brand";
 import { ChatBubble, ChatIntakeFlow } from "../components/witers/chat-intake";
@@ -849,18 +882,18 @@ type CampaignObjectiveUI = "trafico" | "interaccion" | "ventas";
 
 const OBJECTIVE_OPTIONS: {
   value: CampaignObjectiveUI;
-  icon: string;
+  icon: LucideIcon;
   label: string;
   hint: string;
 }[] = [
-  { value: "trafico", icon: "🔗", label: "Tráfico", hint: "Lleva gente a tu Página o Instagram" },
+  { value: "trafico", icon: Link2, label: "Tráfico", hint: "Lleva gente a tu Página o Instagram" },
   {
     value: "interaccion",
-    icon: "💬",
+    icon: MessageCircle,
     label: "Interacción",
     hint: "Más comentarios, likes y compartidos",
   },
-  { value: "ventas", icon: "🛒", label: "Ventas", hint: "Clic directo a tu WhatsApp" },
+  { value: "ventas", icon: ShoppingCart, label: "Ventas", hint: "Clic directo a tu WhatsApp" },
 ];
 
 function parseAgeRangeClient(ageRange: string | null): { min: number; max: number } {
@@ -915,28 +948,33 @@ const LOCATION_COUNTRIES = [
   { code: "VE", flag: "🇻🇪", name: "Venezuela" },
 ];
 
+// Same icon repeated across a chip set on purpose — the amounts/durations
+// differentiate themselves via their label, not via five unrelated icons
+// that wouldn't individually mean "more/less money" or "more/less time"
+// anyway. One consistent icon per question reads cleaner than a forced
+// icon-per-value.
 const BUDGET_CHIPS = [
-  { value: "50", icon: "💵", label: "$50 / día" },
-  { value: "100", icon: "💰", label: "$100 / día" },
-  { value: "200", icon: "🤑", label: "$200 / día" },
-  { value: "300", icon: "💸", label: "$300 / día" },
-  { value: "500", icon: "🏦", label: "$500 / día" },
+  { value: "50", icon: Wallet, label: "$50 / día" },
+  { value: "100", icon: Wallet, label: "$100 / día" },
+  { value: "200", icon: Wallet, label: "$200 / día" },
+  { value: "300", icon: Wallet, label: "$300 / día" },
+  { value: "500", icon: Wallet, label: "$500 / día" },
 ];
 
 const DURATION_CHIPS = [
-  { value: "3", icon: "⚡", label: "3 días" },
-  { value: "7", icon: "📅", label: "1 semana" },
-  { value: "14", icon: "🗓️", label: "2 semanas" },
-  { value: "30", icon: "📆", label: "1 mes" },
+  { value: "3", icon: Calendar, label: "3 días" },
+  { value: "7", icon: Calendar, label: "1 semana" },
+  { value: "14", icon: Calendar, label: "2 semanas" },
+  { value: "30", icon: Calendar, label: "1 mes" },
 ];
 
 const PAUTA_AGE_CHIPS = [
-  { min: 18, max: 24, icon: "🧑‍🎓", label: "18 a 24" },
-  { min: 25, max: 34, icon: "🧑‍💼", label: "25 a 34" },
-  { min: 35, max: 44, icon: "🧑‍🔧", label: "35 a 44" },
-  { min: 45, max: 54, icon: "🧑‍🦳", label: "45 a 54" },
-  { min: 55, max: 65, icon: "👴", label: "55 a 65" },
-  { min: 18, max: 65, icon: "🌍", label: "Todas las edades" },
+  { min: 18, max: 24, icon: User, label: "18 a 24" },
+  { min: 25, max: 34, icon: User, label: "25 a 34" },
+  { min: 35, max: 44, icon: User, label: "35 a 44" },
+  { min: 45, max: 54, icon: User, label: "45 a 54" },
+  { min: 55, max: 65, icon: User, label: "55 a 65" },
+  { min: 18, max: 65, icon: Users, label: "Todas las edades" },
 ];
 
 // Curated so the client never has to type — each icon resolves itself into
@@ -945,18 +983,18 @@ const PAUTA_AGE_CHIPS = [
 // just reports "no se pudo" and the campaign proceeds with broad targeting
 // instead of leaving the client stuck on a dead search box.
 const INTEREST_CATEGORIES = [
-  { query: "moda", icon: "🛍️", label: "Moda y compras" },
-  { query: "restaurantes", icon: "🍽️", label: "Restaurantes" },
-  { query: "fitness", icon: "💪", label: "Fitness" },
-  { query: "belleza", icon: "💄", label: "Belleza" },
-  { query: "decoración del hogar", icon: "🏠", label: "Hogar" },
-  { query: "crianza", icon: "👨‍👩‍👧", label: "Familia" },
-  { query: "tecnología", icon: "💻", label: "Tecnología" },
-  { query: "automóviles", icon: "🚗", label: "Autos" },
-  { query: "viajes", icon: "✈️", label: "Viajes" },
-  { query: "mascotas", icon: "🐾", label: "Mascotas" },
-  { query: "emprendimiento", icon: "🏢", label: "Negocios" },
-  { query: "bienes raíces", icon: "🏡", label: "Bienes raíces" },
+  { query: "moda", icon: ShoppingBag, label: "Moda y compras" },
+  { query: "restaurantes", icon: UtensilsCrossed, label: "Restaurantes" },
+  { query: "fitness", icon: Dumbbell, label: "Fitness" },
+  { query: "belleza", icon: Sparkles, label: "Belleza" },
+  { query: "decoración del hogar", icon: Home, label: "Hogar" },
+  { query: "crianza", icon: Users, label: "Familia" },
+  { query: "tecnología", icon: Laptop, label: "Tecnología" },
+  { query: "automóviles", icon: Car, label: "Autos" },
+  { query: "viajes", icon: Plane, label: "Viajes" },
+  { query: "mascotas", icon: PawPrint, label: "Mascotas" },
+  { query: "emprendimiento", icon: Briefcase, label: "Negocios" },
+  { query: "bienes raíces", icon: Building2, label: "Bienes raíces" },
 ];
 
 type CategoryStatus = "idle" | "loading" | "ok" | "empty" | "error";
@@ -991,15 +1029,16 @@ function buildWizardSteps(objective: CampaignObjectiveUI): WizardStepId[] {
 // smaller than .wit-float's usual -7px, since that amount of motion across
 // a whole grid of buttons reads as distracting rather than a quiet detail.
 function IconChoice({
-  icon,
+  icon: Icon,
   label,
   sublabel,
   selected,
   onClick,
   delay = 0,
   compact = false,
+  spin = false,
 }: {
-  icon: string;
+  icon: LucideIcon;
   label: string;
   sublabel?: string;
   selected?: boolean;
@@ -1009,6 +1048,9 @@ function IconChoice({
   // (e.g. segmentación's dozen interest categories) — the default size
   // reads as oversized once there are more than 5-6 cards on screen.
   compact?: boolean;
+  // For the "buscando en Facebook" loading state (Loader2), so the
+  // spinning icon reads as active work instead of a stuck/broken card.
+  spin?: boolean;
 }) {
   return (
     <button
@@ -1023,7 +1065,12 @@ function IconChoice({
           : "border-wit-ink/12 bg-white hover:border-wit-ink/25"
       }`}
     >
-      <span className={compact ? "text-xl" : "text-3xl"}>{icon}</span>
+      <Icon
+        className={`${compact ? "h-5 w-5" : "h-7 w-7"} ${spin ? "animate-spin" : ""} ${
+          selected ? "text-wit-blue" : "text-wit-ink"
+        }`}
+        strokeWidth={1.75}
+      />
       <span
         className={`font-bold ${compact ? "text-[11px]" : "text-xs"} ${selected ? "text-wit-blue" : "text-wit-ink"}`}
       >
@@ -1043,7 +1090,7 @@ function IconChoice({
 function WizardShell({
   qIndex,
   total,
-  icon,
+  icon: Icon,
   question,
   subtitle,
   children,
@@ -1055,7 +1102,7 @@ function WizardShell({
 }: {
   qIndex: number;
   total: number;
-  icon: string;
+  icon: LucideIcon;
   question: string;
   // A plain-language helper line under the question — for questions that
   // use marketing/ads vocabulary a client setting up their own campaign
@@ -1075,7 +1122,7 @@ function WizardShell({
           Pregunta {qIndex + 1} de {total}
         </p>
         <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-wit-ink">
-          <span className="text-2xl">{icon}</span> {question}
+          <Icon className="h-6 w-6 text-wit-blue" strokeWidth={1.75} /> {question}
         </h2>
         {subtitle ? <p className="mt-1 text-xs text-wit-gray">{subtitle}</p> : null}
       </div>
@@ -1229,6 +1276,8 @@ function PautaBuilder({
   const [interestResults, setInterestResults] = useState<InterestHit[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<InterestHit[]>([]);
   const [interestAdvancedOpen, setInterestAdvancedOpen] = useState(false);
+  const [suggestedInterests, setSuggestedInterests] = useState<InterestHit[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [categoryState, setCategoryState] = useState<CategoryState>({});
   const [adMessages, setAdMessages] = useState<[string, string, string]>(
     buildDefaultAdMessages(request.title),
@@ -1397,6 +1446,33 @@ function PautaBuilder({
     setInterestResults([]);
   }
 
+  // Mirrors the "Sugerencias" Meta's own Ads Manager shows right after you
+  // add an interest — so the client doesn't have to guess synonyms
+  // themselves (picking "Negocios" surfaces "Emprendimiento" and similar
+  // on its own, the same way it would in a real campaign).
+  useEffect(() => {
+    if (selectedInterests.length === 0) {
+      setSuggestedInterests([]);
+      return;
+    }
+    setSuggestionsLoading(true);
+    const names = selectedInterests.map((i) => i.name).join(",");
+    void fetch(`/api/meta-interest-suggestions?interests=${encodeURIComponent(names)}`, {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data: { ok: boolean; results?: InterestHit[] }) => {
+        if (!data.ok) {
+          setSuggestedInterests([]);
+          return;
+        }
+        const selectedIds = new Set(selectedInterests.map((i) => i.id));
+        setSuggestedInterests((data.results ?? []).filter((hit) => !selectedIds.has(hit.id)));
+      })
+      .catch(() => setSuggestedInterests([]))
+      .finally(() => setSuggestionsLoading(false));
+  }, [selectedInterests]);
+
   async function submit() {
     const budgetMxn = Number(dailyBudget);
     if (!Number.isFinite(budgetMxn) || budgetMxn < 20) {
@@ -1522,7 +1598,7 @@ function PautaBuilder({
             </div>
           ) : phase === "sending" ? (
             <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center">
-              <div className="wit-float text-4xl">🚀</div>
+              <Rocket className="wit-float h-10 w-10 text-wit-blue" strokeWidth={1.75} />
               <p className="text-sm font-bold text-wit-ink">Creando tu campaña...</p>
               <p className="text-xs text-wit-gray">Esto toma unos segundos.</p>
             </div>
@@ -1530,7 +1606,7 @@ function PautaBuilder({
             <WizardShell
               qIndex={qIndex}
               total={steps.length}
-              icon="🎯"
+              icon={Target}
               question="¿Qué quieres lograr con esta campaña?"
               onBack={goBack}
               onNext={goNext}
@@ -1556,7 +1632,7 @@ function PautaBuilder({
             <WizardShell
               qIndex={qIndex}
               total={steps.length}
-              icon="🚦"
+              icon={RouteIcon}
               question="¿A dónde llevamos el tráfico?"
               onBack={goBack}
               onNext={goNext}
@@ -1565,7 +1641,7 @@ function PautaBuilder({
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <IconChoice
-                    icon="📱"
+                    icon={Smartphone}
                     label="Mis redes sociales"
                     sublabel="A tu Página / Instagram"
                     selected={trafficDestination === "redes"}
@@ -1575,7 +1651,7 @@ function PautaBuilder({
                     }}
                   />
                   <IconChoice
-                    icon="🌐"
+                    icon={Globe}
                     label="Mi página web"
                     delay={120}
                     selected={trafficDestination === "web"}
@@ -1598,7 +1674,7 @@ function PautaBuilder({
             <WizardShell
               qIndex={qIndex}
               total={steps.length}
-              icon="💬"
+              icon={MessageCircle}
               question="¿A qué WhatsApp llegan tus clientes?"
               onBack={goBack}
               onNext={goNext}
@@ -1636,7 +1712,7 @@ function PautaBuilder({
             <WizardShell
               qIndex={qIndex}
               total={steps.length}
-              icon="💵"
+              icon={Wallet}
               question="¿Cuánto quieres invertir al día?"
               onBack={goBack}
               onNext={goNext}
@@ -1659,7 +1735,7 @@ function PautaBuilder({
                     />
                   ))}
                   <IconChoice
-                    icon="✏️"
+                    icon={Pencil}
                     label="Otro monto"
                     selected={budgetCustomOpen}
                     delay={BUDGET_CHIPS.length * 100}
@@ -1688,7 +1764,7 @@ function PautaBuilder({
             <WizardShell
               qIndex={qIndex}
               total={steps.length}
-              icon="📅"
+              icon={Calendar}
               question="¿Cuánto tiempo debe correr la campaña?"
               onBack={goBack}
               onNext={goNext}
@@ -1711,7 +1787,7 @@ function PautaBuilder({
                     />
                   ))}
                   <IconChoice
-                    icon="✏️"
+                    icon={Pencil}
                     label="Otra duración"
                     selected={durationCustomOpen}
                     delay={DURATION_CHIPS.length * 100}
@@ -1740,7 +1816,7 @@ function PautaBuilder({
             <WizardShell
               qIndex={qIndex}
               total={steps.length}
-              icon="📍"
+              icon={MapPin}
               question="¿A quién le mostramos el anuncio, por ubicación?"
               onBack={goBack}
               onNext={goNext}
@@ -1748,7 +1824,7 @@ function PautaBuilder({
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <IconChoice
-                    icon="🇲🇽"
+                    icon={Globe}
                     label="Todo México"
                     sublabel="Recomendado"
                     selected={!selectedLocation}
@@ -1760,7 +1836,7 @@ function PautaBuilder({
                     }}
                   />
                   <IconChoice
-                    icon="📍"
+                    icon={MapPin}
                     label={selectedLocation ? selectedLocation.name : "Elegir una ciudad"}
                     sublabel={selectedLocation ? "Toca para cambiar" : "Busca por ciudad o CP"}
                     delay={120}
@@ -1867,7 +1943,7 @@ function PautaBuilder({
             <WizardShell
               qIndex={qIndex}
               total={steps.length}
-              icon="🎂"
+              icon={Cake}
               question="¿A qué edades le hablamos?"
               onBack={goBack}
               onNext={goNext}
@@ -1896,7 +1972,7 @@ function PautaBuilder({
                     />
                   ))}
                   <IconChoice
-                    icon="✏️"
+                    icon={Pencil}
                     label="Personalizar"
                     selected={ageCustomOpen}
                     delay={PAUTA_AGE_CHIPS.length * 100}
@@ -1938,7 +2014,7 @@ function PautaBuilder({
             <WizardShell
               qIndex={qIndex}
               total={steps.length}
-              icon="🧲"
+              icon={Magnet}
               question="¿Qué le interesa a tu cliente?"
               subtitle="💡 Piensa: ¿qué crees que tu cliente ideal está viendo en su teléfono justo ahora?"
               onBack={goBack}
@@ -1948,7 +2024,7 @@ function PautaBuilder({
                 <div className="grid grid-cols-4 gap-2">
                   <IconChoice
                     compact
-                    icon="🌎"
+                    icon={Globe}
                     label="Todas las personas"
                     selected={selectedInterests.length === 0}
                     onClick={() => {
@@ -1963,7 +2039,8 @@ function PautaBuilder({
                       <IconChoice
                         compact
                         key={cat.query}
-                        icon={st === "loading" ? "⏳" : cat.icon}
+                        icon={st === "loading" ? Loader2 : cat.icon}
+                        spin={st === "loading"}
                         label={cat.label}
                         selected={st === "ok"}
                         delay={(i + 1) * 90}
@@ -2007,6 +2084,27 @@ function PautaBuilder({
                     ))}
                   </div>
                 ) : null}
+                {suggestionsLoading ? (
+                  <p className="text-[11px] text-wit-gray">Buscando sugerencias relacionadas...</p>
+                ) : suggestedInterests.length > 0 ? (
+                  <div>
+                    <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+                      Sugerencias de Facebook
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {suggestedInterests.map((hit) => (
+                        <button
+                          key={hit.id}
+                          type="button"
+                          onClick={() => addInterest(hit)}
+                          className="rounded-full border border-wit-ink/15 px-3 py-1 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+                        >
+                          + {hit.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setInterestAdvancedOpen((v) => !v)}
@@ -2016,7 +2114,8 @@ function PautaBuilder({
                       : "border-wit-ink/15 text-wit-ink hover:border-wit-blue/50"
                   }`}
                 >
-                  🔍 {interestAdvancedOpen ? "Ocultar búsqueda" : "Buscar algo más específico"}
+                  <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                  {interestAdvancedOpen ? "Ocultar búsqueda" : "Buscar algo más específico"}
                   <span className="ml-auto text-[11px] font-normal text-wit-gray">
                     Lista real de Facebook
                   </span>
@@ -2031,6 +2130,9 @@ function PautaBuilder({
                       placeholder="Ej. yoga, mariscos, bodas..."
                       className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
                     />
+                    <p className="mt-1.5 text-[11px] text-wit-gray">
+                      Aquí puedes buscar intereses más específicos de tu público.
+                    </p>
                     {interestResults.length > 0 ? (
                       <div className="mt-1 overflow-hidden rounded-lg border border-wit-ink/10 bg-white shadow-lg">
                         {interestResults.map((hit) => (
@@ -2055,7 +2157,7 @@ function PautaBuilder({
             <WizardShell
               qIndex={qIndex}
               total={steps.length}
-              icon="📝"
+              icon={FileText}
               question="Estos son los mensajes de tu anuncio"
               onBack={goBack}
               onNext={() => void submit()}
