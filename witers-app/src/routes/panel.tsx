@@ -824,6 +824,24 @@ function buildDefaultAdMessages(title: string): [string, string, string] {
 type LocationHit = { key: string; name: string; type: string; region: string | null };
 type InterestHit = { id: string; name: string; audienceSize: number | null };
 
+// Mexico first (and selected by default) since every client so far is a
+// Mexican business — the rest cover the other markets WITERS clients are
+// most likely to have customers/branches in.
+const COUNTRY_CODES = [
+  { code: "+52", flag: "🇲🇽", name: "México" },
+  { code: "+1", flag: "🇺🇸", name: "Estados Unidos" },
+  { code: "+34", flag: "🇪🇸", name: "España" },
+  { code: "+57", flag: "🇨🇴", name: "Colombia" },
+  { code: "+54", flag: "🇦🇷", name: "Argentina" },
+  { code: "+56", flag: "🇨🇱", name: "Chile" },
+  { code: "+51", flag: "🇵🇪", name: "Perú" },
+  { code: "+593", flag: "🇪🇨", name: "Ecuador" },
+  { code: "+502", flag: "🇬🇹", name: "Guatemala" },
+  { code: "+506", flag: "🇨🇷", name: "Costa Rica" },
+  { code: "+507", flag: "🇵🇦", name: "Panamá" },
+  { code: "+58", flag: "🇻🇪", name: "Venezuela" },
+];
+
 // Full-screen takeover, same pattern as WitConversation — the image on the
 // left, the campaign form on the right. Every numeric field is kept as a
 // raw string in state (not coerced with Number() on every keystroke) —
@@ -855,6 +873,7 @@ function PautaBuilder({
   const [adMessages, setAdMessages] = useState<[string, string, string]>(
     buildDefaultAdMessages(request.title),
   );
+  const [whatsappCountryCode, setWhatsappCountryCode] = useState(COUNTRY_CODES[0].code);
   const [whatsappNumber, setWhatsappNumber] = useState("");
   // Only meaningful for "trafico" — "redes" (default) points the ad at the
   // client's own Facebook Page, "web" points it at a site they type in.
@@ -954,7 +973,8 @@ function PautaBuilder({
           radiusKm: selectedLocation ? Number(radiusKm) : undefined,
           interestIds: selectedInterests.map((i) => i.id),
           adMessages: messages,
-          whatsappNumber: objective === "ventas" ? whatsappNumber.trim() : undefined,
+          whatsappNumber:
+            objective === "ventas" ? `${whatsappCountryCode}${whatsappNumber.trim()}` : undefined,
           websiteUrl:
             objective === "trafico" && trafficDestination === "web" ? websiteUrl.trim() : undefined,
         }),
@@ -1060,13 +1080,27 @@ function PautaBuilder({
                   <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
                     Tu número de WhatsApp
                   </label>
-                  <input
-                    type="tel"
-                    value={whatsappNumber}
-                    onChange={(e) => setWhatsappNumber(e.target.value)}
-                    placeholder="Ej. 5512345678"
-                    className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={whatsappCountryCode}
+                      onChange={(e) => setWhatsappCountryCode(e.target.value)}
+                      aria-label="Código de país"
+                      className="shrink-0 rounded-lg border border-wit-ink/15 bg-white px-2 py-2 text-sm outline-none focus:border-wit-blue"
+                    >
+                      {COUNTRY_CODES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.flag} {c.code}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="tel"
+                      value={whatsappNumber}
+                      onChange={(e) => setWhatsappNumber(e.target.value)}
+                      placeholder="Ej. 5512345678"
+                      className="w-full min-w-0 flex-1 rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
+                    />
+                  </div>
                   <p className="mt-1 text-[11px] text-wit-gray">
                     Al darle clic al anuncio, la gente abrirá un chat directo contigo en WhatsApp.
                   </p>
