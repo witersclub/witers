@@ -13,6 +13,9 @@ const schema = z.object({
   companyName: z.string().min(2).max(120),
   brandColors: z.string().max(60).optional(),
   businessType: z.string().max(100).optional(),
+  // The Facebook Page this client pautas from — null/omitted means they
+  // can't create Meta campaigns yet (see /api/campaigns-create).
+  metaPageId: z.string().max(60).nullable().optional(),
   // undefined = leave the current logo alone, null = clear it (reopens the
   // logo question for that member), a string = set/replace it.
   logoKey: z.string().max(300).nullable().optional(),
@@ -36,10 +39,10 @@ export const Route = createFileRoute("/api/admin/update-brand-profile")({
 
         await db()
           .prepare(
-            `INSERT INTO brand_profiles (user_id, company_name, brand_colors, business_type, logo_key)
-             VALUES (?1, ?2, ?3, ?4, ?5)
+            `INSERT INTO brand_profiles (user_id, company_name, brand_colors, business_type, logo_key, meta_page_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
              ON CONFLICT(user_id) DO UPDATE SET
-               company_name = ?2, brand_colors = ?3, business_type = ?4, logo_key = ?5, updated_at = datetime('now')`,
+               company_name = ?2, brand_colors = ?3, business_type = ?4, logo_key = ?5, meta_page_id = ?6, updated_at = datetime('now')`,
           )
           .bind(
             parsed.data.userId,
@@ -47,6 +50,7 @@ export const Route = createFileRoute("/api/admin/update-brand-profile")({
             parsed.data.brandColors?.trim() || null,
             parsed.data.businessType?.trim() || null,
             nextLogoKey,
+            parsed.data.metaPageId?.trim() || null,
           )
           .run();
 

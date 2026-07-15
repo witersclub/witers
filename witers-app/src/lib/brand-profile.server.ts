@@ -14,6 +14,10 @@ export type BrandProfile = {
   business_type: string | null;
   logo_key: string | null;
   brand_manual_key: string | null;
+  // Facebook Page this client's ads publish from — set only by an admin
+  // (see /api/admin/update-brand-profile), never by the client. Null blocks
+  // "Quiero pautar" for them; there's no shared/default Page fallback.
+  meta_page_id: string | null;
 };
 
 export async function getBrandProfile(userId: string): Promise<BrandProfile | null> {
@@ -62,6 +66,7 @@ export async function resolveBrandProfile(
       business_type: submitted.businessType,
       logo_key: submitted.logoKey,
       brand_manual_key: null,
+      meta_page_id: null,
     };
   }
   if (!existing.logo_key && submitted.logoKey) {
@@ -143,6 +148,7 @@ export async function completeOnboarding(
     business_type: data.businessType,
     logo_key: data.logoKey,
     brand_manual_key: null,
+    meta_page_id: null,
   };
 }
 

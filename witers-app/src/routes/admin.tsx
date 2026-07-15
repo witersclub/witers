@@ -27,6 +27,9 @@ type AdminUser = {
   brand_colors: string | null;
   brand_business_type: string | null;
   brand_logo_key: string | null;
+  // Facebook Page this client pautas from — null blocks "Quiero pautar"
+  // for them (see panel.tsx's PautarButton), no shared/default fallback.
+  brand_meta_page_id: string | null;
 };
 
 type AdminRequest = {
@@ -1463,6 +1466,7 @@ function EditUserModal({
   const [companyName, setCompanyName] = useState(user.brand_company_name ?? "");
   const [brandColors, setBrandColors] = useState(user.brand_colors ?? "");
   const [businessType, setBusinessType] = useState(user.brand_business_type ?? "");
+  const [metaPageId, setMetaPageId] = useState(user.brand_meta_page_id ?? "");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [clearLogo, setClearLogo] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -1528,6 +1532,7 @@ function EditUserModal({
           companyName,
           brandColors: brandColors || undefined,
           businessType: businessType || undefined,
+          metaPageId: metaPageId.trim() || null,
           logoKey,
         }),
       });
@@ -1620,6 +1625,18 @@ function EditUserModal({
               type="text"
               value={businessType}
               onChange={(e) => setBusinessType(e.target.value)}
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">
+              ID de Página de Facebook <span className="font-normal">(para que pueda pautar)</span>
+            </label>
+            <input
+              type="text"
+              value={metaPageId}
+              onChange={(e) => setMetaPageId(e.target.value)}
+              placeholder="Vacío = no puede pautar todavía"
               className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
             />
           </div>

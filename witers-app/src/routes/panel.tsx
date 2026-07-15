@@ -73,6 +73,9 @@ type BrandProfile = {
   business_type: string | null;
   logo_key: string | null;
   brand_manual_key: string | null;
+  // Facebook Page this client pautas from — set only by an admin. Null
+  // means "Quiero pautar" stays blocked for them (see PautarButton).
+  meta_page_id: string | null;
 };
 
 type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
@@ -364,6 +367,7 @@ function Panel() {
                       rows={rows}
                       loading={requests.isLoading}
                       onNew={() => setTab("nueva")}
+                      pageId={brandProfile?.meta_page_id ?? null}
                     />
                   )}
                 </div>
@@ -2308,10 +2312,12 @@ function RequestList({
   rows,
   loading,
   onNew,
+  pageId,
 }: {
   rows: RequestRow[];
   loading: boolean;
   onNew: () => void;
+  pageId: string | null;
 }) {
   return (
     <section>
@@ -2338,7 +2344,7 @@ function RequestList({
       ) : (
         <div className="space-y-4">
           {rows.map((r) => (
-            <RequestEntry key={r.id} row={r} />
+            <RequestEntry key={r.id} row={r} pageId={pageId} />
           ))}
         </div>
       )}
@@ -2351,7 +2357,7 @@ function RequestList({
 // worked on, or already closed out — collapses to a simple row, same
 // declutter pattern as the designer/admin panels. Only "en_proceso" gets
 // the rotating border: it's the one nobody's finished yet.
-function RequestEntry({ row: r }: { row: RequestRow }) {
+function RequestEntry({ row: r, pageId }: { row: RequestRow; pageId: string | null }) {
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   // Owned here, not inside HistoryCard: closing the request flips its
@@ -2376,7 +2382,7 @@ function RequestEntry({ row: r }: { row: RequestRow }) {
   if (r.status === "completada" || showSurvey) {
     return (
       <>
-        <HistoryCard row={r} onDownloadFinalized={() => setShowSurvey(true)} />
+        <HistoryCard row={r} pageId={pageId} onDownloadFinalized={() => setShowSurvey(true)} />
         {survey}
       </>
     );
@@ -2392,7 +2398,7 @@ function RequestEntry({ row: r }: { row: RequestRow }) {
         >
           ← Ocultar detalle
         </button>
-        <HistoryCard row={r} />
+        <HistoryCard row={r} pageId={pageId} />
       </div>
     );
   }
@@ -2458,7 +2464,10 @@ function Spinner({ cls = "border-wit-blue" }: { cls?: string }) {
 // PAUSED (see /api/campaigns-create), so nothing ever spends without the
 // client explicitly turning it on later from Ads Manager. Only rendered
 // by HistoryCard once there's an actual delivered file to advertise.
-function PautarButton({ requestId }: { requestId: string }) {
+// pageConnected reflects brand_profiles.meta_page_id: each client pautas
+// from their own Facebook Page (no shared/default one), set only by an
+// admin once it's connected — until then this stays blocked.
+function PautarButton({ requestId, pageConnected }: { requestId: string; pageConnected: boolean }) {
   const qc = useQueryClient();
   const [step, setStep] = useState<"idle" | "form" | "sending" | "done">("idle");
   const [dailyBudget, setDailyBudget] = useState(100);
@@ -2486,7 +2495,9 @@ function PautarButton({ requestId }: { requestId: string }) {
             ? "Aún no hay una pieza final para esta solicitud."
             : data.error === "solicitud_no_terminada"
               ? "Esta solicitud todavía no está terminada."
-              : "No pudimos crear la campaña. Intenta de nuevo.",
+              : data.error === "pagina_no_conectada"
+                ? "Tu Página de Facebook aún no está conectada. Contáctanos para activarla."
+                : "No pudimos crear la campaña. Intenta de nuevo.",
         );
         setStep("form");
         return;
@@ -2498,6 +2509,17 @@ function PautarButton({ requestId }: { requestId: string }) {
       setError("No pudimos crear la campaña. Intenta de nuevo.");
       setStep("form");
     }
+  }
+
+  if (!pageConnected) {
+    return (
+      <div className="mt-3 rounded-xl bg-wit-mist/50 px-4 py-3 text-xs text-wit-gray">
+        <p className="font-bold text-wit-ink">📣 Pautar en Meta</p>
+        <p className="mt-1">
+          Aún no tienes una Página de Facebook conectada para pautar. Contáctanos para activarla.
+        </p>
+      </div>
+    );
   }
 
   if (step === "idle") {
@@ -2571,9 +2593,11 @@ function PautarButton({ requestId }: { requestId: string }) {
 
 function HistoryCard({
   row: r,
+  pageId,
   onDownloadFinalized,
 }: {
   row: RequestRow;
+  pageId: string | null;
   onDownloadFinalized?: () => void;
 }) {
   const qc = useQueryClient();
@@ -2818,7 +2842,7 @@ function HistoryCard({
       ) : null}
 
       {latestResult && (r.status === "completada" || r.status === "cerrada") ? (
-        <PautarButton requestId={r.id} />
+        <PautarButton requestId={r.id} pageConnected={Boolean(pageId)} />
       ) : null}
 
       {sentMsg ? (

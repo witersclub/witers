@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { bindings } from "../../lib/bindings.server";
+import { getBrandProfile } from "../../lib/brand-profile.server";
 import { createPausedCampaignForRequest } from "../../lib/meta-ads.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
@@ -50,6 +51,14 @@ export const Route = createFileRoute("/api/campaigns-create")({
           return json({ ok: false, error: "solicitud_no_terminada" }, { status: 409 });
         }
 
+        // No shared/default Page: each client pautas from their own,
+        // set only by an admin once it's connected to WITERS's Business
+        // Manager (see /api/admin/update-brand-profile).
+        const brandProfile = await getBrandProfile(user.id);
+        if (!brandProfile?.meta_page_id) {
+          return json({ ok: false, error: "pagina_no_conectada" }, { status: 409 });
+        }
+
         const resultRow = await db()
           .prepare(
             `SELECT r2_key, image_url FROM request_results
@@ -78,6 +87,7 @@ export const Route = createFileRoute("/api/campaigns-create")({
           imageBytesBase64,
           imageContentType,
           adMessage: parsed.data.adMessage?.trim() || reqRow.title,
+          pageId: brandProfile.meta_page_id,
         });
 
         if (!result.ok) {

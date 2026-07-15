@@ -1,9 +1,12 @@
 // Talks to Meta's Marketing API (Graph API) to turn a finished WITERS piece
 // into a real (but paused, never auto-activated) ad campaign — the
 // "Quiero pautar" button in panel.tsx. Uses a Business Portfolio System
-// User token (META_ACCESS_TOKEN), not per-client OAuth: for now every
-// campaign is created in WITERS's own connected ad account, following the
+// User token (META_ACCESS_TOKEN), not per-client OAuth: every campaign is
+// created in WITERS's own connected ad account (shared), following the
 // "manual connection, few clients" approach agreed on before building this.
+// The Facebook Page, unlike the ad account, is per-client (each client's
+// ads must publish from their own Page) — callers pass it in explicitly
+// from that client's brand_profiles.meta_page_id, never from env config.
 
 import process from "node:process";
 
@@ -13,21 +16,14 @@ const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 type MetaConfig = {
   accessToken: string;
   adAccountId: string; // numeric, WITHOUT the "act_" prefix
-  pageId: string | null;
 };
 
-// pageId is optional here (only the final ad-creative step needs it) so
-// campaign/ad-set creation can already be tested before that's configured.
 export function getMetaConfig(): MetaConfig | { error: string } {
   const accessToken = process.env.META_ACCESS_TOKEN;
   const adAccountId = process.env.META_AD_ACCOUNT_ID;
   if (!accessToken) return { error: "falta_meta_access_token" };
   if (!adAccountId) return { error: "falta_meta_ad_account_id" };
-  return {
-    accessToken,
-    adAccountId,
-    pageId: process.env.META_PAGE_ID || null,
-  };
+  return { accessToken, adAccountId };
 }
 
 type GraphError = { error?: { message?: string; type?: string; code?: number } };
@@ -97,6 +93,10 @@ export type CreatePausedCampaignInput = {
   imageBytesBase64: string;
   imageContentType: string;
   adMessage: string;
+  // The client's own connected Facebook Page (brand_profiles.meta_page_id)
+  // — required. Callers must confirm it's set before calling this at all;
+  // see /api/campaigns-create's "pagina_no_conectada" check.
+  pageId: string;
 };
 
 export type CreatePausedCampaignResult =
@@ -112,17 +112,17 @@ export type CreatePausedCampaignResult =
     }
   | { ok: false; error: string };
 
-// Orchestrates campaign → ad set → (image upload → creative → ad), all
-// created with status PAUSED. Stops and reports a warning after the ad set
-// if no Page is configured yet (META_PAGE_ID) — the campaign itself is
-// still real and visible in the client's Ads Manager, just without a
-// finished ad in it yet.
+// Orchestrates campaign → ad set → image upload → creative → ad, all
+// created with status PAUSED. The caller has already confirmed the client
+// has a connected Page (input.pageId), so once the ad set succeeds this
+// runs straight through to a finished ad — no "missing Page" branch.
 export async function createPausedCampaignForRequest(
   input: CreatePausedCampaignInput,
 ): Promise<CreatePausedCampaignResult> {
   const config = getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
-  const { accessToken, adAccountId, pageId } = config;
+  const { accessToken, adAccountId } = config;
+  const { pageId } = input;
   const act = `act_${adAccountId}`;
 
   const campaign = await graphRequest<{ id: string }>(`/${act}/campaigns`, accessToken, {
@@ -155,17 +155,6 @@ export async function createPausedCampaignForRequest(
       adsetId: "",
       adId: null,
       warning: `La campaña se creó, pero el conjunto de anuncios falló: ${adset.error}`,
-    };
-  }
-
-  if (!pageId) {
-    return {
-      ok: true,
-      campaignId: campaign.data.id,
-      adsetId: adset.data.id,
-      adId: null,
-      warning:
-        "La campaña y el conjunto de anuncios se crearon en pausa. Falta conectar una Página de Facebook para generar el anuncio final.",
     };
   }
 
