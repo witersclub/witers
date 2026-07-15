@@ -2518,12 +2518,21 @@ function Spinner({ cls = "border-wit-blue" }: { cls?: string }) {
 function PautarButton({ requestId, pageConnected }: { requestId: string; pageConnected: boolean }) {
   const qc = useQueryClient();
   const [step, setStep] = useState<"idle" | "form" | "sending" | "done">("idle");
-  const [dailyBudget, setDailyBudget] = useState(100);
+  // Kept as the raw typed string, not a number — converting on every
+  // keystroke (via Number(e.target.value)) forced the field to "0" the
+  // instant it was cleared, which then jumbled whatever was typed next
+  // (e.g. "20" landing as "020"). Only parsed to a number at submit time.
+  const [dailyBudget, setDailyBudget] = useState("100");
   const [adMessage, setAdMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
 
   async function submit() {
+    const budgetMxn = Number(dailyBudget);
+    if (!Number.isFinite(budgetMxn) || budgetMxn < 20) {
+      setError("El presupuesto diario debe ser de al menos $20 MXN.");
+      return;
+    }
     setStep("sending");
     setError(null);
     try {
@@ -2532,7 +2541,7 @@ function PautarButton({ requestId, pageConnected }: { requestId: string; pageCon
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           requestId,
-          dailyBudgetMxn: dailyBudget,
+          dailyBudgetMxn: budgetMxn,
           adMessage: adMessage.trim() || undefined,
         }),
       });
@@ -2606,7 +2615,7 @@ function PautarButton({ requestId, pageConnected }: { requestId: string; pageCon
         type="number"
         min={20}
         value={dailyBudget}
-        onChange={(e) => setDailyBudget(Number(e.target.value))}
+        onChange={(e) => setDailyBudget(e.target.value)}
         className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-wit-blue"
       />
       <label className="mb-1.5 mt-3 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
