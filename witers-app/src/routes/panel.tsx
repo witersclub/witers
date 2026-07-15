@@ -1176,10 +1176,10 @@ const ASPECT_RATIO_PROMPT = "¿Qué forma te imaginas para tu pieza?";
 
 // Anything handed off from the homepage teaser (see teaser-handoff.ts), plus
 // a short list of this client's past pieces, becomes a hidden context
-// message — sent to the model, never rendered as a bubble — that always
-// exists (even with nothing to report) so there's a real first turn to open
-// the conversation with, instead of a hardcoded generic greeting. See the
-// system prompt in wit-chat.server.ts for what it does with this.
+// message — sent to the model on every turn, never rendered as a bubble —
+// so Wit can lean on it (e.g. to propose several concrete directions after
+// the client's first reply) without ever asking the client to repeat it.
+// See the system prompt in wit-chat.server.ts for what it does with this.
 function buildContextPrimer(
   initialAnswers?: Record<string, string>,
   recentTitles?: string[],
@@ -1231,11 +1231,9 @@ function WitConversation({
   recentRequestTitles?: string[];
 }) {
   const [contextPrimer] = useState(() => buildContextPrimer(initialAnswers, recentRequestTitles));
-  // No hardcoded greeting: the real opening line comes from Wit itself (see
-  // the mount effect below), proposing one concrete idea from context
-  // instead of a blank "what do you want to create?" — so the conversation
-  // starts from something to react to, not an empty prompt.
-  const [messages, setMessages] = useState<WitMessage[]>([]);
+  const [messages, setMessages] = useState<WitMessage[]>([
+    { role: "assistant", content: "¡Hola! Cuéntame, ¿qué pieza quieres crear hoy?" },
+  ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [awaitingAspectRatio, setAwaitingAspectRatio] = useState(false);
@@ -1307,16 +1305,6 @@ function WitConversation({
       setTyping(false);
     }
   }
-
-  // Kicks off the real opening turn once, on mount — the context primer
-  // above always has something in it, so this is never an empty request.
-  const openedRef = useRef(false);
-  useEffect(() => {
-    if (openedRef.current) return;
-    openedRef.current = true;
-    void askWit([]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   function sendText(text: string) {
     const trimmed = text.trim();
