@@ -393,6 +393,10 @@ function Panel() {
                 disabled={!active || remaining <= 0}
                 brandProfile={brandProfile}
                 initialAnswers={chatKey === 0 ? (teaserAnswers ?? undefined) : undefined}
+                recentRequestTitles={rows
+                  .map((r) => r.title)
+                  .filter((t): t is string => Boolean(t))
+                  .slice(0, 5)}
                 onCreated={() => {
                   void qc.invalidateQueries({ queryKey: ["requests"] });
                   void qc.invalidateQueries({ queryKey: ["me"] });
@@ -1170,17 +1174,38 @@ type WitMessage = { role: "user" | "assistant"; content: string; widget?: "aspec
 
 const ASPECT_RATIO_PROMPT = "¿Qué forma te imaginas para tu pieza?";
 
-// Anything handed off from the homepage teaser (see teaser-handoff.ts)
-// becomes a hidden context message — sent to the model, never rendered as
-// a bubble — instead of the old skip-a-scripted-question mechanism, since
-// the conversation itself is no longer a fixed question list.
-function buildContextPrimer(initialAnswers?: Record<string, string>): string | null {
-  if (!initialAnswers) return null;
-  const bits = Object.entries(initialAnswers)
-    .filter(([, v]) => v && v.trim())
-    .map(([k, v]) => `${k}: ${v}`);
-  if (!bits.length) return null;
-  return `Esto es lo que el cliente ya compartió en la página principal antes de registrarse — tómalo en cuenta, no lo preguntes de nuevo: ${bits.join("; ")}.`;
+// Anything handed off from the homepage teaser (see teaser-handoff.ts), plus
+// a short list of this client's past pieces, becomes a hidden context
+// message — sent to the model, never rendered as a bubble — that always
+// exists (even with nothing to report) so there's a real first turn to open
+// the conversation with, instead of a hardcoded generic greeting. See the
+// system prompt in wit-chat.server.ts for what it does with this.
+function buildContextPrimer(
+  initialAnswers?: Record<string, string>,
+  recentTitles?: string[],
+): string {
+  const bits: string[] = [];
+  if (initialAnswers) {
+    const teaserBits = Object.entries(initialAnswers)
+      .filter(([, v]) => v && v.trim())
+      .map(([k, v]) => `${k}: ${v}`);
+    if (teaserBits.length) {
+      bits.push(
+        `Esto es lo que el cliente ya compartió en la página principal antes de registrarse: ${teaserBits.join("; ")}.`,
+      );
+    }
+  }
+  if (recentTitles?.length) {
+    bits.push(
+      `Piezas que este cliente ya pidió antes (más reciente primero): ${recentTitles.join(", ")}.`,
+    );
+  }
+  if (!bits.length) {
+    bits.push(
+      "Este cliente no ha compartido nada todavía ni tiene solicitudes previas — es su primera pieza.",
+    );
+  }
+  return bits.join(" ");
 }
 
 // Replaces the old scripted question list with a real, live back-and-forth
@@ -1196,17 +1221,21 @@ function WitConversation({
   onClose,
   brandProfile,
   initialAnswers,
+  recentRequestTitles,
 }: {
   disabled: boolean;
   onCreated: () => void;
   onClose: () => void;
   brandProfile: BrandProfile | null;
   initialAnswers?: Record<string, string>;
+  recentRequestTitles?: string[];
 }) {
-  const [contextPrimer] = useState(() => buildContextPrimer(initialAnswers));
-  const [messages, setMessages] = useState<WitMessage[]>([
-    { role: "assistant", content: "¡Hola! Cuéntame, ¿qué pieza quieres crear hoy?" },
-  ]);
+  const [contextPrimer] = useState(() => buildContextPrimer(initialAnswers, recentRequestTitles));
+  // No hardcoded greeting: the real opening line comes from Wit itself (see
+  // the mount effect below), proposing one concrete idea from context
+  // instead of a blank "what do you want to create?" — so the conversation
+  // starts from something to react to, not an empty prompt.
+  const [messages, setMessages] = useState<WitMessage[]>([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [awaitingAspectRatio, setAwaitingAspectRatio] = useState(false);
@@ -1221,10 +1250,23 @@ function WitConversation({
   // submit_piece_details.
   const [pickedAspectRatio, setPickedAspectRatio] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, typing, awaitingAspectRatio, pieceFields]);
+
+  // A single-line input scrolls its own text sideways once it's full, which
+  // is exactly what made dictated text seem to "disappear" mid-sentence —
+  // this grows the box downward instead (capped so it can't swallow the
+  // screen), so everything dictated (or typed) stays visible without the
+  // client having to scroll the field itself back into view.
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  }, [input]);
 
   async function askWit(nextMessages: WitMessage[]) {
     setTyping(true);
@@ -1265,6 +1307,16 @@ function WitConversation({
       setTyping(false);
     }
   }
+
+  // Kicks off the real opening turn once, on mount — the context primer
+  // above always has something in it, so this is never an empty request.
+  const openedRef = useRef(false);
+  useEffect(() => {
+    if (openedRef.current) return;
+    openedRef.current = true;
+    void askWit([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function sendText(text: string) {
     const trimmed = text.trim();
@@ -1437,16 +1489,24 @@ function WitConversation({
                   e.preventDefault();
                   sendText(input);
                 }}
-                className="wit-glass flex items-center gap-2 rounded-full p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+                className="wit-glass flex items-end gap-2 rounded-3xl p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
               >
-                <input
-                  type="text"
+                <textarea
+                  ref={composerRef}
+                  rows={1}
+                  maxLength={2000}
                   aria-label="Tu mensaje"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendText(input);
+                    }
+                  }}
                   disabled={typing}
                   placeholder="Escribe tu mensaje..."
-                  className="min-w-0 flex-1 border-0 bg-transparent py-1.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
+                  className="max-h-[120px] min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent py-2.5 text-sm text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
                 />
                 <MicButton value={input} onChange={setInput} />
                 <button
