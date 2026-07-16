@@ -1558,15 +1558,20 @@ function PautaBuilder({
   // Mirrors the "Sugerencias" Meta's own Ads Manager shows right after you
   // add an interest — so the client doesn't have to guess synonyms
   // themselves (picking "Negocios" surfaces "Emprendimiento" and similar
-  // on its own, the same way it would in a real campaign).
+  // on its own, the same way it would in a real campaign). Seeded from
+  // only the most recently added interest, not the whole accumulated
+  // list — blending in everything picked so far (which can include an
+  // odd/broad match from an earlier category) drags the suggestions
+  // toward something generic instead of staying aligned with whatever
+  // the client is actively exploring right now.
   useEffect(() => {
     if (selectedInterests.length === 0) {
       setSuggestedInterests([]);
       return;
     }
     setSuggestionsLoading(true);
-    const names = selectedInterests.map((i) => i.name).join(",");
-    void fetch(`/api/meta-interest-suggestions?interests=${encodeURIComponent(names)}`, {
+    const latest = selectedInterests[selectedInterests.length - 1].name;
+    void fetch(`/api/meta-interest-suggestions?interests=${encodeURIComponent(latest)}`, {
       credentials: "include",
     })
       .then((res) => res.json())
