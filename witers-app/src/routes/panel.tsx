@@ -800,7 +800,45 @@ function CampaignStat({ label, value }: { label: string; value: string }) {
 // Real campaign list now — refreshes every time this mounts, and every 60s
 // while it's open, matching the "se actualiza sola, no empujado al
 // instante" explanation given for how Meta itself reports ad performance.
+function CampaignCard({ c }: { c: Campaign }) {
+  const st = CAMPAIGN_STATUS_LABEL[c.metaStatus] ?? {
+    label: c.metaStatus,
+    cls: "bg-wit-mist/60 text-wit-gray",
+  };
+  return (
+    <div className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-base font-bold text-wit-ink">{c.requestTitle}</h3>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>{st.label}</span>
+      </div>
+      <p className="mt-1.5 text-xs text-wit-gray">
+        Presupuesto: ${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/día
+      </p>
+      {c.insightError ? (
+        <p className="mt-3 text-xs text-red-600">No pudimos leer sus métricas: {c.insightError}</p>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <CampaignStat
+            label="Gastado"
+            value={`$${Number(c.spend ?? 0).toLocaleString("es-MX")}`}
+          />
+          <CampaignStat label="Alcance" value={Number(c.reach ?? 0).toLocaleString("es-MX")} />
+          <CampaignStat
+            label="Impresiones"
+            value={Number(c.impressions ?? 0).toLocaleString("es-MX")}
+          />
+          <CampaignStat label="Clics" value={Number(c.clicks ?? 0).toLocaleString("es-MX")} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Real campaign list now — refreshes every time this mounts, and every 60s
+// while it's open, matching the "se actualiza sola, no empujado al
+// instante" explanation given for how Meta itself reports ad performance.
 function CampanasPanel() {
+  const [showArchived, setShowArchived] = useState(false);
   const campaigns = useQuery({
     queryKey: ["campaigns"],
     queryFn: async () => {
@@ -811,6 +849,15 @@ function CampanasPanel() {
     refetchInterval: 60_000,
   });
   const rows = campaigns.data?.campaigns ?? [];
+  // Meta never really deletes a campaign either — "eliminar" in Ads
+  // Manager just flips its status to ARCHIVED/DELETED, same data kept for
+  // reporting. Mirroring that here: nothing gets dropped from our own
+  // history, but a campaign someone cleaned up in Ads Manager shouldn't
+  // sit with the same visual weight as one that's actually live.
+  const liveRows = rows.filter((c) => c.metaStatus !== "ARCHIVED" && c.metaStatus !== "DELETED");
+  const archivedRows = rows.filter(
+    (c) => c.metaStatus === "ARCHIVED" || c.metaStatus === "DELETED",
+  );
 
   if (campaigns.isLoading) {
     return (
@@ -822,7 +869,7 @@ function CampanasPanel() {
     );
   }
 
-  if (rows.length === 0) {
+  if (liveRows.length === 0 && archivedRows.length === 0) {
     return (
       <div className="wit-glass flex flex-col items-center gap-4 rounded-3xl px-6 py-20 text-center">
         <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
@@ -839,49 +886,38 @@ function CampanasPanel() {
 
   return (
     <div className="space-y-4">
-      {rows.map((c) => {
-        const st = CAMPAIGN_STATUS_LABEL[c.metaStatus] ?? {
-          label: c.metaStatus,
-          cls: "bg-wit-mist/60 text-wit-gray",
-        };
-        return (
-          <div
-            key={c.id}
-            className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
+      {liveRows.length === 0 ? (
+        <div className="wit-glass flex flex-col items-center gap-4 rounded-3xl px-6 py-14 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
+            {CAMPAIGN_ICON}
+          </span>
+          <p className="text-lg font-bold text-wit-ink">No tienes campañas activas</p>
+          <p className="max-w-sm text-sm text-wit-gray">
+            Tus campañas anteriores quedaron archivadas — puedes verlas abajo.
+          </p>
+        </div>
+      ) : (
+        liveRows.map((c) => <CampaignCard key={c.id} c={c} />)
+      )}
+      {archivedRows.length > 0 ? (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowArchived((v) => !v)}
+            className="flex w-full items-center justify-between rounded-2xl border border-wit-ink/10 bg-white px-5 py-3 text-sm font-semibold text-wit-gray hover:border-wit-blue/40 hover:text-wit-blue"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-base font-bold text-wit-ink">{c.requestTitle}</h3>
-              <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
-                {st.label}
-              </span>
+            Archivadas ({archivedRows.length})
+            <span className="text-xs">{showArchived ? "Ocultar ▲" : "Ver ▼"}</span>
+          </button>
+          {showArchived ? (
+            <div className="mt-4 space-y-4">
+              {archivedRows.map((c) => (
+                <CampaignCard key={c.id} c={c} />
+              ))}
             </div>
-            <p className="mt-1.5 text-xs text-wit-gray">
-              Presupuesto: ${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/día
-            </p>
-            {c.insightError ? (
-              <p className="mt-3 text-xs text-red-600">
-                No pudimos leer sus métricas: {c.insightError}
-              </p>
-            ) : (
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <CampaignStat
-                  label="Gastado"
-                  value={`$${Number(c.spend ?? 0).toLocaleString("es-MX")}`}
-                />
-                <CampaignStat
-                  label="Alcance"
-                  value={Number(c.reach ?? 0).toLocaleString("es-MX")}
-                />
-                <CampaignStat
-                  label="Impresiones"
-                  value={Number(c.impressions ?? 0).toLocaleString("es-MX")}
-                />
-                <CampaignStat label="Clics" value={Number(c.clicks ?? 0).toLocaleString("es-MX")} />
-              </div>
-            )}
-          </div>
-        );
-      })}
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
