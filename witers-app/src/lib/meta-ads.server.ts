@@ -331,6 +331,7 @@ export async function createPausedCampaignForRequest(
     bid_strategy: "LOWEST_COST_WITHOUT_CAP",
   });
   if (!campaign.ok) return { ok: false, error: campaign.error };
+  const campaignId = campaign.data.id;
 
   const now = new Date();
   const endTime = new Date(now.getTime() + input.durationDays * 24 * 60 * 60 * 1000);
@@ -354,42 +355,69 @@ export async function createPausedCampaignForRequest(
           }
         : { countries: ["MX"] };
 
-  const adset = await graphRequest<{ id: string }>(`/${act}/adsets`, accessToken, {
-    name: `WITERS — ${input.requestTitle}`,
-    campaign_id: campaign.data.id,
-    start_time: now.toISOString(),
-    end_time: endTime.toISOString(),
-    billing_event: "IMPRESSIONS",
-    optimization_goal: optimizationGoal,
-    // Required whenever optimization_goal is POST_ENGAGEMENT — it needs to
-    // know which Page's post it's optimizing engagement for. Omitting this
-    // for "interacción" campaigns is what used to fail with "Invalid
-    // parameter" on every real attempt.
-    ...(objective === "interaccion" ? { promoted_object: { page_id: pageId } } : {}),
-    targeting: {
-      // Deliberately left on Meta's automatic placements (Facebook +
-      // Instagram + the rest) rather than restricted to Facebook only —
-      // no client has an Instagram account explicitly connected here, but
-      // Instagram delivery is still wanted to see how it performs in
-      // practice for Pages that do have one linked in Meta's own system.
-      geo_locations: geoLocations,
-      age_min: input.ageMin,
-      age_max: input.ageMax,
-      ...(input.interestIds.length
-        ? { flexible_spec: [{ interests: input.interestIds.map((id) => ({ id })) }] }
-        : {}),
-    },
-    status: "PAUSED",
-  });
+  function buildAdsetPayload(includeInterests: boolean) {
+    return {
+      name: `WITERS — ${input.requestTitle}`,
+      campaign_id: campaignId,
+      start_time: now.toISOString(),
+      end_time: endTime.toISOString(),
+      billing_event: "IMPRESSIONS",
+      optimization_goal: optimizationGoal,
+      // Required whenever optimization_goal is POST_ENGAGEMENT — it needs to
+      // know which Page's post it's optimizing engagement for. Omitting this
+      // for "interacción" campaigns is what used to fail with "Invalid
+      // parameter" on every real attempt.
+      ...(objective === "interaccion" ? { promoted_object: { page_id: pageId } } : {}),
+      targeting: {
+        // Deliberately left on Meta's automatic placements (Facebook +
+        // Instagram + the rest) rather than restricted to Facebook only —
+        // no client has an Instagram account explicitly connected here, but
+        // Instagram delivery is still wanted to see how it performs in
+        // practice for Pages that do have one linked in Meta's own system.
+        geo_locations: geoLocations,
+        age_min: input.ageMin,
+        age_max: input.ageMax,
+        ...(includeInterests && input.interestIds.length
+          ? { flexible_spec: [{ interests: input.interestIds.map((id) => ({ id })) }] }
+          : {}),
+      },
+      status: "PAUSED",
+    };
+  }
+
+  let adset = await graphRequest<{ id: string }>(
+    `/${act}/adsets`,
+    accessToken,
+    buildAdsetPayload(true),
+  );
+  // A real campaign hit this: one interest id Meta's search/suggestion
+  // endpoints handed back turned out to not be valid for targeting
+  // ("Los intereses con el identificador ... no son válidos"), which
+  // fails the whole ad set even though everything else about it was
+  // fine. Rather than leave the client stuck, retry once with broader
+  // (no-interest) targeting instead of losing the campaign entirely —
+  // surfaced via the warning below so it's never silent.
+  let droppedInterests = false;
+  if (!adset.ok && input.interestIds.length && /inter[ée]s/i.test(adset.error)) {
+    droppedInterests = true;
+    adset = await graphRequest<{ id: string }>(
+      `/${act}/adsets`,
+      accessToken,
+      buildAdsetPayload(false),
+    );
+  }
   if (!adset.ok) {
     return {
       ok: true,
-      campaignId: campaign.data.id,
+      campaignId,
       adsetId: "",
       adIds: [],
       warning: `La campaña se creó, pero el conjunto de anuncios falló: ${adset.error}`,
     };
   }
+  const interestNote = droppedInterests
+    ? "Quitamos la segmentación por intereses porque uno de los identificadores ya no era válido para Meta — la campaña llegó a todo el público en el rango de edad/ubicación elegido en su lugar. "
+    : "";
 
   const imageUpload = await graphRequest<{ images: Record<string, { hash: string }> }>(
     `/${act}/adimages`,
@@ -399,21 +427,20 @@ export async function createPausedCampaignForRequest(
   if (!imageUpload.ok) {
     return {
       ok: true,
-      campaignId: campaign.data.id,
+      campaignId,
       adsetId: adset.data.id,
       adIds: [],
-      warning: `La campaña y el conjunto de anuncios se crearon, pero no pudimos subir la imagen: ${imageUpload.error}`,
+      warning: `${interestNote}La campaña y el conjunto de anuncios se crearon, pero no pudimos subir la imagen: ${imageUpload.error}`,
     };
   }
   const imageHash = Object.values(imageUpload.data.images)[0]?.hash;
   if (!imageHash) {
     return {
       ok: true,
-      campaignId: campaign.data.id,
+      campaignId,
       adsetId: adset.data.id,
       adIds: [],
-      warning:
-        "La campaña y el conjunto de anuncios se crearon, pero la imagen no se pudo procesar.",
+      warning: `${interestNote}La campaña y el conjunto de anuncios se crearon, pero la imagen no se pudo procesar.`,
     };
   }
 
@@ -448,10 +475,10 @@ export async function createPausedCampaignForRequest(
   if (!creative.ok) {
     return {
       ok: true,
-      campaignId: campaign.data.id,
+      campaignId,
       adsetId: adset.data.id,
       adIds: [],
-      warning: `La campaña y el conjunto de anuncios se crearon, pero el anuncio no se pudo generar: ${creative.error}`,
+      warning: `${interestNote}La campaña y el conjunto de anuncios se crearon, pero el anuncio no se pudo generar: ${creative.error}`,
     };
   }
 
@@ -464,18 +491,19 @@ export async function createPausedCampaignForRequest(
   if (!ad.ok) {
     return {
       ok: true,
-      campaignId: campaign.data.id,
+      campaignId,
       adsetId: adset.data.id,
       adIds: [],
-      warning: `La campaña y el conjunto de anuncios se crearon, pero el anuncio no se pudo generar: ${ad.error}`,
+      warning: `${interestNote}La campaña y el conjunto de anuncios se crearon, pero el anuncio no se pudo generar: ${ad.error}`,
     };
   }
 
   return {
     ok: true,
-    campaignId: campaign.data.id,
+    campaignId,
     adsetId: adset.data.id,
     adIds: [ad.data.id],
+    warning: droppedInterests ? interestNote.trim() : undefined,
   };
 }
 

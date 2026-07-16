@@ -164,7 +164,17 @@ export const Route = createFileRoute("/api/campaigns-create")({
           )
           .run();
 
-        return json({ ok: true, id, warning: result.warning ?? null });
+        return json({
+          ok: true,
+          id,
+          warning: result.warning ?? null,
+          // A warning doesn't always mean something's missing — e.g. an
+          // invalid interest id gets dropped and retried rather than
+          // failing the ad set, so campaign+ad set+ad all exist. The
+          // client uses this to tell "fully created, minor caveat" apart
+          // from "genuinely incomplete, go check Ads Manager."
+          complete: Boolean(result.adsetId) && result.adIds.length > 0,
+        });
       },
     },
   },

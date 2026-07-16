@@ -1416,6 +1416,7 @@ function PautaBuilder({
   const [interestAdvancedOpen, setInterestAdvancedOpen] = useState(false);
   const [suggestedInterests, setSuggestedInterests] = useState<InterestHit[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [validatingSuggestionId, setValidatingSuggestionId] = useState<string | null>(null);
   const [categoryState, setCategoryState] = useState<CategoryState>({});
   const [adMessages, setAdMessages] = useState<[string, string, string]>(
     buildDefaultAdMessages(request.title),
@@ -1438,6 +1439,7 @@ function PautaBuilder({
   const [qIndex, setQIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  const [campaignComplete, setCampaignComplete] = useState(true);
 
   const steps = useMemo(() => buildWizardSteps(objective), [objective]);
   useEffect(() => {
@@ -1598,6 +1600,28 @@ function PautaBuilder({
     setInterestResults([]);
   }
 
+  // Facebook's own "sugerencias" endpoint (adinterestsuggestion) can hand
+  // back ids that its own targeting validator then rejects at submit time
+  // ("Los intereses con el identificador ... no son válidos") — a real
+  // campaign hit exactly this. The plain interest search (adinterest, the
+  // same one categories and free-text search already use successfully)
+  // doesn't have that problem, so a suggestion chip re-resolves its name
+  // through that endpoint and adds whatever id THAT returns, instead of
+  // trusting the suggestion endpoint's id directly.
+  function addSuggestedInterest(hit: InterestHit) {
+    setValidatingSuggestionId(hit.id);
+    void fetch(`/api/meta-interest-search?q=${encodeURIComponent(hit.name)}`, {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data: { ok: boolean; results?: InterestHit[] }) => {
+        const validated = data.ok ? data.results?.[0] : undefined;
+        if (validated) addInterest(validated);
+        setSuggestedInterests((prev) => prev.filter((i) => i.id !== hit.id));
+      })
+      .finally(() => setValidatingSuggestionId(null));
+  }
+
   // Mirrors the "Sugerencias" Meta's own Ads Manager shows right after you
   // add an interest — so the client doesn't have to guess synonyms
   // themselves (picking "Negocios" surfaces "Emprendimiento" and similar
@@ -1742,6 +1766,7 @@ function PautaBuilder({
         error?: string;
         message?: string;
         warning?: string | null;
+        complete?: boolean;
       };
       if (!data.ok) {
         setError(
@@ -1762,6 +1787,7 @@ function PautaBuilder({
         return;
       }
       setWarning(data.warning ?? null);
+      setCampaignComplete(data.complete ?? true);
       setPhase("done");
     } catch {
       setError("No pudimos crear la campaña. Intenta de nuevo.");
@@ -1800,14 +1826,14 @@ function PautaBuilder({
           </div>
 
           {phase === "done" ? (
-            warning ? (
-              // A "warning" here means something past the campaign itself
-              // (ad set, imagen, o el anuncio) genuinely failed — this is
-              // NOT full success. It used to render inside the same green
-              // "✓" box as a full success, in small gray text easy to miss
-              // (a client confirmed missing it: saw "campaña creada" the
-              // night before, only to find no ad set/ads the next morning).
-              // Now it gets its own loud amber warning card instead.
+            warning && !campaignComplete ? (
+              // A warning WITHOUT campaignComplete means something past the
+              // campaign itself (ad set, imagen, o el anuncio) genuinely
+              // failed — this is NOT success. It used to render inside the
+              // same green "✓" box as a full success, in small gray text
+              // easy to miss (a client confirmed missing it: saw "campaña
+              // creada" the night before, only to find no ad set/ads the
+              // next morning). Now it gets its own loud amber warning card.
               <div className="rounded-2xl border-2 border-amber-400 bg-amber-50 p-6 text-sm text-wit-ink">
                 <p className="flex items-center gap-2 font-bold text-amber-800">
                   <AlertTriangle className="h-5 w-5 shrink-0" strokeWidth={1.75} />
@@ -1822,6 +1848,22 @@ function PautaBuilder({
                   type="button"
                   onClick={onCreated}
                   className="mt-4 rounded-full bg-amber-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-amber-700"
+                >
+                  Ver en Campañas
+                </button>
+              </div>
+            ) : warning ? (
+              // Complete (campaign + ad set + ad all exist) but with a
+              // caveat worth knowing — e.g. an interest id Meta rejected
+              // got dropped automatically instead of blocking the whole
+              // campaign. Informational, not alarming: blue, not amber.
+              <div className="rounded-2xl border-2 border-wit-blue/30 bg-wit-blue/5 p-6 text-sm text-wit-ink">
+                <p className="font-bold">✓ Tu campaña se creó en pausa.</p>
+                <p className="mt-1 text-xs text-wit-ink/80">{warning}</p>
+                <button
+                  type="button"
+                  onClick={onCreated}
+                  className="mt-4 rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep"
                 >
                   Ver en Campañas
                 </button>
@@ -2407,10 +2449,11 @@ function PautaBuilder({
                         <button
                           key={hit.id}
                           type="button"
-                          onClick={() => addInterest(hit)}
-                          className="rounded-full border border-wit-ink/15 px-3 py-1 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+                          disabled={validatingSuggestionId === hit.id}
+                          onClick={() => addSuggestedInterest(hit)}
+                          className="rounded-full border border-wit-ink/15 px-3 py-1 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue disabled:opacity-50"
                         >
-                          + {hit.name}
+                          {validatingSuggestionId === hit.id ? "..." : `+ ${hit.name}`}
                         </button>
                       ))}
                     </div>
