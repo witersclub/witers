@@ -9,6 +9,7 @@ import {
   Cake,
   Calendar,
   Car,
+  Crosshair,
   Dumbbell,
   FileText,
   Globe,
@@ -1226,6 +1227,84 @@ function LocationRadiusMap({ lat, lon, radiusKm }: { lat: number; lon: number; r
   );
 }
 
+// "Drop a pin" location picker — for places (colonias/boroughs) that
+// don't exist as a searchable named entity in Meta's own location
+// database, so a client can just point at the exact spot with their
+// finger instead of depending on Meta recognizing the name. Same pattern
+// Uber/food-delivery apps use: a pin fixed in the middle of the screen,
+// the map pans underneath it, and the pin's position is just wherever
+// the map's center currently is (read on drag-end, not tracked as a
+// draggable marker — much friendlier on a touchscreen).
+function InteractiveLocationPicker({
+  lat,
+  lon,
+  radiusKm,
+  onCenterChange,
+}: {
+  lat: number;
+  lon: number;
+  radiusKm: number;
+  onCenterChange: (center: { lat: number; lon: number }) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<LeafletNS.Map | null>(null);
+  const circleRef = useRef<LeafletNS.Circle | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let cancelled = false;
+    void Promise.all([import("leaflet"), import("leaflet/dist/leaflet.css")]).then(([leaflet]) => {
+      if (cancelled || !containerRef.current) return;
+      const map = leaflet.map(containerRef.current, { zoomControl: true }).setView([lat, lon], 12);
+      leaflet
+        .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 18,
+          attribution: "&copy; OpenStreetMap contributors",
+        })
+        .addTo(map);
+      const circle = leaflet
+        .circle([lat, lon], {
+          radius: radiusKm * 1000,
+          color: "#0047ff",
+          fillColor: "#0047ff",
+          fillOpacity: 0.12,
+          weight: 1.5,
+        })
+        .addTo(map);
+      mapRef.current = map;
+      circleRef.current = circle;
+      // Follow the map center while dragging (so the circle visibly tracks
+      // the fixed pin overlay) and only report the new point once the drag
+      // settles, to avoid flooding state updates mid-gesture.
+      map.on("move", () => circle.setLatLng(map.getCenter()));
+      map.on("moveend", () => {
+        const c = map.getCenter();
+        onCenterChange({ lat: c.lat, lon: c.lng });
+      });
+    });
+    return () => {
+      cancelled = true;
+      mapRef.current?.remove();
+      mapRef.current = null;
+      circleRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initializes once with the starting point; radius updates handled below, and onCenterChange (a useState setter) is referentially stable
+  }, []);
+
+  useEffect(() => {
+    circleRef.current?.setRadius(radiusKm * 1000);
+  }, [radiusKm]);
+
+  return (
+    <div className="relative h-72 w-full overflow-hidden rounded-xl border border-wit-ink/10">
+      <div ref={containerRef} className="h-full w-full" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <Crosshair className="h-8 w-8 text-wit-blue drop-shadow" strokeWidth={2} />
+      </div>
+    </div>
+  );
+}
+
 // Full-screen takeover, same pattern as WitConversation — the image on the
 // left, the campaign form on the right. Every numeric field is kept as a
 // raw string in state (not coerced with Number() on every keystroke) —
@@ -1272,6 +1351,11 @@ function PautaBuilder({
   const [radiusKm, setRadiusKm] = useState("10");
   const [mapCenter, setMapCenter] = useState<{ lat: number; lon: number } | null>(null);
   const [mapLoading, setMapLoading] = useState(false);
+  // A hand-dropped pin — for places (colonias/boroughs) that don't exist
+  // as a searchable named entity in Meta's own location database, so the
+  // client can just point at the exact spot instead of depending on it.
+  const [customLocationOpen, setCustomLocationOpen] = useState(false);
+  const [customLocation, setCustomLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [interestQuery, setInterestQuery] = useState("");
   const [interestResults, setInterestResults] = useState<InterestHit[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<InterestHit[]>([]);
@@ -1518,7 +1602,9 @@ function PautaBuilder({
           ageMin: min,
           ageMax: max,
           locationKey: selectedLocation?.key,
-          radiusKm: selectedLocation ? Number(radiusKm) : undefined,
+          customLat: customLocation?.lat,
+          customLon: customLocation?.lon,
+          radiusKm: selectedLocation || customLocation ? Number(radiusKm) : undefined,
           interestIds: selectedInterests.map((i) => i.id),
           adMessages: messages,
           whatsappNumber:
@@ -1822,16 +1908,17 @@ function PautaBuilder({
               onNext={goNext}
             >
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <IconChoice
                     icon={Globe}
                     label="Todo México"
                     sublabel="Recomendado"
-                    selected={!selectedLocation}
+                    selected={!selectedLocation && !customLocationOpen}
                     onClick={() => {
                       setSelectedLocation(null);
                       setLocationQuery("");
                       setLocationAdvancedOpen(false);
+                      setCustomLocationOpen(false);
                       goNext();
                     }}
                   />
@@ -1841,9 +1928,50 @@ function PautaBuilder({
                     sublabel={selectedLocation ? "Toca para cambiar" : "Busca por ciudad o CP"}
                     delay={120}
                     selected={Boolean(selectedLocation)}
-                    onClick={() => setLocationAdvancedOpen(true)}
+                    onClick={() => {
+                      setCustomLocationOpen(false);
+                      setLocationAdvancedOpen(true);
+                    }}
+                  />
+                  <IconChoice
+                    icon={Crosshair}
+                    label="Marcar en el mapa"
+                    sublabel="Con tu dedo"
+                    delay={240}
+                    selected={customLocationOpen}
+                    onClick={() => {
+                      setSelectedLocation(null);
+                      setLocationQuery("");
+                      setLocationAdvancedOpen(false);
+                      setCustomLocationOpen(true);
+                    }}
                   />
                 </div>
+                {customLocationOpen ? (
+                  <div className="space-y-2">
+                    <InteractiveLocationPicker
+                      lat={customLocation?.lat ?? 19.4326}
+                      lon={customLocation?.lon ?? -99.1332}
+                      radiusKm={Number(radiusKm)}
+                      onCenterChange={setCustomLocation}
+                    />
+                    <p className="text-[11px] text-wit-gray">
+                      Arrastra el mapa para mover el punto — el radio se mide desde el centro.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-wit-gray">Radio: {radiusKm} km</span>
+                      <input
+                        type="range"
+                        min={5}
+                        max={50}
+                        step={5}
+                        value={radiusKm}
+                        onChange={(e) => setRadiusKm(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                ) : null}
                 {locationAdvancedOpen ? (
                   <div>
                     <label className="mb-1 block text-[11px] font-bold text-wit-gray">

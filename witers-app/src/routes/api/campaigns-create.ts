@@ -20,6 +20,12 @@ const schema = z
     // A Meta location-search result key (see /api/meta-location-search) —
     // omitted means "all of Mexico," same as before this feature.
     locationKey: z.string().min(1).optional(),
+    // A hand-dropped pin (lat/lon) — for places that aren't searchable as
+    // a named entity in Meta's own location database (colonias/boroughs
+    // are hit-or-miss there). Takes priority over locationKey if both are
+    // somehow present.
+    customLat: z.number().min(-90).max(90).optional(),
+    customLon: z.number().min(-180).max(180).optional(),
     radiusKm: z.number().min(5).max(50).optional(),
     interestIds: z.array(z.string().min(1)).max(10).default([]),
     adMessages: z.array(z.string().min(1).max(500)).min(1).max(3),
@@ -105,6 +111,10 @@ export const Route = createFileRoute("/api/campaigns-create")({
           ageMin: parsed.data.ageMin,
           ageMax: parsed.data.ageMax,
           locationKey: parsed.data.locationKey ?? null,
+          customLocation:
+            parsed.data.customLat != null && parsed.data.customLon != null
+              ? { lat: parsed.data.customLat, lon: parsed.data.customLon }
+              : null,
           radiusKm: parsed.data.radiusKm ?? null,
           interestIds: parsed.data.interestIds,
           pageId: brandProfile.meta_page_id,

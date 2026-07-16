@@ -232,9 +232,16 @@ export type CreatePausedCampaignInput = {
   ageMin: number;
   ageMax: number;
   // Meta's own city/neighborhood/zip search result key (see
-  // searchMetaLocations) — null falls back to all of Mexico.
+  // searchMetaLocations) — null falls back to all of Mexico. Mutually
+  // exclusive with customLocation below; if both are somehow set,
+  // customLocation wins (see geoLocations resolution).
   locationKey: string | null;
   radiusKm: number | null;
+  // A raw lat/lon the client dropped a pin on — Meta's "custom location"
+  // targeting (the same thing Ads Manager offers when you place a pin by
+  // hand), for places that don't exist as a searchable named entity in
+  // Meta's own location database (boroughs/colonias are hit-or-miss there).
+  customLocation: { lat: number; lon: number } | null;
   interestIds: string[];
   // The client's own connected Facebook Page (brand_profiles.meta_page_id)
   // — required. Callers must confirm it's set before calling this at all;
@@ -285,11 +292,24 @@ export async function createPausedCampaignForRequest(
   const now = new Date();
   const endTime = new Date(now.getTime() + input.durationDays * 24 * 60 * 60 * 1000);
   const geoLocations =
-    input.locationKey && input.radiusKm
+    input.customLocation && input.radiusKm
       ? {
-          cities: [{ key: input.locationKey, radius: input.radiusKm, distance_unit: "kilometer" }],
+          custom_locations: [
+            {
+              latitude: input.customLocation.lat,
+              longitude: input.customLocation.lon,
+              radius: input.radiusKm,
+              distance_unit: "kilometer",
+            },
+          ],
         }
-      : { countries: ["MX"] };
+      : input.locationKey && input.radiusKm
+        ? {
+            cities: [
+              { key: input.locationKey, radius: input.radiusKm, distance_unit: "kilometer" },
+            ],
+          }
+        : { countries: ["MX"] };
 
   const adset = await graphRequest<{ id: string }>(`/${act}/adsets`, accessToken, {
     name: `WITERS — ${input.requestTitle}`,
