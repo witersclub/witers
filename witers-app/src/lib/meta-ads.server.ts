@@ -154,16 +154,24 @@ export async function searchMetaInterests(
   const config = getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
   const res = await graphRequest<{
-    data: Array<{ id: string; name: string; audience_size_lower_bound?: number }>;
+    data: Array<{ id?: string | number; name: string; audience_size_lower_bound?: number }>;
   }>("/search", config.accessToken, { type: "adinterest", q: query, limit: 10 }, "GET");
   if (!res.ok) return { ok: false, error: res.error };
   return {
     ok: true,
-    data: res.data.data.map((r) => ({
-      id: r.id,
-      name: r.name,
-      audienceSize: r.audience_size_lower_bound ?? null,
-    })),
+    // String(r.id) + the filter below is what actually made
+    // "interestIds: Invalid input" happen on real submissions: whatever
+    // Meta returned here got stored and sent back verbatim, and if it was
+    // ever a bare number (JSON int, not a quoted string) or missing, it
+    // sailed past every type here (nothing enforces it at runtime) and
+    // only broke much later, at the zod check in campaigns-create.ts.
+    data: res.data.data
+      .filter((r) => r.id != null && String(r.id).length > 0)
+      .map((r) => ({
+        id: String(r.id),
+        name: r.name,
+        audienceSize: r.audience_size_lower_bound ?? null,
+      })),
   };
 }
 
@@ -178,7 +186,7 @@ export async function suggestMetaInterests(
   const config = getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
   const res = await graphRequest<{
-    data: Array<{ id: string; name: string; audience_size_lower_bound?: number }>;
+    data: Array<{ id?: string | number; name: string; audience_size_lower_bound?: number }>;
   }>(
     "/search",
     config.accessToken,
@@ -188,11 +196,13 @@ export async function suggestMetaInterests(
   if (!res.ok) return { ok: false, error: res.error };
   return {
     ok: true,
-    data: res.data.data.map((r) => ({
-      id: r.id,
-      name: r.name,
-      audienceSize: r.audience_size_lower_bound ?? null,
-    })),
+    data: res.data.data
+      .filter((r) => r.id != null && String(r.id).length > 0)
+      .map((r) => ({
+        id: String(r.id),
+        name: r.name,
+        audienceSize: r.audience_size_lower_bound ?? null,
+      })),
   };
 }
 

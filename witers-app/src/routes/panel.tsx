@@ -1441,6 +1441,10 @@ function PautaBuilder({
       setCategoryState((prev) => ({ ...prev, [cat.query]: { status: "idle" } }));
       return;
     }
+    // Meta's own targeting caps flexible_spec at 10 interests — stop here
+    // instead of letting a client pick more and only finding out at
+    // submit time.
+    if (selectedInterests.length >= 10) return;
     setCategoryState((prev) => ({ ...prev, [cat.query]: { status: "loading" } }));
     void fetch(`/api/meta-interest-search?q=${encodeURIComponent(cat.query)}`, {
       credentials: "include",
@@ -1551,7 +1555,9 @@ function PautaBuilder({
   }, [interestQuery]);
 
   function addInterest(hit: InterestHit) {
-    setSelectedInterests((prev) => (prev.some((i) => i.id === hit.id) ? prev : [...prev, hit]));
+    setSelectedInterests((prev) =>
+      prev.some((i) => i.id === hit.id) || prev.length >= 10 ? prev : [...prev, hit],
+    );
     setInterestQuery("");
     setInterestResults([]);
   }
@@ -1679,7 +1685,15 @@ function PautaBuilder({
           customLat: customLocation?.lat,
           customLon: customLocation?.lon,
           radiusKm: selectedLocation || customLocation ? Number(radiusKm) : undefined,
-          interestIds: selectedInterests.map((i) => i.id),
+          // Defensive: only well-formed, non-empty string ids reach the
+          // server, and never more than the schema's max of 10 — this is
+          // what "interestIds: Invalid input" turned out to be, a
+          // malformed/oversized entry silently riding along in
+          // selectedInterests until it broke validation at submit time.
+          interestIds: selectedInterests
+            .map((i) => i.id)
+            .filter((id): id is string => typeof id === "string" && id.length > 0)
+            .slice(0, 10),
           adMessages: messages,
           whatsappNumber:
             objective === "ventas" ? `${whatsappCountryCode}${whatsappNumber.trim()}` : undefined,
@@ -2324,6 +2338,11 @@ function PautaBuilder({
                     </p>
                   ) : null;
                 })()}
+                {selectedInterests.length >= 10 ? (
+                  <p className="text-[11px] text-amber-600">
+                    Llegaste al máximo de 10 intereses — quita alguno para agregar otro.
+                  </p>
+                ) : null}
                 {selectedInterests.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedInterests.map((i) => (
