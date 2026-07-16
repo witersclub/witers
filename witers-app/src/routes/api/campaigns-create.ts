@@ -44,6 +44,17 @@ const schema = z
 type RequestRow = { id: string; user_id: string; title: string; status: string };
 type ResultRow = { r2_key: string | null; image_url: string | null };
 
+// "datos_invalidos" alone doesn't say which field or why — this is what
+// left a real submission failure ("No pudimos crear la campaña
+// (datos_invalidos)") impossible to diagnose from a screenshot. Same
+// pattern as /api/requests.ts's describeValidationError.
+function describeValidationError(error: z.ZodError): string {
+  const issue = error.issues[0];
+  if (!issue) return "Revisa los datos de la campaña e intenta de nuevo.";
+  const field = String(issue.path[0] ?? "campo desconocido");
+  return `${field}: ${issue.message}`;
+}
+
 // Turns a finished piece into a real (paused) Meta campaign — the "Pauta
 // interactiva" screen in panel.tsx. Never activates anything; the client
 // reviews and turns it on later from Ads Manager (or from Campañas, once
@@ -56,7 +67,12 @@ export const Route = createFileRoute("/api/campaigns-create")({
         if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
 
         const parsed = schema.safeParse(await request.json().catch(() => null));
-        if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
+        if (!parsed.success) {
+          return json(
+            { ok: false, error: "datos_invalidos", message: describeValidationError(parsed.error) },
+            { status: 400 },
+          );
+        }
 
         const reqRow = await db()
           .prepare("SELECT id, user_id, title, status FROM design_requests WHERE id = ?1")

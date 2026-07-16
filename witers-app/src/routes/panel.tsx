@@ -1686,7 +1686,12 @@ function PautaBuilder({
             objective === "trafico" && trafficDestination === "web" ? websiteUrl.trim() : undefined,
         }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string; warning?: string | null };
+      const data = (await res.json()) as {
+        ok: boolean;
+        error?: string;
+        message?: string;
+        warning?: string | null;
+      };
       if (!data.ok) {
         setError(
           data.error === "sin_pieza_final"
@@ -1695,10 +1700,12 @@ function PautaBuilder({
               ? "Esta solicitud todavía no está terminada."
               : data.error === "pagina_no_conectada"
                 ? "Tu Página de Facebook aún no está conectada. Contáctanos para activarla."
-                : // Anything else is a real Meta/config error — show the raw
-                  // code so it's diagnosable from a screenshot instead of
-                  // swallowed into a generic "try again."
-                  `No pudimos crear la campaña${data.error ? ` (${data.error})` : ""}. Intenta de nuevo.`,
+                : data.error === "datos_invalidos" && data.message
+                  ? `No pudimos crear la campaña (${data.message}).`
+                  : // Anything else is a real Meta/config error — show the raw
+                    // code so it's diagnosable from a screenshot instead of
+                    // swallowed into a generic "try again."
+                    `No pudimos crear la campaña${data.error ? ` (${data.error})` : ""}. Intenta de nuevo.`,
         );
         setPhase("wizard");
         return;
@@ -1837,7 +1844,11 @@ function PautaBuilder({
               question="¿A qué WhatsApp llegan tus clientes?"
               onBack={goBack}
               onNext={goNext}
-              nextDisabled={!whatsappNumber.trim()}
+              // A number too short to be real still let the client past
+              // this step before (only checked "not empty"), and only
+              // failed later at submit with an unreadable "datos_invalidos"
+              // — catch it here instead, where it's actually fixable.
+              nextDisabled={whatsappNumber.replace(/\D/g, "").length < 8}
             >
               <div>
                 <div className="flex gap-2">
@@ -1862,9 +1873,16 @@ function PautaBuilder({
                     className="w-full min-w-0 flex-1 rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
                   />
                 </div>
-                <p className="mt-2 text-[11px] text-wit-gray">
-                  Al darle clic al anuncio, la gente abrirá un chat directo contigo en WhatsApp.
-                </p>
+                {whatsappNumber.trim() && whatsappNumber.replace(/\D/g, "").length < 8 ? (
+                  <p className="mt-2 text-[11px] text-amber-600">
+                    Ese número se ve incompleto — escríbelo completo, sin el código de país (ej.
+                    5512345678).
+                  </p>
+                ) : (
+                  <p className="mt-2 text-[11px] text-wit-gray">
+                    Al darle clic al anuncio, la gente abrirá un chat directo contigo en WhatsApp.
+                  </p>
+                )}
               </div>
             </WizardShell>
           ) : currentStepId === "presupuesto" ? (
@@ -2372,23 +2390,27 @@ function PautaBuilder({
                     Generando textos con IA...
                   </p>
                 ) : null}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {adMessages.map((msg, i) => (
-                    <input
-                      key={i}
-                      type="text"
-                      maxLength={500}
-                      value={msg}
-                      onChange={(e) => {
-                        adCopyEditedRef.current = true;
-                        setAdMessages((prev) => {
-                          const next = [...prev] as [string, string, string];
-                          next[i] = e.target.value;
-                          return next;
-                        });
-                      }}
-                      className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
-                    />
+                    <div key={i}>
+                      <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+                        Mensaje {i + 1}
+                      </label>
+                      <textarea
+                        rows={4}
+                        maxLength={500}
+                        value={msg}
+                        onChange={(e) => {
+                          adCopyEditedRef.current = true;
+                          setAdMessages((prev) => {
+                            const next = [...prev] as [string, string, string];
+                            next[i] = e.target.value;
+                            return next;
+                          });
+                        }}
+                        className="w-full resize-y rounded-xl border border-wit-ink/15 bg-white px-3 py-2.5 text-base leading-snug outline-none focus:border-wit-blue"
+                      />
+                    </div>
                   ))}
                 </div>
                 <button
