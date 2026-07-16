@@ -320,6 +320,14 @@ export async function createPausedCampaignForRequest(
     billing_event: "IMPRESSIONS",
     optimization_goal: optimizationGoal,
     bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+    // Meta now requires this explicitly whenever the budget lives on the
+    // ad set (as it does here) rather than the campaign — every real
+    // attempt was failing with "Se debe especificar Verdadero o Falso en
+    // el campo is_adset_budget_sharing_enabled" until this was added.
+    // false = don't let this ad set share budget with siblings under the
+    // same campaign, which matches how these campaigns are actually
+    // structured (one ad set per campaign, budget set individually).
+    is_adset_budget_sharing_enabled: false,
     // Required whenever optimization_goal is POST_ENGAGEMENT — it needs to
     // know which Page's post it's optimizing engagement for. Omitting this
     // for "interacción" campaigns is what used to fail with "Invalid

@@ -29,6 +29,7 @@ import { Route as ApiMetaLocationSearchRouteImport } from './routes/api/meta-loc
 import { Route as ApiMetaInterestSuggestionsRouteImport } from './routes/api/meta-interest-suggestions'
 import { Route as ApiMetaInterestSearchRouteImport } from './routes/api/meta-interest-search'
 import { Route as ApiGeocodeRouteImport } from './routes/api/geocode'
+import { Route as ApiGenerateAdCopyRouteImport } from './routes/api/generate-ad-copy'
 import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
@@ -164,6 +165,11 @@ const ApiMetaInterestSearchRoute = ApiMetaInterestSearchRouteImport.update({
 const ApiGeocodeRoute = ApiGeocodeRouteImport.update({
   id: '/api/geocode',
   path: '/api/geocode',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGenerateAdCopyRoute = ApiGenerateAdCopyRouteImport.update({
+  id: '/api/generate-ad-copy',
+  path: '/api/generate-ad-copy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFileRoute = ApiFileRouteImport.update({
@@ -366,6 +372,7 @@ export interface FileRoutesByFullPath {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
+  '/api/generate-ad-copy': typeof ApiGenerateAdCopyRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
@@ -423,6 +430,7 @@ export interface FileRoutesByTo {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
+  '/api/generate-ad-copy': typeof ApiGenerateAdCopyRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
@@ -481,6 +489,7 @@ export interface FileRoutesById {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
+  '/api/generate-ad-copy': typeof ApiGenerateAdCopyRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
@@ -540,6 +549,7 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
+    | '/api/generate-ad-copy'
     | '/api/geocode'
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
@@ -597,6 +607,7 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
+    | '/api/generate-ad-copy'
     | '/api/geocode'
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
@@ -654,6 +665,7 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
+    | '/api/generate-ad-copy'
     | '/api/geocode'
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
@@ -712,6 +724,7 @@ export interface RootRouteChildren {
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiCloseRequestRoute: typeof ApiCloseRequestRoute
   ApiFileRoute: typeof ApiFileRoute
+  ApiGenerateAdCopyRoute: typeof ApiGenerateAdCopyRoute
   ApiGeocodeRoute: typeof ApiGeocodeRoute
   ApiMetaInterestSearchRoute: typeof ApiMetaInterestSearchRoute
   ApiMetaInterestSuggestionsRoute: typeof ApiMetaInterestSuggestionsRoute
@@ -890,6 +903,13 @@ declare module '@tanstack/react-router' {
       path: '/api/geocode'
       fullPath: '/api/geocode'
       preLoaderRoute: typeof ApiGeocodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/generate-ad-copy': {
+      id: '/api/generate-ad-copy'
+      path: '/api/generate-ad-copy'
+      fullPath: '/api/generate-ad-copy'
+      preLoaderRoute: typeof ApiGenerateAdCopyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/file': {
@@ -1160,6 +1180,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiCloseRequestRoute: ApiCloseRequestRoute,
   ApiFileRoute: ApiFileRoute,
+  ApiGenerateAdCopyRoute: ApiGenerateAdCopyRoute,
   ApiGeocodeRoute: ApiGeocodeRoute,
   ApiMetaInterestSearchRoute: ApiMetaInterestSearchRoute,
   ApiMetaInterestSuggestionsRoute: ApiMetaInterestSuggestionsRoute,

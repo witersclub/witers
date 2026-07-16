@@ -23,6 +23,7 @@ import {
   PawPrint,
   Pencil,
   Plane,
+  RefreshCw,
   Rocket,
   Route as RouteIcon,
   Search,
@@ -137,6 +138,13 @@ type PautaRequestInfo = {
   title: string;
   imageHref: string;
   ageRangeDefault: string | null;
+  // For AI-generated ad copy (see ad-copy.server.ts) — the richer the
+  // context, the less generic the result. All optional since older
+  // requests may be missing some of these.
+  pieceBrief: string | null;
+  style: string | null;
+  audience: string | null;
+  companyName: string | null;
 };
 
 function Panel() {
@@ -1375,6 +1383,14 @@ function PautaBuilder({
   const [adMessages, setAdMessages] = useState<[string, string, string]>(
     buildDefaultAdMessages(request.title),
   );
+  const [adCopyLoading, setAdCopyLoading] = useState(false);
+  // Tracks whether the client has typed into a message field by hand, so
+  // the AI result (which can take a few seconds) never overwrites
+  // something they've already started editing — checked as a ref, not
+  // state, since it needs to be read synchronously the instant the fetch
+  // resolves, not on whatever render happened to be current when the
+  // request was kicked off.
+  const adCopyEditedRef = useRef(false);
   const [whatsappCountryCode, setWhatsappCountryCode] = useState(COUNTRY_CODES[0].code);
   const [whatsappNumber, setWhatsappNumber] = useState("");
   // Only meaningful for "trafico" — "redes" (default) points the ad at the
@@ -1565,6 +1581,49 @@ function PautaBuilder({
       .catch(() => setSuggestedInterests([]))
       .finally(() => setSuggestionsLoading(false));
   }, [selectedInterests]);
+
+  // Real ad copy from ChatGPT, tailored to this piece and objective —
+  // replaces the "Me interesa X / Quiero saber más sobre X..." template
+  // once it resolves. `force` is for the manual "Generar de nuevo"
+  // button, which should always apply its result even if the client has
+  // already edited a field by hand; the background mount-time fetch
+  // should not.
+  async function generateCopy({ force = false }: { force?: boolean } = {}) {
+    setAdCopyLoading(true);
+    try {
+      const res = await fetch("/api/generate-ad-copy", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: request.title,
+          pieceBrief: request.pieceBrief ?? undefined,
+          style: request.style ?? undefined,
+          audience: request.audience ?? undefined,
+          companyName: request.companyName ?? undefined,
+          objective,
+        }),
+      });
+      const data = (await res.json()) as {
+        ok: boolean;
+        messages?: [string, string, string];
+      };
+      if (data.ok && data.messages && (force || !adCopyEditedRef.current)) {
+        setAdMessages(data.messages);
+        adCopyEditedRef.current = false;
+      }
+    } catch {
+      // Silent — the template defaults are already sitting in the fields
+      // as a working fallback, same graceful-degradation pattern as the
+      // rest of this wizard.
+    } finally {
+      setAdCopyLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void generateCopy();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once on mount with whatever objective is picked by then; the manual "Generar de nuevo" button covers a later objective change
+  }, []);
 
   async function submit() {
     const budgetMxn = Number(dailyBudget);
@@ -2302,6 +2361,12 @@ function PautaBuilder({
               nextDisabled={adMessages.every((m) => !m.trim())}
             >
               <div>
+                {adCopyLoading ? (
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-wit-blue">
+                    <Sparkles className="h-3.5 w-3.5 animate-pulse" strokeWidth={1.75} />
+                    Generando textos con IA...
+                  </p>
+                ) : null}
                 <div className="space-y-2">
                   {adMessages.map((msg, i) => (
                     <input
@@ -2309,17 +2374,30 @@ function PautaBuilder({
                       type="text"
                       maxLength={500}
                       value={msg}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        adCopyEditedRef.current = true;
                         setAdMessages((prev) => {
                           const next = [...prev] as [string, string, string];
                           next[i] = e.target.value;
                           return next;
-                        })
-                      }
+                        });
+                      }}
                       className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
                     />
                   ))}
                 </div>
+                <button
+                  type="button"
+                  disabled={adCopyLoading}
+                  onClick={() => void generateCopy({ force: true })}
+                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-wit-blue hover:text-wit-blue-deep disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${adCopyLoading ? "animate-spin" : ""}`}
+                    strokeWidth={1.75}
+                  />
+                  Generar otra vez con IA
+                </button>
                 <p className="mt-2 text-[11px] text-wit-gray">
                   Cada mensaje se convierte en su propio anuncio dentro de la campaña, para probar
                   cuál funciona mejor.
@@ -4415,6 +4493,10 @@ function HistoryCard({
               title: r.title,
               imageHref: href,
               ageRangeDefault: r.age_range,
+              pieceBrief: r.piece_brief,
+              style: r.style,
+              audience: r.audience,
+              companyName: r.company_name,
             });
           }}
         />
