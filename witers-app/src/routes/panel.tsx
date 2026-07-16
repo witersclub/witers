@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type * as LeafletNS from "leaflet";
 import {
+  AlertTriangle,
   Briefcase,
   Building2,
   Cake,
@@ -1749,19 +1750,47 @@ function PautaBuilder({
           </div>
 
           {phase === "done" ? (
-            <div className="rounded-2xl bg-wit-ice p-6 text-sm text-wit-ink">
-              <p className="font-bold">✓ Tu campaña se creó en pausa.</p>
-              <p className="mt-1 text-xs text-wit-gray">
-                {warning ?? "Actívala desde Meta Ads Manager cuando quieras que empiece a correr."}
-              </p>
-              <button
-                type="button"
-                onClick={onCreated}
-                className="mt-4 rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep"
-              >
-                Ver en Campañas
-              </button>
-            </div>
+            warning ? (
+              // A "warning" here means something past the campaign itself
+              // (ad set, imagen, o el anuncio) genuinely failed — this is
+              // NOT full success. It used to render inside the same green
+              // "✓" box as a full success, in small gray text easy to miss
+              // (a client confirmed missing it: saw "campaña creada" the
+              // night before, only to find no ad set/ads the next morning).
+              // Now it gets its own loud amber warning card instead.
+              <div className="rounded-2xl border-2 border-amber-400 bg-amber-50 p-6 text-sm text-wit-ink">
+                <p className="flex items-center gap-2 font-bold text-amber-800">
+                  <AlertTriangle className="h-5 w-5 shrink-0" strokeWidth={1.75} />
+                  Tu campaña quedó incompleta
+                </p>
+                <p className="mt-1 text-xs text-amber-900">{warning}</p>
+                <p className="mt-2 text-xs text-amber-900">
+                  Revísala en Meta Ads Manager antes de darla por lista — probablemente falte el
+                  conjunto de anuncios, la imagen o el anuncio.
+                </p>
+                <button
+                  type="button"
+                  onClick={onCreated}
+                  className="mt-4 rounded-full bg-amber-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-amber-700"
+                >
+                  Ver en Campañas
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-wit-ice p-6 text-sm text-wit-ink">
+                <p className="font-bold">✓ Tu campaña se creó en pausa.</p>
+                <p className="mt-1 text-xs text-wit-gray">
+                  Actívala desde Meta Ads Manager cuando quieras que empiece a correr.
+                </p>
+                <button
+                  type="button"
+                  onClick={onCreated}
+                  className="mt-4 rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep"
+                >
+                  Ver en Campañas
+                </button>
+              </div>
+            )
           ) : phase === "sending" ? (
             <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center">
               <Rocket className="wit-float h-10 w-10 text-wit-blue" strokeWidth={1.75} />
