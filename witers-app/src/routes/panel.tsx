@@ -1153,6 +1153,13 @@ function WizardShell({
   );
 }
 
+// CARTO's free "Voyager" basemap instead of OpenStreetMap's own default
+// tile style — same underlying OSM data, no API key or billing account
+// needed either, just a cleaner, more modern look (thinner roads, muted
+// colors) closer to what a client expects a map to look like.
+const MAP_TILE_URL = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+const MAP_TILE_ATTRIBUTION = "&copy; OpenStreetMap contributors &copy; CARTO";
+
 // Visual radius picker for the ubicación step — a real OpenStreetMap tile
 // map with a dot at the (approximate, geocoded purely for display —
 // see geocode.server.ts) center and a circle sized to radiusKm, so a
@@ -1175,9 +1182,10 @@ function LocationRadiusMap({ lat, lon, radiusKm }: { lat: number; lon: number; r
       if (cancelled || !containerRef.current) return;
       const map = leaflet.map(containerRef.current, { zoomControl: false }).setView([lat, lon], 11);
       leaflet
-        .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        .tileLayer(MAP_TILE_URL, {
           maxZoom: 18,
-          attribution: "&copy; OpenStreetMap contributors",
+          subdomains: "abcd",
+          attribution: MAP_TILE_ATTRIBUTION,
         })
         .addTo(map);
       leaflet
@@ -1257,9 +1265,10 @@ function InteractiveLocationPicker({
       if (cancelled || !containerRef.current) return;
       const map = leaflet.map(containerRef.current, { zoomControl: true }).setView([lat, lon], 12);
       leaflet
-        .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        .tileLayer(MAP_TILE_URL, {
           maxZoom: 18,
-          attribution: "&copy; OpenStreetMap contributors",
+          subdomains: "abcd",
+          attribution: MAP_TILE_ATTRIBUTION,
         })
         .addTo(map);
       const circle = leaflet
