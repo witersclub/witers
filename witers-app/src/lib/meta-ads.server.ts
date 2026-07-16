@@ -98,23 +98,42 @@ export async function searchMetaLocations(
 ): Promise<{ ok: true; data: LocationSuggestion[] } | { ok: false; error: string }> {
   const config = getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
-  const res = await graphRequest<{
+  type LocationSearchData = {
     data: Array<{ key: string; name: string; type: string; region?: string }>;
-  }>(
+  };
+  // Ads Manager's own location search returns a "Lugar"/Place category
+  // (landmarks, colonias, points of interest) alongside "city" — that's
+  // the granularity a colonia like "Cuajimalpa de Morelos" actually
+  // needs, and it was missing from location_types entirely. Try it
+  // first; if Meta rejects "place" as invalid in this API version (the
+  // same failure mode "neighborhood" caused before), fall back to the
+  // known-good city/zip-only list instead of the whole search breaking.
+  let res = await graphRequest<LocationSearchData>(
     "/search",
     config.accessToken,
     {
       type: "adgeolocation",
       q: query,
-      // "neighborhood" isn't a real Meta location_types value — an invalid
-      // enum entry here made the whole search request fail every time,
-      // which is why nothing was ever showing up.
-      location_types: ["city", "zip"],
+      location_types: ["city", "zip", "place"],
       country_code: countryCode,
       limit: 8,
     },
     "GET",
   );
+  if (!res.ok) {
+    res = await graphRequest<LocationSearchData>(
+      "/search",
+      config.accessToken,
+      {
+        type: "adgeolocation",
+        q: query,
+        location_types: ["city", "zip"],
+        country_code: countryCode,
+        limit: 8,
+      },
+      "GET",
+    );
+  }
   if (!res.ok) return { ok: false, error: res.error };
   return {
     ok: true,
