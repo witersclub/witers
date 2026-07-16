@@ -245,8 +245,12 @@ export type CreatePausedCampaignInput = {
   durationDays: number;
   imageBytesBase64: string;
   imageContentType: string;
-  // 1-3 ad copy variants — each becomes its own paused ad in the same ad
-  // set, so Meta can split-test them once the client turns it on.
+  // 1-3 ad copy variants — all included as text options on a single paused
+  // ad (Meta's own "multiple text options" template, the same one Ads
+  // Manager offers when you add several variations to one ad), which
+  // rotates/tests between them automatically. This is deliberately ONE ad,
+  // not one ad per variant — three separate ads for what's visually the
+  // same creative read as confusing/illogical to the client.
   adMessages: string[];
   ageMin: number;
   ageMax: number;
@@ -278,10 +282,12 @@ export type CreatePausedCampaignResult =
       ok: true;
       campaignId: string;
       adsetId: string;
+      // 0 or 1 entries — kept as an array for DB/bookkeeping compatibility,
+      // but this is always a single ad now.
       adIds: string[];
-      // Set when everything up to the ad set worked but not every ad
-      // variant could be created — the campaign/ad set (and whichever ads
-      // did work) still exist and are visible in Ads Manager.
+      // Set when everything up to the ad set worked but the ad itself
+      // couldn't be created — the campaign/ad set still exist and are
+      // visible in Ads Manager.
       warning?: string;
     }
   | { ok: false; error: string };
@@ -305,6 +311,14 @@ export async function createPausedCampaignForRequest(
     objective: metaObjective,
     status: "PAUSED",
     special_ad_categories: [],
+    // Budget + bid strategy live on the campaign (CBO), not the ad set —
+    // one number to manage per campaign, matching what the client expects
+    // to see. Each campaign only ever has one ad set here, so CBO vs ABO
+    // makes no practical delivery difference, but it's what avoids the
+    // "is_adset_budget_sharing_enabled" field Meta only requires when the
+    // ad set (not the campaign) carries the budget.
+    daily_budget: input.dailyBudgetCents,
+    bid_strategy: "LOWEST_COST_WITHOUT_CAP",
   });
   if (!campaign.ok) return { ok: false, error: campaign.error };
 
@@ -333,20 +347,10 @@ export async function createPausedCampaignForRequest(
   const adset = await graphRequest<{ id: string }>(`/${act}/adsets`, accessToken, {
     name: `WITERS — ${input.requestTitle}`,
     campaign_id: campaign.data.id,
-    daily_budget: input.dailyBudgetCents,
     start_time: now.toISOString(),
     end_time: endTime.toISOString(),
     billing_event: "IMPRESSIONS",
     optimization_goal: optimizationGoal,
-    bid_strategy: "LOWEST_COST_WITHOUT_CAP",
-    // Meta now requires this explicitly whenever the budget lives on the
-    // ad set (as it does here) rather than the campaign — every real
-    // attempt was failing with "Se debe especificar Verdadero o Falso en
-    // el campo is_adset_budget_sharing_enabled" until this was added.
-    // false = don't let this ad set share budget with siblings under the
-    // same campaign, which matches how these campaigns are actually
-    // structured (one ad set per campaign, budget set individually).
-    is_adset_budget_sharing_enabled: false,
     // Required whenever optimization_goal is POST_ENGAGEMENT — it needs to
     // know which Page's post it's optimizing engagement for. Omitting this
     // for "interacción" campaigns is what used to fail with "Invalid
@@ -404,44 +408,56 @@ export async function createPausedCampaignForRequest(
   }
 
   const link = resolveDestinationLink(objective, pageId, input.whatsappNumber, input.websiteUrl);
-  const adIds: string[] = [];
-  const failures: string[] = [];
 
-  // One ad per copy variant, all in the same (paused) ad set — lets the
-  // client split-test the 3 messages once they turn the ad set on, instead
-  // of us guessing which one performs best.
-  for (const [i, message] of input.adMessages.entries()) {
-    const creative = await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
-      name: `WITERS — ${input.requestTitle} — variante ${i + 1}`,
+  // A single ad whose creative carries all copy variants as text options —
+  // Meta's own "plantilla de mensajes" (the same multiple-text-variations
+  // feature Ads Manager offers on one ad), which rotates/tests between them
+  // on its own. Tried first; if this ad account/API version rejects
+  // asset_feed_spec, fall back to one plain ad with just the first variant
+  // rather than failing the whole campaign over it.
+  let creative = await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
+    name: `WITERS — ${input.requestTitle}`,
+    object_story_spec: { page_id: pageId },
+    asset_feed_spec: {
+      images: [{ hash: imageHash }],
+      bodies: input.adMessages.map((text) => ({ text })),
+      link_urls: [{ website_url: link }],
+      call_to_action_types: ["LEARN_MORE"],
+      ad_formats: ["SINGLE_IMAGE"],
+    },
+  });
+  if (!creative.ok) {
+    creative = await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
+      name: `WITERS — ${input.requestTitle}`,
       object_story_spec: {
         page_id: pageId,
-        link_data: { image_hash: imageHash, message, link },
+        link_data: { image_hash: imageHash, message: input.adMessages[0], link },
       },
     });
-    if (!creative.ok) {
-      failures.push(`variante ${i + 1} (creativo): ${creative.error}`);
-      continue;
-    }
-    const ad = await graphRequest<{ id: string }>(`/${act}/ads`, accessToken, {
-      name: `WITERS — ${input.requestTitle} — variante ${i + 1}`,
-      adset_id: adset.data.id,
-      creative: { creative_id: creative.data.id },
-      status: "PAUSED",
-    });
-    if (!ad.ok) {
-      failures.push(`variante ${i + 1} (anuncio): ${ad.error}`);
-      continue;
-    }
-    adIds.push(ad.data.id);
   }
-
-  if (adIds.length === 0) {
+  if (!creative.ok) {
     return {
       ok: true,
       campaignId: campaign.data.id,
       adsetId: adset.data.id,
       adIds: [],
-      warning: `La campaña y el conjunto de anuncios se crearon, pero ningún anuncio se pudo generar: ${failures.join("; ")}`,
+      warning: `La campaña y el conjunto de anuncios se crearon, pero el anuncio no se pudo generar: ${creative.error}`,
+    };
+  }
+
+  const ad = await graphRequest<{ id: string }>(`/${act}/ads`, accessToken, {
+    name: `WITERS — ${input.requestTitle}`,
+    adset_id: adset.data.id,
+    creative: { creative_id: creative.data.id },
+    status: "PAUSED",
+  });
+  if (!ad.ok) {
+    return {
+      ok: true,
+      campaignId: campaign.data.id,
+      adsetId: adset.data.id,
+      adIds: [],
+      warning: `La campaña y el conjunto de anuncios se crearon, pero el anuncio no se pudo generar: ${ad.error}`,
     };
   }
 
@@ -449,8 +465,7 @@ export async function createPausedCampaignForRequest(
     ok: true,
     campaignId: campaign.data.id,
     adsetId: adset.data.id,
-    adIds,
-    warning: failures.length ? `Algunas variantes fallaron: ${failures.join("; ")}` : undefined,
+    adIds: [ad.data.id],
   };
 }
 

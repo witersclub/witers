@@ -1878,6 +1878,14 @@ function PautaBuilder({
                     Ese número se ve incompleto — escríbelo completo, sin el código de país (ej.
                     5512345678).
                   </p>
+                ) : whatsappNumber.replace(/\D/g, "").length >= 8 ? (
+                  <p className="mt-2 text-[11px] text-wit-gray">
+                    Al darle clic al anuncio, se abrirá este chat:{" "}
+                    <span className="font-mono font-semibold text-wit-ink">
+                      wa.me/{`${whatsappCountryCode}${whatsappNumber}`.replace(/\D/g, "")}
+                    </span>{" "}
+                    — revísalo, es el número exacto que va a usar Facebook.
+                  </p>
                 ) : (
                   <p className="mt-2 text-[11px] text-wit-gray">
                     Al darle clic al anuncio, la gente abrirá un chat directo contigo en WhatsApp.
@@ -2426,8 +2434,8 @@ function PautaBuilder({
                   Generar otra vez con IA
                 </button>
                 <p className="mt-2 text-[11px] text-wit-gray">
-                  Cada mensaje se convierte en su propio anuncio dentro de la campaña, para probar
-                  cuál funciona mejor.
+                  Los 3 mensajes van dentro de un solo anuncio, como plantilla de texto — Facebook
+                  va alternando entre ellos para ver cuál funciona mejor.
                 </p>
                 {error ? <p className="mt-3 text-xs text-red-600">{error}</p> : null}
               </div>
