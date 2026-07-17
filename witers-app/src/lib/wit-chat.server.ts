@@ -164,6 +164,11 @@ type OpenAiChatResponse = { choices?: Array<{ message?: OpenAiMessage }> };
 // client is left staring at unclickable text with no picker, and has to
 // type a guess to get unstuck. This catches both patterns after the fact
 // and forces the real picker instead of trusting the model got it right.
+// Kept in sync with the enum in /api/requests.ts and with ASPECT_OPTIONS in
+// lab-pickers.tsx — these are the only formats the picker widget can ever
+// produce, and the only ones the final POST accepts.
+const VALID_ASPECT_RATIOS = new Set(["1:1", "4:3", "3:4", "16:9", "9:16"]);
+
 function looksLikeAspectRatioAnnouncement(text: string): boolean {
   const t = text.toLowerCase();
   const mentionsFormat = /\bformato\b|proporci[oó]n/.test(t);
@@ -223,6 +228,16 @@ export async function runWitChat(
   if (toolCall?.function.name === "submit_piece_details") {
     try {
       const args = JSON.parse(toolCall.function.arguments) as Partial<PieceDetails>;
+      // The enum in the tool schema is only a hint to the model, not an
+      // enforced constraint (tool_choice is "auto", not strict JSON schema)
+      // — gpt-4o-mini sometimes free-types a plausible-looking but invalid
+      // ratio (e.g. "4:5") instead of calling show_aspect_ratio_picker, which
+      // would otherwise reach the client's review card and only fail once
+      // they hit "Confirmar y enviar", with no way to fix it from there. Fall
+      // back to the real picker instead of trusting an unvalidated value.
+      if (!args.aspectRatio || !VALID_ASPECT_RATIOS.has(args.aspectRatio.trim())) {
+        return { ok: true, kind: "ask_aspect_ratio" };
+      }
       return {
         ok: true,
         kind: "done",
@@ -233,7 +248,7 @@ export async function runWitChat(
           style: args.style?.trim() || "",
           audience: args.audience?.trim() || "",
           ageRanges: args.ageRanges?.trim() || "",
-          aspectRatio: args.aspectRatio?.trim() || "1:1",
+          aspectRatio: args.aspectRatio.trim(),
           promoPrice: args.promoPrice?.trim() || "",
           requiredText: args.requiredText?.trim() || "",
         },
