@@ -524,10 +524,10 @@ function Panel() {
               // loop closed all the way to real results — not just a
               // request counter. Reach only shows once there's a real
               // number to show; 0 campañas/0 alcance would read as failure,
-              // not motivation. Flex-wrap (not a stretching grid) so each
-              // tile stays a small, fixed-ish size instead of ballooning
-              // to fill the row on desktop.
-              <div className="mt-6 grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
+              // not motivation. Fixed-size squares (not a stretching grid
+              // or plain rectangle) so they read as little badges, not
+              // wide bars — same size on every breakpoint.
+              <div className="mt-6 flex flex-wrap gap-2.5">
                 <div
                   ref={piecesTileRef}
                   role="button"
@@ -543,25 +543,25 @@ function Panel() {
                       openPiecesBurst();
                     }
                   }}
-                  className="select-none rounded-xl bg-wit-navy p-3.5 text-white transition-transform active:scale-95 sm:w-32"
+                  className="flex aspect-square w-24 select-none flex-col justify-center rounded-xl bg-wit-navy p-3 text-white transition-transform active:scale-95"
                 >
                   <Images className="h-4 w-4 text-white/70" strokeWidth={1.75} />
                   <p className="mt-1.5 text-lg font-extrabold">{piecesCreated}</p>
-                  <p className="text-[10px] text-white/70">
+                  <p className="text-[10px] leading-tight text-white/70">
                     {piecesCreated === 1 ? "pieza creada" : "piezas creadas"}
                   </p>
                 </div>
                 {campaignsLaunched > 0 ? (
-                  <div className="rounded-xl bg-wit-navy p-3.5 text-white sm:w-32">
+                  <div className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-navy p-3 text-white">
                     <Rocket className="h-4 w-4 text-white/70" strokeWidth={1.75} />
                     <p className="mt-1.5 text-lg font-extrabold">{campaignsLaunched}</p>
-                    <p className="text-[10px] text-white/70">
+                    <p className="text-[10px] leading-tight text-white/70">
                       {campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas"}
                     </p>
                   </div>
                 ) : null}
                 {totalReach > 0 ? (
-                  <div className="rounded-xl bg-wit-blue p-3.5 text-white sm:w-32">
+                  <div className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-blue p-3 text-white">
                     <Eye className="h-4 w-4 text-white/70" strokeWidth={1.75} />
                     <p className="mt-1.5 text-lg font-extrabold">
                       {totalReach.toLocaleString("es-MX")}
