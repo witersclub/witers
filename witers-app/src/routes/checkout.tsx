@@ -1,36 +1,42 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { z } from "zod";
 
 import { WitersLogo } from "../components/witers/brand";
+import { currentPriceFor, getPlan, isPlanId } from "../lib/membership-plans";
 import { useMe } from "../lib/witers-client";
 
 export const Route = createFileRoute("/checkout")({
+  validateSearch: z.object({
+    plan: z
+      .string()
+      .optional()
+      .transform((v) => (isPlanId(v) ? v : undefined)),
+  }),
   head: () => ({
     meta: [
       { title: "Activa tu membresía. WITERS" },
-      { name: "description", content: "Activa tu membresía WITERS por $5,999 MXN al mes." },
+      { name: "description", content: "Activa tu membresía WITERS — Essential, Grow o Scale." },
     ],
   }),
   component: Checkout,
 });
 
-const BENEFICIOS = [
-  "Acceso completo a la comunidad",
-  "20 solicitudes de diseño con IA",
-  "Panel personal de seguimiento",
-  "Soporte y estrategia de marca",
-];
-
 function Checkout() {
   const me = useMe();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { plan: planId } = Route.useSearch();
+  const plan = getPlan(planId ?? me.data?.membership?.plan);
+  const fmt = (n: number) =>
+    "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const [card, setCard] = useState({ name: "", number: "", exp: "", cvc: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const active = me.data?.membership?.status === "active";
+  const price = currentPriceFor(plan, me.data?.membership?.activated_at ?? null);
 
   async function pay(e: React.FormEvent) {
     e.preventDefault();
@@ -45,7 +51,7 @@ function Checkout() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ cardName: card.name, cardLast4: digits.slice(-4) }),
+        body: JSON.stringify({ cardName: card.name, cardLast4: digits.slice(-4), plan: plan.id }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (!data.ok) {
@@ -124,12 +130,19 @@ function Checkout() {
 
           <div className="mt-8 rounded-3xl bg-wit-navy p-7 text-white">
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/70">
-              Membresía WITERS
+              WITERS {plan.nombre}
             </p>
-            <p className="mt-3 font-wit-mono text-5xl font-semibold">$5,999</p>
-            <p className="mt-1 text-sm text-white/75">MXN al mes</p>
+            <p className="mt-1 text-sm text-white/80">{plan.tagline}</p>
+            <p className="mt-3 font-wit-mono text-5xl font-semibold">{fmt(price)}</p>
+            <p className="mt-1 text-sm text-white/75">MXN al mes + IVA</p>
+            {price === plan.precioPromo ? (
+              <p className="mt-2 text-[11px] leading-relaxed text-white/60">
+                Precio de promoción, válido tus primeros 3 meses. Después: {fmt(plan.precioRegular)}{" "}
+                MXN + IVA al mes.
+              </p>
+            ) : null}
             <ul className="mt-6 space-y-3">
-              {BENEFICIOS.map((b) => (
+              {plan.beneficios.map((b) => (
                 <li key={b} className="flex items-start gap-2.5 text-sm text-white/90">
                   <svg
                     width="18"
@@ -272,7 +285,7 @@ function Checkout() {
                 disabled={loading}
                 className="mt-6 w-full rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
               >
-                {loading ? "Procesando pago..." : "Pagar $5,999 MXN"}
+                {loading ? "Procesando pago..." : `Pagar ${fmt(price)} MXN`}
               </button>
               <p className="mt-3 text-center text-[11px] leading-relaxed text-wit-gray">
                 Entorno de pago en modo de activación directa. La pasarela definitiva (Stripe o

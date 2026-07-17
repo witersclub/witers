@@ -1,10 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { z } from "zod";
 
 import { WitersLogo } from "../components/witers/brand";
+import { isPlanId } from "../lib/membership-plans";
 
 export const Route = createFileRoute("/registro")({
+  validateSearch: z.object({
+    plan: z
+      .string()
+      .optional()
+      .transform((v) => (isPlanId(v) ? v : undefined)),
+  }),
   head: () => ({
     meta: [
       { title: "Crear cuenta. WITERS" },
@@ -17,6 +25,7 @@ export const Route = createFileRoute("/registro")({
 function Registro() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { plan } = Route.useSearch();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +52,7 @@ function Registro() {
         return;
       }
       await qc.invalidateQueries({ queryKey: ["me"] });
-      navigate({ to: "/checkout" });
+      navigate({ to: "/checkout", search: plan ? { plan } : {} });
     } catch {
       setError("No pudimos crear tu cuenta. Intenta de nuevo.");
     } finally {

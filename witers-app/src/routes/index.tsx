@@ -11,6 +11,7 @@ import {
   PieceTypePicker,
   StylePicker,
 } from "../components/witers/lab-pickers";
+import { MEMBERSHIP_PLANS, PROMO_MESES } from "../lib/membership-plans";
 import { saveTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe } from "../lib/witers-client";
 
@@ -608,81 +609,6 @@ function CtaFinal() {
 
 /* ---------------- 9. MEMBRESÍA ---------------- */
 
-type MembresiaTier = {
-  nombre: string;
-  tagline: string;
-  descripcion: string;
-  precio: number;
-  precioAnterior: number;
-  destacada?: boolean;
-  beneficios: string[];
-};
-
-// Promoción Julio 2026 para nuevos suscriptores: 30% de descuento, aplicable
-// únicamente a los primeros 3 meses consecutivos de suscripción (ver /terminos).
-const PROMO_MESES = 3;
-
-const MEMBRESIAS: MembresiaTier[] = [
-  {
-    nombre: "Essential",
-    tagline: "Impulsa el inicio de tu marca",
-    descripcion:
-      "Ideal para emprendedores y pequeñas empresas que desean construir una imagen profesional y comenzar a atraer más clientes.",
-    precio: 5999.9,
-    precioAnterior: 8571.29,
-    beneficios: [
-      "10 solicitudes de diseño al mes",
-      "Hasta 2 revisiones por diseño",
-      "2 campañas publicitarias",
-      "Acompañamiento estratégico para tu marca",
-      "Entregas en alta resolución, listas para publicar",
-      "Panel exclusivo para dar seguimiento a cada solicitud",
-    ],
-  },
-  {
-    nombre: "Grow",
-    tagline: "Acelera el crecimiento de tu negocio",
-    descripcion:
-      "Pensado para empresas que buscan aumentar su presencia digital con una estrategia de contenido más completa.",
-    precio: 12999.9,
-    precioAnterior: 18571.29,
-    destacada: true,
-    beneficios: [
-      "15 solicitudes de diseño al mes",
-      "Hasta 2 revisiones por diseño",
-      "2 carruseles para redes sociales",
-      "2 videos para redes sociales",
-      "3 campañas publicitarias",
-      "Planeación estratégica de contenido",
-      "Asesoría estratégica personalizada",
-      "Reporte semanal de desempeño",
-      "Panel exclusivo para dar seguimiento a cada solicitud",
-    ],
-  },
-  {
-    nombre: "Scale",
-    tagline: "Escala tu marca con una estrategia integral",
-    descripcion:
-      "La solución más completa para empresas que buscan crecer de forma constante con estrategia, creatividad y análisis.",
-    precio: 16999.9,
-    precioAnterior: 24285.57,
-    beneficios: [
-      "20 solicitudes de diseño al mes",
-      "Hasta 3 revisiones por diseño",
-      "4 carruseles para redes sociales",
-      "4 videos para redes sociales",
-      "4 campañas publicitarias",
-      "Planeación estratégica de contenido",
-      "Asesoría estratégica personalizada",
-      "Reporte semanal de desempeño",
-      "Auditoría mensual de estrategia y resultados",
-      "Reunión mensual de seguimiento estratégico",
-      "Prioridad alta en tiempos de entrega",
-      "Panel exclusivo para dar seguimiento a cada solicitud",
-    ],
-  },
-];
-
 function Membresia() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
@@ -716,11 +642,11 @@ function Membresia() {
         </div>
 
         <div className="mx-auto mt-14 grid max-w-6xl gap-6 lg:grid-cols-3">
-          {MEMBRESIAS.map((m) => {
-            const descuento = Math.round((1 - m.precio / m.precioAnterior) * 100);
+          {MEMBERSHIP_PLANS.map((m) => {
+            const descuento = Math.round((1 - m.precioPromo / m.precioRegular) * 100);
             return (
               <div
-                key={m.nombre}
+                key={m.id}
                 className={`relative flex flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_40px_120px_rgba(0,71,255,0.25)] ${
                   m.destacada ? "ring-2 ring-[#5c85ff] lg:-translate-y-4" : ""
                 }`}
@@ -739,7 +665,7 @@ function Membresia() {
                   <p className="mt-1.5 text-sm font-semibold text-white/95">{m.tagline}</p>
                   <div className="mt-4 flex items-center gap-2">
                     <span className="text-sm text-white/50 line-through">
-                      {fmt(m.precioAnterior)}
+                      {fmt(m.precioRegular)}
                     </span>
                     <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-extrabold text-white">
                       -{descuento}%
@@ -747,13 +673,13 @@ function Membresia() {
                   </div>
                   <div className="mt-1 flex items-end gap-2">
                     <span className="font-wit-mono text-4xl font-semibold leading-none">
-                      {fmt(m.precio)}
+                      {fmt(m.precioPromo)}
                     </span>
                     <span className="pb-1 text-xs font-semibold text-white/85">MXN/mes + IVA</span>
                   </div>
                   <p className="mt-2 text-[11px] leading-relaxed text-white/60">
                     Precio especial válido tus primeros {PROMO_MESES} meses. Del mes{" "}
-                    {PROMO_MESES + 1} en adelante: {fmt(m.precioAnterior)} MXN + IVA al mes.
+                    {PROMO_MESES + 1} en adelante: {fmt(m.precioRegular)} MXN + IVA al mes.
                   </p>
                 </div>
 
@@ -785,6 +711,7 @@ function Membresia() {
                 <div className="px-7 pb-7">
                   <Link
                     to={signedIn ? "/checkout" : "/registro"}
+                    search={{ plan: m.id }}
                     className={`block w-full rounded-2xl px-6 py-3.5 text-center text-base font-bold text-white transition-all duration-200 active:scale-[0.99] ${
                       m.destacada
                         ? "bg-wit-blue hover:brightness-110"

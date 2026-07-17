@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 
 import { WitersLogo } from "../components/witers/brand";
+import { MEMBERSHIP_PLANS, type PlanId } from "../lib/membership-plans";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -1473,6 +1474,7 @@ function EditUserModal({
   const [msg, setMsg] = useState<string | null>(null);
   const [activating, setActivating] = useState(false);
   const [activateMsg, setActivateMsg] = useState<string | null>(null);
+  const [activatePlan, setActivatePlan] = useState<PlanId>("essential");
 
   // For a client who paid outside the app (transferencia, en persona) —
   // mirrors what the sandbox checkout does, just triggered by an admin
@@ -1484,7 +1486,7 @@ function EditUserModal({
       const res = await fetch("/api/admin/activate-membership", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, plan: activatePlan }),
       });
       const data = (await res.json()) as { ok: boolean };
       if (!data.ok) {
@@ -1574,14 +1576,27 @@ function EditUserModal({
             </p>
           </div>
           {user.membership_status !== "active" ? (
-            <button
-              type="button"
-              disabled={activating}
-              onClick={activateMembership}
-              className="shrink-0 rounded-xl bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
-            >
-              {activating ? "Activando..." : "Activar membresía"}
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <select
+                value={activatePlan}
+                onChange={(e) => setActivatePlan(e.target.value as PlanId)}
+                className="rounded-xl border border-wit-ink/15 px-2 py-2 text-xs font-semibold text-wit-ink outline-none focus:border-wit-blue"
+              >
+                {MEMBERSHIP_PLANS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={activating}
+                onClick={activateMembership}
+                className="shrink-0 rounded-xl bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+              >
+                {activating ? "Activando..." : "Activar membresía"}
+              </button>
+            </div>
           ) : null}
         </div>
         {activateMsg ? <p className="mt-2 text-xs text-red-600">{activateMsg}</p> : null}

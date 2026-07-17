@@ -54,6 +54,7 @@ import {
   ProductPhotoUploadPicker,
   uploadReferenceFile,
 } from "../components/witers/lab-pickers";
+import { getPlan } from "../lib/membership-plans";
 import { consumeTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe } from "../lib/witers-client";
 
@@ -511,11 +512,23 @@ function Panel() {
                     </span>
                   </p>
                 </div>
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
-                >
-                  {active ? "Membresía activa" : "Sin membresía"}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                  >
+                    {active ? `${getPlan(membership?.plan).nombre} activa` : "Sin membresía"}
+                  </span>
+                  {active && membership ? (
+                    <span className="font-wit-mono text-[11px] text-wit-gray">
+                      $
+                      {membership.price_mxn.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      MXN/mes + IVA
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
 
