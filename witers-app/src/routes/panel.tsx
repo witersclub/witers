@@ -309,8 +309,15 @@ function Panel() {
   const piecesCreated = finishedRows.length;
   const streakWeeks = computeStreakWeeks(rows.map((r) => r.created_at));
   const impactCampaigns = campaignsForImpact.data?.campaigns ?? [];
-  const campaignsLaunched = impactCampaigns.length;
-  const totalReach = impactCampaigns.reduce((sum, c) => sum + Number(c.reach ?? 0), 0);
+  // "Lanzada" means it actually ran and reached someone — a campaign that
+  // was created, never turned on, and later archived shouldn't count
+  // toward this any more than a draft would. Real activity (impressions,
+  // which implies spend/reach followed), not just existing as a row, is
+  // what makes it count — a client caught exactly this: 3 archived,
+  // never-activated campaigns were inflating the number.
+  const activatedCampaigns = impactCampaigns.filter((c) => Number(c.impressions ?? 0) > 0);
+  const campaignsLaunched = activatedCampaigns.length;
+  const totalReach = activatedCampaigns.reduce((sum, c) => sum + Number(c.reach ?? 0), 0);
   // Rows come back newest-first, so the first one with a logo is the most
   // recent request that had one — offered as a shortcut on the new form.
   const previousLogoKey = rows.find((row) => row.logo_key)?.logo_key ?? null;
