@@ -195,6 +195,15 @@ function Panel() {
   // Campañas tab (so that's what's underneath once the builder closes)
   // and opens the interactive builder for that specific request.
   const [pautaRequest, setPautaRequest] = useState<PautaRequestInfo | null>(null);
+  // "Piezas creadas" burst pop-up — mouse click opens instantly, touch
+  // needs a real hold (not just a tap) so it doesn't fire by accident
+  // while scrolling. Hooks must live above every early return below, so
+  // this can't sit next to the stats it's paired with (further down).
+  const piecesTileRef = useRef<HTMLDivElement>(null);
+  const piecesPressTimer = useRef<number | null>(null);
+  const [piecesPopupOpen, setPiecesPopupOpen] = useState(false);
+  const [burstOrigin, setBurstOrigin] = useState<{ x: number; y: number } | null>(null);
+  const [burstRadius, setBurstRadius] = useState(110);
   // Read (and clear) once per mount — only the very first chat (chatKey
   // still at its initial value) should inherit these, not a later
   // conversation opened via the button.
@@ -318,6 +327,60 @@ function Panel() {
   const activatedCampaigns = impactCampaigns.filter((c) => Number(c.impressions ?? 0) > 0);
   const campaignsLaunched = activatedCampaigns.length;
   const totalReach = activatedCampaigns.reduce((sum, c) => sum + Number(c.reach ?? 0), 0);
+
+  // finishedRows comes back newest-first (same order as `rows`), so the
+  // first 8 are the 8 most recent — capped so the circle stays readable
+  // instead of trying to fit a whole quarter's worth of pieces in it.
+  const BURST_MAX = 8;
+  const recentPieces = finishedRows
+    .slice(0, BURST_MAX)
+    .map((r) => {
+      const latest = parseResults(r).at(-1);
+      const thumbHref = latest
+        ? (latest.image_url ?? `/api/file?key=${encodeURIComponent(latest.r2_key ?? "")}`)
+        : null;
+      return thumbHref ? { kind: "piece" as const, id: r.id, title: r.title, thumbHref } : null;
+    })
+    .filter(
+      (p): p is { kind: "piece"; id: string; title: string; thumbHref: string } => p !== null,
+    );
+  const extraPiecesCount = Math.max(0, piecesCreated - recentPieces.length);
+  const burstItems: (
+    | { kind: "piece"; id: string; title: string; thumbHref: string }
+    | { kind: "more"; count: number }
+  )[] =
+    extraPiecesCount > 0
+      ? [...recentPieces, { kind: "more", count: extraPiecesCount }]
+      : recentPieces;
+
+  function openPiecesBurst() {
+    const rect = piecesTileRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setBurstOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+    setBurstRadius(window.innerWidth < 640 ? 72 : 92);
+    setPiecesPopupOpen(true);
+  }
+  function closePiecesBurst() {
+    setPiecesPopupOpen(false);
+  }
+  function cancelPiecesPress() {
+    if (piecesPressTimer.current != null) {
+      window.clearTimeout(piecesPressTimer.current);
+      piecesPressTimer.current = null;
+    }
+  }
+  function handlePiecesPointerDown(e: React.PointerEvent) {
+    if (e.pointerType === "mouse") {
+      openPiecesBurst();
+      return;
+    }
+    // Touch: real hold, not a tap — a quick scroll-adjacent touch
+    // shouldn't pop this open by accident.
+    piecesPressTimer.current = window.setTimeout(() => {
+      openPiecesBurst();
+      piecesPressTimer.current = null;
+    }, 380);
+  }
   // Rows come back newest-first, so the first one with a logo is the most
   // recent request that had one — offered as a shortcut on the new form.
   const previousLogoKey = rows.find((row) => row.logo_key)?.logo_key ?? null;
@@ -449,33 +512,101 @@ function Panel() {
               // loop closed all the way to real results — not just a
               // request counter. Reach only shows once there's a real
               // number to show; 0 campañas/0 alcance would read as failure,
-              // not motivation.
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl bg-wit-navy p-5 text-white">
-                  <Images className="h-5 w-5 text-white/70" strokeWidth={1.75} />
-                  <p className="mt-2 text-2xl font-extrabold">{piecesCreated}</p>
-                  <p className="text-xs text-white/70">
+              // not motivation. Flex-wrap (not a stretching grid) so each
+              // tile stays a small, fixed-ish size instead of ballooning
+              // to fill the row on desktop.
+              <div className="mt-6 grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
+                <div
+                  ref={piecesTileRef}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Ver piezas creadas"
+                  onPointerDown={handlePiecesPointerDown}
+                  onPointerUp={cancelPiecesPress}
+                  onPointerLeave={cancelPiecesPress}
+                  onPointerCancel={cancelPiecesPress}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openPiecesBurst();
+                    }
+                  }}
+                  className="select-none rounded-xl bg-wit-navy p-3.5 text-white transition-transform active:scale-95 sm:w-32"
+                >
+                  <Images className="h-4 w-4 text-white/70" strokeWidth={1.75} />
+                  <p className="mt-1.5 text-lg font-extrabold">{piecesCreated}</p>
+                  <p className="text-[10px] text-white/70">
                     {piecesCreated === 1 ? "pieza creada" : "piezas creadas"}
                   </p>
                 </div>
                 {campaignsLaunched > 0 ? (
-                  <div className="rounded-2xl bg-wit-navy p-5 text-white">
-                    <Rocket className="h-5 w-5 text-white/70" strokeWidth={1.75} />
-                    <p className="mt-2 text-2xl font-extrabold">{campaignsLaunched}</p>
-                    <p className="text-xs text-white/70">
+                  <div className="rounded-xl bg-wit-navy p-3.5 text-white sm:w-32">
+                    <Rocket className="h-4 w-4 text-white/70" strokeWidth={1.75} />
+                    <p className="mt-1.5 text-lg font-extrabold">{campaignsLaunched}</p>
+                    <p className="text-[10px] text-white/70">
                       {campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas"}
                     </p>
                   </div>
                 ) : null}
                 {totalReach > 0 ? (
-                  <div className="rounded-2xl bg-wit-blue p-5 text-white">
-                    <Eye className="h-5 w-5 text-white/70" strokeWidth={1.75} />
-                    <p className="mt-2 text-2xl font-extrabold">
+                  <div className="rounded-xl bg-wit-blue p-3.5 text-white sm:w-32">
+                    <Eye className="h-4 w-4 text-white/70" strokeWidth={1.75} />
+                    <p className="mt-1.5 text-lg font-extrabold">
                       {totalReach.toLocaleString("es-MX")}
                     </p>
-                    <p className="text-xs text-white/70">personas alcanzadas</p>
+                    <p className="text-[10px] text-white/70">personas alcanzadas</p>
                   </div>
                 ) : null}
+              </div>
+            ) : null}
+
+            {piecesPopupOpen && burstOrigin ? (
+              <div className="fixed inset-0 z-50" onClick={closePiecesBurst} role="presentation">
+                <div className="absolute inset-0 bg-wit-navy/25 backdrop-blur-[1px]" />
+                {burstItems.map((item, i) => {
+                  const angle = (i / burstItems.length) * Math.PI * 2 - Math.PI / 2;
+                  const tx = Math.round(Math.cos(angle) * burstRadius);
+                  const ty = Math.round(Math.sin(angle) * burstRadius);
+                  const style = {
+                    left: burstOrigin.x,
+                    top: burstOrigin.y,
+                    "--tx": `${tx}px`,
+                    "--ty": `${ty}px`,
+                    animationDelay: `${i * 45}ms`,
+                  } as React.CSSProperties;
+                  if (item.kind === "more") {
+                    return (
+                      <button
+                        key="more"
+                        type="button"
+                        style={style}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSection("creatividad");
+                          setTab("solicitudes");
+                          closePiecesBurst();
+                        }}
+                        className="wit-burst absolute flex h-12 w-12 items-center justify-center rounded-xl border-2 border-white bg-wit-blue text-xs font-bold text-white shadow-lg"
+                      >
+                        +{item.count}
+                      </button>
+                    );
+                  }
+                  return (
+                    <div
+                      key={item.id}
+                      style={style}
+                      title={item.title}
+                      className="wit-burst absolute h-12 w-12 overflow-hidden rounded-xl border-2 border-white shadow-lg"
+                    >
+                      <img
+                        src={item.thumbHref}
+                        alt={item.title}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  );
+                })}
               </div>
             ) : null}
 

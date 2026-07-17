@@ -399,10 +399,32 @@
   animation: wit-float 6s ease-in-out infinite;
 }
 
+/* Pieces "burst" out from the impact tile in a circle — --tx/--ty (the
+   per-item target offset) are set inline per item since they're computed
+   from a trig layout in JS, not known ahead of time in CSS. */
+@keyframes wit-burst {
+  from {
+    transform: translate(-50%, -50%) scale(0.25);
+    opacity: 0;
+  }
+  to {
+    transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1);
+    opacity: 1;
+  }
+}
+.wit-burst {
+  animation: wit-burst 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wit-rise,
   .wit-float {
     animation: none;
+  }
+  .wit-burst {
+    animation: none;
+    transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1);
+    opacity: 1;
   }
   .wit-navlink::after {
     transition: none;
