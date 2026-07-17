@@ -13,7 +13,7 @@ import {
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
-import { MetaAdsDashboardCard } from "../components/witers/meta-ads-card";
+import { MetaAdsDashboardCard, WhatsAppPhoneMockup } from "../components/witers/meta-ads-card";
 import { useMe } from "../lib/witers-client";
 
 export const Route = createFileRoute("/pauta")({
@@ -92,7 +92,10 @@ function Hero() {
         </div>
       </div>
       <div className="wit-rise wit-rise-d2 relative mt-14 px-5">
-        <MetaAdsDashboardCard />
+        <div className="relative mx-auto max-w-md pb-8 pl-8 pt-4 sm:pb-14 sm:pl-16">
+          <MetaAdsDashboardCard />
+          <WhatsAppPhoneMockup className="absolute -bottom-6 -left-2 z-10 sm:-bottom-10 sm:-left-6" />
+        </div>
       </div>
     </section>
   );
