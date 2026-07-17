@@ -361,7 +361,10 @@ function Panel() {
     // Phone gets a much bigger, screen-filling version of this — desktop
     // keeps the original compact size, there's no "lift your finger" on
     // a mouse to justify going big there too.
-    setBurstRadius(window.innerWidth < 640 ? 150 : 92);
+    // Half-moon (not a full circle) spreads fewer items over the same
+    // angular budget, so it needs a bigger radius to still read as
+    // "filling the screen" instead of a tight little fan.
+    setBurstRadius(window.innerWidth < 640 ? 195 : 92);
     setPiecesPopupOpen(true);
   }
   function closePiecesBurst() {
@@ -573,7 +576,14 @@ function Panel() {
               <div className="fixed inset-0 z-50" onClick={closePiecesBurst} role="presentation">
                 <div className="absolute inset-0 bg-wit-navy/25 backdrop-blur-[1px]" />
                 {burstItems.map((item, i) => {
-                  const angle = (i / burstItems.length) * Math.PI * 2 - Math.PI / 2;
+                  // Half-moon, not a full circle — top (-90°) through
+                  // right (0°) to bottom (+90°), so cos(angle) never goes
+                  // negative and nothing ever lands left of the tile
+                  // (which sits close to the screen's left edge).
+                  const angle =
+                    burstItems.length > 1
+                      ? -Math.PI / 2 + (i / (burstItems.length - 1)) * Math.PI
+                      : 0;
                   const tx = Math.round(Math.cos(angle) * burstRadius);
                   const ty = Math.round(Math.sin(angle) * burstRadius);
                   const style = {
