@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
@@ -806,44 +805,15 @@ function CampanasTeaser() {
           </Link>
         </div>
 
-        {/* A mock Meta ad card, tilted in 3D — straightens on hover. Not a
-            real client's ad (nothing to legally clear or misattribute),
-            just a convincing stand-in for what "your piece as a real
-            campaign" looks like. */}
-        <div className="[perspective:1200px]">
-          <div className="mx-auto max-w-sm rounded-2xl bg-white p-4 shadow-[0_50px_100px_rgba(5,13,40,0.28)] ring-1 ring-wit-ink/5 transition-transform duration-500 [transform:rotateY(-10deg)_rotateX(4deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)]">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-blue/10">
-                <WMark size={20} />
-              </span>
-              <div>
-                <p className="text-sm font-bold text-wit-ink">Tu Marca</p>
-                <p className="text-xs text-wit-gray">Patrocinado</p>
-              </div>
-              <span className="ml-auto text-lg leading-none text-wit-gray">⋯</span>
-            </div>
-            <p className="mt-3 text-[13px] leading-snug text-wit-ink">
-              No dejes que tu marca pase desapercibida. Estrategia, creatividad e IA trabajando para
-              ti. 🚀
-            </p>
-            <div className="mt-3 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(135deg,#0047FF,#1d2fa6)]">
-              <TrendingUp className="text-white/70" size={64} strokeWidth={1.25} />
-            </div>
-            <div className="mt-3 flex items-center justify-between rounded-lg bg-wit-mist/40 px-3 py-2.5">
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-wit-gray">witers.com</p>
-                <p className="text-sm font-bold text-wit-ink">Conoce más</p>
-              </div>
-              <span className="rounded-full bg-wit-ink/10 px-3.5 py-1.5 text-xs font-bold text-wit-ink">
-                Más información
-              </span>
-            </div>
-            <div className="mt-3 flex items-center gap-4 border-t border-wit-ink/10 pt-3 text-xs text-wit-gray">
-              <span>👍❤️ 248</span>
-              <span>32 comentarios</span>
-              <span>18 compartidos</span>
-            </div>
-          </div>
+        <div className="flex justify-center">
+          <img
+            src="/assets/meta-ads-dashboard.webp"
+            alt="Panel de rendimiento de una campaña de Meta Ads gestionada por WITERS"
+            width={1536}
+            height={1024}
+            className="w-full max-w-xl drop-shadow-[0_40px_90px_rgba(0,71,255,0.25)] transition-transform duration-500 hover:scale-[1.02]"
+            loading="lazy"
+          />
         </div>
       </div>
     </section>

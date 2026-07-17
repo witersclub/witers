@@ -90,6 +90,15 @@ function Hero() {
           </a>
         </div>
       </div>
+      <div className="wit-rise wit-rise-d2 relative mt-14 flex justify-center px-5">
+        <img
+          src="/assets/meta-ads-dashboard.webp"
+          alt="Panel de rendimiento de una campaña de Meta Ads gestionada por WITERS"
+          width={1536}
+          height={1024}
+          className="w-full max-w-3xl drop-shadow-[0_40px_90px_rgba(0,71,255,0.25)]"
+        />
+      </div>
     </section>
   );
 }
