@@ -13,6 +13,7 @@ import {
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
+import { MetaAdsDashboardCard } from "../components/witers/meta-ads-card";
 import { useMe } from "../lib/witers-client";
 
 export const Route = createFileRoute("/pauta")({
@@ -90,14 +91,8 @@ function Hero() {
           </a>
         </div>
       </div>
-      <div className="wit-rise wit-rise-d2 relative mt-14 flex justify-center px-5">
-        <img
-          src="/assets/meta-ads-dashboard.webp"
-          alt="Panel de rendimiento de una campaña de Meta Ads gestionada por WITERS"
-          width={1536}
-          height={1024}
-          className="w-full max-w-3xl drop-shadow-[0_40px_90px_rgba(0,71,255,0.25)]"
-        />
+      <div className="wit-rise wit-rise-d2 relative mt-14 px-5">
+        <MetaAdsDashboardCard />
       </div>
     </section>
   );

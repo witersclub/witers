@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
+import { MetaAdsDashboardCard } from "../components/witers/meta-ads-card";
 import {
   AspectRatioPicker,
   ColorsPicker,
@@ -805,16 +806,7 @@ function CampanasTeaser() {
           </Link>
         </div>
 
-        <div className="flex justify-center">
-          <img
-            src="/assets/meta-ads-dashboard.webp"
-            alt="Panel de rendimiento de una campaña de Meta Ads gestionada por WITERS"
-            width={1536}
-            height={1024}
-            className="w-full max-w-xl drop-shadow-[0_40px_90px_rgba(0,71,255,0.25)] transition-transform duration-500 hover:scale-[1.02]"
-            loading="lazy"
-          />
-        </div>
+        <MetaAdsDashboardCard />
       </div>
     </section>
   );
