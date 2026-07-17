@@ -27,6 +27,7 @@ export function SiteHeader() {
   }, []);
 
   const links = [
+    { href: "/pauta", label: "Campañas de Meta" },
     { href: "/nuestra-historia", label: "Nuestra historia" },
     { href: "/nuestra-historia#valores", label: "Comunidad" },
     { href: "#membresia", label: "Membresía" },
@@ -162,6 +163,9 @@ export function SiteFooter() {
           <div className="mt-12 flex flex-col gap-6 border-t border-white/10 pt-8 md:flex-row md:items-center md:justify-between">
             <WitersLogo dark compact />
             <nav className="flex flex-wrap gap-x-8 gap-y-3 text-sm text-white/70">
+              <a href="/pauta" className="hover:text-white">
+                Campañas de Meta
+              </a>
               <a href="/nuestra-historia" className="hover:text-white">
                 Nuestra historia
               </a>

@@ -13,6 +13,7 @@ import { Route as WiterRouteImport } from './routes/witer'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as PautaRouteImport } from './routes/pauta'
 import { Route as PanelRouteImport } from './routes/panel'
 import { Route as NuestraHistoriaRouteImport } from './routes/nuestra-historia'
 import { Route as IngresarRouteImport } from './routes/ingresar'
@@ -84,6 +85,11 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
 const RegistroRoute = RegistroRouteImport.update({
   id: '/registro',
   path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PautaRoute = PautaRouteImport.update({
+  id: '/pauta',
+  path: '/pauta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PanelRoute = PanelRouteImport.update({
@@ -360,6 +366,7 @@ export interface FileRoutesByFullPath {
   '/ingresar': typeof IngresarRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
   '/panel': typeof PanelRoute
+  '/pauta': typeof PautaRoute
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -418,6 +425,7 @@ export interface FileRoutesByTo {
   '/ingresar': typeof IngresarRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
   '/panel': typeof PanelRoute
+  '/pauta': typeof PautaRoute
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -477,6 +485,7 @@ export interface FileRoutesById {
   '/ingresar': typeof IngresarRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
   '/panel': typeof PanelRoute
+  '/pauta': typeof PautaRoute
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -537,6 +546,7 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/nuestra-historia'
     | '/panel'
+    | '/pauta'
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -595,6 +605,7 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/nuestra-historia'
     | '/panel'
+    | '/pauta'
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -653,6 +664,7 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/nuestra-historia'
     | '/panel'
+    | '/pauta'
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -712,6 +724,7 @@ export interface RootRouteChildren {
   IngresarRoute: typeof IngresarRoute
   NuestraHistoriaRoute: typeof NuestraHistoriaRoute
   PanelRoute: typeof PanelRoute
+  PautaRoute: typeof PautaRoute
   RegistroRoute: typeof RegistroRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -791,6 +804,13 @@ declare module '@tanstack/react-router' {
       path: '/registro'
       fullPath: '/registro'
       preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pauta': {
+      id: '/pauta'
+      path: '/pauta'
+      fullPath: '/pauta'
+      preLoaderRoute: typeof PautaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/panel': {
@@ -1168,6 +1188,7 @@ const rootRouteChildren: RootRouteChildren = {
   IngresarRoute: IngresarRoute,
   NuestraHistoriaRoute: NuestraHistoriaRoute,
   PanelRoute: PanelRoute,
+  PautaRoute: PautaRoute,
   RegistroRoute: RegistroRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
