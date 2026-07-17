@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
@@ -852,10 +852,35 @@ function CampanasTeaser() {
 
 /* ---------------- 10. FAQ ---------------- */
 
-const FAQS = [
+const FAQS: { q: string; a: ReactNode }[] = [
   {
     q: "¿Qué incluye la membresía?",
-    a: "Depende del nivel: Esencial incluye 10 solicitudes de diseño y 2 campañas de Meta Ads al mes; Crecimiento suma videos con IA y sube a 20 solicitudes y 3 campañas; Élite llega a 30 solicitudes, 4 campañas y atención personalizada. Los tres incluyen acceso a la comunidad WITERS, panel personal de seguimiento y acompañamiento de estrategia de marca.",
+    a: (
+      <div className="space-y-3">
+        <p>
+          Depende del nivel que elijas — cada uno incluye todo lo del anterior, más lo que se agrega
+          aquí:
+        </p>
+        <ul className="space-y-1.5">
+          <li>
+            <strong className="text-wit-ink">Esencial</strong> — 10 solicitudes de diseño y 2
+            campañas de Meta Ads al mes.
+          </li>
+          <li>
+            <strong className="text-wit-ink">Crecimiento</strong> — sube a 20 solicitudes y 3
+            campañas al mes, más 2 producciones de video con IA.
+          </li>
+          <li>
+            <strong className="text-wit-ink">Élite</strong> — sube a 30 solicitudes y 4 campañas al
+            mes, más 4 producciones de video con IA y atención personalizada.
+          </li>
+        </ul>
+        <p>
+          Los tres incluyen acceso a la comunidad WITERS, panel personal de seguimiento y
+          acompañamiento de estrategia de marca.
+        </p>
+      </div>
+    ),
   },
   {
     q: "¿Cómo se paga?",
@@ -908,7 +933,9 @@ function Faq() {
                   className={`grid transition-[grid-template-rows] duration-300 ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
                 >
                   <div className="overflow-hidden">
-                    <p className="pb-5 text-[15px] leading-relaxed text-wit-gray">{f.a}</p>
+                    <div className="pb-5 text-[15px] leading-relaxed text-wit-gray [&_li]:list-disc [&_li]:ml-5 [&_ul]:space-y-1.5">
+                      {f.a}
+                    </div>
                   </div>
                 </div>
               </div>
