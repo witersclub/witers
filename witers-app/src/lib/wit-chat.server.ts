@@ -82,9 +82,17 @@ function buildSystemPrompt(brand: WitBrandContext): string {
     "preguntarlo ni pidas permiso para continuar: llama directamente a la función " +
     "show_aspect_ratio_picker en ese mismo turno. La interfaz le mostrará al cliente opciones " +
     "visuales para elegir, y su elección aparecerá como su siguiente mensaje.\n\n" +
+    "IMPORTANTE: SIEMPRE debes llamar a show_aspect_ratio_picker antes de submit_piece_details, " +
+    "sin ninguna excepción — incluso si el cliente ya mencionó un formato, proporción o medida " +
+    "concreta en su descripción de la pieza (por ejemplo '4:5', 'formato vertical', 'para " +
+    "historias'). Nunca asumas el formato por tu cuenta ni lo tomes de lo que el cliente ya " +
+    "escribió: siempre debe elegirlo él mismo en el selector visual antes de que puedas cerrar " +
+    "la solicitud, aunque eso signifique preguntarlo de nuevo. Si el cliente ya lo mencionó, " +
+    "puedes reconocerlo brevemente y aun así mostrarle el selector para que lo confirme ahí.\n\n" +
     "En cuanto tengas todo lo necesario — como mínimo qué debe mostrar la pieza y el formato ya " +
-    "elegido — llama directamente a la función submit_piece_details con todos los campos " +
-    "completos en español, en ese mismo turno. No sigas conversando después de eso.\n\n" +
+    "elegido por el cliente en el selector visual (nunca uno que tú hayas decidido) — llama " +
+    "directamente a la función submit_piece_details con todos los campos completos en español, " +
+    "en ese mismo turno. No sigas conversando después de eso.\n\n" +
     "Regla importante sobre estas dos funciones: NUNCA anuncies con texto que vas a mostrar el " +
     "formato o el resumen final, ni preguntes '¿quieres que continúe?', '¿te parece bien?' o " +
     "algo similar antes de llamarlas — eso obliga al cliente a decir 'sí, adelante' de más, y la " +
@@ -228,14 +236,25 @@ export async function runWitChat(
   if (toolCall?.function.name === "submit_piece_details") {
     try {
       const args = JSON.parse(toolCall.function.arguments) as Partial<PieceDetails>;
-      // The enum in the tool schema is only a hint to the model, not an
-      // enforced constraint (tool_choice is "auto", not strict JSON schema)
-      // — gpt-4o-mini sometimes free-types a plausible-looking but invalid
-      // ratio (e.g. "4:5") instead of calling show_aspect_ratio_picker, which
-      // would otherwise reach the client's review card and only fail once
-      // they hit "Confirmar y enviar", with no way to fix it from there. Fall
-      // back to the real picker instead of trusting an unvalidated value.
-      if (!args.aspectRatio || !VALID_ASPECT_RATIOS.has(args.aspectRatio.trim())) {
+      // The system prompt tells the model to always call
+      // show_aspect_ratio_picker first, even if the client already mentioned
+      // a format in their own words — but that's only an instruction, not an
+      // enforced constraint (tool_choice is "auto"), and the model can still
+      // decide it "already knows" the format from the client's description
+      // and skip straight to submit_piece_details. This is the real
+      // guarantee: only trust the format if the client actually clicked it
+      // in the visual picker (recorded as this exact confirmation message by
+      // panel.tsx's pickAspectRatio) — never a value the model typed itself,
+      // valid-looking or not, and regardless of what the client wrote in the
+      // piece's own description.
+      const pickerWasUsed = history.some(
+        (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
+      );
+      if (
+        !pickerWasUsed ||
+        !args.aspectRatio ||
+        !VALID_ASPECT_RATIOS.has(args.aspectRatio.trim())
+      ) {
         return { ok: true, kind: "ask_aspect_ratio" };
       }
       return {
