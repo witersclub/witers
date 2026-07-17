@@ -18,11 +18,13 @@ function Registro() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!acceptedTerms) return;
     setError(null);
     setLoading(true);
     try {
@@ -115,13 +117,35 @@ function Registro() {
             />
           </div>
 
+          <label htmlFor="terms" className="flex items-start gap-3 text-sm text-wit-gray">
+            <input
+              id="terms"
+              type="checkbox"
+              required
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-wit-ink/25 text-wit-blue accent-[#0047ff]"
+            />
+            <span>
+              Acepto los{" "}
+              <Link
+                to="/terminos"
+                target="_blank"
+                className="font-semibold text-wit-blue underline hover:text-wit-blue-deep"
+              >
+                términos y condiciones
+              </Link>{" "}
+              de WITERS.
+            </span>
+          </label>
+
           {error ? (
             <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
           ) : null}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !acceptedTerms}
             className="w-full rounded-xl bg-wit-blue px-6 py-3.5 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
           >
             {loading ? "Creando cuenta..." : "Crear cuenta"}
@@ -134,4 +158,3 @@ function Registro() {
     </div>
   );
 }
-

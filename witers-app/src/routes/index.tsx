@@ -610,48 +610,75 @@ function CtaFinal() {
 
 type MembresiaTier = {
   nombre: string;
+  tagline: string;
+  descripcion: string;
   precio: number;
   precioAnterior: number;
   destacada?: boolean;
   beneficios: string[];
 };
 
+// Promoción Julio 2026 para nuevos suscriptores: 30% de descuento, aplicable
+// únicamente a los primeros 3 meses consecutivos de suscripción (ver /terminos).
+const PROMO_MESES = 3;
+
 const MEMBRESIAS: MembresiaTier[] = [
   {
-    nombre: "Esencial",
-    precio: 5999,
-    precioAnterior: 11999,
+    nombre: "Essential",
+    tagline: "Impulsa el inicio de tu marca",
+    descripcion:
+      "Ideal para emprendedores y pequeñas empresas que desean construir una imagen profesional y comenzar a atraer más clientes.",
+    precio: 5999.9,
+    precioAnterior: 8571.29,
     beneficios: [
-      "Acceso completo a la comunidad WITERS",
       "10 solicitudes de diseño al mes",
-      "2 campañas publicitarias en Meta Ads",
-      "Panel personal para dar seguimiento",
-      "Soporte y acompañamiento de estrategia de marca",
+      "Hasta 2 revisiones por diseño",
+      "2 campañas publicitarias",
+      "Acompañamiento estratégico para tu marca",
+      "Entregas en alta resolución, listas para publicar",
+      "Panel exclusivo para dar seguimiento a cada solicitud",
     ],
   },
   {
-    nombre: "Crecimiento",
-    precio: 12999,
-    precioAnterior: 18950,
+    nombre: "Grow",
+    tagline: "Acelera el crecimiento de tu negocio",
+    descripcion:
+      "Pensado para empresas que buscan aumentar su presencia digital con una estrategia de contenido más completa.",
+    precio: 12999.9,
+    precioAnterior: 18571.29,
     destacada: true,
     beneficios: [
-      "Todo lo de Esencial, más:",
-      "20 solicitudes de diseño al mes",
-      "3 campañas publicitarias en Meta Ads",
-      "2 producciones de video con IA, a partir de tus referencias",
+      "15 solicitudes de diseño al mes",
+      "Hasta 2 revisiones por diseño",
+      "2 carruseles para redes sociales",
+      "2 videos para redes sociales",
+      "3 campañas publicitarias",
+      "Planeación estratégica de contenido",
+      "Asesoría estratégica personalizada",
+      "Reporte semanal de desempeño",
+      "Panel exclusivo para dar seguimiento a cada solicitud",
     ],
   },
   {
-    nombre: "Élite",
-    precio: 16999,
-    precioAnterior: 24550,
+    nombre: "Scale",
+    tagline: "Escala tu marca con una estrategia integral",
+    descripcion:
+      "La solución más completa para empresas que buscan crecer de forma constante con estrategia, creatividad y análisis.",
+    precio: 16999.9,
+    precioAnterior: 24285.57,
     beneficios: [
-      "Todo lo de Crecimiento, más:",
-      "30 solicitudes de diseño al mes",
-      "4 campañas publicitarias, hasta 4 productos o servicios distintos",
-      "4 producciones de video con IA",
-      "Atención personalizada",
-      "Reportes de resultados prioritarios",
+      "20 solicitudes de diseño al mes",
+      "Hasta 3 revisiones por diseño",
+      "4 carruseles para redes sociales",
+      "4 videos para redes sociales",
+      "4 campañas publicitarias",
+      "Planeación estratégica de contenido",
+      "Asesoría estratégica personalizada",
+      "Reporte semanal de desempeño",
+      "Auditoría mensual de estrategia y resultados",
+      "Reunión mensual de seguimiento estratégico",
+      "Prioridad alta en tiempos de entrega",
+      "Panel exclusivo para dar seguimiento a cada solicitud",
     ],
   },
 ];
@@ -659,7 +686,8 @@ const MEMBRESIAS: MembresiaTier[] = [
 function Membresia() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
-  const fmt = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
+  const fmt = (n: number) =>
+    "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (
     <section id="membresia" className="relative overflow-hidden bg-wit-navy py-20 md:py-28">
       <div
@@ -671,7 +699,10 @@ function Membresia() {
 
       <div className="relative px-5 md:px-[110px]">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-4xl font-extrabold tracking-tighter text-white md:text-6xl">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[#5c85ff]/40 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#9db4ff]">
+            Promoción Julio 2026 · Para nuevos suscriptores
+          </span>
+          <h2 className="mt-5 text-4xl font-extrabold tracking-tighter text-white md:text-6xl">
             Únete a la comunidad
             <br />
             del <span className="wit-underline text-[#5c85ff]">ingenio</span>
@@ -690,7 +721,7 @@ function Membresia() {
             return (
               <div
                 key={m.nombre}
-                className={`relative overflow-hidden rounded-[28px] bg-white shadow-[0_40px_120px_rgba(0,71,255,0.25)] ${
+                className={`relative flex flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_40px_120px_rgba(0,71,255,0.25)] ${
                   m.destacada ? "ring-2 ring-[#5c85ff] lg:-translate-y-4" : ""
                 }`}
               >
@@ -703,9 +734,10 @@ function Membresia() {
                   className={`px-7 py-6 text-white ${m.destacada ? "bg-wit-navy" : "bg-wit-blue"}`}
                 >
                   <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/80">
-                    {m.nombre}
+                    WITERS {m.nombre}
                   </p>
-                  <div className="mt-3 flex items-center gap-2">
+                  <p className="mt-1.5 text-sm font-semibold text-white/95">{m.tagline}</p>
+                  <div className="mt-4 flex items-center gap-2">
                     <span className="text-sm text-white/50 line-through">
                       {fmt(m.precioAnterior)}
                     </span>
@@ -717,11 +749,19 @@ function Membresia() {
                     <span className="font-wit-mono text-4xl font-semibold leading-none">
                       {fmt(m.precio)}
                     </span>
-                    <span className="pb-1 text-xs font-semibold text-white/85">MXN/mes</span>
+                    <span className="pb-1 text-xs font-semibold text-white/85">MXN/mes + IVA</span>
                   </div>
+                  <p className="mt-2 text-[11px] leading-relaxed text-white/60">
+                    Precio especial válido tus primeros {PROMO_MESES} meses. Del mes{" "}
+                    {PROMO_MESES + 1} en adelante: {fmt(m.precioAnterior)} MXN + IVA al mes.
+                  </p>
                 </div>
 
-                <ul className="space-y-3.5 px-7 py-7">
+                <p className="border-b border-wit-ink/10 px-7 py-5 text-sm leading-relaxed text-wit-gray">
+                  {m.descripcion}
+                </p>
+
+                <ul className="flex-1 space-y-3.5 px-7 py-7">
                   {m.beneficios.map((b) => (
                     <li key={b} className="flex items-start gap-3 text-sm text-wit-ink">
                       <svg
@@ -759,7 +799,12 @@ function Membresia() {
           })}
         </div>
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs text-white/50">
-          Pago con tarjeta de crédito o débito. Activación inmediata.
+          Pago con tarjeta de crédito o débito. Activación inmediata. Suscripción con renovación
+          automática mensual — puedes cancelar cuando quieras.{" "}
+          <Link to="/terminos" className="underline hover:text-white">
+            Ver términos y condiciones
+          </Link>
+          .
         </p>
       </div>
     </section>
@@ -822,34 +867,51 @@ const FAQS: { q: string; a: ReactNode }[] = [
     q: "¿Qué incluye la membresía?",
     a: (
       <div className="space-y-3">
-        <p>
-          Depende del nivel que elijas — cada uno incluye todo lo del anterior, más lo que se agrega
-          aquí:
-        </p>
+        <p>Depende del nivel que elijas:</p>
         <ul className="space-y-1.5">
           <li>
-            <strong className="text-wit-ink">Esencial</strong> — 10 solicitudes de diseño y 2
-            campañas de Meta Ads al mes.
+            <strong className="text-wit-ink">Essential</strong> — 10 solicitudes de diseño y 2
+            campañas publicitarias al mes, con acompañamiento estratégico y entregas en alta
+            resolución.
           </li>
           <li>
-            <strong className="text-wit-ink">Crecimiento</strong> — sube a 20 solicitudes y 3
-            campañas al mes, más 2 producciones de video con IA.
+            <strong className="text-wit-ink">Grow</strong> — 15 solicitudes, 3 campañas, más
+            carruseles y videos para redes, planeación de contenido, asesoría estratégica
+            personalizada y reporte semanal de desempeño.
           </li>
           <li>
-            <strong className="text-wit-ink">Élite</strong> — sube a 30 solicitudes y 4 campañas al
-            mes, más 4 producciones de video con IA y atención personalizada.
+            <strong className="text-wit-ink">Scale</strong> — 20 solicitudes, 4 campañas, más
+            carruseles y videos, auditoría y reunión mensual de estrategia, y prioridad alta en
+            tiempos de entrega.
           </li>
         </ul>
-        <p>
-          Los tres incluyen acceso a la comunidad WITERS, panel personal de seguimiento y
-          acompañamiento de estrategia de marca.
-        </p>
+        <p>Los tres incluyen panel exclusivo para dar seguimiento a cada solicitud.</p>
       </div>
     ),
   },
   {
+    q: "¿Cómo funciona la promoción de julio 2026?",
+    a: `Los nuevos suscriptores obtienen 30% de descuento durante sus primeros ${PROMO_MESES} meses consecutivos. A partir del mes ${PROMO_MESES + 1}, la mensualidad se cobra al precio regular del paquete contratado. Todos los precios publicados son más IVA.`,
+  },
+  {
     q: "¿Cómo se paga?",
-    a: "Con tarjeta de crédito o débito desde la propia plataforma, mes a mes. Elige el nivel que mejor se ajuste a tu marca — Esencial, Crecimiento o Élite — y tu cuenta se activa de inmediato. Pronto también aceptaremos Mercado Pago.",
+    a: (
+      <div className="space-y-3">
+        <p>
+          Con tarjeta de crédito o débito desde la propia plataforma, mes a mes. Elige el nivel que
+          mejor se ajuste a tu marca — Essential, Grow o Scale — y tu cuenta se activa de inmediato.
+        </p>
+        <p>
+          La suscripción se renueva automáticamente cada mes. Puedes cancelarla cuando quieras, sin
+          penalización; la cancelación aplica al terminar el periodo ya pagado, sin reembolsos por
+          el tiempo restante. Consulta los{" "}
+          <Link to="/terminos" className="font-semibold text-wit-blue underline">
+            términos y condiciones
+          </Link>{" "}
+          completos.
+        </p>
+      </div>
+    ),
   },
   {
     q: "¿Cómo uso la plataforma?",

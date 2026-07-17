@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WiterRouteImport } from './routes/witer'
+import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RegistroRouteImport } from './routes/registro'
@@ -70,6 +71,11 @@ import { Route as ApiAdminActivateMembershipRouteImport } from './routes/api/adm
 const WiterRoute = WiterRouteImport.update({
   id: '/witer',
   path: '/witer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TerminosRoute = TerminosRouteImport.update({
+  id: '/terminos',
+  path: '/terminos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -370,6 +376,7 @@ export interface FileRoutesByFullPath {
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terminos': typeof TerminosRoute
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
@@ -429,6 +436,7 @@ export interface FileRoutesByTo {
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terminos': typeof TerminosRoute
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
@@ -489,6 +497,7 @@ export interface FileRoutesById {
   '/registro': typeof RegistroRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terminos': typeof TerminosRoute
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
@@ -550,6 +559,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/terminos'
     | '/witer'
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
@@ -609,6 +619,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/terminos'
     | '/witer'
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
@@ -668,6 +679,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/terminos'
     | '/witer'
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
@@ -728,6 +740,7 @@ export interface RootRouteChildren {
   RegistroRoute: typeof RegistroRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TerminosRoute: typeof TerminosRoute
   WiterRoute: typeof WiterRoute
   ApiBrandProfileRoute: typeof ApiBrandProfileRoute
   ApiBrandProfileColorsRoute: typeof ApiBrandProfileColorsRoute
@@ -783,6 +796,13 @@ declare module '@tanstack/react-router' {
       path: '/witer'
       fullPath: '/witer'
       preLoaderRoute: typeof WiterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terminos': {
+      id: '/terminos'
+      path: '/terminos'
+      fullPath: '/terminos'
+      preLoaderRoute: typeof TerminosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -1192,6 +1212,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegistroRoute: RegistroRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TerminosRoute: TerminosRoute,
   WiterRoute: WiterRoute,
   ApiBrandProfileRoute: ApiBrandProfileRoute,
   ApiBrandProfileColorsRoute: ApiBrandProfileColorsRoute,
