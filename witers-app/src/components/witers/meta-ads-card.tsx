@@ -72,3 +72,41 @@ export function MetaAdsDashboardCard({ className = "" }: { className?: string })
     </div>
   );
 }
+
+// A small iPhone/WhatsApp mockup showing a real customer message landing
+// after clicking an ad — the "lo que está sucediendo" half of the pairing
+// with MetaAdsDashboardCard's "lo técnico" half. Meant to sit layered on
+// top of that card, not standalone, so it's intentionally compact.
+export function WhatsAppPhoneMockup({ className = "" }: { className?: string }) {
+  return (
+    <div className={`[perspective:1200px] ${className}`}>
+      <div className="w-[212px] rounded-[2.1rem] border-[6px] border-wit-ink bg-wit-ink shadow-[0_35px_70px_rgba(5,13,40,0.4)] transition-transform duration-500 [transform:rotateY(10deg)_rotateX(-4deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)]">
+        <div className="relative overflow-hidden rounded-[1.6rem] bg-[#e5ddd5]">
+          <div className="absolute left-1/2 top-0 z-10 h-4 w-20 -translate-x-1/2 rounded-b-2xl bg-wit-ink" />
+
+          <div className="flex items-center gap-2 bg-[#128C7E] px-3 pb-2 pt-5 text-white">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/25 text-[10px] font-bold">
+              CM
+            </span>
+            <div className="leading-tight">
+              <p className="text-[10px] font-semibold">Cliente potencial</p>
+              <p className="text-[8px] text-white/75">en línea</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 px-2 py-2.5">
+            <div className="max-w-[85%] rounded-lg rounded-tl-none bg-white px-2 py-1.5 text-[9px] leading-snug text-wit-ink shadow-sm">
+              Hola! Vi su anuncio en Instagram 👋 ¿todavía tienen disponibilidad?
+            </div>
+            <div className="ml-auto max-w-[85%] rounded-lg rounded-tr-none bg-[#dcf8c6] px-2 py-1.5 text-[9px] leading-snug text-wit-ink shadow-sm">
+              ¡Hola! Sí, claro 😊 ¿qué día te gustaría?
+            </div>
+            <div className="max-w-[85%] rounded-lg rounded-tl-none bg-white px-2 py-1.5 text-[9px] leading-snug text-wit-ink shadow-sm">
+              Perfecto, quiero agendar 🙌
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
