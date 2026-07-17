@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { TrendingUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
@@ -38,6 +39,7 @@ function Landing() {
       <MarcasQueConfian />
       <PruebaInteractiva />
       <Membresia />
+      <CampanasTeaser />
       <Faq />
       <CtaFinal />
       <SiteFooter />
@@ -606,26 +608,58 @@ function CtaFinal() {
 
 /* ---------------- 9. MEMBRESÍA ---------------- */
 
-const PRECIO_MENSUAL = 5999;
-const PRECIO_ANUAL = 50000; // facturado una vez al año
+type MembresiaTier = {
+  nombre: string;
+  precio: number;
+  precioAnterior: number;
+  destacada?: boolean;
+  beneficios: string[];
+};
 
-const BENEFICIOS = [
-  "Acceso completo a la comunidad WITERS",
-  "Creatividades publicitarias generadas con inteligencia artificial",
-  "20 solicitudes de diseño incluidas en tu membresía",
-  "Panel personal para dar seguimiento a cada petición",
-  "Resultados en alta resolución, listos para tus campañas",
-  "Soporte y acompañamiento de estrategia de marca",
+const MEMBRESIAS: MembresiaTier[] = [
+  {
+    nombre: "Esencial",
+    precio: 5999,
+    precioAnterior: 11999,
+    beneficios: [
+      "Acceso completo a la comunidad WITERS",
+      "10 solicitudes de diseño al mes",
+      "2 campañas publicitarias en Meta Ads",
+      "Panel personal para dar seguimiento",
+      "Soporte y acompañamiento de estrategia de marca",
+    ],
+  },
+  {
+    nombre: "Crecimiento",
+    precio: 12999,
+    precioAnterior: 18950,
+    destacada: true,
+    beneficios: [
+      "Todo lo de Esencial, más:",
+      "20 solicitudes de diseño al mes",
+      "3 campañas publicitarias en Meta Ads",
+      "2 producciones de video con IA, a partir de tus referencias",
+    ],
+  },
+  {
+    nombre: "Élite",
+    precio: 16999,
+    precioAnterior: 24550,
+    beneficios: [
+      "Todo lo de Crecimiento, más:",
+      "30 solicitudes de diseño al mes",
+      "4 campañas publicitarias, hasta 4 productos o servicios distintos",
+      "4 producciones de video con IA",
+      "Atención personalizada",
+      "Reportes de resultados prioritarios",
+    ],
+  },
 ];
 
 function Membresia() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
-  const [plan, setPlan] = useState<"mensual" | "anual">("anual");
-  const esAnual = plan === "anual";
   const fmt = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
-  const mesEquivalente = Math.round(PRECIO_ANUAL / 12);
-  const ahorro = Math.round((1 - PRECIO_ANUAL / (PRECIO_MENSUAL * 12)) * 100);
   return (
     <section id="membresia" className="relative overflow-hidden bg-wit-navy py-20 md:py-28">
       <div
@@ -643,89 +677,172 @@ function Membresia() {
             del <span className="wit-underline text-[#5c85ff]">ingenio</span>
           </h2>
           <p className="mt-6 text-lg leading-relaxed text-white/70">
-            Una sola membresía. Todo el poder del <strong className="text-white">ingenio</strong>,
-            la <strong className="text-white">estrategia</strong> y la{" "}
-            <strong className="text-white">inteligencia artificial</strong> trabajando para tu
-            marca.
+            Elige el nivel de acompañamiento que tu marca necesita. Todo el poder del{" "}
+            <strong className="text-white">ingenio</strong>, la{" "}
+            <strong className="text-white">estrategia</strong> y la{" "}
+            <strong className="text-white">inteligencia artificial</strong> trabajando para ti.
           </p>
         </div>
 
-        <div className="mx-auto mt-14 max-w-xl overflow-hidden rounded-[28px] bg-white shadow-[0_40px_120px_rgba(0,71,255,0.35)]">
-          <div className="bg-wit-blue px-8 py-6 text-white">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <p className="text-xs font-bold uppercase tracking-[0.3em] text-white/80">
-                Membresía WITERS
-              </p>
-              <div className="flex rounded-full bg-white/15 p-1">
-                <button
-                  type="button"
-                  onClick={() => setPlan("mensual")}
-                  className={`rounded-full px-4 py-2 text-[13px] font-bold transition ${
-                    esAnual ? "text-white/85" : "bg-white text-wit-blue"
-                  }`}
+        <div className="mx-auto mt-14 grid max-w-6xl gap-6 lg:grid-cols-3">
+          {MEMBRESIAS.map((m) => {
+            const descuento = Math.round((1 - m.precio / m.precioAnterior) * 100);
+            return (
+              <div
+                key={m.nombre}
+                className={`relative overflow-hidden rounded-[28px] bg-white shadow-[0_40px_120px_rgba(0,71,255,0.25)] ${
+                  m.destacada ? "ring-2 ring-[#5c85ff] lg:-translate-y-4" : ""
+                }`}
+              >
+                {m.destacada ? (
+                  <span className="absolute right-5 top-5 z-10 rounded-full bg-white px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-wit-blue">
+                    Más popular
+                  </span>
+                ) : null}
+                <div
+                  className={`px-7 py-6 text-white ${m.destacada ? "bg-wit-navy" : "bg-wit-blue"}`}
                 >
-                  Mensual
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPlan("anual")}
-                  className={`rounded-full px-4 py-2 text-[13px] font-bold transition ${
-                    esAnual ? "bg-white text-wit-blue" : "text-white/85"
-                  }`}
-                >
-                  Anual
-                </button>
+                  <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/80">
+                    {m.nombre}
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-sm text-white/50 line-through">
+                      {fmt(m.precioAnterior)}
+                    </span>
+                    <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-extrabold text-white">
+                      -{descuento}%
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-end gap-2">
+                    <span className="font-wit-mono text-4xl font-semibold leading-none">
+                      {fmt(m.precio)}
+                    </span>
+                    <span className="pb-1 text-xs font-semibold text-white/85">MXN/mes</span>
+                  </div>
+                </div>
+
+                <ul className="space-y-3.5 px-7 py-7">
+                  {m.beneficios.map((b) => (
+                    <li key={b} className="flex items-start gap-3 text-sm text-wit-ink">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        stroke="#0047FF"
+                        strokeWidth="2.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="mt-0.5 shrink-0"
+                      >
+                        <path d="M3.5 10.5 8 15l8.5-9.5" />
+                      </svg>
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="px-7 pb-7">
+                  <Link
+                    to={signedIn ? "/checkout" : "/registro"}
+                    className={`block w-full rounded-2xl px-6 py-3.5 text-center text-base font-bold text-white transition-all duration-200 active:scale-[0.99] ${
+                      m.destacada
+                        ? "bg-wit-blue hover:brightness-110"
+                        : "bg-wit-navy hover:bg-wit-blue"
+                    }`}
+                  >
+                    Quiero {m.nombre}
+                  </Link>
+                </div>
               </div>
-            </div>
-            <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
-              <span className="font-wit-mono text-5xl font-semibold leading-none md:text-6xl">
-                {fmt(esAnual ? mesEquivalente : PRECIO_MENSUAL)}
-              </span>
-              <span className="pb-1 text-sm font-semibold text-white/85">MXN / mes</span>
-              {esAnual ? (
-                <span className="mb-0.5 rounded-full bg-white px-3 py-1 text-xs font-extrabold tracking-wide text-wit-blue">
-                  AHORRA {ahorro}%
-                </span>
-              ) : null}
-            </div>
-            <p className="mt-2 text-sm text-white/80">
-              {esAnual
-                ? `Facturado anualmente: ${fmt(PRECIO_ANUAL)} MXN al año. Acceso completo a la plataforma.`
-                : "Facturación mes a mes. Acceso completo a la plataforma."}
-            </p>
-          </div>
+            );
+          })}
+        </div>
+        <p className="mx-auto mt-8 max-w-2xl text-center text-xs text-white/50">
+          Pago con tarjeta de crédito o débito. Activación inmediata.
+        </p>
+      </div>
+    </section>
+  );
+}
 
-          <ul className="space-y-4 px-8 py-8">
-            {BENEFICIOS.map((b) => (
-              <li key={b} className="flex items-start gap-3 text-[15px] text-wit-ink">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="#0047FF"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mt-0.5 shrink-0"
-                >
-                  <path d="M3.5 10.5 8 15l8.5-9.5" />
-                </svg>
-                {b}
-              </li>
-            ))}
-          </ul>
+/* ---------------- 9b. CAMPAÑAS TEASER ---------------- */
 
-          <div className="px-8 pb-9">
-            <Link
-              to={signedIn ? "/checkout" : "/registro"}
-              className="block w-full rounded-2xl bg-wit-navy px-6 py-4 text-center text-lg font-bold text-white transition-all duration-200 hover:bg-wit-blue active:scale-[0.99]"
+function CampanasTeaser() {
+  return (
+    <section className="relative overflow-hidden bg-white py-20 md:py-28">
+      <div className="grid items-center gap-14 px-5 md:px-[110px] lg:grid-cols-2">
+        <div>
+          <span className="inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-wit-mist/40 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue">
+            Meta Ads
+          </span>
+          <h2 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-5xl">
+            Tu pieza no se queda
+            <br />
+            en <span className="italic text-wit-blue">"me gusta"</span>.
+          </h2>
+          <p className="mt-6 max-w-md text-lg leading-relaxed text-wit-gray">
+            La convertimos en una campaña real de Meta Ads — configurada, medible y lista para
+            vender. Sin salir de WITERS.
+          </p>
+          <Link
+            to="/pauta"
+            className="group mt-8 inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-7 py-3.5 text-sm font-bold uppercase tracking-[0.06em] text-white shadow-[0_18px_40px_rgba(0,71,255,0.38)] transition-all duration-200 hover:shadow-[0_22px_48px_rgba(0,71,255,0.48)] active:scale-[0.98]"
+          >
+            Quiero campañas
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1"
             >
-              Quiero mi membresía
-            </Link>
-            <p className="mt-3 text-center text-xs text-wit-gray">
-              Pago con tarjeta de crédito o débito. Activación inmediata.
+              <path d="M3 13 13 3M13 3H6M13 3v7" />
+            </svg>
+          </Link>
+        </div>
+
+        {/* A mock Meta ad card, tilted in 3D — straightens on hover. Not a
+            real client's ad (nothing to legally clear or misattribute),
+            just a convincing stand-in for what "your piece as a real
+            campaign" looks like. */}
+        <div className="[perspective:1200px]">
+          <div className="mx-auto max-w-sm rounded-2xl bg-white p-4 shadow-[0_50px_100px_rgba(5,13,40,0.28)] ring-1 ring-wit-ink/5 transition-transform duration-500 [transform:rotateY(-10deg)_rotateX(4deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)]">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-blue/10">
+                <WMark size={20} />
+              </span>
+              <div>
+                <p className="text-sm font-bold text-wit-ink">Tu Marca</p>
+                <p className="text-xs text-wit-gray">Patrocinado</p>
+              </div>
+              <span className="ml-auto text-lg leading-none text-wit-gray">⋯</span>
+            </div>
+            <p className="mt-3 text-[13px] leading-snug text-wit-ink">
+              No dejes que tu marca pase desapercibida. Estrategia, creatividad e IA trabajando para
+              ti. 🚀
             </p>
+            <div className="mt-3 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(135deg,#0047FF,#1d2fa6)]">
+              <TrendingUp className="text-white/70" size={64} strokeWidth={1.25} />
+            </div>
+            <div className="mt-3 flex items-center justify-between rounded-lg bg-wit-mist/40 px-3 py-2.5">
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-wit-gray">witers.com</p>
+                <p className="text-sm font-bold text-wit-ink">Conoce más</p>
+              </div>
+              <span className="rounded-full bg-wit-ink/10 px-3.5 py-1.5 text-xs font-bold text-wit-ink">
+                Más información
+              </span>
+            </div>
+            <div className="mt-3 flex items-center gap-4 border-t border-wit-ink/10 pt-3 text-xs text-wit-gray">
+              <span>👍❤️ 248</span>
+              <span>32 comentarios</span>
+              <span>18 compartidos</span>
+            </div>
           </div>
         </div>
       </div>
@@ -738,11 +855,11 @@ function Membresia() {
 const FAQS = [
   {
     q: "¿Qué incluye la membresía?",
-    a: "Acceso a la comunidad WITERS y a la plataforma de creatividades con IA: 20 solicitudes de diseño, panel personal de seguimiento, resultados descargables en alta resolución y acompañamiento de estrategia de marca.",
+    a: "Depende del nivel: Esencial incluye 10 solicitudes de diseño y 2 campañas de Meta Ads al mes; Crecimiento suma videos con IA y sube a 20 solicitudes y 3 campañas; Élite llega a 30 solicitudes, 4 campañas y atención personalizada. Los tres incluyen acceso a la comunidad WITERS, panel personal de seguimiento y acompañamiento de estrategia de marca.",
   },
   {
     q: "¿Cómo se paga?",
-    a: "Con tarjeta de crédito o débito desde la propia plataforma. Puedes elegir el plan mensual de $5,999 MXN al mes, o el plan anual de $50,000 MXN al año (equivalente a $4,167 al mes). Tu cuenta se activa de inmediato. Pronto también aceptaremos Mercado Pago.",
+    a: "Con tarjeta de crédito o débito desde la propia plataforma, mes a mes. Elige el nivel que mejor se ajuste a tu marca — Esencial, Crecimiento o Élite — y tu cuenta se activa de inmediato. Pronto también aceptaremos Mercado Pago.",
   },
   {
     q: "¿Cómo uso la plataforma?",
