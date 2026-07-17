@@ -12,9 +12,12 @@ import {
   Car,
   Crosshair,
   Dumbbell,
+  Eye,
   FileText,
+  Flame,
   Globe,
   Home,
+  Images,
   Laptop,
   Link2,
   Loader2,
@@ -134,6 +137,25 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   rechazada: { label: "Rechazada", cls: "bg-red-50 text-red-600" },
 };
 
+// Consecutive weeks (counting back from the current one) with at least one
+// request — a gap of even one week breaks it. "Week" here is just "N*7
+// days ago," not a calendar week, so it doesn't reset on some arbitrary
+// day for no reason a client would notice.
+function computeStreakWeeks(createdAtDates: string[]): number {
+  const now = Date.now();
+  const weekBuckets = new Set(
+    createdAtDates
+      .map((d) => {
+        const t = new Date(d + "Z").getTime();
+        return Number.isNaN(t) ? null : Math.floor((now - t) / (7 * 24 * 60 * 60 * 1000));
+      })
+      .filter((w): w is number => w !== null && w >= 0),
+  );
+  let streak = 0;
+  while (weekBuckets.has(streak)) streak++;
+  return streak;
+}
+
 type PautaRequestInfo = {
   id: string;
   title: string;
@@ -187,6 +209,20 @@ function Panel() {
     },
     enabled: Boolean(me.data?.ok),
     refetchInterval: 30_000,
+  });
+
+  // Same query the Campañas tab uses (CampanasPanel below) — sharing the
+  // "campaigns" key means React Query dedupes the fetch when both are
+  // mounted, and this one alone is enough to power the impact stats in the
+  // header even when the client never opens that tab.
+  const campaignsForImpact = useQuery({
+    queryKey: ["campaigns"],
+    queryFn: async () => {
+      const res = await fetch("/api/campaigns", { credentials: "include" });
+      if (!res.ok) return { ok: false, campaigns: [] as Campaign[] };
+      return (await res.json()) as { ok: boolean; campaigns: Campaign[] };
+    },
+    enabled: Boolean(me.data?.ok),
   });
 
   // One membership, one business — once set (see /api/requests), company
@@ -265,6 +301,16 @@ function Panel() {
   const active = membership?.status === "active";
   const remaining = membership ? membership.requests_quota - membership.requests_used : 0;
   const rows = requests.data?.requests ?? [];
+  // "Impact panel" stats — closes the loop from pedir → pieza → campaña →
+  // resultado, and doubles as the client's own history read back as an
+  // achievement instead of a task list. All computed from data already
+  // fetched for other tabs (requests, campaigns), nothing new to fetch.
+  const finishedRows = rows.filter((r) => r.status === "completada" || r.status === "cerrada");
+  const piecesCreated = finishedRows.length;
+  const streakWeeks = computeStreakWeeks(rows.map((r) => r.created_at));
+  const impactCampaigns = campaignsForImpact.data?.campaigns ?? [];
+  const campaignsLaunched = impactCampaigns.length;
+  const totalReach = impactCampaigns.reduce((sum, c) => sum + Number(c.reach ?? 0), 0);
   // Rows come back newest-first, so the first one with a logo is the most
   // recent request that had one — offered as a shortcut on the new form.
   const previousLogoKey = rows.find((row) => row.logo_key)?.logo_key ?? null;
@@ -355,9 +401,17 @@ function Panel() {
           <>
             <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
               <div>
-                <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
-                  Hola, <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
-                </h1>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
+                    Hola, <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
+                  </h1>
+                  {streakWeeks > 0 ? (
+                    <span className="flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
+                      <Flame className="h-3.5 w-3.5" strokeWidth={2} />
+                      {streakWeeks} {streakWeeks === 1 ? "semana seguida" : "semanas seguidas"}
+                    </span>
+                  ) : null}
+                </div>
                 <p className="mt-2 text-base text-wit-gray">
                   Pide creatividades y da seguimiento a cada solicitud desde aquí.
                 </p>
@@ -382,6 +436,41 @@ function Panel() {
                 </span>
               </div>
             </div>
+
+            {piecesCreated > 0 ? (
+              // Their own history read back as an achievement, and the
+              // loop closed all the way to real results — not just a
+              // request counter. Reach only shows once there's a real
+              // number to show; 0 campañas/0 alcance would read as failure,
+              // not motivation.
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl bg-wit-navy p-5 text-white">
+                  <Images className="h-5 w-5 text-white/70" strokeWidth={1.75} />
+                  <p className="mt-2 text-2xl font-extrabold">{piecesCreated}</p>
+                  <p className="text-xs text-white/70">
+                    {piecesCreated === 1 ? "pieza creada" : "piezas creadas"}
+                  </p>
+                </div>
+                {campaignsLaunched > 0 ? (
+                  <div className="rounded-2xl bg-wit-navy p-5 text-white">
+                    <Rocket className="h-5 w-5 text-white/70" strokeWidth={1.75} />
+                    <p className="mt-2 text-2xl font-extrabold">{campaignsLaunched}</p>
+                    <p className="text-xs text-white/70">
+                      {campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas"}
+                    </p>
+                  </div>
+                ) : null}
+                {totalReach > 0 ? (
+                  <div className="rounded-2xl bg-wit-blue p-5 text-white">
+                    <Eye className="h-5 w-5 text-white/70" strokeWidth={1.75} />
+                    <p className="mt-2 text-2xl font-extrabold">
+                      {totalReach.toLocaleString("es-MX")}
+                    </p>
+                    <p className="text-xs text-white/70">personas alcanzadas</p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {!active ? (
               <div className="mt-8 flex flex-col items-start gap-4 rounded-3xl bg-wit-navy p-8 text-white md:flex-row md:items-center md:justify-between">
