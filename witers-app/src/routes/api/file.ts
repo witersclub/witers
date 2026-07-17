@@ -1,12 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { bindings } from "../../lib/bindings.server";
-import {
-  db,
-  getSessionUser,
-  json,
-  requireStaffUser,
-} from "../../lib/witers-auth.server";
+import { db, getSessionUser, json, requireStaffUser } from "../../lib/witers-auth.server";
+
+// Turns a request title into a safe, readable filename segment — accents
+// stripped (not every OS/zip tool handles UTF-8 filenames well), anything
+// that isn't alphanumeric collapsed to a single underscore.
+function slugifyFilenamePart(title: string): string {
+  const slug = title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60);
+  return slug || "Pieza";
+}
 
 // Serves R2 objects (member reference uploads + admin deliverables).
 // Access: the member who owns the related request, or a platform (admin) user.
@@ -22,38 +30,57 @@ export const Route = createFileRoute("/api/file")({
 
         const member = await getSessionUser(request);
         let allowed = false;
+        // Set whenever `key` is a delivered piece, regardless of who's
+        // downloading — used below to build "WITERS_Título_03.ext" instead
+        // of the raw R2 key as the saved filename, for staff downloads too.
+        let delivery: { title: string; clientSeq: number } | null = null;
 
-        if (member) {
-          if (key.startsWith(`refs/${member.id}/`)) {
-            allowed = true;
-          } else if (key.startsWith("deliveries/")) {
-            // The owning client can only ever reach the latest delivery for
-            // a request — never an older, superseded version (those are
-            // dropped from both the API response and here). That's the
-            // actual "one final design per request" enforcement; once it's
-            // the current delivery, the client can view and download it as
-            // many times as they want, whether the request is still
-            // "completada" or already "cerrada" — it's the same single file
-            // either way.
-            const row = await db()
-              .prepare(
-                `SELECT r.user_id, r.status,
-                   (res.id = (
-                     SELECT id FROM request_results
-                     WHERE request_id = r.id AND kind != 'draft'
-                     ORDER BY created_at DESC LIMIT 1
-                   )) AS is_latest
-                 FROM request_results res
-                 JOIN design_requests r ON r.id = res.request_id
-                 WHERE res.r2_key = ?1`,
-              )
-              .bind(key)
-              .first<{ user_id: string; status: string; is_latest: number }>();
-            allowed =
-              row?.user_id === member.id &&
-              row.is_latest === 1 &&
-              (row.status === "completada" || row.status === "cerrada");
+        if (key.startsWith("deliveries/")) {
+          // The owning client can only ever reach the latest delivery for a
+          // request — never an older, superseded version (those are dropped
+          // from both the API response and here). That's the actual "one
+          // final design per request" enforcement; once it's the current
+          // delivery, the client can view and download it as many times as
+          // they want, whether the request is still "completada" or already
+          // "cerrada" — it's the same single file either way.
+          // client_seq: this client's Nth request ever, chronologically —
+          // the "número de referencia" a client asked to see baked into the
+          // downloaded filename. Computed on the fly (no stored sequence
+          // column) since it's simple, always in sync, and correct for
+          // every request already in the database, not just new ones.
+          const row = await db()
+            .prepare(
+              `SELECT r.user_id, r.status, r.title,
+                 (res.id = (
+                   SELECT id FROM request_results
+                   WHERE request_id = r.id AND kind != 'draft'
+                   ORDER BY created_at DESC LIMIT 1
+                 )) AS is_latest,
+                 (SELECT COUNT(*) FROM design_requests d2
+                  WHERE d2.user_id = r.user_id AND d2.created_at <= r.created_at) AS client_seq
+               FROM request_results res
+               JOIN design_requests r ON r.id = res.request_id
+               WHERE res.r2_key = ?1`,
+            )
+            .bind(key)
+            .first<{
+              user_id: string;
+              status: string;
+              title: string;
+              is_latest: number;
+              client_seq: number;
+            }>();
+          if (row) {
+            delivery = { title: row.title, clientSeq: row.client_seq };
+            if (member) {
+              allowed =
+                row.user_id === member.id &&
+                row.is_latest === 1 &&
+                (row.status === "completada" || row.status === "cerrada");
+            }
           }
+        } else if (member && key.startsWith(`refs/${member.id}/`)) {
+          allowed = true;
         }
 
         if (!allowed) {
@@ -73,7 +100,12 @@ export const Route = createFileRoute("/api/file")({
           "cache-control": "private, max-age=300",
         };
         if (url.searchParams.get("download") === "1") {
-          const filename = key.split("/").pop() ?? "archivo";
+          let filename = key.split("/").pop() ?? "archivo";
+          if (delivery) {
+            const ext = key.includes(".") ? key.slice(key.lastIndexOf(".") + 1) : "png";
+            const seq = String(delivery.clientSeq).padStart(2, "0");
+            filename = `WITERS_${slugifyFilenamePart(delivery.title)}_${seq}.${ext}`;
+          }
           headers["content-disposition"] = `attachment; filename="${filename}"`;
         }
 
@@ -82,4 +114,3 @@ export const Route = createFileRoute("/api/file")({
     },
   },
 });
-
