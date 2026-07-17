@@ -201,6 +201,7 @@ function Panel() {
   // this can't sit next to the stats it's paired with (further down).
   const piecesTileRef = useRef<HTMLDivElement>(null);
   const piecesPressTimer = useRef<number | null>(null);
+  const piecesPointerTypeRef = useRef<string | null>(null);
   const [piecesPopupOpen, setPiecesPopupOpen] = useState(false);
   const [burstOrigin, setBurstOrigin] = useState<{ x: number; y: number } | null>(null);
   const [burstRadius, setBurstRadius] = useState(110);
@@ -357,19 +358,17 @@ function Panel() {
     const rect = piecesTileRef.current?.getBoundingClientRect();
     if (!rect) return;
     setBurstOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
-    setBurstRadius(window.innerWidth < 640 ? 72 : 92);
+    // Phone gets a much bigger, screen-filling version of this — desktop
+    // keeps the original compact size, there's no "lift your finger" on
+    // a mouse to justify going big there too.
+    setBurstRadius(window.innerWidth < 640 ? 150 : 92);
     setPiecesPopupOpen(true);
   }
   function closePiecesBurst() {
     setPiecesPopupOpen(false);
   }
-  function cancelPiecesPress() {
-    if (piecesPressTimer.current != null) {
-      window.clearTimeout(piecesPressTimer.current);
-      piecesPressTimer.current = null;
-    }
-  }
   function handlePiecesPointerDown(e: React.PointerEvent) {
+    piecesPointerTypeRef.current = e.pointerType;
     if (e.pointerType === "mouse") {
       openPiecesBurst();
       return;
@@ -380,6 +379,16 @@ function Panel() {
       openPiecesBurst();
       piecesPressTimer.current = null;
     }, 380);
+  }
+  function endPiecesPress() {
+    if (piecesPressTimer.current != null) {
+      window.clearTimeout(piecesPressTimer.current);
+      piecesPressTimer.current = null;
+    }
+    // Touch is "peek while held" — lifting the finger closes it right
+    // away. Mouse stays click-to-open/click-outside-to-close since there's
+    // no hold gesture to tie a release to.
+    if (piecesPointerTypeRef.current !== "mouse") setPiecesPopupOpen(false);
   }
   // Rows come back newest-first, so the first one with a logo is the most
   // recent request that had one — offered as a shortcut on the new form.
@@ -522,9 +531,9 @@ function Panel() {
                   tabIndex={0}
                   aria-label="Ver piezas creadas"
                   onPointerDown={handlePiecesPointerDown}
-                  onPointerUp={cancelPiecesPress}
-                  onPointerLeave={cancelPiecesPress}
-                  onPointerCancel={cancelPiecesPress}
+                  onPointerUp={endPiecesPress}
+                  onPointerLeave={endPiecesPress}
+                  onPointerCancel={endPiecesPress}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
@@ -586,7 +595,7 @@ function Panel() {
                           setTab("solicitudes");
                           closePiecesBurst();
                         }}
-                        className="wit-burst absolute flex h-12 w-12 items-center justify-center rounded-xl border-2 border-white bg-wit-blue text-xs font-bold text-white shadow-lg"
+                        className="wit-burst absolute flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-wit-blue text-sm font-bold text-white shadow-xl sm:h-12 sm:w-12 sm:rounded-xl sm:border-2 sm:text-xs"
                       >
                         +{item.count}
                       </button>
@@ -597,7 +606,7 @@ function Panel() {
                       key={item.id}
                       style={style}
                       title={item.title}
-                      className="wit-burst absolute h-12 w-12 overflow-hidden rounded-xl border-2 border-white shadow-lg"
+                      className="wit-burst absolute h-24 w-24 overflow-hidden rounded-2xl border-4 border-white shadow-xl sm:h-12 sm:w-12 sm:rounded-xl sm:border-2"
                     >
                       <img
                         src={item.thumbHref}
