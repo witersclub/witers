@@ -225,13 +225,17 @@ function usePlatformUser() {
 function KpiCard({
   label,
   value,
+  subtext,
   icon: Icon,
   accent,
+  onClick,
 }: {
   label: string;
   value: string;
+  subtext?: string;
   icon: typeof Wallet;
   accent: "blue" | "emerald" | "amber" | "violet";
+  onClick?: () => void;
 }) {
   const accents: Record<typeof accent, { bg: string; text: string; ring: string }> = {
     blue: { bg: "bg-wit-blue/10", text: "text-wit-blue", ring: "ring-wit-blue/15" },
@@ -240,9 +244,16 @@ function KpiCard({
     violet: { bg: "bg-violet-50", text: "text-violet-600", ring: "ring-violet-200/60" },
   };
   const a = accents[accent];
+  const Tag = onClick ? "button" : "div";
   return (
-    <div
-      className={`wit-glass rounded-2xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)] ring-1 ${a.ring}`}
+    <Tag
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className={`wit-glass rounded-2xl p-5 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)] ring-1 ${a.ring} ${
+        onClick
+          ? "transition-transform hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(5,13,40,0.1)]"
+          : ""
+      }`}
     >
       <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${a.bg} ${a.text}`}>
         <Icon size={19} strokeWidth={2.25} />
@@ -251,7 +262,8 @@ function KpiCard({
         {label}
       </p>
       <p className="mt-1 font-wit-mono text-2xl font-semibold text-wit-ink">{value}</p>
-    </div>
+      {subtext ? <p className="mt-1 text-xs font-medium text-wit-gray">{subtext}</p> : null}
+    </Tag>
   );
 }
 
@@ -304,14 +316,31 @@ function ChartTooltip({
   );
 }
 
-function DashboardView({ data }: { data: Overview }) {
+function DashboardView({
+  data,
+  onNavigateToAttention,
+}: {
+  data: Overview;
+  onNavigateToAttention: () => void;
+}) {
   const totalRevenue = data.payments
     .filter((p) => p.status === "paid")
     .reduce((s, p) => s + p.amount_mxn, 0);
   const activeMemberships = data.users.filter((u) => u.membership_status === "active").length;
-  const needsAttention = data.requests.filter(
-    (r) => (r.status === "en_proceso" && !r.claimed_by_name) || r.status === "cambio_solicitado",
+  const unclaimedCount = data.requests.filter(
+    (r) => r.status === "en_proceso" && !r.claimed_by_name,
   ).length;
+  const changeRequestedCount = data.requests.filter((r) => r.status === "cambio_solicitado").length;
+  const needsAttention = unclaimedCount + changeRequestedCount;
+  const attentionSubtext =
+    needsAttention === 0
+      ? undefined
+      : [
+          unclaimedCount > 0 ? `${unclaimedCount} sin tomar` : null,
+          changeRequestedCount > 0 ? `${changeRequestedCount} cambio solicitado` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
   const rated = data.requests.filter((r) => r.satisfaction_rating != null);
   const avgRating = rated.length
     ? rated.reduce((s, r) => s + (r.satisfaction_rating ?? 0), 0) / rated.length
@@ -324,7 +353,7 @@ function DashboardView({ data }: { data: Overview }) {
 
   return (
     <div className="mt-6 space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <KpiCard
           label="Ingresos totales"
           value={`$${totalRevenue.toLocaleString("es-MX")}`}
@@ -340,8 +369,10 @@ function DashboardView({ data }: { data: Overview }) {
         <KpiCard
           label="Necesitan tu atención"
           value={String(needsAttention)}
+          subtext={attentionSubtext}
           icon={AlertCircle}
           accent="amber"
+          onClick={needsAttention > 0 ? onNavigateToAttention : undefined}
         />
         <KpiCard
           label="Calificación promedio"
@@ -666,7 +697,7 @@ function Admin() {
               No pudimos cargar los datos de administración.
             </p>
           ) : tab === "dashboard" ? (
-            <DashboardView data={data} />
+            <DashboardView data={data} onNavigateToAttention={() => setTab("solicitudes")} />
           ) : tab === "solicitudes" ? (
             <RequestsAdmin rows={data.requests} />
           ) : tab === "diseñadores" ? (
