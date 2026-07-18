@@ -11,6 +11,7 @@ export type Me = {
     price_mxn: number;
     requests_quota: number;
     requests_used: number;
+    bonus_requests_quota: number;
     activated_at: string | null;
   } | null;
 };
@@ -25,4 +26,3 @@ export async function fetchMe(): Promise<Me | null> {
 export function useMe() {
   return useQuery({ queryKey: ["me"], queryFn: fetchMe, staleTime: 15_000 });
 }
-

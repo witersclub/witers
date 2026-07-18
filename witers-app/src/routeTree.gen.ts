@@ -29,6 +29,7 @@ import { Route as ApiSubmitSatisfactionRouteImport } from './routes/api/submit-s
 import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
 import { Route as ApiRequestChangeRouteImport } from './routes/api/request-change'
+import { Route as ApiPurchasePackRouteImport } from './routes/api/purchase-pack'
 import { Route as ApiMetaLocationSearchRouteImport } from './routes/api/meta-location-search'
 import { Route as ApiMetaInterestSuggestionsRouteImport } from './routes/api/meta-interest-suggestions'
 import { Route as ApiMetaInterestSearchRouteImport } from './routes/api/meta-interest-search'
@@ -171,6 +172,11 @@ const ApiRequestRevisionRoute = ApiRequestRevisionRouteImport.update({
 const ApiRequestChangeRoute = ApiRequestChangeRouteImport.update({
   id: '/api/request-change',
   path: '/api/request-change',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPurchasePackRoute = ApiPurchasePackRouteImport.update({
+  id: '/api/purchase-pack',
+  path: '/api/purchase-pack',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMetaLocationSearchRoute = ApiMetaLocationSearchRouteImport.update({
@@ -423,6 +429,7 @@ export interface FileRoutesByFullPath {
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
+  '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -488,6 +495,7 @@ export interface FileRoutesByTo {
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
+  '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -554,6 +562,7 @@ export interface FileRoutesById {
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
+  '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
@@ -621,6 +630,7 @@ export interface FileRouteTypes {
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
     | '/api/meta-location-search'
+    | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
     | '/api/requests'
@@ -686,6 +696,7 @@ export interface FileRouteTypes {
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
     | '/api/meta-location-search'
+    | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
     | '/api/requests'
@@ -751,6 +762,7 @@ export interface FileRouteTypes {
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
     | '/api/meta-location-search'
+    | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
     | '/api/requests'
@@ -817,6 +829,7 @@ export interface RootRouteChildren {
   ApiMetaInterestSearchRoute: typeof ApiMetaInterestSearchRoute
   ApiMetaInterestSuggestionsRoute: typeof ApiMetaInterestSuggestionsRoute
   ApiMetaLocationSearchRoute: typeof ApiMetaLocationSearchRoute
+  ApiPurchasePackRoute: typeof ApiPurchasePackRoute
   ApiRequestChangeRoute: typeof ApiRequestChangeRoute
   ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
   ApiRequestsRoute: typeof ApiRequestsRoute
@@ -995,6 +1008,13 @@ declare module '@tanstack/react-router' {
       path: '/api/request-change'
       fullPath: '/api/request-change'
       preLoaderRoute: typeof ApiRequestChangeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/purchase-pack': {
+      id: '/api/purchase-pack'
+      path: '/api/purchase-pack'
+      fullPath: '/api/purchase-pack'
+      preLoaderRoute: typeof ApiPurchasePackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/meta-location-search': {
@@ -1329,6 +1349,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMetaInterestSearchRoute: ApiMetaInterestSearchRoute,
   ApiMetaInterestSuggestionsRoute: ApiMetaInterestSuggestionsRoute,
   ApiMetaLocationSearchRoute: ApiMetaLocationSearchRoute,
+  ApiPurchasePackRoute: ApiPurchasePackRoute,
   ApiRequestChangeRoute: ApiRequestChangeRoute,
   ApiRequestRevisionRoute: ApiRequestRevisionRoute,
   ApiRequestsRoute: ApiRequestsRoute,

@@ -114,7 +114,10 @@ export const Route = createFileRoute("/api/requests")({
         if (!membership || membership.status !== "active") {
           return json({ ok: false, error: "sin_membresia" }, { status: 403 });
         }
-        if (membership.requests_used >= membership.requests_quota) {
+        if (
+          membership.requests_used >=
+          membership.requests_quota + membership.bonus_requests_quota
+        ) {
           return json({ ok: false, error: "sin_saldo" }, { status: 403 });
         }
 

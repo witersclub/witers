@@ -27,9 +27,11 @@ import {
   Magnet,
   MapPin,
   MessageCircle,
+  PackagePlus,
   PawPrint,
   Pencil,
   Plane,
+  Plus,
   RefreshCw,
   Rocket,
   Route as RouteIcon,
@@ -43,6 +45,7 @@ import {
   Users,
   UtensilsCrossed,
   Wallet,
+  X,
   type LucideIcon,
 } from "lucide-react";
 
@@ -57,6 +60,7 @@ import {
   ProductPhotoUploadPicker,
   uploadReferenceFile,
 } from "../components/witers/lab-pickers";
+import { IMAGE_PACKS } from "../lib/image-packs";
 import { getPlan } from "../lib/membership-plans";
 import { consumeTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe, type Me } from "../lib/witers-client";
@@ -205,6 +209,11 @@ function Panel() {
   // Campañas tab (so that's what's underneath once the builder closes)
   // and opens the interactive builder for that specific request.
   const [pautaRequest, setPautaRequest] = useState<PautaRequestInfo | null>(null);
+  // "Paquetes de imágenes" — a one-time top-up on solicitudes, available on
+  // any active plan, stacking on top of the monthly quota with no
+  // expiration. A modal (not a page) since it's a quick add-on purchase,
+  // not a whole new flow like activating a membership.
+  const [packsOpen, setPacksOpen] = useState(false);
   // "Piezas creadas" burst pop-up — mouse click opens instantly, touch
   // needs a real hold (not just a tap) so it doesn't fire by accident
   // while scrolling. Hooks must live above every early return below, so
@@ -319,7 +328,9 @@ function Panel() {
 
   const membership = me.data.membership;
   const active = membership?.status === "active";
-  const remaining = membership ? membership.requests_quota - membership.requests_used : 0;
+  const remaining = membership
+    ? membership.requests_quota + membership.bonus_requests_quota - membership.requests_used
+    : 0;
   const rows = requests.data?.requests ?? [];
   // "Impact panel" stats — closes the loop from pedir → pieza → campaña →
   // resultado, and doubles as the client's own history read back as an
@@ -506,35 +517,54 @@ function Panel() {
                 </p>
               </div>
 
-              <div className="wit-glass flex items-center gap-4 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
-                    Solicitudes disponibles
-                  </p>
-                  <p className="font-wit-mono text-3xl font-semibold text-wit-ink">
-                    {active ? remaining : 0}
-                    <span className="text-base text-wit-gray">
-                      /{membership?.requests_quota ?? 20}
+              <div className="flex flex-col items-stretch gap-2">
+                <div className="wit-glass flex items-center gap-4 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
+                      Solicitudes disponibles
+                    </p>
+                    <p className="font-wit-mono text-3xl font-semibold text-wit-ink">
+                      {active ? remaining : 0}
+                      <span className="text-base text-wit-gray">
+                        /
+                        {(membership?.requests_quota ?? 20) +
+                          (membership?.bonus_requests_quota ?? 0)}
+                      </span>
+                    </p>
+                    {membership && membership.bonus_requests_quota > 0 ? (
+                      <p className="mt-0.5 text-[11px] font-semibold text-wit-blue">
+                        +{membership.bonus_requests_quota} de paquetes comprados
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                    >
+                      {active ? `${getPlan(membership?.plan).nombre} activa` : "Sin membresía"}
                     </span>
-                  </p>
+                    {active && membership ? (
+                      <span className="font-wit-mono text-[11px] text-wit-gray">
+                        $
+                        {membership.price_mxn.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{" "}
+                        MXN/mes + IVA
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                {active ? (
+                  <button
+                    type="button"
+                    onClick={() => setPacksOpen(true)}
+                    className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/25 bg-white px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/5"
                   >
-                    {active ? `${getPlan(membership?.plan).nombre} activa` : "Sin membresía"}
-                  </span>
-                  {active && membership ? (
-                    <span className="font-wit-mono text-[11px] text-wit-gray">
-                      $
-                      {membership.price_mxn.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}{" "}
-                      MXN/mes + IVA
-                    </span>
-                  ) : null}
-                </div>
+                    <PackagePlus className="h-3.5 w-3.5" strokeWidth={2.4} />
+                    Comprar paquete de imágenes
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -759,6 +789,19 @@ function Panel() {
                 }}
               />
             </div>,
+            document.body,
+          )
+        : null}
+
+      {packsOpen
+        ? createPortal(
+            <ImagePacksModal
+              onClose={() => setPacksOpen(false)}
+              onPurchased={() => {
+                void qc.invalidateQueries({ queryKey: ["me"] });
+                setPacksOpen(false);
+              }}
+            />,
             document.body,
           )
         : null}
@@ -1314,6 +1357,8 @@ function MembershipSummaryCard({
         year: "numeric",
       })
     : null;
+  const qc = useQueryClient();
+  const [packsOpen, setPacksOpen] = useState(false);
 
   return (
     <section className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
@@ -1361,8 +1406,14 @@ function MembershipSummaryCard({
                 Solicitudes usadas
               </p>
               <p className="mt-0.5 font-wit-mono text-lg font-semibold text-wit-ink">
-                {membership.requests_used}/{membership.requests_quota}
+                {membership.requests_used}/
+                {membership.requests_quota + membership.bonus_requests_quota}
               </p>
+              {membership.bonus_requests_quota > 0 ? (
+                <p className="mt-0.5 text-[11px] font-semibold text-wit-blue">
+                  +{membership.bonus_requests_quota} de paquetes
+                </p>
+              ) : null}
             </div>
             {activatedLabel ? (
               <div>
@@ -1374,6 +1425,17 @@ function MembershipSummaryCard({
             ) : null}
           </div>
 
+          {active ? (
+            <button
+              type="button"
+              onClick={() => setPacksOpen(true)}
+              className="flex w-full items-center justify-center gap-1.5 rounded-full border border-wit-blue/25 px-4 py-2.5 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/5"
+            >
+              <PackagePlus className="h-3.5 w-3.5" strokeWidth={2.4} />
+              Comprar paquete de imágenes
+            </button>
+          ) : null}
+
           <p className="text-xs text-wit-gray">
             <Link
               to="/terminos"
@@ -1384,7 +1446,263 @@ function MembershipSummaryCard({
           </p>
         </div>
       )}
+
+      {packsOpen
+        ? createPortal(
+            <ImagePacksModal
+              onClose={() => setPacksOpen(false)}
+              onPurchased={() => {
+                void qc.invalidateQueries({ queryKey: ["me"] });
+                setPacksOpen(false);
+              }}
+            />,
+            document.body,
+          )
+        : null}
     </section>
+  );
+}
+
+// One-time "paquetes de imágenes" purchase — a modal, not a page, since it's
+// a quick add-on on top of an already-active membership (see
+// /api/purchase-pack). Reuses the same sandbox card-form pattern as
+// /checkout: card fields accepted for UX completeness, payment always
+// "succeeds" until a real gateway is connected.
+function ImagePacksModal({
+  onClose,
+  onPurchased,
+}: {
+  onClose: () => void;
+  onPurchased: () => void;
+}) {
+  const [selected, setSelected] = useState<(typeof IMAGE_PACKS)[number] | null>(null);
+  const [card, setCard] = useState({ name: "", number: "", exp: "", cvc: "" });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const fmt = (n: number) =>
+    "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  async function pay(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selected) return;
+    setError(null);
+    const digits = card.number.replace(/\s+/g, "");
+    if (digits.length < 15 || digits.length > 16) {
+      setError("Revisa el número de tarjeta.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/purchase-pack", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          cardName: card.name,
+          cardLast4: digits.slice(-4),
+          packId: selected.id,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) {
+        setError("No pudimos procesar el pago. Intenta de nuevo.");
+        return;
+      }
+      onPurchased();
+    } catch {
+      setError("No pudimos procesar el pago. Intenta de nuevo.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-wit-ink/50 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-7 shadow-[0_30px_80px_rgba(5,13,40,0.25)]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-lg font-bold text-wit-ink">Paquetes de imágenes</p>
+            <p className="mt-1 text-sm text-wit-gray">
+              Solicitudes extra sin subir de plan. No expiran.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-full p-1.5 text-wit-gray hover:bg-wit-mist/50 hover:text-wit-ink"
+            aria-label="Cerrar"
+          >
+            <X className="h-5 w-5" strokeWidth={2.25} />
+          </button>
+        </div>
+
+        {!selected ? (
+          <div className="mt-6 space-y-3">
+            {IMAGE_PACKS.map((pack) => (
+              <button
+                key={pack.id}
+                type="button"
+                onClick={() => setSelected(pack)}
+                className="flex w-full items-center justify-between gap-4 rounded-2xl border border-wit-ink/10 p-4 text-left transition-colors hover:border-wit-blue hover:bg-wit-blue/5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-wit-blue/10 text-wit-blue">
+                    <Images className="h-5 w-5" strokeWidth={2.2} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-wit-ink">{pack.images} imágenes</p>
+                    <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                      30% de descuento
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-wit-mono text-base font-bold text-wit-ink">
+                    {fmt(pack.precioPromo)}
+                  </p>
+                  <p className="font-wit-mono text-[11px] text-wit-gray line-through">
+                    {fmt(pack.precioRegular)}
+                  </p>
+                </div>
+              </button>
+            ))}
+            <p className="pt-1 text-center text-[11px] leading-relaxed text-wit-gray">
+              Precios en MXN + IVA. Se suman a tu saldo mensual y se quedan disponibles hasta que
+              los uses.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={pay} className="mt-6">
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              className="flex items-center gap-1 text-xs font-semibold text-wit-gray hover:text-wit-ink"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.25} />
+              Elegir otro paquete
+            </button>
+
+            <div className="mt-3 flex items-center justify-between rounded-2xl bg-wit-navy p-4 text-white">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">
+                  {selected.images} imágenes
+                </p>
+                <p className="mt-1 font-wit-mono text-xl font-semibold">
+                  {fmt(selected.precioPromo)}{" "}
+                  <span className="text-xs font-semibold text-white/60 line-through">
+                    {fmt(selected.precioRegular)}
+                  </span>
+                </p>
+              </div>
+              <Plus className="h-5 w-5 shrink-0 text-white/40" strokeWidth={2} />
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label htmlFor="pkname" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+                  Nombre en la tarjeta
+                </label>
+                <input
+                  id="pkname"
+                  type="text"
+                  required
+                  minLength={2}
+                  value={card.name}
+                  onChange={(e) => setCard({ ...card, name: e.target.value })}
+                  className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+                  placeholder="Como aparece en la tarjeta"
+                />
+              </div>
+              <div>
+                <label htmlFor="pknum" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+                  Número de tarjeta
+                </label>
+                <input
+                  id="pknum"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="cc-number"
+                  required
+                  value={card.number}
+                  onChange={(e) =>
+                    setCard({
+                      ...card,
+                      number: e.target.value
+                        .replace(/[^\d]/g, "")
+                        .replace(/(\d{4})(?=\d)/g, "$1 ")
+                        .slice(0, 19),
+                    })
+                  }
+                  className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 font-wit-mono text-sm outline-none focus:border-wit-blue"
+                  placeholder="4242 4242 4242 4242"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label
+                    htmlFor="pkexp"
+                    className="mb-1.5 block text-sm font-semibold text-wit-ink"
+                  >
+                    Vencimiento
+                  </label>
+                  <input
+                    id="pkexp"
+                    type="text"
+                    required
+                    value={card.exp}
+                    onChange={(e) =>
+                      setCard({
+                        ...card,
+                        exp: e.target.value
+                          .replace(/[^\d]/g, "")
+                          .replace(/(\d{2})(?=\d)/, "$1/")
+                          .slice(0, 5),
+                      })
+                    }
+                    className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 font-wit-mono text-sm outline-none focus:border-wit-blue"
+                    placeholder="MM/AA"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="pkcvc"
+                    className="mb-1.5 block text-sm font-semibold text-wit-ink"
+                  >
+                    CVC
+                  </label>
+                  <input
+                    id="pkcvc"
+                    type="password"
+                    required
+                    value={card.cvc}
+                    onChange={(e) =>
+                      setCard({ ...card, cvc: e.target.value.replace(/[^\d]/g, "").slice(0, 4) })
+                    }
+                    className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 font-wit-mono text-sm outline-none focus:border-wit-blue"
+                    placeholder="123"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {error ? (
+              <p className="mt-4 rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-5 w-full rounded-2xl bg-wit-blue px-6 py-3.5 text-sm font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
+            >
+              {loading ? "Procesando pago..." : `Pagar ${fmt(selected.precioPromo)} MXN`}
+            </button>
+            <p className="mt-3 text-center text-[11px] leading-relaxed text-wit-gray">
+              Entorno de pago en modo de activación directa. La pasarela definitiva (Stripe o
+              Mercado Pago) se conecta sin cambiar este flujo.
+            </p>
+          </form>
+        )}
+      </div>
+    </div>
   );
 }
 

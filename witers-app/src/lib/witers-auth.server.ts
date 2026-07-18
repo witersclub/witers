@@ -81,6 +81,7 @@ export type Membership = {
   price_mxn: number;
   requests_quota: number;
   requests_used: number;
+  bonus_requests_quota: number;
   activated_at: string | null;
 };
 
@@ -173,4 +174,3 @@ export async function requireStaffUser(
   }
   return { ok: true, user };
 }
-
