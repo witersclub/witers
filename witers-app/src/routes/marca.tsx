@@ -76,6 +76,9 @@ const BRAND_EXAMPLES: { src: string; alt: string }[] = [
   { src: "/assets/brand-example-belle.webp", alt: "Identidad de marca Belle Intimate" },
   { src: "/assets/brand-example-hygge.webp", alt: "Identidad de marca Hygge Home" },
   { src: "/assets/brand-example-fitzone.webp", alt: "Identidad de marca FitZone" },
+  { src: "/assets/brand-example-alma.webp", alt: "Identidad de marca Alma Pilates Studio" },
+  { src: "/assets/brand-example-lumina.webp", alt: "Identidad de marca Lumina Home" },
+  { src: "/assets/brand-example-noa.webp", alt: "Identidad de marca Noa Wear" },
 ];
 
 // Twenty example boutique brand names, styled as the kind of concept
