@@ -91,13 +91,21 @@ const LOGO_TILES: {
   text: string;
   icon?: typeof Leaf;
   script?: boolean;
+  // Real client logos slotted in — these tiles render the actual image
+  // instead of a name-and-color placeholder like the rest of the grid.
+  image?: string;
 }[] = [
   { name: "LUMINA", bg: "bg-[#e9d3ae]", text: "text-wit-ink", icon: Leaf },
-  { name: "NOA", bg: "bg-[#c1425a]", text: "text-white" },
+  { name: "NOA", bg: "bg-[#c1425a]", text: "text-white", image: "/assets/tile-logo-noa.webp" },
   { name: "LUNEA", bg: "bg-[#4c6b3f]", text: "text-white", icon: Leaf },
   { name: "MÍA", bg: "bg-[#a99bd6]", text: "text-white", icon: Sparkles },
   { name: "ALMA", bg: "bg-[#e9caa0]", text: "text-wit-ink" },
-  { name: "B", bg: "bg-[#f3c9d6]", text: "text-[#a83552]" },
+  {
+    name: "FITZONE",
+    bg: "bg-black",
+    text: "text-white",
+    image: "/assets/tile-logo-fitzone.webp",
+  },
   { name: "éclat", bg: "bg-[#e7f1ea]", text: "text-[#c14a52]", script: true },
   { name: "NUVIA", bg: "bg-[#e08a3e]", text: "text-white", icon: Leaf },
   { name: "SERENA", bg: "bg-[#7c5a72]", text: "text-white" },
@@ -137,27 +145,38 @@ function TabletLogoGrid({ className = "" }: { className?: string }) {
           </div>
 
           <div className="mt-4 grid grid-cols-5 gap-2 sm:mt-5 sm:gap-2.5">
-            {LOGO_TILES.map((t) => (
-              <div
-                key={t.name}
-                className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg shadow-[0_6px_14px_rgba(0,0,0,0.2)] sm:rounded-xl ${t.bg}`}
-              >
-                {t.icon ? (
-                  <t.icon
-                    size={11}
-                    strokeWidth={1.75}
-                    className={`${t.text} sm:h-[14px] sm:w-[14px]`}
-                  />
-                ) : null}
-                <span
-                  className={`px-0.5 text-center text-[6px] font-bold leading-none sm:text-[8px] ${t.text} ${
-                    t.script ? "italic" : ""
-                  }`}
+            {LOGO_TILES.map((t) =>
+              t.image ? (
+                <img
+                  key={t.name}
+                  src={t.image}
+                  alt={t.name}
+                  loading="lazy"
+                  draggable={false}
+                  className="aspect-square rounded-lg object-cover shadow-[0_6px_14px_rgba(0,0,0,0.2)] sm:rounded-xl"
+                />
+              ) : (
+                <div
+                  key={t.name}
+                  className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg shadow-[0_6px_14px_rgba(0,0,0,0.2)] sm:rounded-xl ${t.bg}`}
                 >
-                  {t.name}
-                </span>
-              </div>
-            ))}
+                  {t.icon ? (
+                    <t.icon
+                      size={11}
+                      strokeWidth={1.75}
+                      className={`${t.text} sm:h-[14px] sm:w-[14px]`}
+                    />
+                  ) : null}
+                  <span
+                    className={`px-0.5 text-center text-[6px] font-bold leading-none sm:text-[8px] ${t.text} ${
+                      t.script ? "italic" : ""
+                    }`}
+                  >
+                    {t.name}
+                  </span>
+                </div>
+              ),
+            )}
           </div>
         </div>
       </div>
