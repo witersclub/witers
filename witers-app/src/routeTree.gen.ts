@@ -17,6 +17,7 @@ import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as PautaRouteImport } from './routes/pauta'
 import { Route as PanelRouteImport } from './routes/panel'
 import { Route as NuestraHistoriaRouteImport } from './routes/nuestra-historia'
+import { Route as MarcaRouteImport } from './routes/marca'
 import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as AdminLabRouteImport } from './routes/admin-lab'
@@ -106,6 +107,11 @@ const PanelRoute = PanelRouteImport.update({
 const NuestraHistoriaRoute = NuestraHistoriaRouteImport.update({
   id: '/nuestra-historia',
   path: '/nuestra-historia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarcaRoute = MarcaRouteImport.update({
+  id: '/marca',
+  path: '/marca',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IngresarRoute = IngresarRouteImport.update({
@@ -370,6 +376,7 @@ export interface FileRoutesByFullPath {
   '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
+  '/marca': typeof MarcaRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
@@ -430,6 +437,7 @@ export interface FileRoutesByTo {
   '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
+  '/marca': typeof MarcaRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
@@ -491,6 +499,7 @@ export interface FileRoutesById {
   '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
   '/ingresar': typeof IngresarRoute
+  '/marca': typeof MarcaRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
@@ -553,6 +562,7 @@ export interface FileRouteTypes {
     | '/admin-lab'
     | '/checkout'
     | '/ingresar'
+    | '/marca'
     | '/nuestra-historia'
     | '/panel'
     | '/pauta'
@@ -613,6 +623,7 @@ export interface FileRouteTypes {
     | '/admin-lab'
     | '/checkout'
     | '/ingresar'
+    | '/marca'
     | '/nuestra-historia'
     | '/panel'
     | '/pauta'
@@ -673,6 +684,7 @@ export interface FileRouteTypes {
     | '/admin-lab'
     | '/checkout'
     | '/ingresar'
+    | '/marca'
     | '/nuestra-historia'
     | '/panel'
     | '/pauta'
@@ -734,6 +746,7 @@ export interface RootRouteChildren {
   AdminLabRoute: typeof AdminLabRoute
   CheckoutRoute: typeof CheckoutRoute
   IngresarRoute: typeof IngresarRoute
+  MarcaRoute: typeof MarcaRoute
   NuestraHistoriaRoute: typeof NuestraHistoriaRoute
   PanelRoute: typeof PanelRoute
   PautaRoute: typeof PautaRoute
@@ -845,6 +858,13 @@ declare module '@tanstack/react-router' {
       path: '/nuestra-historia'
       fullPath: '/nuestra-historia'
       preLoaderRoute: typeof NuestraHistoriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marca': {
+      id: '/marca'
+      path: '/marca'
+      fullPath: '/marca'
+      preLoaderRoute: typeof MarcaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ingresar': {
@@ -1206,6 +1226,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLabRoute: AdminLabRoute,
   CheckoutRoute: CheckoutRoute,
   IngresarRoute: IngresarRoute,
+  MarcaRoute: MarcaRoute,
   NuestraHistoriaRoute: NuestraHistoriaRoute,
   PanelRoute: PanelRoute,
   PautaRoute: PautaRoute,
