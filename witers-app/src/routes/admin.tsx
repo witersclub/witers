@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
+  ArrowRight,
   ClipboardList,
   CreditCard,
   LayoutDashboard,
@@ -263,6 +264,12 @@ function KpiCard({
       </p>
       <p className="mt-1 font-wit-mono text-2xl font-semibold text-wit-ink">{value}</p>
       {subtext ? <p className="mt-1 text-xs font-medium text-wit-gray">{subtext}</p> : null}
+      {onClick ? (
+        <p className={`mt-2 flex items-center gap-1 text-xs font-bold ${a.text}`}>
+          Ver solicitudes
+          <ArrowRight size={13} strokeWidth={2.5} />
+        </p>
+      ) : null}
     </Tag>
   );
 }
@@ -336,8 +343,16 @@ function DashboardView({
     needsAttention === 0
       ? undefined
       : [
-          unclaimedCount > 0 ? `${unclaimedCount} sin tomar` : null,
-          changeRequestedCount > 0 ? `${changeRequestedCount} cambio solicitado` : null,
+          unclaimedCount > 0
+            ? unclaimedCount === 1
+              ? "1 solicitud sin diseñador asignado"
+              : `${unclaimedCount} solicitudes sin diseñador asignado`
+            : null,
+          changeRequestedCount > 0
+            ? changeRequestedCount === 1
+              ? "1 cambio reportado por un cliente"
+              : `${changeRequestedCount} cambios reportados por clientes`
+            : null,
         ]
           .filter(Boolean)
           .join(" · ");
