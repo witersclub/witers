@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
+import { useDraggableMarquee } from "../hooks/use-draggable-marquee";
 import { useMe } from "../lib/witers-client";
 
 export const Route = createFileRoute("/marca")({
@@ -50,6 +51,51 @@ function MarcaLanding() {
 }
 
 /* ---------------- 1. HERO ---------------- */
+
+// Real examples of the deliverable — same identity applied across a
+// social profile, packaging and a business card. Runs as a small,
+// continuous right-to-left marquee (same technique as the "Resultados
+// reales" section on the homepage) instead of one static image.
+const BRAND_EXAMPLES: { src: string; alt: string }[] = [
+  {
+    src: "/assets/brand-mockup.webp",
+    alt: "Identidad de marca WITERS aplicada a Instagram, vaso, bolsa y tarjeta de presentación",
+  },
+  { src: "/assets/brand-example-mia.webp", alt: "Identidad de marca MÍA Accesorios" },
+  {
+    src: "/assets/brand-example-montenegro.webp",
+    alt: "Identidad de marca Montenegro, café de especialidad",
+  },
+  { src: "/assets/brand-example-belle.webp", alt: "Identidad de marca Belle Intimate" },
+  { src: "/assets/brand-example-hygge.webp", alt: "Identidad de marca Hygge Home" },
+  { src: "/assets/brand-example-fitzone.webp", alt: "Identidad de marca FitZone" },
+];
+
+function HeroMarquee() {
+  // Duplicated back to back so the track can loop seamlessly.
+  const track = [...BRAND_EXAMPLES, ...BRAND_EXAMPLES];
+  const { trackRef, dragHandlers } = useDraggableMarquee(track.length);
+  return (
+    <div className="wit-marquee-mask relative h-[380px] overflow-hidden rounded-[28px] sm:h-[440px] md:h-[500px]">
+      <div
+        ref={trackRef}
+        {...dragHandlers}
+        className="flex h-full w-max cursor-grab touch-pan-y gap-4 active:cursor-grabbing"
+      >
+        {track.map((b, i) => (
+          <img
+            key={i}
+            src={b.src}
+            alt={b.alt}
+            loading="lazy"
+            draggable={false}
+            className="aspect-[3/4] h-full shrink-0 rounded-[20px] object-cover shadow-[0_30px_70px_rgba(5,13,40,0.25)]"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Hero() {
   const me = useMe();
@@ -102,12 +148,8 @@ function Hero() {
           </div>
         </div>
 
-        <div className="wit-rise wit-rise-d1 mx-auto w-full max-w-md">
-          <img
-            src="/assets/brand-mockup.webp"
-            alt="Ejemplo de identidad de marca aplicada a Instagram, vaso, bolsa y tarjeta de presentación"
-            className="w-full rounded-[28px] shadow-[0_40px_100px_rgba(5,13,40,0.28)]"
-          />
+        <div className="wit-rise wit-rise-d1 mx-auto w-full max-w-md lg:max-w-none">
+          <HeroMarquee />
         </div>
       </div>
     </section>
