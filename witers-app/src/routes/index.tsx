@@ -609,6 +609,16 @@ function CtaFinal() {
 
 /* ---------------- 9. MEMBRESÍA ---------------- */
 
+// Essential stays brand blue; Grow (the "middle" tier) reads as platinum —
+// a brushed silver gradient, not another shade of blue — and Scale reads as
+// black, so the three cards feel like a visible step up rather than three
+// blue boxes with different numbers.
+const TIER_HEADER_BG: Record<string, string> = {
+  essential: "bg-wit-blue",
+  grow: "bg-[linear-gradient(135deg,#aeb6c0,#6b7280_55%,#464b54)]",
+  scale: "bg-[linear-gradient(135deg,#2a2a2d,#000000_60%,#000000)]",
+};
+
 function Membresia() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
@@ -648,18 +658,16 @@ function Membresia() {
               <div
                 key={m.id}
                 className={`relative flex flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_40px_120px_rgba(0,71,255,0.25)] ${
-                  m.destacada ? "ring-2 ring-[#5c85ff] lg:-translate-y-4" : ""
+                  m.destacada ? "ring-2 ring-[#9aa3b2] lg:-translate-y-4" : ""
                 }`}
               >
-                {m.destacada ? (
-                  <span className="absolute right-5 top-5 z-10 rounded-full bg-white px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-wit-blue">
-                    Más popular
-                  </span>
-                ) : null}
-                <div
-                  className={`px-7 py-6 text-white ${m.destacada ? "bg-wit-navy" : "bg-wit-blue"}`}
-                >
-                  <p className="text-xs font-bold uppercase tracking-[0.28em] text-white/80">
+                <div className={`px-7 py-6 text-white ${TIER_HEADER_BG[m.id]}`}>
+                  {m.destacada ? (
+                    <span className="mx-auto mb-2 block w-fit rounded-full bg-white px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-wit-blue">
+                      Más popular
+                    </span>
+                  ) : null}
+                  <p className="text-center text-lg font-extrabold uppercase tracking-[0.12em] text-white">
                     WITERS {m.nombre}
                   </p>
                   <p className="mt-1.5 text-sm font-semibold text-white/95">{m.tagline}</p>
@@ -675,7 +683,10 @@ function Membresia() {
                     <span className="font-wit-mono text-4xl font-semibold leading-none">
                       {fmt(m.precioPromo)}
                     </span>
-                    <span className="pb-1 text-xs font-semibold text-white/85">MXN/mes + IVA</span>
+                    <span className="pb-1 text-xs font-semibold leading-tight text-white/85">
+                      MXN/mes
+                      <br />+ IVA
+                    </span>
                   </div>
                   <p className="mt-2 text-[11px] leading-relaxed text-white/60">
                     Precio especial válido tus primeros {PROMO_MESES} meses. Del mes{" "}
