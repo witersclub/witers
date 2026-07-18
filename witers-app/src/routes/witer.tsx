@@ -80,7 +80,18 @@ function DesignerPanel() {
     enabled: Boolean(platform.data),
     refetchInterval: 20_000,
   });
-  const [tab, setTab] = useState<"pendientes" | "finalizadas">("pendientes");
+  const [tab, setTab] = useState<"en_proceso" | "en_revision" | "finalizadas">("en_proceso");
+  // Lifted above the individual request cards: a card that just got sent
+  // moves out of "En proceso" the instant the list refetches, which would
+  // unmount a toast rendered inside it before the client ever saw it. Kept
+  // here instead, at the panel level, so it survives that move.
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function showToast(text: string) {
+    setToast(text);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  }
 
   if (platform.isLoading) {
     return (
@@ -165,41 +176,53 @@ function DesignerPanel() {
           </div>
         ) : (
           (() => {
-            const pending = data.requests.filter((r) => r.status !== "cerrada");
-            const finished = data.requests.filter((r) => r.status === "cerrada");
-            const shown = tab === "pendientes" ? pending : finished;
+            const enProceso = data.requests.filter((r) => r.status === "en_proceso");
+            const enRevision = data.requests.filter((r) => r.status === "completada");
+            const finalizadas = data.requests.filter(
+              (r) => r.status === "cerrada" || r.status === "rechazada",
+            );
+            const shown =
+              tab === "en_proceso" ? enProceso : tab === "en_revision" ? enRevision : finalizadas;
             return (
               <>
                 <div className="mt-8 flex gap-2 border-b border-wit-ink/10">
                   <DesignerTab
-                    active={tab === "pendientes"}
-                    onClick={() => setTab("pendientes")}
-                    label="Solicitudes pendientes"
-                    count={pending.length}
+                    active={tab === "en_proceso"}
+                    onClick={() => setTab("en_proceso")}
+                    label="En proceso"
+                    count={enProceso.length}
+                  />
+                  <DesignerTab
+                    active={tab === "en_revision"}
+                    onClick={() => setTab("en_revision")}
+                    label="En revisión"
+                    count={enRevision.length}
                   />
                   <DesignerTab
                     active={tab === "finalizadas"}
                     onClick={() => setTab("finalizadas")}
-                    label="Solicitudes finalizadas"
-                    count={finished.length}
+                    label="Finalizadas"
+                    count={finalizadas.length}
                   />
                 </div>
 
                 {shown.length === 0 ? (
                   <div className="wit-glass mt-6 rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
                     <p className="text-base font-semibold text-wit-ink">
-                      {tab === "pendientes"
-                        ? "No hay solicitudes pendientes."
-                        : "Aún no hay solicitudes finalizadas."}
+                      {tab === "en_proceso"
+                        ? "No hay solicitudes en proceso."
+                        : tab === "en_revision"
+                          ? "No hay piezas en revisión del cliente."
+                          : "Aún no hay solicitudes finalizadas."}
                     </p>
                   </div>
                 ) : (
                   <div className="mt-6 space-y-5">
                     {shown.map((r) =>
-                      tab === "finalizadas" ? (
-                        <FinishedRequestCard key={r.id} row={r} me={data.me} />
+                      tab !== "en_proceso" ? (
+                        <CompactRequestCard key={r.id} row={r} me={data.me} onSent={showToast} />
                       ) : r.claimed_by === data.me ? (
-                        <DesignerRequestCard key={r.id} row={r} me={data.me} />
+                        <DesignerRequestCard key={r.id} row={r} me={data.me} onSent={showToast} />
                       ) : (
                         <PendingCompactCard key={r.id} row={r} me={data.me} />
                       ),
@@ -211,6 +234,14 @@ function DesignerPanel() {
           })()
         )}
       </main>
+
+      {toast ? (
+        <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center px-5">
+          <span className="rounded-full bg-wit-navy px-5 py-2.5 text-sm font-bold text-white shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
+            ✓ {toast}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -357,12 +388,28 @@ function PendingCompactCard({ row, me }: { row: DesignerRequest; me: string }) {
   );
 }
 
-// Collapsed row for an already-finalized request: title, date, and the
-// delivered thumbnail only — clicking it expands into the full
-// DesignerRequestCard instead of always showing every field, since a
-// finalized request never needs action and was just cluttering the panel.
-function FinishedRequestCard({ row, me }: { row: DesignerRequest; me: string }) {
+// Collapsed row for a request that no longer needs the designer's action —
+// delivered (en revisión del cliente), rejected, or closed by the client.
+// Title, date, and the delivered thumbnail only — clicking it expands into
+// the full DesignerRequestCard for detail instead of always showing every
+// field, since none of these ever need action and were just cluttering the
+// panel.
+function CompactRequestCard({
+  row,
+  me,
+  onSent,
+}: {
+  row: DesignerRequest;
+  me: string;
+  onSent: (text: string) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const badge =
+    row.status === "cerrada"
+      ? { label: "✓ Finalizada", cls: "bg-wit-blue/10 text-wit-blue" }
+      : row.status === "rechazada"
+        ? { label: "✗ Rechazada", cls: "bg-red-50 text-red-600" }
+        : { label: "En revisión", cls: "bg-emerald-50 text-emerald-700" };
 
   const thumb = (() => {
     if (!row.results_json) return null;
@@ -389,7 +436,7 @@ function FinishedRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
         >
           ← Ocultar detalle
         </button>
-        <DesignerRequestCard row={row} me={me} />
+        <DesignerRequestCard row={row} me={me} onSent={onSent} />
       </div>
     );
   }
@@ -416,14 +463,22 @@ function FinishedRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
           {new Date(row.created_at + "Z").toLocaleString("es-MX")}
         </p>
       </div>
-      <span className="shrink-0 rounded-full bg-wit-blue/10 px-3 py-1 text-xs font-bold text-wit-blue">
-        ✓ Finalizada
+      <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${badge.cls}`}>
+        {badge.label}
       </span>
     </button>
   );
 }
 
-function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) {
+function DesignerRequestCard({
+  row,
+  me,
+  onSent,
+}: {
+  row: DesignerRequest;
+  me: string;
+  onSent: (text: string) => void;
+}) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -431,6 +486,8 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
   const [note, setNote] = useState(row.admin_note ?? "");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
 
   const allResults = (() => {
     if (!row.results_json) return [] as ResultItem[];
@@ -565,10 +622,15 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
       const fd = new FormData();
       fd.append("file", file);
       fd.append("requestId", row.id);
+      if (note.trim()) fd.append("adminNote", note.trim());
       const res = await fetch("/api/admin/deliver", { method: "POST", body: fd });
       const data = (await res.json()) as { ok: boolean };
-      setMsg(data.ok ? "Archivo entregado al cliente." : "No pudimos subir el archivo.");
-      setFile(null);
+      if (data.ok) {
+        setFile(null);
+        onSent("Pieza enviada");
+      } else {
+        setMsg("No pudimos subir el archivo.");
+      }
       await refresh();
     } catch {
       setMsg("No pudimos subir el archivo.");
@@ -577,17 +639,31 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
     }
   }
 
-  async function setStatus(status: string) {
-    setBusy("status");
+  async function reject() {
+    if (!rejectReason.trim()) return;
+    setBusy("reject");
     setMsg(null);
     try {
-      await fetch("/api/admin/update-request", {
+      const res = await fetch("/api/admin/update-request", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ requestId: row.id, status, adminNote: note || undefined }),
+        body: JSON.stringify({
+          requestId: row.id,
+          status: "rechazada",
+          adminNote: rejectReason.trim(),
+        }),
       });
+      const data = (await res.json()) as { ok: boolean };
+      if (data.ok) {
+        setRejecting(false);
+        setRejectReason("");
+        onSent("Pieza enviada");
+      } else {
+        setMsg("No pudimos rechazar la solicitud.");
+      }
       await refresh();
-      setMsg("Solicitud actualizada.");
+    } catch {
+      setMsg("No pudimos rechazar la solicitud.");
     } finally {
       setBusy(null);
     }
@@ -868,6 +944,14 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
         <p className="mt-4 rounded-xl bg-wit-blue/5 px-4 py-3 text-sm font-semibold text-wit-blue">
           ✓ El cliente marcó esta solicitud como correcta y finalizada. Ya no se puede editar.
         </p>
+      ) : row.status === "completada" ? (
+        <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+          ✓ Ya enviaste esta pieza — está en revisión del cliente.
+        </p>
+      ) : row.status === "rechazada" ? (
+        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+          ✗ Rechazaste esta solicitud{row.admin_note ? `: "${row.admin_note}"` : "."}
+        </p>
       ) : (
         <>
           <div className="mt-5 rounded-xl bg-wit-ice p-4">
@@ -883,53 +967,79 @@ function DesignerRequestCard({ row, me }: { row: DesignerRequest; me: string }) 
                   {file ? file.name.slice(0, 24) : "Elegir archivo final"}
                 </span>
               </label>
-              {file ? (
+            </div>
+            {file ? (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 animate-in fade-in slide-in-from-top-1 duration-200">
+                  ✓ Archivo subido
+                </span>
                 <button
                   type="button"
                   disabled={busy !== null}
                   onClick={deliver}
                   className="rounded-full bg-wit-navy px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue disabled:opacity-50"
                 >
-                  {busy === "deliver" ? "Subiendo..." : "Entregar archivo"}
+                  {busy === "deliver" ? "Enviando..." : "Enviar"}
                 </button>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="mt-4">
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Nota para el cliente (opcional)"
-              className="min-w-0 flex-1 rounded-lg border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue"
+              className="w-full rounded-lg border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue"
             />
-            <div className="flex gap-2">
+          </div>
+
+          <div className="mt-4">
+            {!rejecting ? (
               <button
                 type="button"
                 disabled={busy !== null}
-                onClick={() => setStatus("en_proceso")}
-                className="rounded-full border border-wit-ink/20 px-4 py-2 text-xs font-bold text-wit-ink hover:border-wit-blue"
-              >
-                En proceso
-              </button>
-              <button
-                type="button"
-                disabled={busy !== null}
-                onClick={() => setStatus("completada")}
-                className="rounded-full border border-emerald-300 px-4 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
-              >
-                Completada
-              </button>
-              <button
-                type="button"
-                disabled={busy !== null}
-                onClick={() => setStatus("rechazada")}
+                onClick={() => setRejecting(true)}
                 className="rounded-full border border-red-300 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
               >
-                Rechazada
+                Rechazar solicitud
               </button>
-            </div>
+            ) : (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                <label className="text-xs font-bold uppercase tracking-[0.12em] text-red-700">
+                  ¿Por qué se rechaza?
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={2}
+                  placeholder="Explica el motivo — el cliente lo verá."
+                  className="mt-1.5 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm outline-none focus:border-red-400"
+                />
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => {
+                      setRejecting(false);
+                      setRejectReason("");
+                    }}
+                    className="rounded-full border border-wit-ink/15 px-4 py-2 text-xs font-semibold text-wit-gray hover:border-wit-ink/30"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy !== null || !rejectReason.trim()}
+                    onClick={reject}
+                    className="rounded-full bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {busy === "reject" ? "Enviando..." : "Confirmar rechazo"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}

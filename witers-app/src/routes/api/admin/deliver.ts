@@ -22,6 +22,7 @@ export const Route = createFileRoute("/api/admin/deliver")({
         const form = await request.formData();
         const file = form.get("file");
         const requestId = String(form.get("requestId") ?? "");
+        const adminNote = String(form.get("adminNote") ?? "").trim();
         if (!(file instanceof File) || !requestId) {
           return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
         }
@@ -64,9 +65,11 @@ export const Route = createFileRoute("/api/admin/deliver")({
 
         await db()
           .prepare(
-            "UPDATE design_requests SET status = 'completada', updated_at = datetime('now') WHERE id = ?1",
+            `UPDATE design_requests
+             SET status = 'completada', admin_note = COALESCE(?2, admin_note), updated_at = datetime('now')
+             WHERE id = ?1`,
           )
-          .bind(requestId)
+          .bind(requestId, adminNote || null)
           .run();
 
         const notifyRow = await db()
@@ -89,4 +92,3 @@ export const Route = createFileRoute("/api/admin/deliver")({
     },
   },
 });
-
