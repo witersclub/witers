@@ -213,7 +213,7 @@ function Hero() {
                 so all 20 tiles stay proportionally correct, not redrawn. */}
             <div
               aria-hidden="true"
-              className="wit-float pointer-events-none absolute left-full top-0 z-10 ml-2 origin-top-left scale-[0.27] rotate-[6deg] lg:hidden"
+              className="wit-float pointer-events-none absolute left-full top-0 z-10 ml-[1.3cm] origin-top-left scale-[0.27] rotate-[6deg] lg:hidden"
             >
               <TabletLogoGrid className="w-[320px]" />
             </div>
