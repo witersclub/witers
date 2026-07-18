@@ -1,20 +1,27 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
+  BatteryFull,
   BookOpen,
+  Droplet,
   Facebook,
   FileStack,
+  Flower2,
+  Heart,
   Instagram,
+  Leaf,
   Linkedin,
   Music2,
   Palette,
   PenTool,
   Share2,
   Shapes,
+  ShoppingBag,
   Sparkles,
   Type,
   Users,
   Video,
+  Wifi,
   X as XIcon,
   Youtube,
 } from "lucide-react";
@@ -71,6 +78,90 @@ const BRAND_EXAMPLES: { src: string; alt: string }[] = [
   { src: "/assets/brand-example-fitzone.webp", alt: "Identidad de marca FitZone" },
 ];
 
+// Twenty example boutique brand names, styled as the kind of concept
+// tiles WITERS actually delivers — built with real HTML/CSS (not a
+// downscaled photo) so the names stay crisp and legible even this small,
+// and the whole thing never shows a mismatched background behind it.
+const LOGO_TILES: {
+  name: string;
+  bg: string;
+  text: string;
+  icon?: typeof Leaf;
+  script?: boolean;
+}[] = [
+  { name: "LUMINA", bg: "bg-[#e9d3ae]", text: "text-wit-ink", icon: Leaf },
+  { name: "NOA", bg: "bg-[#c1425a]", text: "text-white" },
+  { name: "LUNEA", bg: "bg-[#4c6b3f]", text: "text-white", icon: Leaf },
+  { name: "MÍA", bg: "bg-[#a99bd6]", text: "text-white", icon: Sparkles },
+  { name: "ALMA", bg: "bg-[#e9caa0]", text: "text-wit-ink" },
+  { name: "B", bg: "bg-[#f3c9d6]", text: "text-[#a83552]" },
+  { name: "éclat", bg: "bg-[#e7f1ea]", text: "text-[#c14a52]", script: true },
+  { name: "NUVIA", bg: "bg-[#e08a3e]", text: "text-white", icon: Leaf },
+  { name: "SERENA", bg: "bg-[#7c5a72]", text: "text-white" },
+  { name: "FLORA", bg: "bg-[#c9bce6]", text: "text-[#4a3a6b]", icon: Flower2 },
+  { name: "DULCE", bg: "bg-[#eeddbf]", text: "text-wit-ink", icon: Heart },
+  { name: "VITALIS", bg: "bg-[#3f6a92]", text: "text-white", icon: Leaf },
+  { name: "SANTÉ", bg: "bg-[#e8cfa3]", text: "text-wit-ink", icon: Flower2 },
+  { name: "BALANCE", bg: "bg-[#7fa88d]", text: "text-white" },
+  { name: "ELLA", bg: "bg-[#d2607d]", text: "text-white" },
+  { name: "MARÉ", bg: "bg-[#d9762f]", text: "text-white", icon: ShoppingBag },
+  { name: "ZENNA", bg: "bg-[#a99bd6]", text: "text-white" },
+  { name: "NUTRIKA", bg: "bg-[#dcead9]", text: "text-[#4a6b4a]", icon: Droplet },
+  { name: "ESENCIA", bg: "bg-[#e6cba5]", text: "text-wit-ink", icon: Flower2 },
+  { name: "FEMINA", bg: "bg-[#f3b8cb]", text: "text-[#a83552]" },
+];
+
+function TabletLogoGrid({ className = "" }: { className?: string }) {
+  return (
+    <div className={`[perspective:1600px] ${className}`}>
+      <div className="rounded-[32px] border-[10px] border-wit-ink bg-wit-ink shadow-[0_60px_120px_rgba(5,13,40,0.4)] transition-transform duration-500 [transform:rotateY(-8deg)_rotateX(3deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)]">
+        <div className="relative overflow-hidden rounded-[20px] bg-[linear-gradient(160deg,#1a5bff,#0b1f8f)] p-4 sm:p-6">
+          <div className="flex items-center justify-between text-[10px] font-semibold text-white/90 sm:text-xs">
+            <span>9:41</span>
+            <span className="flex items-center gap-1.5">
+              <Wifi size={12} strokeWidth={2.25} />
+              <BatteryFull size={14} strokeWidth={2} />
+            </span>
+          </div>
+
+          <div className="mt-3 text-center sm:mt-4">
+            <p className="font-wit text-3xl font-extrabold tracking-[0.1em] text-white sm:text-4xl">
+              WITERS
+            </p>
+            <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.3em] text-white/60 sm:text-[10px]">
+              Ingenio que impulsa marcas
+            </p>
+          </div>
+
+          <div className="mt-4 grid grid-cols-5 gap-2 sm:mt-5 sm:gap-2.5">
+            {LOGO_TILES.map((t) => (
+              <div
+                key={t.name}
+                className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg shadow-[0_6px_14px_rgba(0,0,0,0.2)] sm:rounded-xl ${t.bg}`}
+              >
+                {t.icon ? (
+                  <t.icon
+                    size={11}
+                    strokeWidth={1.75}
+                    className={`${t.text} sm:h-[14px] sm:w-[14px]`}
+                  />
+                ) : null}
+                <span
+                  className={`px-0.5 text-center text-[6px] font-bold leading-none sm:text-[8px] ${t.text} ${
+                    t.script ? "italic" : ""
+                  }`}
+                >
+                  {t.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HeroMarquee() {
   // Duplicated back to back so the track can loop seamlessly.
   const track = [...BRAND_EXAMPLES, ...BRAND_EXAMPLES];
@@ -107,22 +198,13 @@ function Hero() {
           <span className="inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-wit-mist/40 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue">
             Branding &amp; Rebranding
           </span>
-          <div className="relative w-fit">
-            <h1 className="mt-6 text-5xl font-extrabold leading-[1.02] tracking-tighter text-wit-ink md:text-6xl">
-              WITERS
-              <br />
-              <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
-                Brand
-              </span>
-            </h1>
-            <img
-              src="/assets/brand-tablet-float.webp"
-              alt=""
-              aria-hidden="true"
-              draggable={false}
-              className="wit-float pointer-events-none absolute left-full top-1/2 z-10 ml-[1cm] w-16 -translate-y-1/2 rotate-[7deg] drop-shadow-[0_20px_45px_rgba(5,13,40,0.28)] sm:ml-[2cm] sm:w-32 md:w-40"
-            />
-          </div>
+          <h1 className="mt-6 text-5xl font-extrabold leading-[1.02] tracking-tighter text-wit-ink md:text-6xl">
+            WITERS
+            <br />
+            <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
+              Brand
+            </span>
+          </h1>
           <p className="mt-5 text-2xl font-bold leading-snug text-wit-ink">
             Construimos la identidad que{" "}
             <span className="italic text-wit-blue">hará crecer tu negocio</span>.
@@ -157,9 +239,16 @@ function Hero() {
           </div>
         </div>
 
-        <div className="wit-rise wit-rise-d1 mx-auto w-full max-w-md lg:max-w-none">
-          <HeroMarquee />
+        <div className="wit-rise wit-rise-d1 wit-float mx-auto w-full max-w-md lg:max-w-lg">
+          <TabletLogoGrid />
         </div>
+      </div>
+
+      <div className="wit-rise wit-rise-d2 mt-16 px-5 md:mt-20 md:px-[110px]">
+        <p className="mb-5 text-center text-xs font-bold uppercase tracking-[0.3em] text-wit-gray lg:text-left">
+          Ejemplos de identidades que ya entregamos
+        </p>
+        <HeroMarquee />
       </div>
     </section>
   );
