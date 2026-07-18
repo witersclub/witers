@@ -62,6 +62,7 @@ import { Route as ApiAdminUpdateDesignerRouteImport } from './routes/api/admin/u
 import { Route as ApiAdminUpdateBrandProfileRouteImport } from './routes/api/admin/update-brand-profile'
 import { Route as ApiAdminToggleLogoVisibilityRouteImport } from './routes/api/admin/toggle-logo-visibility'
 import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overview'
+import { Route as ApiAdminGrantRequestsRouteImport } from './routes/api/admin/grant-requests'
 import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
 import { Route as ApiAdminDeliverRouteImport } from './routes/api/admin/deliver'
 import { Route as ApiAdminDeleteRequestRouteImport } from './routes/api/admin/delete-request'
@@ -342,6 +343,11 @@ const ApiAdminOverviewRoute = ApiAdminOverviewRouteImport.update({
   path: '/api/admin/overview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminGrantRequestsRoute = ApiAdminGrantRequestsRouteImport.update({
+  id: '/api/admin/grant-requests',
+  path: '/api/admin/grant-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminDiscardResultRoute = ApiAdminDiscardResultRouteImport.update({
   id: '/api/admin/discard-result',
   path: '/api/admin/discard-result',
@@ -447,6 +453,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
+  '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
@@ -513,6 +520,7 @@ export interface FileRoutesByTo {
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
+  '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
@@ -580,6 +588,7 @@ export interface FileRoutesById {
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
+  '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
@@ -648,6 +657,7 @@ export interface FileRouteTypes {
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
+    | '/api/admin/grant-requests'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/update-brand-profile'
@@ -714,6 +724,7 @@ export interface FileRouteTypes {
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
+    | '/api/admin/grant-requests'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/update-brand-profile'
@@ -780,6 +791,7 @@ export interface FileRouteTypes {
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/discard-result'
+    | '/api/admin/grant-requests'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/update-brand-profile'
@@ -847,6 +859,7 @@ export interface RootRouteChildren {
   ApiAdminDeleteRequestRoute: typeof ApiAdminDeleteRequestRoute
   ApiAdminDeliverRoute: typeof ApiAdminDeliverRoute
   ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
+  ApiAdminGrantRequestsRoute: typeof ApiAdminGrantRequestsRoute
   ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
   ApiAdminToggleLogoVisibilityRoute: typeof ApiAdminToggleLogoVisibilityRoute
   ApiAdminUpdateBrandProfileRoute: typeof ApiAdminUpdateBrandProfileRoute
@@ -1241,6 +1254,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminOverviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/grant-requests': {
+      id: '/api/admin/grant-requests'
+      path: '/api/admin/grant-requests'
+      fullPath: '/api/admin/grant-requests'
+      preLoaderRoute: typeof ApiAdminGrantRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/discard-result': {
       id: '/api/admin/discard-result'
       path: '/api/admin/discard-result'
@@ -1367,6 +1387,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminDeleteRequestRoute: ApiAdminDeleteRequestRoute,
   ApiAdminDeliverRoute: ApiAdminDeliverRoute,
   ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
+  ApiAdminGrantRequestsRoute: ApiAdminGrantRequestsRoute,
   ApiAdminOverviewRoute: ApiAdminOverviewRoute,
   ApiAdminToggleLogoVisibilityRoute: ApiAdminToggleLogoVisibilityRoute,
   ApiAdminUpdateBrandProfileRoute: ApiAdminUpdateBrandProfileRoute,

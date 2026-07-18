@@ -29,7 +29,7 @@ export const Route = createFileRoute("/api/admin/overview")({
         const requests = await db()
           .prepare(
             `SELECT r.*, u.email AS user_email, u.name AS user_name, d.name AS claimed_by_name,
-               (SELECT json_group_array(json_object('id', res.id, 'kind', res.kind, 'image_url', res.image_url, 'r2_key', res.r2_key))
+               (SELECT json_group_array(json_object('id', res.id, 'kind', res.kind, 'image_url', res.image_url, 'r2_key', res.r2_key, 'created_at', res.created_at))
                 FROM request_results res WHERE res.request_id = r.id) AS results_json
              FROM design_requests r
              JOIN users u ON u.id = r.user_id

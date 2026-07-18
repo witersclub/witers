@@ -12,7 +12,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Area,
@@ -48,6 +48,7 @@ type AdminUser = {
   membership_plan: string | null;
   requests_quota: number | null;
   requests_used: number | null;
+  bonus_requests_quota: number | null;
   total_paid_mxn: number;
   // One membership, one business — set once a member submits their first
   // request, then locked (see /api/requests). Null means no request yet.
@@ -88,6 +89,8 @@ type AdminRequest = {
   created_at: string;
   user_email: string;
   user_name: string;
+  claimed_by: string | null;
+  claimed_at: string | null;
   claimed_by_name: string | null;
   results_json: string | null;
   // ChatGPT-polished version of the prompt below — spelling/wording
@@ -96,7 +99,13 @@ type AdminRequest = {
   ai_prompt: string | null;
 };
 
-type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
+type ResultItem = {
+  id: string;
+  kind: string;
+  image_url: string | null;
+  r2_key: string | null;
+  created_at?: string;
+};
 
 type AdminPayment = {
   id: string;
@@ -716,7 +725,7 @@ function Admin() {
           ) : tab === "solicitudes" ? (
             <RequestsAdmin rows={data.requests} />
           ) : tab === "diseñadores" ? (
-            <DesignersPanel rows={data.designers} />
+            <DesignersPanel rows={data.designers} requests={data.requests} />
           ) : tab === "usuarios" ? (
             <UsersTable rows={data.users} />
           ) : (
@@ -1539,7 +1548,146 @@ function RequestCard({ row }: { row: AdminRequest }) {
 
 /* ---------- designers ---------- */
 
-function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
+// A piece counts as "delivered" once it's gone through the design team at
+// least once — completada (still open for the client), cerrada (closed) or
+// cambio_solicitado (a closed piece flagged for a post-close fix) all mean
+// the designer did the work. Only en_proceso means it's still pending.
+const DELIVERED_STATUSES = new Set(["completada", "cerrada", "cambio_solicitado"]);
+
+type DesignerMetrics = {
+  claimedCount: number;
+  completionRate: number | null; // 0-100
+  avgRating: number | null; // 0-5
+  noRevisionRate: number | null; // 0-100
+  avgDeliveryHours: number | null;
+};
+
+function computeDesignerMetrics(designerId: string, requests: AdminRequest[]): DesignerMetrics {
+  const claimed = requests.filter((r) => r.claimed_by === designerId);
+  const delivered = claimed.filter((r) => DELIVERED_STATUSES.has(r.status));
+
+  const ratings = delivered
+    .map((r) => r.satisfaction_rating)
+    .filter((n): n is number => typeof n === "number");
+  const avgRating = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
+
+  const noRevisionRate = delivered.length
+    ? (delivered.filter((r) => r.revisions_used === 0).length / delivered.length) * 100
+    : null;
+
+  // Real delivery time, not just design_requests.updated_at — that column
+  // gets overwritten again when a piece is later closed or reopened for a
+  // post-close change, which would silently corrupt this into "time to
+  // close" instead of "time to deliver". The first non-draft result's
+  // created_at is the actual moment the designer delivered.
+  const deliveryHours: number[] = [];
+  for (const r of delivered) {
+    if (!r.claimed_at || !r.results_json) continue;
+    let items: ResultItem[];
+    try {
+      items = JSON.parse(r.results_json) as ResultItem[];
+    } catch {
+      continue;
+    }
+    const firstDelivery = items
+      .filter((it) => it.kind !== "draft" && it.created_at)
+      .map((it) => new Date(it.created_at + "Z").getTime())
+      .sort((a, b) => a - b)[0];
+    if (!firstDelivery) continue;
+    const claimedAt = new Date(r.claimed_at + "Z").getTime();
+    const hours = (firstDelivery - claimedAt) / 3_600_000;
+    if (hours >= 0) deliveryHours.push(hours);
+  }
+  const avgDeliveryHours = deliveryHours.length
+    ? deliveryHours.reduce((a, b) => a + b, 0) / deliveryHours.length
+    : null;
+
+  return {
+    claimedCount: claimed.length,
+    completionRate: claimed.length ? (delivered.length / claimed.length) * 100 : null,
+    avgRating,
+    noRevisionRate,
+    avgDeliveryHours,
+  };
+}
+
+function MiniBar({
+  label,
+  valueLabel,
+  percent,
+  colorClass,
+}: {
+  label: string;
+  valueLabel: string;
+  percent: number | null;
+  colorClass: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3 text-[10px] font-semibold text-wit-gray">
+        <span>{label}</span>
+        <span className="font-wit-mono text-wit-ink">{percent === null ? "—" : valueLabel}</span>
+      </div>
+      <div className="mt-0.5 h-1.5 w-28 overflow-hidden rounded-full bg-wit-mist/60">
+        {percent !== null ? (
+          <div
+            className={`h-full rounded-full ${colorClass}`}
+            style={{ width: `${Math.max(4, Math.min(100, percent))}%` }}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function DesignerPerformanceCell({
+  designerId,
+  requests,
+  fastestAvgHours,
+}: {
+  designerId: string;
+  requests: AdminRequest[];
+  fastestAvgHours: number | null;
+}) {
+  const m = computeDesignerMetrics(designerId, requests);
+  if (m.claimedCount === 0) {
+    return <p className="text-xs text-wit-gray">Sin piezas tomadas aún</p>;
+  }
+  const speedPercent =
+    m.avgDeliveryHours !== null && fastestAvgHours !== null
+      ? (fastestAvgHours / m.avgDeliveryHours) * 100
+      : null;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <MiniBar
+        label="Finalización"
+        valueLabel={`${Math.round(m.completionRate ?? 0)}%`}
+        percent={m.completionRate}
+        colorClass="bg-wit-blue"
+      />
+      <MiniBar
+        label="Calificación"
+        valueLabel={`${(m.avgRating ?? 0).toFixed(1)}/5`}
+        percent={m.avgRating !== null ? (m.avgRating / 5) * 100 : null}
+        colorClass="bg-violet-500"
+      />
+      <MiniBar
+        label="Sin revisión"
+        valueLabel={`${Math.round(m.noRevisionRate ?? 0)}%`}
+        percent={m.noRevisionRate}
+        colorClass="bg-emerald-500"
+      />
+      <MiniBar
+        label="Velocidad"
+        valueLabel={`${Math.round(m.avgDeliveryHours ?? 0)}h prom.`}
+        percent={speedPercent}
+        colorClass="bg-amber-500"
+      />
+    </div>
+  );
+}
+
+function DesignersPanel({ rows, requests }: { rows: AdminDesigner[]; requests: AdminRequest[] }) {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -1547,6 +1695,17 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [editing, setEditing] = useState<AdminDesigner | null>(null);
+
+  // The "Velocidad" bar compares each designer against the fastest one on
+  // the team right now, not an arbitrary fixed target — there's no single
+  // "correct" delivery time across every kind of piece, but knowing who's
+  // fastest relative to their own teammates is directly actionable.
+  const fastestAvgHours = useMemo(() => {
+    const averages = rows
+      .map((d) => computeDesignerMetrics(d.id, requests).avgDeliveryHours)
+      .filter((h): h is number => h !== null && h > 0);
+    return averages.length ? Math.min(...averages) : null;
+  }, [rows, requests]);
 
   async function createDesigner(e: React.FormEvent) {
     e.preventDefault();
@@ -1633,6 +1792,7 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
               <th className="px-5 py-3.5">Diseñador</th>
               <th className="px-5 py-3.5">Tomadas</th>
               <th className="px-5 py-3.5">Entregadas</th>
+              <th className="px-5 py-3.5">Desempeño</th>
               <th className="px-5 py-3.5">Alta</th>
               <th className="px-5 py-3.5" />
             </tr>
@@ -1646,6 +1806,13 @@ function DesignersPanel({ rows }: { rows: AdminDesigner[] }) {
                 </td>
                 <td className="px-5 py-3.5 font-wit-mono">{d.claimed_count}</td>
                 <td className="px-5 py-3.5 font-wit-mono">{d.completed_count}</td>
+                <td className="px-5 py-3.5">
+                  <DesignerPerformanceCell
+                    designerId={d.id}
+                    requests={requests}
+                    fastestAvgHours={fastestAvgHours}
+                  />
+                </td>
                 <td className="px-5 py-3.5 text-xs text-wit-gray">
                   {new Date(d.created_at + "Z").toLocaleDateString("es-MX")}
                 </td>
@@ -1914,8 +2081,16 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
                   {u.membership_status === "active" ? "Activa" : "Sin activar"}
                 </span>
               </td>
-              <td className="px-5 py-3.5 font-wit-mono">
-                {u.requests_used ?? 0}/{u.requests_quota ?? 0}
+              <td className="px-5 py-3.5">
+                <p className="font-wit-mono">
+                  {u.requests_used ?? 0}/{(u.requests_quota ?? 0) + (u.bonus_requests_quota ?? 0)}
+                </p>
+                {u.bonus_requests_quota ? (
+                  <p className="text-[11px] font-semibold text-wit-blue">
+                    +{u.bonus_requests_quota} regaladas
+                  </p>
+                ) : null}
+                {u.membership_status === "active" ? <GrantRequestsButton userId={u.id} /> : null}
               </td>
               <td className="px-5 py-3.5 font-wit-mono">
                 ${u.total_paid_mxn.toLocaleString("es-MX")}
@@ -1968,6 +2143,48 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
           )
         : null}
     </div>
+  );
+}
+
+// Quick manual top-up for a client who ran out of solicitudes — same
+// bonus_requests_quota mechanism as a purchased image pack (see
+// /api/admin/grant-requests), just free and one click. Deliberately a
+// single fixed amount, not a picker: this is the "start simple" version —
+// a designer selling image packs from the panel already exists for anyone
+// who wants a specific amount.
+function GrantRequestsButton({ userId }: { userId: string }) {
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function grant() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/grant-requests", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId, amount: 10 }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) return;
+      setDone(true);
+      await qc.invalidateQueries({ queryKey: ["admin-overview"] });
+      window.setTimeout(() => setDone(false), 2000);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={grant}
+      disabled={busy}
+      title="Regalar 10 solicitudes extra a este usuario"
+      className="mt-1 rounded-full border border-wit-blue/25 px-2 py-0.5 text-[11px] font-bold text-wit-blue transition-colors hover:bg-wit-blue/10 disabled:opacity-50"
+    >
+      {done ? "+10 ✓" : busy ? "..." : "+10"}
+    </button>
   );
 }
 
@@ -2088,7 +2305,8 @@ function EditUserModal({
             <p className="text-sm text-wit-ink">
               {user.membership_status === "active" ? (
                 <span className="font-semibold text-emerald-700">
-                  Activa · {user.requests_used ?? 0}/{user.requests_quota ?? 0} solicitudes
+                  Activa · {user.requests_used ?? 0}/
+                  {(user.requests_quota ?? 0) + (user.bonus_requests_quota ?? 0)} solicitudes
                 </span>
               ) : (
                 <span className="font-semibold text-amber-700">Sin activar</span>
