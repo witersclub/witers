@@ -120,7 +120,7 @@ function Hero() {
               alt=""
               aria-hidden="true"
               draggable={false}
-              className="wit-float pointer-events-none absolute left-full top-1/2 z-10 ml-[2cm] hidden w-24 -translate-y-1/2 rotate-[7deg] drop-shadow-[0_20px_45px_rgba(5,13,40,0.28)] sm:block sm:w-32 md:w-40"
+              className="wit-float pointer-events-none absolute left-full top-1/2 z-10 ml-[1cm] w-16 -translate-y-1/2 rotate-[7deg] drop-shadow-[0_20px_45px_rgba(5,13,40,0.28)] sm:ml-[2cm] sm:w-32 md:w-40"
             />
           </div>
           <p className="mt-5 text-2xl font-bold leading-snug text-wit-ink">
