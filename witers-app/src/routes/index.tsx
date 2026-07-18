@@ -268,7 +268,7 @@ function Testimonios() {
   if (list.length === 0) return null;
 
   return (
-    <section className="relative overflow-hidden bg-white py-20 md:py-28">
+    <section className="relative overflow-hidden bg-white/55 py-20 backdrop-blur-2xl md:py-28">
       <div className="px-5 md:px-[110px]">
         <p className="text-center text-sm font-bold uppercase tracking-[0.3em] text-wit-blue">
           Resultados reales
@@ -493,7 +493,7 @@ function PruebaInteractiva() {
     ) : null;
 
   return (
-    <section className="relative bg-wit-ice py-16 md:py-20">
+    <section className="relative overflow-hidden bg-white/55 py-16 backdrop-blur-2xl md:py-20">
       <div className="mx-auto max-w-sm px-5">
         <p className="wit-rise text-center text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
           Pruébalo tú mismo
