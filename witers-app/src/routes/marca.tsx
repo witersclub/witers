@@ -104,8 +104,8 @@ function Hero() {
 
         <div className="wit-rise wit-rise-d1 mx-auto w-full max-w-md">
           <img
-            src="/assets/brand-collage.webp"
-            alt="Caja, tarjeta de presentación y celular con el logotipo WITERS aplicado"
+            src="/assets/brand-mockup.webp"
+            alt="Ejemplo de identidad de marca aplicada a Instagram, vaso, bolsa y tarjeta de presentación"
             className="w-full rounded-[28px] shadow-[0_40px_100px_rgba(5,13,40,0.28)]"
           />
         </div>
