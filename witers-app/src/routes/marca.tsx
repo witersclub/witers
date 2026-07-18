@@ -107,13 +107,22 @@ function Hero() {
           <span className="inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-wit-mist/40 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue">
             Branding &amp; Rebranding
           </span>
-          <h1 className="mt-6 text-5xl font-extrabold leading-[1.02] tracking-tighter text-wit-ink md:text-6xl">
-            WITERS
-            <br />
-            <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
-              Brand
-            </span>
-          </h1>
+          <div className="relative">
+            <h1 className="mt-6 text-5xl font-extrabold leading-[1.02] tracking-tighter text-wit-ink md:text-6xl">
+              WITERS
+              <br />
+              <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
+                Brand
+              </span>
+            </h1>
+            <img
+              src="/assets/brand-tablet-float.webp"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="wit-float pointer-events-none absolute -right-6 -top-6 w-28 rotate-[7deg] drop-shadow-[0_20px_45px_rgba(5,13,40,0.28)] sm:-right-10 sm:w-36 md:-right-16 md:w-44"
+            />
+          </div>
           <p className="mt-5 text-2xl font-bold leading-snug text-wit-ink">
             Construimos la identidad que{" "}
             <span className="italic text-wit-blue">hará crecer tu negocio</span>.
