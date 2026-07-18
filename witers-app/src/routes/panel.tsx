@@ -5,11 +5,13 @@ import { createPortal } from "react-dom";
 import type * as LeafletNS from "leaflet";
 import {
   AlertTriangle,
+  ArrowLeft,
   Briefcase,
   Building2,
   Cake,
   Calendar,
   Car,
+  ChevronDown,
   Crosshair,
   Dumbbell,
   Eye,
@@ -21,6 +23,7 @@ import {
   Laptop,
   Link2,
   Loader2,
+  LogOut,
   Magnet,
   MapPin,
   MessageCircle,
@@ -56,7 +59,7 @@ import {
 } from "../components/witers/lab-pickers";
 import { getPlan } from "../lib/membership-plans";
 import { consumeTeaserAnswers } from "../lib/teaser-handoff";
-import { useMe } from "../lib/witers-client";
+import { useMe, type Me } from "../lib/witers-client";
 
 export const Route = createFileRoute("/panel")({
   head: () => ({
@@ -179,6 +182,10 @@ function Panel() {
   // existed before this section was introduced (solicitudes + hacer
   // solicitud); Activos de marca and Campañas are new.
   const [section, setSection] = useState<"creatividad" | "activos" | "campanas">("creatividad");
+  // A separate top-level view, not a 4th SectionNav pill — account settings
+  // aren't a "work area" like Creatividad/Activos/Campañas, they live behind
+  // the avatar menu instead, same as most account dashboards.
+  const [view, setView] = useState<"panel" | "perfil">("panel");
   // "Hacer solicitud" is the default landing tab for every visit, not just
   // a brand-new client's — creating a piece is the panel's main job, so it
   // should be the first thing anyone sees, not something they have to
@@ -462,21 +469,18 @@ function Panel() {
           <Link to="/">
             <WitersLogo compact />
           </Link>
-          <div className="flex items-center gap-5">
-            <span className="hidden text-sm text-wit-gray sm:block">{me.data.user?.name}</span>
-            <button
-              type="button"
-              onClick={logout}
-              className="wit-navlink text-sm font-medium text-wit-ink"
-            >
-              Cerrar sesión
-            </button>
-          </div>
+          <UserMenu
+            name={me.data.user?.name ?? ""}
+            onOpenProfile={() => setView("perfil")}
+            onLogout={logout}
+          />
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-5 py-10">
-        {needsOnboarding ? (
+        {view === "perfil" ? (
+          <PerfilView me={me.data} onBack={() => setView("panel")} />
+        ) : needsOnboarding ? (
           <OnboardingGate
             onDone={() => void qc.invalidateQueries({ queryKey: ["brand-profile"] })}
           />
@@ -977,6 +981,410 @@ const SECTIONS: { id: "creatividad" | "activos" | "campanas"; label: string }[] 
   { id: "activos", label: "Activos de marca" },
   { id: "campanas", label: "Campañas" },
 ];
+
+// Avatar + dropdown in the header, replacing the old plain "Cerrar sesión"
+// text link — account settings ("Mi perfil") live behind this, same as
+// virtually every SaaS dashboard, instead of competing with Creatividad /
+// Activos / Campañas as a 4th SectionNav pill.
+function UserMenu({
+  name,
+  onOpenProfile,
+  onLogout,
+}: {
+  name: string;
+  onOpenProfile: () => void;
+  onLogout: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const initial = (name.trim()[0] ?? "?").toUpperCase();
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label="Menú de cuenta"
+        className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2.5 transition-colors hover:bg-wit-mist/50 sm:pr-3"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wit-blue text-sm font-bold text-white">
+          {initial}
+        </span>
+        <span className="hidden text-sm font-medium text-wit-ink sm:block">{name}</span>
+        <ChevronDown
+          size={16}
+          strokeWidth={2}
+          className={`hidden text-wit-gray transition-transform duration-200 sm:block ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open ? (
+        <div className="absolute right-0 top-full z-20 mt-2 w-52 overflow-hidden rounded-2xl border border-wit-ink/10 bg-white py-1.5 shadow-[0_20px_50px_rgba(5,13,40,0.15)]">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onOpenProfile();
+            }}
+            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-medium text-wit-ink hover:bg-wit-mist/50"
+          >
+            <User size={16} strokeWidth={1.75} />
+            Mi perfil
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onLogout();
+            }}
+            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+          >
+            <LogOut size={16} strokeWidth={1.75} />
+            Cerrar sesión
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* ---------------- MI PERFIL ---------------- */
+
+function PerfilView({ me, onBack }: { me: Me; onBack: () => void }) {
+  const plan = me.membership ? getPlan(me.membership.plan) : null;
+  return (
+    <div className="mx-auto max-w-2xl">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex items-center gap-1.5 text-sm font-semibold text-wit-gray hover:text-wit-ink"
+      >
+        <ArrowLeft size={16} strokeWidth={2.25} />
+        Volver al panel
+      </button>
+
+      <h1 className="mt-4 text-3xl font-extrabold tracking-tighter text-wit-ink">Mi perfil</h1>
+      <p className="mt-1 text-sm text-wit-gray">Tus datos de cuenta, seguridad y membresía.</p>
+
+      <div className="mt-8 space-y-6">
+        <AccountCard user={me.user} />
+        <PasswordCard />
+        <MembershipSummaryCard membership={me.membership} plan={plan} />
+      </div>
+    </div>
+  );
+}
+
+function AccountCard({ user }: { user: Me["user"] }) {
+  const qc = useQueryClient();
+  const [name, setName] = useState(user?.name ?? "");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const dirty = name.trim() !== (user?.name ?? "").trim();
+
+  async function save() {
+    if (!dirty || name.trim().length < 2) return;
+    setSaving(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/account/update-name", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (data.ok) {
+        await qc.invalidateQueries({ queryKey: ["me"] });
+        setMsg("Nombre actualizado.");
+      } else {
+        setMsg("No pudimos guardar el cambio. Intenta de nuevo.");
+      }
+    } catch {
+      setMsg("No pudimos guardar el cambio. Intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const memberSince = user?.created_at
+    ? new Date(user.created_at + "Z").toLocaleDateString("es-MX", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+
+  return (
+    <section className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      <p className="text-lg font-bold text-wit-ink">Datos de la cuenta</p>
+      <p className="mt-1 text-sm text-wit-gray">Tu nombre, correo y antigüedad en WITERS.</p>
+
+      <div className="mt-6 space-y-4">
+        <div>
+          <label htmlFor="pname" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Nombre completo
+          </label>
+          <input
+            id="pname"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            minLength={2}
+            className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
+          />
+        </div>
+        <div>
+          <p className="mb-1.5 block text-sm font-semibold text-wit-ink">Correo electrónico</p>
+          <p className="rounded-xl border border-wit-ink/10 bg-wit-mist/30 px-4 py-3 text-base text-wit-gray">
+            {user?.email}
+          </p>
+          <p className="mt-1.5 text-xs text-wit-gray">
+            ¿Necesitas cambiarlo? Escríbenos a{" "}
+            <a
+              href="mailto:hola@witers.com"
+              className="font-semibold text-wit-blue underline-offset-2 hover:underline"
+            >
+              hola@witers.com
+            </a>
+            .
+          </p>
+        </div>
+        {memberSince ? (
+          <p className="text-xs text-wit-gray">Miembro desde el {memberSince}.</p>
+        ) : null}
+      </div>
+
+      {msg ? <p className="mt-4 text-sm text-wit-gray">{msg}</p> : null}
+
+      <button
+        type="button"
+        disabled={!dirty || saving || name.trim().length < 2}
+        onClick={save}
+        className="mt-5 rounded-2xl bg-wit-blue px-6 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {saving ? "Guardando..." : "Guardar cambios"}
+      </button>
+    </section>
+  );
+}
+
+function PasswordCard() {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const canSubmit = current.length > 0 && next.length >= 8 && next === confirm;
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(false);
+    try {
+      const res = await fetch("/api/account/change-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ currentPassword: current, newPassword: next }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (data.ok) {
+        setSuccess(true);
+        setCurrent("");
+        setNext("");
+        setConfirm("");
+      } else {
+        setError(
+          data.error === "contrasena_actual_incorrecta"
+            ? "Tu contraseña actual no es correcta."
+            : "No pudimos cambiar tu contraseña. Intenta de nuevo.",
+        );
+      }
+    } catch {
+      setError("No pudimos cambiar tu contraseña. Intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      <p className="text-lg font-bold text-wit-ink">Seguridad</p>
+      <p className="mt-1 text-sm text-wit-gray">Cambia tu contraseña cuando quieras.</p>
+
+      <form onSubmit={submit} className="mt-6 space-y-4">
+        <div>
+          <label htmlFor="pw-current" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            Contraseña actual
+          </label>
+          <input
+            id="pw-current"
+            type="password"
+            required
+            autoComplete="current-password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="pw-new" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+              Nueva contraseña
+            </label>
+            <input
+              id="pw-new"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+              placeholder="Mínimo 8 caracteres"
+              className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
+            />
+          </div>
+          <div>
+            <label htmlFor="pw-confirm" className="mb-1.5 block text-sm font-semibold text-wit-ink">
+              Confirmar nueva contraseña
+            </label>
+            <input
+              id="pw-confirm"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
+            />
+            {confirm && next !== confirm ? (
+              <p className="mt-1 text-xs text-red-600">Las contraseñas no coinciden.</p>
+            ) : null}
+          </div>
+        </div>
+
+        {error ? (
+          <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
+        ) : null}
+        {success ? (
+          <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            Contraseña actualizada.
+          </p>
+        ) : null}
+
+        <button
+          type="submit"
+          disabled={!canSubmit || saving}
+          className="rounded-2xl bg-wit-blue px-6 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? "Guardando..." : "Cambiar contraseña"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function MembershipSummaryCard({
+  membership,
+  plan,
+}: {
+  membership: Me["membership"];
+  plan: ReturnType<typeof getPlan> | null;
+}) {
+  const active = membership?.status === "active";
+  const activatedLabel = membership?.activated_at
+    ? new Date(membership.activated_at + "Z").toLocaleDateString("es-MX", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+
+  return (
+    <section className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      <p className="text-lg font-bold text-wit-ink">Tu membresía</p>
+      <p className="mt-1 text-sm text-wit-gray">Resumen de tu plan actual.</p>
+
+      {!membership || !plan ? (
+        <div className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-5 text-center">
+          <p className="text-sm text-wit-gray">Todavía no tienes una membresía activa.</p>
+          <Link
+            to="/checkout"
+            className="mt-3 inline-block rounded-full bg-wit-blue px-5 py-2.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+          >
+            Activar membresía
+          </Link>
+        </div>
+      ) : (
+        <div className="mt-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-wit-navy p-5 text-white">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">
+                WITERS {plan.nombre}
+              </p>
+              <p className="mt-1 font-wit-mono text-2xl font-semibold">
+                $
+                {membership.price_mxn.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                <span className="text-sm font-semibold text-white/70">MXN/mes + IVA</span>
+              </p>
+            </div>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-bold ${
+                active ? "bg-emerald-400/20 text-emerald-300" : "bg-amber-400/20 text-amber-300"
+              }`}
+            >
+              {active ? "Activa" : membership.status}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+                Solicitudes usadas
+              </p>
+              <p className="mt-0.5 font-wit-mono text-lg font-semibold text-wit-ink">
+                {membership.requests_used}/{membership.requests_quota}
+              </p>
+            </div>
+            {activatedLabel ? (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+                  Activa desde
+                </p>
+                <p className="mt-0.5 text-sm font-semibold text-wit-ink">{activatedLabel}</p>
+              </div>
+            ) : null}
+          </div>
+
+          <p className="text-xs text-wit-gray">
+            <Link
+              to="/terminos"
+              className="font-semibold text-wit-blue underline-offset-2 hover:underline"
+            >
+              Ver términos y condiciones
+            </Link>
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
 
 // The panel's primary navigation — one level above "Mis solicitudes / Hacer
 // solicitud", which now only lives inside "Creatividad". Styled as a

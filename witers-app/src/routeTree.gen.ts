@@ -68,6 +68,8 @@ import { Route as ApiAdminCreateDesignerRouteImport } from './routes/api/admin/c
 import { Route as ApiAdminApproveResultRouteImport } from './routes/api/admin/approve-result'
 import { Route as ApiAdminAiFillRouteImport } from './routes/api/admin/ai-fill'
 import { Route as ApiAdminActivateMembershipRouteImport } from './routes/api/admin/activate-membership'
+import { Route as ApiAccountUpdateNameRouteImport } from './routes/api/account/update-name'
+import { Route as ApiAccountChangePasswordRouteImport } from './routes/api/account/change-password'
 
 const WiterRoute = WiterRouteImport.update({
   id: '/witer',
@@ -369,6 +371,17 @@ const ApiAdminActivateMembershipRoute =
     path: '/api/admin/activate-membership',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAccountUpdateNameRoute = ApiAccountUpdateNameRouteImport.update({
+  id: '/api/account/update-name',
+  path: '/api/account/update-name',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAccountChangePasswordRoute =
+  ApiAccountChangePasswordRouteImport.update({
+    id: '/api/account/change-password',
+    path: '/api/account/change-password',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -403,6 +416,8 @@ export interface FileRoutesByFullPath {
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/account/change-password': typeof ApiAccountChangePasswordRoute
+  '/api/account/update-name': typeof ApiAccountUpdateNameRoute
   '/api/admin/activate-membership': typeof ApiAdminActivateMembershipRoute
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
@@ -464,6 +479,8 @@ export interface FileRoutesByTo {
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/account/change-password': typeof ApiAccountChangePasswordRoute
+  '/api/account/update-name': typeof ApiAccountUpdateNameRoute
   '/api/admin/activate-membership': typeof ApiAdminActivateMembershipRoute
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
@@ -526,6 +543,8 @@ export interface FileRoutesById {
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/user': typeof ApiUserRoute
+  '/api/account/change-password': typeof ApiAccountChangePasswordRoute
+  '/api/account/update-name': typeof ApiAccountUpdateNameRoute
   '/api/admin/activate-membership': typeof ApiAdminActivateMembershipRoute
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
@@ -589,6 +608,8 @@ export interface FileRouteTypes {
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/account/change-password'
+    | '/api/account/update-name'
     | '/api/admin/activate-membership'
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
@@ -650,6 +671,8 @@ export interface FileRouteTypes {
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/account/change-password'
+    | '/api/account/update-name'
     | '/api/admin/activate-membership'
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
@@ -711,6 +734,8 @@ export interface FileRouteTypes {
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
     | '/api/user'
+    | '/api/account/change-password'
+    | '/api/account/update-name'
     | '/api/admin/activate-membership'
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
@@ -773,6 +798,8 @@ export interface RootRouteChildren {
   ApiSubmitSatisfactionRoute: typeof ApiSubmitSatisfactionRoute
   ApiUploadReferenceRoute: typeof ApiUploadReferenceRoute
   ApiUserRoute: typeof ApiUserRoute
+  ApiAccountChangePasswordRoute: typeof ApiAccountChangePasswordRoute
+  ApiAccountUpdateNameRoute: typeof ApiAccountUpdateNameRoute
   ApiAdminActivateMembershipRoute: typeof ApiAdminActivateMembershipRoute
   ApiAdminAiFillRoute: typeof ApiAdminAiFillRoute
   ApiAdminApproveResultRoute: typeof ApiAdminApproveResultRoute
@@ -1217,6 +1244,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminActivateMembershipRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/account/update-name': {
+      id: '/api/account/update-name'
+      path: '/api/account/update-name'
+      fullPath: '/api/account/update-name'
+      preLoaderRoute: typeof ApiAccountUpdateNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/account/change-password': {
+      id: '/api/account/change-password'
+      path: '/api/account/change-password'
+      fullPath: '/api/account/change-password'
+      preLoaderRoute: typeof ApiAccountChangePasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1253,6 +1294,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSubmitSatisfactionRoute: ApiSubmitSatisfactionRoute,
   ApiUploadReferenceRoute: ApiUploadReferenceRoute,
   ApiUserRoute: ApiUserRoute,
+  ApiAccountChangePasswordRoute: ApiAccountChangePasswordRoute,
+  ApiAccountUpdateNameRoute: ApiAccountUpdateNameRoute,
   ApiAdminActivateMembershipRoute: ApiAdminActivateMembershipRoute,
   ApiAdminAiFillRoute: ApiAdminAiFillRoute,
   ApiAdminApproveResultRoute: ApiAdminApproveResultRoute,
