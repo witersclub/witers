@@ -1,9 +1,34 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import {
+  AlertCircle,
+  ClipboardList,
+  CreditCard,
+  LayoutDashboard,
+  LogOut,
+  Palette,
+  Star,
+  Users,
+  Wallet,
+} from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-import { WitersLogo } from "../components/witers/brand";
+import { WitersLogo, WMark } from "../components/witers/brand";
 import { MEMBERSHIP_PLANS, type PlanId } from "../lib/membership-plans";
 
 export const Route = createFileRoute("/admin")({
@@ -19,6 +44,7 @@ type AdminUser = {
   name: string;
   created_at: string;
   membership_status: string | null;
+  membership_plan: string | null;
   requests_quota: number | null;
   requests_used: number | null;
   total_paid_mxn: number;
@@ -57,6 +83,7 @@ type AdminRequest = {
   revision_note_1: string | null;
   revision_note_2: string | null;
   change_request_note: string | null;
+  satisfaction_rating: number | null;
   created_at: string;
   user_email: string;
   user_name: string;
@@ -96,6 +123,87 @@ type Overview = {
   designers: AdminDesigner[];
 };
 
+/* ---------- dashboard data helpers ---------- */
+
+// created_at is stored as a naive UTC timestamp with no "Z" suffix — every
+// other place in this file appends it before parsing (see the request/
+// payment cards below), so the same convention applies here.
+function monthKey(iso: string): string {
+  const d = new Date(`${iso}Z`);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function lastNMonths(n: number): { key: string; label: string }[] {
+  const now = new Date();
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (n - 1 - i), 1);
+    return {
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleDateString("es-MX", { month: "short" }),
+    };
+  });
+}
+
+function buildRevenueSeries(payments: AdminPayment[]) {
+  const months = lastNMonths(6);
+  const sums = new Map(months.map((m) => [m.key, 0]));
+  for (const p of payments) {
+    if (p.status !== "paid") continue;
+    const k = monthKey(p.created_at);
+    if (sums.has(k)) sums.set(k, (sums.get(k) ?? 0) + p.amount_mxn);
+  }
+  return months.map((m) => ({ name: m.label, ingresos: sums.get(m.key) ?? 0 }));
+}
+
+function buildRequestsSeries(requests: AdminRequest[]) {
+  const months = lastNMonths(6);
+  const counts = new Map(months.map((m) => [m.key, 0]));
+  for (const r of requests) {
+    const k = monthKey(r.created_at);
+    if (counts.has(k)) counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  return months.map((m) => ({ name: m.label, solicitudes: counts.get(m.key) ?? 0 }));
+}
+
+const STATUS_CHART_META: Record<string, { label: string; color: string }> = {
+  en_proceso: { label: "En proceso", color: "#f59e0b" },
+  completada: { label: "Completada", color: "#10b981" },
+  cerrada: { label: "Finalizada", color: "#0047ff" },
+  rechazada: { label: "Rechazada", color: "#ef4444" },
+  cambio_solicitado: { label: "Cambio solicitado", color: "#f97316" },
+};
+
+function buildStatusBreakdown(requests: AdminRequest[]) {
+  const counts = new Map<string, number>();
+  for (const r of requests) counts.set(r.status, (counts.get(r.status) ?? 0) + 1);
+  return [...counts.entries()]
+    .map(([status, value]) => ({
+      name: STATUS_CHART_META[status]?.label ?? status,
+      value,
+      color: STATUS_CHART_META[status]?.color ?? "#94a3b8",
+    }))
+    .sort((a, b) => b.value - a.value);
+}
+
+const PLAN_CHART_COLORS: Record<string, string> = {
+  essential: "#0047ff",
+  grow: "#8b93a3",
+  scale: "#0a1230",
+};
+
+function buildPlanBreakdown(users: AdminUser[]) {
+  const counts = new Map<string, number>();
+  for (const u of users) {
+    if (u.membership_status !== "active" || !u.membership_plan) continue;
+    counts.set(u.membership_plan, (counts.get(u.membership_plan) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([plan, value]) => ({
+    name: MEMBERSHIP_PLANS.find((p) => p.id === plan)?.nombre ?? plan,
+    value,
+    color: PLAN_CHART_COLORS[plan] ?? "#94a3b8",
+  }));
+}
+
 function usePlatformUser() {
   return useQuery({
     queryKey: ["platform-user"],
@@ -112,6 +220,269 @@ function usePlatformUser() {
   });
 }
 
+/* ---------- dashboard ---------- */
+
+function KpiCard({
+  label,
+  value,
+  icon: Icon,
+  accent,
+}: {
+  label: string;
+  value: string;
+  icon: typeof Wallet;
+  accent: "blue" | "emerald" | "amber" | "violet";
+}) {
+  const accents: Record<typeof accent, { bg: string; text: string; ring: string }> = {
+    blue: { bg: "bg-wit-blue/10", text: "text-wit-blue", ring: "ring-wit-blue/15" },
+    emerald: { bg: "bg-emerald-50", text: "text-emerald-600", ring: "ring-emerald-200/60" },
+    amber: { bg: "bg-amber-50", text: "text-amber-600", ring: "ring-amber-200/60" },
+    violet: { bg: "bg-violet-50", text: "text-violet-600", ring: "ring-violet-200/60" },
+  };
+  const a = accents[accent];
+  return (
+    <div
+      className={`wit-glass rounded-2xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)] ring-1 ${a.ring}`}
+    >
+      <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${a.bg} ${a.text}`}>
+        <Icon size={19} strokeWidth={2.25} />
+      </span>
+      <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.16em] text-wit-gray">
+        {label}
+      </p>
+      <p className="mt-1 font-wit-mono text-2xl font-semibold text-wit-ink">{value}</p>
+    </div>
+  );
+}
+
+function ChartCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <p className="text-sm font-bold text-wit-ink">{title}</p>
+      <p className="mt-0.5 text-xs text-wit-gray">{subtitle}</p>
+      <div className="mt-4 h-64">{children}</div>
+    </div>
+  );
+}
+
+function ChartTooltip({
+  active,
+  payload,
+  label,
+  formatter,
+}: {
+  active?: boolean;
+  payload?: { name: string; value: number; color?: string; payload?: { color?: string } }[];
+  label?: string;
+  formatter?: (v: number) => string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div className="rounded-xl border border-wit-ink/10 bg-white px-3 py-2 text-xs shadow-[0_10px_30px_rgba(5,13,40,0.12)]">
+      {label ? <p className="mb-1 font-bold text-wit-ink">{label}</p> : null}
+      {payload.map((p, i) => (
+        <p key={i} className="flex items-center gap-1.5 text-wit-gray">
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: p.color ?? p.payload?.color ?? "#0047ff" }}
+          />
+          <span className="font-semibold text-wit-ink">
+            {formatter ? formatter(p.value) : p.value}
+          </span>
+          {payload.length > 1 ? <span>{p.name}</span> : null}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function DashboardView({ data }: { data: Overview }) {
+  const totalRevenue = data.payments
+    .filter((p) => p.status === "paid")
+    .reduce((s, p) => s + p.amount_mxn, 0);
+  const activeMemberships = data.users.filter((u) => u.membership_status === "active").length;
+  const needsAttention = data.requests.filter(
+    (r) => (r.status === "en_proceso" && !r.claimed_by_name) || r.status === "cambio_solicitado",
+  ).length;
+  const rated = data.requests.filter((r) => r.satisfaction_rating != null);
+  const avgRating = rated.length
+    ? rated.reduce((s, r) => s + (r.satisfaction_rating ?? 0), 0) / rated.length
+    : null;
+
+  const revenueSeries = buildRevenueSeries(data.payments);
+  const requestsSeries = buildRequestsSeries(data.requests);
+  const statusBreakdown = buildStatusBreakdown(data.requests);
+  const planBreakdown = buildPlanBreakdown(data.users);
+
+  return (
+    <div className="mt-6 space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          label="Ingresos totales"
+          value={`$${totalRevenue.toLocaleString("es-MX")}`}
+          icon={Wallet}
+          accent="emerald"
+        />
+        <KpiCard
+          label="Membresías activas"
+          value={String(activeMemberships)}
+          icon={Users}
+          accent="blue"
+        />
+        <KpiCard
+          label="Necesitan tu atención"
+          value={String(needsAttention)}
+          icon={AlertCircle}
+          accent="amber"
+        />
+        <KpiCard
+          label="Calificación promedio"
+          value={avgRating ? `${avgRating.toFixed(1)} / 5` : "Sin datos"}
+          icon={Star}
+          accent="violet"
+        />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ChartCard title="Ingresos por mes" subtitle="Últimos 6 meses, MXN">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={revenueSeries} margin={{ left: -20, top: 5, right: 10 }}>
+              <defs>
+                <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#0047ff" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#0047ff" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} stroke="#eef0f5" />
+              <XAxis
+                dataKey="name"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11, fill: "#5a6478" }}
+              />
+              <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#5a6478" }} />
+              <Tooltip
+                content={<ChartTooltip formatter={(v) => `$${v.toLocaleString("es-MX")} MXN`} />}
+              />
+              <Area
+                type="monotone"
+                dataKey="ingresos"
+                stroke="#0047ff"
+                strokeWidth={2.5}
+                fill="url(#revenueFill)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Solicitudes creadas" subtitle="Últimos 6 meses">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={requestsSeries} margin={{ left: -20, top: 5, right: 10 }}>
+              <CartesianGrid vertical={false} stroke="#eef0f5" />
+              <XAxis
+                dataKey="name"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11, fill: "#5a6478" }}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: "#5a6478" }}
+              />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(0,71,255,0.06)" }} />
+              <Bar dataKey="solicitudes" fill="#0047ff" radius={[6, 6, 0, 0]} maxBarSize={36} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Solicitudes por estado" subtitle="Todo el historial">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={statusBreakdown}
+                dataKey="value"
+                nameKey="name"
+                innerRadius="55%"
+                outerRadius="85%"
+                paddingAngle={2}
+              >
+                {statusBreakdown.map((s) => (
+                  <Cell key={s.name} fill={s.color} />
+                ))}
+              </Pie>
+              <Tooltip content={<ChartTooltip />} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="-mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
+            {statusBreakdown.map((s) => (
+              <span key={s.name} className="flex items-center gap-1.5 text-xs text-wit-gray">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                {s.name} ({s.value})
+              </span>
+            ))}
+          </div>
+        </ChartCard>
+
+        <ChartCard title="Membresías por plan" subtitle="Activas ahora">
+          {planBreakdown.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-wit-gray">
+              Aún no hay membresías activas.
+            </div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={planBreakdown}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius="55%"
+                    outerRadius="85%"
+                    paddingAngle={2}
+                  >
+                    {planBreakdown.map((s) => (
+                      <Cell key={s.name} fill={s.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<ChartTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="-mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
+                {planBreakdown.map((s) => (
+                  <span key={s.name} className="flex items-center gap-1.5 text-xs text-wit-gray">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                    {s.name} ({s.value})
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+        </ChartCard>
+      </div>
+    </div>
+  );
+}
+
+type AdminTab = "dashboard" | "solicitudes" | "diseñadores" | "usuarios" | "pagos";
+
+const NAV_ITEMS: { key: AdminTab; label: string; icon: typeof LayoutDashboard }[] = [
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "solicitudes", label: "Solicitudes", icon: ClipboardList },
+  { key: "diseñadores", label: "Diseñadores", icon: Palette },
+  { key: "usuarios", label: "Usuarios", icon: Users },
+  { key: "pagos", label: "Pagos", icon: CreditCard },
+];
+
 function Admin() {
   const platform = usePlatformUser();
   const overview = useQuery({
@@ -124,9 +495,7 @@ function Admin() {
     enabled: Boolean(platform.data),
     refetchInterval: 30_000,
   });
-  const [tab, setTab] = useState<"solicitudes" | "usuarios" | "pagos" | "diseñadores">(
-    "solicitudes",
-  );
+  const [tab, setTab] = useState<AdminTab>("dashboard");
 
   if (platform.isLoading) {
     return (
@@ -158,112 +527,175 @@ function Admin() {
   }
 
   const data = overview.data;
+  const needsAttentionCount =
+    data?.requests.filter(
+      (r) => (r.status === "en_proceso" && !r.claimed_by_name) || r.status === "cambio_solicitado",
+    ).length ?? 0;
+
+  function logout() {
+    void fetch("/api/auth/logout", { method: "POST", credentials: "include" }).finally(() => {
+      window.location.href = "/";
+    });
+  }
+
+  const TAB_TITLES: Record<AdminTab, string> = {
+    dashboard: "Dashboard",
+    solicitudes: "Solicitudes",
+    diseñadores: "Diseñadores",
+    usuarios: "Usuarios",
+    pagos: "Pagos",
+  };
 
   return (
-    <div className="wit-page min-h-dvh">
-      <header className="wit-glass border-b border-wit-ink/10">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-          <div className="flex items-center gap-3">
-            <Link to="/">
-              <WitersLogo compact />
-            </Link>
-            <span className="rounded-full bg-wit-mist/60 px-3 py-1 text-xs font-bold text-wit-blue">
-              ADMIN
-            </span>
-          </div>
-          <div className="flex items-center gap-5">
+    <div className="wit-page min-h-dvh lg:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-wit-ink/10 bg-white lg:flex">
+        <div className="flex h-16 items-center gap-2.5 border-b border-wit-ink/10 px-5">
+          <Link to="/" className="shrink-0">
+            <WMark size={26} />
+          </Link>
+          <span className="truncate font-wit text-sm font-extrabold tracking-[0.16em] text-wit-ink">
+            WITERS
+          </span>
+          <span className="ml-auto shrink-0 rounded-full bg-wit-mist/60 px-2.5 py-1 text-[10px] font-bold text-wit-blue">
+            ADMIN
+          </span>
+        </div>
+        <nav className="flex-1 space-y-1 px-3 py-6">
+          {NAV_ITEMS.map((item) => {
+            const active = tab === item.key;
+            const badge = item.key === "solicitudes" ? needsAttentionCount : 0;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setTab(item.key)}
+                className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
+                  active
+                    ? "bg-wit-blue text-white shadow-[0_10px_25px_rgba(0,71,255,0.28)]"
+                    : "text-wit-gray hover:bg-wit-mist/50 hover:text-wit-ink"
+                }`}
+              >
+                <item.icon size={18} strokeWidth={2.1} />
+                {item.label}
+                {badge > 0 ? (
+                  <span
+                    className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                      active ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {badge}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="border-t border-wit-ink/10 p-3">
+          <button
+            type="button"
+            onClick={logout}
+            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-wit-gray hover:bg-red-50 hover:text-red-600"
+          >
+            <LogOut size={18} strokeWidth={2.1} />
+            Cerrar sesión
+          </button>
+        </div>
+      </aside>
+
+      <div className="min-w-0 flex-1">
+        <header className="wit-glass border-b border-wit-ink/10 lg:hidden">
+          <div className="flex h-16 items-center justify-between px-5">
+            <div className="flex items-center gap-3">
+              <Link to="/">
+                <WitersLogo compact />
+              </Link>
+              <span className="rounded-full bg-wit-mist/60 px-3 py-1 text-xs font-bold text-wit-blue">
+                ADMIN
+              </span>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                void fetch("/api/auth/logout", { method: "POST", credentials: "include" }).finally(
-                  () => {
-                    window.location.href = "/";
-                  },
-                );
-              }}
+              onClick={logout}
               className="wit-navlink text-sm font-medium text-wit-ink"
             >
               Cerrar sesión
             </button>
           </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-5 py-10">
-        <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink">
-          Panel de <span className="text-wit-blue">administración</span>
-        </h1>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <StatCard label="Usuarios" value={data?.users.length ?? 0} />
-          <StatCard
-            label="Solicitudes en proceso"
-            value={data?.requests.filter((r) => r.status === "en_proceso").length ?? 0}
-          />
-          <StatCard
-            label="Ingresos (MXN)"
-            value={`$${(
-              data?.payments
-                .filter((p) => p.status === "paid")
-                .reduce((s, p) => s + p.amount_mxn, 0) ?? 0
-            ).toLocaleString("es-MX")}`}
-          />
-        </div>
-
-        <div className="mt-8 flex gap-2 border-b border-wit-ink/10">
-          {(["solicitudes", "diseñadores", "usuarios", "pagos"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={`-mb-px border-b-2 px-4 py-3 text-sm font-semibold capitalize transition-colors ${
-                tab === t
-                  ? "border-wit-blue text-wit-blue"
-                  : "border-transparent text-wit-gray hover:text-wit-ink"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-
-        {overview.isLoading ? (
-          <div className="mt-6 space-y-4">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />
-            ))}
+          <div className="flex gap-1.5 overflow-x-auto px-5 pb-3">
+            {NAV_ITEMS.map((item) => {
+              const active = tab === item.key;
+              const badge = item.key === "solicitudes" ? needsAttentionCount : 0;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setTab(item.key)}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors ${
+                    active ? "bg-wit-blue text-white" : "bg-wit-mist/50 text-wit-gray"
+                  }`}
+                >
+                  {item.label}
+                  {badge > 0 ? (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                        active ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {badge}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
-        ) : !data?.ok ? (
-          <p className="mt-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-            No pudimos cargar los datos de administración.
-          </p>
-        ) : tab === "solicitudes" ? (
-          <RequestsAdmin rows={data.requests} />
-        ) : tab === "diseñadores" ? (
-          <DesignersPanel rows={data.designers} />
-        ) : tab === "usuarios" ? (
-          <UsersTable rows={data.users} />
-        ) : (
-          <PaymentsTable rows={data.payments} />
-        )}
-      </main>
-    </div>
-  );
-}
+        </header>
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="wit-glass rounded-2xl px-6 py-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">{label}</p>
-      <p className="mt-1 font-wit-mono text-3xl font-semibold text-wit-ink">{value}</p>
+        <main className="mx-auto max-w-6xl px-5 py-10">
+          <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink">
+            {TAB_TITLES[tab]}
+          </h1>
+
+          {overview.isLoading ? (
+            <div className="mt-6 space-y-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />
+              ))}
+            </div>
+          ) : !data?.ok ? (
+            <p className="mt-6 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+              No pudimos cargar los datos de administración.
+            </p>
+          ) : tab === "dashboard" ? (
+            <DashboardView data={data} />
+          ) : tab === "solicitudes" ? (
+            <RequestsAdmin rows={data.requests} />
+          ) : tab === "diseñadores" ? (
+            <DesignersPanel rows={data.designers} />
+          ) : tab === "usuarios" ? (
+            <UsersTable rows={data.users} />
+          ) : (
+            <PaymentsTable rows={data.payments} />
+          )}
+        </main>
+      </div>
     </div>
   );
 }
 
 /* ---------- requests management ---------- */
 
+type RequestsTab = "atencion" | "en_proceso" | "completadas" | "finalizadas" | "rechazadas";
+
+const REQUESTS_TAB_META: Record<RequestsTab, { label: string; empty: string }> = {
+  atencion: { label: "Necesitan atención", empty: "No hay nada esperando tu atención." },
+  en_proceso: { label: "En proceso", empty: "No hay solicitudes en proceso." },
+  completadas: { label: "Completadas", empty: "No hay solicitudes completadas por confirmar." },
+  finalizadas: { label: "Finalizadas", empty: "Aún no hay solicitudes finalizadas." },
+  rechazadas: { label: "Rechazadas", empty: "No hay solicitudes rechazadas." },
+};
+
 function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
-  const [tab, setTab] = useState<"pendientes" | "finalizadas">("pendientes");
+  const [tab, setTab] = useState<RequestsTab>("atencion");
 
   if (rows.length === 0) {
     return (
@@ -273,34 +705,37 @@ function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
     );
   }
 
-  const pending = rows.filter((r) => r.status !== "cerrada");
-  const finished = rows.filter((r) => r.status === "cerrada");
-  const shown = tab === "pendientes" ? pending : finished;
+  // "Necesitan atención" groups the two states that require an admin to act
+  // before the design team can move: nobody has claimed it yet, or a client
+  // reported an error on an already-closed piece (see /api/admin/activate-change).
+  const buckets: Record<RequestsTab, AdminRequest[]> = {
+    atencion: rows.filter(
+      (r) => (r.status === "en_proceso" && !r.claimed_by_name) || r.status === "cambio_solicitado",
+    ),
+    en_proceso: rows.filter((r) => r.status === "en_proceso" && Boolean(r.claimed_by_name)),
+    completadas: rows.filter((r) => r.status === "completada"),
+    finalizadas: rows.filter((r) => r.status === "cerrada"),
+    rechazadas: rows.filter((r) => r.status === "rechazada"),
+  };
+  const shown = buckets[tab];
 
   return (
     <div>
-      <div className="mt-6 flex gap-2 border-b border-wit-ink/10">
-        <AdminSubTab
-          active={tab === "pendientes"}
-          onClick={() => setTab("pendientes")}
-          label="Pendientes"
-          count={pending.length}
-        />
-        <AdminSubTab
-          active={tab === "finalizadas"}
-          onClick={() => setTab("finalizadas")}
-          label="Finalizadas"
-          count={finished.length}
-        />
+      <div className="mt-6 flex gap-5 overflow-x-auto border-b border-wit-ink/10">
+        {(Object.keys(REQUESTS_TAB_META) as RequestsTab[]).map((t) => (
+          <AdminSubTab
+            key={t}
+            active={tab === t}
+            onClick={() => setTab(t)}
+            label={REQUESTS_TAB_META[t].label}
+            count={buckets[t].length}
+          />
+        ))}
       </div>
 
       {shown.length === 0 ? (
         <div className="wit-glass mt-6 rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
-          <p className="text-base font-semibold text-wit-ink">
-            {tab === "pendientes"
-              ? "No hay solicitudes pendientes."
-              : "Aún no hay solicitudes finalizadas."}
-          </p>
+          <p className="text-base font-semibold text-wit-ink">{REQUESTS_TAB_META[tab].empty}</p>
         </div>
       ) : (
         <div className="mt-6 space-y-5">
@@ -332,7 +767,7 @@ function AdminSubTab({
     <button
       type="button"
       onClick={onClick}
-      className={`relative -mb-px flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-bold transition-colors ${
+      className={`relative -mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-bold transition-colors ${
         active
           ? "border-wit-blue text-wit-blue"
           : "border-transparent text-wit-gray hover:text-wit-ink"
