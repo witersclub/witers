@@ -66,7 +66,8 @@ export const Route = createFileRoute("/api/admin/deliver")({
         await db()
           .prepare(
             `UPDATE design_requests
-             SET status = 'completada', admin_note = COALESCE(?2, admin_note), updated_at = datetime('now')
+             SET status = 'completada', admin_note = COALESCE(?2, admin_note),
+                 change_request_note = NULL, change_requested_at = NULL, updated_at = datetime('now')
              WHERE id = ?1`,
           )
           .bind(requestId, adminNote || null)

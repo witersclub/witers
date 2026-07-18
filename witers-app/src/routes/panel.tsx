@@ -91,6 +91,7 @@ type RequestRow = {
   revisions_used: number;
   revision_note_1: string | null;
   revision_note_2: string | null;
+  change_request_note: string | null;
   satisfaction_rating: number | null;
   created_at: string;
   results_json: string | null;
@@ -139,6 +140,7 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   completada: { label: "Completada", cls: "bg-emerald-50 text-emerald-700" },
   cerrada: { label: "✓ Finalizada", cls: "bg-wit-blue/10 text-wit-blue" },
   rechazada: { label: "Rechazada", cls: "bg-red-50 text-red-600" },
+  cambio_solicitado: { label: "Cambio en revisión", cls: "bg-amber-50 text-amber-700" },
 };
 
 // Consecutive weeks (counting back from the current one) with at least one
@@ -4993,13 +4995,15 @@ function RequestEntry({
       <span
         className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}
       >
-        {r.status === "en_proceso" ? <Spinner cls="border-amber-600" /> : null}
+        {r.status === "en_proceso" || r.status === "cambio_solicitado" ? (
+          <Spinner cls="border-amber-600" />
+        ) : null}
         {st.label}
       </span>
     </button>
   );
 
-  return r.status === "en_proceso" ? (
+  return r.status === "en_proceso" || r.status === "cambio_solicitado" ? (
     <div className="wit-pending-glow">
       <div className="wit-pending-glow-shield">{compact}</div>
     </div>
@@ -5070,6 +5074,8 @@ function HistoryCard({
   const latestResult = parseResults(r).at(-1) ?? null;
   const [revisionText, setRevisionText] = useState("");
   const [showRevisionForm, setShowRevisionForm] = useState(false);
+  const [changeText, setChangeText] = useState("");
+  const [showChangeForm, setShowChangeForm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [sentMsg, setSentMsg] = useState<string | null>(null);
@@ -5172,6 +5178,35 @@ function HistoryCard({
     }
   }
 
+  async function reportChange() {
+    if (changeText.trim().length < 5) {
+      setMsg("Cuéntanos con un poco más de detalle cuál es el error.");
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/request-change", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId: r.id, message: changeText }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (data.ok) {
+        setChangeText("");
+        setShowChangeForm(false);
+        setSentMsg("Recibimos tu reporte. El equipo lo va a revisar antes de retomar la pieza.");
+        await qc.invalidateQueries({ queryKey: ["requests"] });
+      } else {
+        setMsg("No pudimos enviar tu reporte. Intenta de nuevo.");
+      }
+    } catch {
+      setMsg("No pudimos enviar tu reporte. Intenta de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <article className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -5200,7 +5235,7 @@ function HistoryCard({
               key={s.label}
               className="flex items-center gap-3 rounded-xl bg-wit-ice/60 px-4 py-2.5"
             >
-              {isLast && r.status === "en_proceso" ? (
+              {isLast && (r.status === "en_proceso" || r.status === "cambio_solicitado") ? (
                 <Spinner />
               ) : isLast && r.status === "rechazada" ? (
                 <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold leading-none text-white">
@@ -5219,7 +5254,7 @@ function HistoryCard({
               <span
                 className={`text-xs font-bold ${
                   isLast
-                    ? r.status === "en_proceso"
+                    ? r.status === "en_proceso" || r.status === "cambio_solicitado"
                       ? "text-wit-blue"
                       : r.status === "rechazada"
                         ? "text-red-600"
@@ -5405,6 +5440,70 @@ function HistoryCard({
             {msg ? <p className="w-full text-sm text-red-600">{msg}</p> : null}
           </div>
         )
+      ) : null}
+
+      {r.status === "cerrada" ? (
+        showChangeForm ? (
+          <div className="mt-4 rounded-xl bg-wit-ice p-4">
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
+              Qué error notaste en la pieza
+            </label>
+            <div className="relative">
+              <textarea
+                rows={3}
+                maxLength={1000}
+                value={changeText}
+                onChange={(e) => setChangeText(e.target.value)}
+                className="w-full resize-y rounded-lg border border-wit-ink/15 bg-white px-3 py-2 pr-12 text-sm outline-none focus:border-wit-blue"
+                placeholder="Ej. el nombre de la empresa está mal escrito, el color no es el correcto..."
+              />
+              <MicButton
+                value={changeText}
+                onChange={setChangeText}
+                className="absolute bottom-2 right-2"
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={reportChange}
+                className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+              >
+                {busy ? "Enviando..." : "Enviar reporte"}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setShowChangeForm(false)}
+                className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
+              >
+                Cancelar
+              </button>
+            </div>
+            {msg ? <p className="mt-2 text-sm text-red-600">{msg}</p> : null}
+          </div>
+        ) : (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setSentMsg(null);
+                setShowChangeForm(true);
+              }}
+              className="rounded-full border border-wit-ink/15 px-4 py-2 text-sm font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+            >
+              Solicitar cambio por error en la pieza
+            </button>
+          </div>
+        )
+      ) : null}
+
+      {r.status === "cambio_solicitado" ? (
+        <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+          Tu reporte está en revisión por el equipo de WITERS. En cuanto lo aprobemos, el equipo de
+          diseño retoma la pieza.
+        </p>
       ) : null}
 
       {lightbox

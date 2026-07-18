@@ -81,11 +81,13 @@ export const Route = createFileRoute("/api/requests")({
         // /api/file by reading old URLs straight out of this response.
         // Shown while "completada" (still open, downloadable) and kept
         // visible (but locked, per /api/file) once "cerrada" so the client's
-        // history doesn't just go blank after they download it.
+        // history doesn't just go blank after they download it. Also kept
+        // visible during "cambio_solicitado" so the client still sees the
+        // piece they're reporting an error on while it's under review.
         const rows = await db()
           .prepare(
             `SELECT r.*,
-               CASE WHEN r.status IN ('completada', 'cerrada') THEN (
+               CASE WHEN r.status IN ('completada', 'cerrada', 'cambio_solicitado') THEN (
                  SELECT json_group_array(json_object('id', id, 'kind', kind, 'image_url', image_url, 'r2_key', r2_key))
                  FROM (
                    SELECT id, kind, image_url, r2_key FROM request_results

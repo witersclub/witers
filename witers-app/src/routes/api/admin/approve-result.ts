@@ -35,7 +35,10 @@ export const Route = createFileRoute("/api/admin/approve-result")({
 
         await db()
           .prepare(
-            "UPDATE design_requests SET status = 'completada', updated_at = datetime('now') WHERE id = ?1",
+            `UPDATE design_requests
+             SET status = 'completada', change_request_note = NULL, change_requested_at = NULL,
+                 updated_at = datetime('now')
+             WHERE id = ?1`,
           )
           .bind(parsed.data.requestId)
           .run();

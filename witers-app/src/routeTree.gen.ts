@@ -28,6 +28,7 @@ import { Route as ApiUploadReferenceRouteImport } from './routes/api/upload-refe
 import { Route as ApiSubmitSatisfactionRouteImport } from './routes/api/submit-satisfaction'
 import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
+import { Route as ApiRequestChangeRouteImport } from './routes/api/request-change'
 import { Route as ApiMetaLocationSearchRouteImport } from './routes/api/meta-location-search'
 import { Route as ApiMetaInterestSuggestionsRouteImport } from './routes/api/meta-interest-suggestions'
 import { Route as ApiMetaInterestSearchRouteImport } from './routes/api/meta-interest-search'
@@ -68,6 +69,7 @@ import { Route as ApiAdminCreateDesignerRouteImport } from './routes/api/admin/c
 import { Route as ApiAdminApproveResultRouteImport } from './routes/api/admin/approve-result'
 import { Route as ApiAdminAiFillRouteImport } from './routes/api/admin/ai-fill'
 import { Route as ApiAdminActivateMembershipRouteImport } from './routes/api/admin/activate-membership'
+import { Route as ApiAdminActivateChangeRouteImport } from './routes/api/admin/activate-change'
 import { Route as ApiAccountUpdateNameRouteImport } from './routes/api/account/update-name'
 import { Route as ApiAccountChangePasswordRouteImport } from './routes/api/account/change-password'
 
@@ -164,6 +166,11 @@ const ApiRequestsRoute = ApiRequestsRouteImport.update({
 const ApiRequestRevisionRoute = ApiRequestRevisionRouteImport.update({
   id: '/api/request-revision',
   path: '/api/request-revision',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRequestChangeRoute = ApiRequestChangeRouteImport.update({
+  id: '/api/request-change',
+  path: '/api/request-change',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMetaLocationSearchRoute = ApiMetaLocationSearchRouteImport.update({
@@ -371,6 +378,11 @@ const ApiAdminActivateMembershipRoute =
     path: '/api/admin/activate-membership',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAdminActivateChangeRoute = ApiAdminActivateChangeRouteImport.update({
+  id: '/api/admin/activate-change',
+  path: '/api/admin/activate-change',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAccountUpdateNameRoute = ApiAccountUpdateNameRouteImport.update({
   id: '/api/account/update-name',
   path: '/api/account/update-name',
@@ -411,6 +423,7 @@ export interface FileRoutesByFullPath {
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
+  '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
@@ -418,6 +431,7 @@ export interface FileRoutesByFullPath {
   '/api/user': typeof ApiUserRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
+  '/api/admin/activate-change': typeof ApiAdminActivateChangeRoute
   '/api/admin/activate-membership': typeof ApiAdminActivateMembershipRoute
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
@@ -474,6 +488,7 @@ export interface FileRoutesByTo {
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
+  '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
@@ -481,6 +496,7 @@ export interface FileRoutesByTo {
   '/api/user': typeof ApiUserRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
+  '/api/admin/activate-change': typeof ApiAdminActivateChangeRoute
   '/api/admin/activate-membership': typeof ApiAdminActivateMembershipRoute
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
@@ -538,6 +554,7 @@ export interface FileRoutesById {
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
   '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
+  '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
@@ -545,6 +562,7 @@ export interface FileRoutesById {
   '/api/user': typeof ApiUserRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
+  '/api/admin/activate-change': typeof ApiAdminActivateChangeRoute
   '/api/admin/activate-membership': typeof ApiAdminActivateMembershipRoute
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
@@ -603,6 +621,7 @@ export interface FileRouteTypes {
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
     | '/api/meta-location-search'
+    | '/api/request-change'
     | '/api/request-revision'
     | '/api/requests'
     | '/api/submit-satisfaction'
@@ -610,6 +629,7 @@ export interface FileRouteTypes {
     | '/api/user'
     | '/api/account/change-password'
     | '/api/account/update-name'
+    | '/api/admin/activate-change'
     | '/api/admin/activate-membership'
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
@@ -666,6 +686,7 @@ export interface FileRouteTypes {
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
     | '/api/meta-location-search'
+    | '/api/request-change'
     | '/api/request-revision'
     | '/api/requests'
     | '/api/submit-satisfaction'
@@ -673,6 +694,7 @@ export interface FileRouteTypes {
     | '/api/user'
     | '/api/account/change-password'
     | '/api/account/update-name'
+    | '/api/admin/activate-change'
     | '/api/admin/activate-membership'
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
@@ -729,6 +751,7 @@ export interface FileRouteTypes {
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
     | '/api/meta-location-search'
+    | '/api/request-change'
     | '/api/request-revision'
     | '/api/requests'
     | '/api/submit-satisfaction'
@@ -736,6 +759,7 @@ export interface FileRouteTypes {
     | '/api/user'
     | '/api/account/change-password'
     | '/api/account/update-name'
+    | '/api/admin/activate-change'
     | '/api/admin/activate-membership'
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
@@ -793,6 +817,7 @@ export interface RootRouteChildren {
   ApiMetaInterestSearchRoute: typeof ApiMetaInterestSearchRoute
   ApiMetaInterestSuggestionsRoute: typeof ApiMetaInterestSuggestionsRoute
   ApiMetaLocationSearchRoute: typeof ApiMetaLocationSearchRoute
+  ApiRequestChangeRoute: typeof ApiRequestChangeRoute
   ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
   ApiRequestsRoute: typeof ApiRequestsRoute
   ApiSubmitSatisfactionRoute: typeof ApiSubmitSatisfactionRoute
@@ -800,6 +825,7 @@ export interface RootRouteChildren {
   ApiUserRoute: typeof ApiUserRoute
   ApiAccountChangePasswordRoute: typeof ApiAccountChangePasswordRoute
   ApiAccountUpdateNameRoute: typeof ApiAccountUpdateNameRoute
+  ApiAdminActivateChangeRoute: typeof ApiAdminActivateChangeRoute
   ApiAdminActivateMembershipRoute: typeof ApiAdminActivateMembershipRoute
   ApiAdminAiFillRoute: typeof ApiAdminAiFillRoute
   ApiAdminApproveResultRoute: typeof ApiAdminApproveResultRoute
@@ -962,6 +988,13 @@ declare module '@tanstack/react-router' {
       path: '/api/request-revision'
       fullPath: '/api/request-revision'
       preLoaderRoute: typeof ApiRequestRevisionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/request-change': {
+      id: '/api/request-change'
+      path: '/api/request-change'
+      fullPath: '/api/request-change'
+      preLoaderRoute: typeof ApiRequestChangeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/meta-location-search': {
@@ -1244,6 +1277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminActivateMembershipRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/activate-change': {
+      id: '/api/admin/activate-change'
+      path: '/api/admin/activate-change'
+      fullPath: '/api/admin/activate-change'
+      preLoaderRoute: typeof ApiAdminActivateChangeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/account/update-name': {
       id: '/api/account/update-name'
       path: '/api/account/update-name'
@@ -1289,6 +1329,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMetaInterestSearchRoute: ApiMetaInterestSearchRoute,
   ApiMetaInterestSuggestionsRoute: ApiMetaInterestSuggestionsRoute,
   ApiMetaLocationSearchRoute: ApiMetaLocationSearchRoute,
+  ApiRequestChangeRoute: ApiRequestChangeRoute,
   ApiRequestRevisionRoute: ApiRequestRevisionRoute,
   ApiRequestsRoute: ApiRequestsRoute,
   ApiSubmitSatisfactionRoute: ApiSubmitSatisfactionRoute,
@@ -1296,6 +1337,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUserRoute: ApiUserRoute,
   ApiAccountChangePasswordRoute: ApiAccountChangePasswordRoute,
   ApiAccountUpdateNameRoute: ApiAccountUpdateNameRoute,
+  ApiAdminActivateChangeRoute: ApiAdminActivateChangeRoute,
   ApiAdminActivateMembershipRoute: ApiAdminActivateMembershipRoute,
   ApiAdminAiFillRoute: ApiAdminAiFillRoute,
   ApiAdminApproveResultRoute: ApiAdminApproveResultRoute,

@@ -56,6 +56,7 @@ type AdminRequest = {
   revisions_used: number;
   revision_note_1: string | null;
   revision_note_2: string | null;
+  change_request_note: string | null;
   created_at: string;
   user_email: string;
   user_name: string;
@@ -722,6 +723,29 @@ function RequestCard({ row }: { row: AdminRequest }) {
     }
   }
 
+  async function activateChange() {
+    setBusy("activate");
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/activate-change", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId: row.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      setMsg(
+        data.ok
+          ? "Pieza activada. Ya está disponible para el equipo de diseño."
+          : "No pudimos activarla. Intenta de nuevo.",
+      );
+      await refresh();
+    } catch {
+      setMsg("No pudimos activarla. Intenta de nuevo.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <article className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -944,6 +968,21 @@ function RequestCard({ row }: { row: AdminRequest }) {
         <p className="mt-4 rounded-xl bg-wit-blue/5 px-4 py-3 text-sm font-semibold text-wit-blue">
           ✓ El cliente marcó esta solicitud como correcta y finalizada. Ya no se puede editar.
         </p>
+      ) : row.status === "cambio_solicitado" ? (
+        <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-700">
+            El cliente reportó un error en esta pieza ya finalizada
+          </p>
+          <p className="mt-2 text-sm text-wit-ink">{row.change_request_note}</p>
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={activateChange}
+            className="mt-3 rounded-full bg-wit-blue px-5 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+          >
+            {busy === "activate" ? "Activando..." : "Activar pieza para cambio"}
+          </button>
+        </div>
       ) : (
         <>
           <div className="mt-5 rounded-xl bg-wit-ice p-4">

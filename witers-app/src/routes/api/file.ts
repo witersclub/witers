@@ -76,7 +76,9 @@ export const Route = createFileRoute("/api/file")({
               allowed =
                 row.user_id === member.id &&
                 row.is_latest === 1 &&
-                (row.status === "completada" || row.status === "cerrada");
+                (row.status === "completada" ||
+                  row.status === "cerrada" ||
+                  row.status === "cambio_solicitado");
             }
           }
         } else if (member && key.startsWith(`refs/${member.id}/`)) {

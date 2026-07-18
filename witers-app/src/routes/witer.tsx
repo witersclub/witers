@@ -35,6 +35,7 @@ type DesignerRequest = {
   revisions_used: number;
   revision_note_1: string | null;
   revision_note_2: string | null;
+  change_request_note: string | null;
   created_at: string;
   claimed_by: string | null;
   claimed_by_name: string | null;
@@ -614,6 +615,11 @@ function DesignerRequestCard({
     await copyText(prompt, `revision${n}`);
   }
 
+  async function copyChangePrompt(note: string) {
+    const prompt = `Corrige un error que el cliente reportó en esta pieza, que ya había sido entregada y marcada como correcta: ${note}. Mantén todo lo demás igual a la versión anterior. Contexto original de la pieza: ${buildBasePrompt()}`;
+    await copyText(prompt, "change");
+  }
+
   async function deliver() {
     if (!file) return;
     setBusy("deliver");
@@ -785,6 +791,25 @@ function DesignerRequestCard({
               </div>
             );
           })}
+        </div>
+      ) : null}
+
+      {row.change_request_note && row.status === "en_proceso" ? (
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-wit-ink">
+          <p className="min-w-0 flex-1">
+            <strong>Corrección solicitada por el cliente (pieza ya finalizada):</strong>{" "}
+            {row.change_request_note}
+          </p>
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => copyChangePrompt(row.change_request_note ?? "")}
+              className="rounded-full border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+            >
+              Copiar prompt del cambio
+            </button>
+            {copiedKey === "change" ? <CopiedNotice /> : null}
+          </div>
         </div>
       ) : null}
 
