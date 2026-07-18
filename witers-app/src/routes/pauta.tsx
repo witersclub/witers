@@ -23,7 +23,7 @@ export const Route = createFileRoute("/pauta")({
       {
         name: "description",
         content:
-          "De la pieza a la campaña sin salir de WITERS: creamos tu creatividad con IA y la convertimos en una campaña real de Meta Ads, configurada y en pausa hasta que tú decidas activarla.",
+          "El equipo de WITERS se encarga de que tus creatividades tengan el mayor alcance para tus ventas: las convertimos en una campaña real de Meta Ads, configurada y en pausa hasta que tú decidas activarla.",
       },
     ],
   }),
@@ -50,12 +50,22 @@ function Hero() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
   return (
-    <section className="relative overflow-hidden pb-16 pt-32 md:pb-24 md:pt-40">
+    <section className="relative overflow-hidden pb-16 pt-28 md:pb-24 md:pt-36">
       <div className="relative mx-auto max-w-3xl px-5 text-center md:px-[110px]">
         <span className="wit-rise inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-white/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue backdrop-blur-sm">
           Meta Ads · Campañas reales
         </span>
-        <h1 className="wit-rise wit-rise-d1 mx-auto mt-7 max-w-2xl text-5xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-7xl">
+      </div>
+
+      <div className="wit-rise wit-rise-d1 relative mt-8 px-5">
+        <div className="relative mx-auto max-w-md pb-8 pl-8 pt-4 sm:pb-14 sm:pl-16">
+          <MetaAdsDashboardCard />
+          <WhatsAppPhoneMockup className="absolute -bottom-6 -left-2 z-10 sm:-bottom-10 sm:-left-6" />
+        </div>
+      </div>
+
+      <div className="relative mx-auto mt-8 max-w-3xl px-5 text-center md:px-[110px]">
+        <h1 className="wit-rise wit-rise-d2 mx-auto max-w-2xl text-5xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-7xl">
           De la pieza a la{" "}
           <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
             campaña
@@ -63,8 +73,9 @@ function Hero() {
           .
         </h1>
         <p className="wit-rise wit-rise-d2 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-wit-gray">
-          Creamos tu creatividad publicitaria con IA y la convertimos en una campaña real de Meta
-          Ads — configurada en minutos, en pausa hasta que tú decidas encenderla.
+          El equipo de WITERS se encarga de que tus creatividades tengan el mayor alcance para tus
+          ventas — las convertimos en una campaña real de Meta Ads, configurada en minutos y en
+          pausa hasta que tú decidas encenderla.
         </p>
         <div className="wit-rise wit-rise-d2 mt-9 flex flex-col items-center gap-5">
           <Link
@@ -91,12 +102,6 @@ function Hero() {
           </a>
         </div>
       </div>
-      <div className="wit-rise wit-rise-d2 relative mt-14 px-5">
-        <div className="relative mx-auto max-w-md pb-8 pl-8 pt-4 sm:pb-14 sm:pl-16">
-          <MetaAdsDashboardCard />
-          <WhatsAppPhoneMockup className="absolute -bottom-6 -left-2 z-10 sm:-bottom-10 sm:-left-6" />
-        </div>
-      </div>
     </section>
   );
 }
@@ -106,8 +111,8 @@ function Hero() {
 const PASOS = [
   {
     icon: Wand2,
-    title: "Creamos tu pieza con IA",
-    text: "Wit arma tu creatividad publicitaria — título, estilo y marca — en minutos, dentro de tu panel.",
+    title: "Creamos tu pieza",
+    text: "El equipo de WITERS arma tu creatividad publicitaria — con apoyo de IA, cuidando estilo, marca y mensaje — en minutos, dentro de tu panel.",
   },
   {
     icon: Target,
@@ -116,8 +121,8 @@ const PASOS = [
   },
   {
     icon: MapPinned,
-    title: "La IA escribe el anuncio",
-    text: "Tres variantes de texto pensadas para vender, no solo para verse bien. Las puedes editar antes de continuar.",
+    title: "Escribimos el anuncio",
+    text: "Tres variantes de texto pensadas para vender, no solo para verse bien — redactadas con apoyo de IA y revisadas por nuestro equipo. Las puedes editar antes de continuar.",
   },
   {
     icon: PauseCircle,

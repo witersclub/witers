@@ -744,6 +744,11 @@ function CampanasTeaser() {
   return (
     <section className="relative overflow-hidden bg-white py-20 md:py-28">
       <div className="grid items-center gap-14 px-5 md:px-[110px] lg:grid-cols-2">
+        <div className="relative pb-8 pl-8 pt-4 sm:pb-14 sm:pl-16">
+          <MetaAdsDashboardCard />
+          <WhatsAppPhoneMockup className="absolute -bottom-6 -left-2 z-10 sm:-bottom-10 sm:-left-6" />
+        </div>
+
         <div>
           <span className="inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-wit-mist/40 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue">
             Meta Ads
@@ -754,8 +759,9 @@ function CampanasTeaser() {
             en <span className="italic text-wit-blue">"me gusta"</span>.
           </h2>
           <p className="mt-6 max-w-md text-lg leading-relaxed text-wit-gray">
-            La convertimos en una campaña real de Meta Ads — configurada, medible y lista para
-            vender. Sin salir de WITERS.
+            El equipo de WITERS se encarga de que tenga el mayor alcance para tus ventas — la
+            convertimos en una campaña real de Meta Ads, configurada, medible y lista para vender.
+            Sin salir de WITERS.
           </p>
           <Link
             to="/pauta"
@@ -776,11 +782,6 @@ function CampanasTeaser() {
               <path d="M3 13 13 3M13 3H6M13 3v7" />
             </svg>
           </Link>
-        </div>
-
-        <div className="relative pb-8 pl-8 pt-4 sm:pb-14 sm:pl-16">
-          <MetaAdsDashboardCard />
-          <WhatsAppPhoneMockup className="absolute -bottom-6 -left-2 z-10 sm:-bottom-10 sm:-left-6" />
         </div>
       </div>
     </section>
