@@ -3965,8 +3965,8 @@ function NewRequestForm({
     <section className="wit-glass h-fit rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
       <h2 className="text-xl font-bold text-wit-ink">Nueva solicitud de diseño</h2>
       <p className="mt-1 text-sm text-wit-gray">
-        Describe la creatividad publicitaria que necesitas y la generamos con IA. Tu solicitud se
-        entrega en un máximo de 3 días hábiles.
+        Describe la creatividad publicitaria que necesitas y nuestro equipo la trabaja, con IA como
+        herramienta de apoyo. Tu solicitud se entrega en un máximo de 3 días hábiles.
       </p>
 
       <form onSubmit={goToPreview} className="mt-6 space-y-4">

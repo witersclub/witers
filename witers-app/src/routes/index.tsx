@@ -847,7 +847,7 @@ const FAQS: { q: string; a: ReactNode }[] = [
   },
   {
     q: "¿Qué tipo de imágenes puedo solicitar?",
-    a: "Creatividades publicitarias para redes sociales, anuncios, banners, imágenes de producto y piezas de campaña. Cada solicitud se procesa con IA y con la supervisión del equipo WITERS.",
+    a: "Creatividades publicitarias para redes sociales, anuncios, banners, imágenes de producto y piezas de campaña. Cada solicitud la trabaja el equipo de WITERS, con IA como herramienta de apoyo.",
   },
 ];
 
