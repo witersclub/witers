@@ -198,13 +198,26 @@ function Hero() {
           <span className="inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-wit-mist/40 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue">
             Branding &amp; Rebranding
           </span>
-          <h1 className="mt-6 text-5xl font-extrabold leading-[1.02] tracking-tighter text-wit-ink md:text-6xl">
-            WITERS
-            <br />
-            <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
-              Brand
-            </span>
-          </h1>
+          <div className="relative w-fit">
+            <h1 className="mt-6 text-5xl font-extrabold leading-[1.02] tracking-tighter text-wit-ink md:text-6xl">
+              WITERS
+              <br />
+              <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
+                Brand
+              </span>
+            </h1>
+            {/* Below lg the hero collapses to one column, so the full-size
+                tablet (below) lands after the CTA instead of beside the
+                title. This small scaled-down copy fills that spot on
+                narrow screens — same tablet, just shrunk via CSS transform
+                so all 20 tiles stay proportionally correct, not redrawn. */}
+            <div
+              aria-hidden="true"
+              className="wit-float pointer-events-none absolute left-full top-0 z-10 ml-2 origin-top-left scale-[0.27] rotate-[6deg] lg:hidden"
+            >
+              <TabletLogoGrid className="w-[320px]" />
+            </div>
+          </div>
           <p className="mt-5 text-2xl font-bold leading-snug text-wit-ink">
             Construimos la identidad que{" "}
             <span className="italic text-wit-blue">hará crecer tu negocio</span>.
@@ -239,7 +252,7 @@ function Hero() {
           </div>
         </div>
 
-        <div className="wit-rise wit-rise-d1 wit-float mx-auto w-full max-w-md lg:max-w-lg">
+        <div className="wit-rise wit-rise-d1 wit-float mx-auto hidden w-full max-w-lg lg:block">
           <TabletLogoGrid />
         </div>
       </div>
