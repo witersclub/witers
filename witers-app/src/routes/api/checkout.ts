@@ -44,6 +44,18 @@ export const Route = createFileRoute("/api/checkout")({
         // get the promo price.
         const price = currentPriceFor(plan, existing?.activated_at ?? null);
 
+        // A plan switch charges only the difference from what they're already
+        // paying this month — not the new plan's full price again — since
+        // there's no real subscription/billing-cycle engine here to prorate
+        // against (no stored renewal date). A downgrade (or same-price swap)
+        // charges nothing; there's no refund path for the difference already
+        // paid on the old plan, so it just takes effect for free.
+        let chargeAmount = price;
+        if (existing?.status === "active" && existing.plan !== plan.id) {
+          const oldPrice = currentPriceFor(getPlan(existing.plan), existing.activated_at);
+          chargeAmount = Math.max(0, price - oldPrice);
+        }
+
         const membershipId = existing?.id ?? crypto.randomUUID();
         if (existing) {
           await db()
@@ -71,10 +83,10 @@ export const Route = createFileRoute("/api/checkout")({
             `INSERT INTO payments (id, user_id, membership_id, amount_mxn, method, provider, provider_ref, status)
              VALUES (?1, ?2, ?3, ?4, 'card', 'sandbox', ?5, 'paid')`,
           )
-          .bind(paymentId, user.id, membershipId, price, `card-${parsed.data.cardLast4}`)
+          .bind(paymentId, user.id, membershipId, chargeAmount, `card-${parsed.data.cardLast4}`)
           .run();
 
-        return json({ ok: true, membershipId, paymentId });
+        return json({ ok: true, membershipId, paymentId, chargeAmount });
       },
     },
   },

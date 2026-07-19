@@ -44,7 +44,15 @@ function Checkout() {
   // client-facing entry point for this flow.
   const currentPlanId = me.data?.membership?.plan;
   const isSwitch = active && currentPlanId !== plan.id;
-  const price = currentPriceFor(plan, me.data?.membership?.activated_at ?? null);
+  const activatedAt = me.data?.membership?.activated_at ?? null;
+  const price = currentPriceFor(plan, activatedAt);
+  // A switch charges only the difference from the current plan's rate, not
+  // the new plan's full price again — no billing-cycle/renewal-date engine
+  // exists here to prorate against, so this is the simplest fair-ish
+  // approximation. A downgrade (or same-price swap) costs nothing now;
+  // there's no refund path for what was already paid on the pricier plan.
+  const oldPrice = isSwitch ? currentPriceFor(getPlan(currentPlanId), activatedAt) : 0;
+  const chargeAmount = isSwitch ? Math.max(0, price - oldPrice) : price;
 
   async function pay(e: React.FormEvent) {
     e.preventDefault();
@@ -145,7 +153,15 @@ function Checkout() {
               <>
                 Pasas de <strong className="text-wit-ink">{getPlan(currentPlanId).nombre}</strong> a{" "}
                 <strong className="text-wit-ink">{plan.nombre}</strong>. Tus solicitudes usadas este
-                mes y tus solicitudes de paquetes no se pierden.
+                mes y tus solicitudes de paquetes no se pierden.{" "}
+                {chargeAmount > 0 ? (
+                  <>
+                    Solo pagas la diferencia con lo que ya cubriste este mes:{" "}
+                    <strong className="text-wit-ink">{fmt(chargeAmount)} MXN</strong>.
+                  </>
+                ) : (
+                  "El cambio no tiene costo adicional este mes."
+                )}
               </>
             ) : (
               "Activa tu suscripción y tu cuenta queda lista para pedir creatividades con IA."
@@ -312,7 +328,9 @@ function Checkout() {
                 {loading
                   ? "Procesando pago..."
                   : isSwitch
-                    ? `Cambiar a ${plan.nombre} — ${fmt(price)} MXN`
+                    ? chargeAmount > 0
+                      ? `Cambiar a ${plan.nombre} — ${fmt(chargeAmount)} MXN`
+                      : `Cambiar a ${plan.nombre} — sin costo adicional`
                     : `Pagar ${fmt(price)} MXN`}
               </button>
               <p className="mt-3 text-center text-[11px] leading-relaxed text-wit-gray">
