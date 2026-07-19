@@ -675,7 +675,17 @@ function Membresia() {
 function CampanasTeaser() {
   return (
     <section className="relative overflow-hidden bg-white py-20 md:py-28">
-      <div className="grid items-center gap-14 px-5 md:px-[110px] lg:grid-cols-2">
+      <div className="mx-auto max-w-2xl px-5 text-center md:px-[110px]">
+        <h2 className="text-3xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-5xl">
+          De la pieza a la{" "}
+          <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
+            campaña
+          </span>
+          .
+        </h2>
+      </div>
+
+      <div className="mt-14 grid items-center gap-14 px-5 md:px-[110px] lg:grid-cols-2">
         <div className="relative pb-8 pl-8 pt-4 sm:pb-14 sm:pl-16">
           <MetaAdsDashboardCard />
           <WhatsAppPhoneMockup className="absolute -bottom-6 -left-2 z-10 sm:-bottom-10 sm:-left-6" />
@@ -685,13 +695,11 @@ function CampanasTeaser() {
           <span className="inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-wit-mist/40 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue">
             Meta Ads
           </span>
-          <h2 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-5xl">
-            De la pieza a la{" "}
-            <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
-              campaña
-            </span>
-            .
-          </h2>
+          <h3 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-5xl">
+            Tu pieza no se queda
+            <br />
+            en <span className="italic text-wit-blue">"me gusta"</span>.
+          </h3>
           <p className="mt-6 max-w-md text-lg leading-relaxed text-wit-gray">
             El equipo de WITERS se encarga de que tenga el mayor alcance para tus ventas — la
             convertimos en una campaña real de Meta Ads, configurada, medible y lista para vender.
