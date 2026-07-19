@@ -3,6 +3,7 @@
 // stay identical between both; only the CTA per card (and which plan, if
 // any, reads as "current") differs, via the ctaFor callback.
 import { Link } from "@tanstack/react-router";
+import { Star } from "lucide-react";
 
 import { MEMBERSHIP_PLANS, PROMO_MESES, type MembershipPlan } from "../../lib/membership-plans";
 
@@ -39,12 +40,15 @@ export function MembershipPlanCards({ ctaFor }: { ctaFor: (plan: MembershipPlan)
               m.destacada ? "ring-2 ring-[#9aa3b2] lg:-translate-y-4" : ""
             }`}
           >
-            <div className={`px-7 py-6 text-white ${TIER_HEADER_BG[m.id]}`}>
-              {m.destacada ? (
-                <span className="mx-auto mb-2 block w-fit rounded-full bg-white px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-wit-blue">
-                  Más popular
-                </span>
-              ) : null}
+            {m.destacada ? (
+              <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-wit-blue shadow-[0_8px_20px_rgba(0,0,0,0.22)]">
+                <Star className="h-3 w-3" fill="currentColor" strokeWidth={0} />
+                Más popular
+              </span>
+            ) : null}
+            <div
+              className={`px-7 pb-6 text-white ${m.destacada ? "pt-14" : "pt-6"} ${TIER_HEADER_BG[m.id]}`}
+            >
               <p className="text-center text-lg font-extrabold uppercase tracking-[0.12em] text-white">
                 WITERS {m.nombre}
               </p>

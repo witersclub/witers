@@ -555,16 +555,6 @@ function Panel() {
                     >
                       {active ? `${getPlan(membership?.plan).nombre} activa` : "Sin membresía"}
                     </span>
-                    {active && membership ? (
-                      <span className="font-wit-mono text-[11px] text-wit-gray">
-                        $
-                        {membership.price_mxn.toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}{" "}
-                        MXN/mes + IVA
-                      </span>
-                    ) : null}
                   </div>
                 </div>
                 {active ? (
@@ -1391,17 +1381,8 @@ function MembershipSummaryCard({
         <div className="mt-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-wit-navy p-5 text-white">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">
-                WITERS {plan.nombre}
-              </p>
-              <p className="mt-1 font-wit-mono text-2xl font-semibold">
-                $
-                {membership.price_mxn.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                <span className="text-sm font-semibold text-white/70">MXN/mes + IVA</span>
-              </p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">Tu plan</p>
+              <p className="mt-1 text-2xl font-extrabold">WITERS {plan.nombre}</p>
             </div>
             <span
               className={`rounded-full px-3 py-1 text-xs font-bold ${
