@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
+import { MembershipComparisonTable } from "../components/witers/membership-comparison-table";
 import { MembershipPlanCards } from "../components/witers/membership-cards";
 import { MetaAdsDashboardCard, WhatsAppPhoneMockup } from "../components/witers/meta-ads-card";
 import {
@@ -576,6 +577,8 @@ function Membresia() {
           </Link>
           .
         </p>
+
+        <MembershipComparisonTable />
       </div>
     </section>
   );
