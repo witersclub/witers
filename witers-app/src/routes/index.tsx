@@ -686,9 +686,11 @@ function CampanasTeaser() {
             Meta Ads
           </span>
           <h2 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-5xl">
-            Tu pieza no se queda
-            <br />
-            en <span className="italic text-wit-blue">"me gusta"</span>.
+            De la pieza a la{" "}
+            <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
+              campaña
+            </span>
+            .
           </h2>
           <p className="mt-6 max-w-md text-lg leading-relaxed text-wit-gray">
             El equipo de WITERS se encarga de que tenga el mayor alcance para tus ventas — la
