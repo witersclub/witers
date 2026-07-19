@@ -2038,9 +2038,18 @@ function EditDesignerModal({
 
 /* ---------- users & payments ---------- */
 
+// Client-side speed bump, not a real access boundary — /admin already
+// requires role = 'admin' server-side (see requireAdminUser), so this code
+// only exists to stop editing a user from being a single accidental click
+// for the admins already in this panel. Anyone who can open devtools can
+// read it out of the bundle, so it must never be treated as protecting
+// anything the server itself doesn't also check.
+const EDIT_USER_PIN = "0722";
+
 function UsersTable({ rows }: { rows: AdminUser[] }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<AdminUser | null>(null);
+  const [pinTarget, setPinTarget] = useState<AdminUser | null>(null);
 
   return (
     <div className="wit-glass mt-6 overflow-x-auto rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
@@ -2090,7 +2099,6 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
                     +{u.bonus_requests_quota} regaladas
                   </p>
                 ) : null}
-                {u.membership_status === "active" ? <GrantRequestsButton userId={u.id} /> : null}
               </td>
               <td className="px-5 py-3.5 font-wit-mono">
                 ${u.total_paid_mxn.toLocaleString("es-MX")}
@@ -2101,7 +2109,7 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
               <td className="px-5 py-3.5 text-right">
                 <button
                   type="button"
-                  onClick={() => setEditing(u)}
+                  onClick={() => setPinTarget(u)}
                   aria-label={`Editar a ${u.name}`}
                   title="Editar"
                   className="rounded-lg p-2 text-wit-gray transition-colors hover:bg-wit-blue/10 hover:text-wit-blue"
@@ -2129,6 +2137,19 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
         <p className="px-5 py-8 text-center text-sm text-wit-gray">Sin usuarios registrados aún.</p>
       ) : null}
 
+      {pinTarget
+        ? createPortal(
+            <PinGateModal
+              onClose={() => setPinTarget(null)}
+              onConfirmed={() => {
+                setEditing(pinTarget);
+                setPinTarget(null);
+              }}
+            />,
+            document.body,
+          )
+        : null}
+
       {editing
         ? createPortal(
             <EditUserModal
@@ -2146,19 +2167,88 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
   );
 }
 
+function PinGateModal({ onClose, onConfirmed }: { onClose: () => void; onConfirmed: () => void }) {
+  const [code, setCode] = useState("");
+  const [error, setError] = useState(false);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (code === EDIT_USER_PIN) {
+      onConfirmed();
+      return;
+    }
+    setError(true);
+    setCode("");
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-wit-navy/90 p-5"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-xs rounded-2xl bg-white p-6 shadow-2xl"
+      >
+        <h2 className="text-base font-bold text-wit-ink">Código de administrador</h2>
+        <p className="mt-1 text-xs text-wit-gray">
+          Ingresa el código para editar los datos de este usuario.
+        </p>
+        <input
+          type="password"
+          inputMode="numeric"
+          autoFocus
+          maxLength={4}
+          value={code}
+          onChange={(e) => {
+            setError(false);
+            setCode(e.target.value.replace(/[^\d]/g, "").slice(0, 4));
+          }}
+          className={`mt-4 w-full rounded-xl border px-4 py-3 text-center font-wit-mono text-lg tracking-[0.5em] outline-none ${
+            error
+              ? "border-red-400 focus:border-red-500"
+              : "border-wit-ink/15 focus:border-wit-blue"
+          }`}
+          placeholder="····"
+        />
+        {error ? <p className="mt-2 text-xs text-red-600">Código incorrecto.</p> : null}
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm font-semibold text-wit-ink hover:border-wit-blue"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={code.length !== 4}
+            className="flex-1 rounded-xl bg-wit-blue px-4 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+          >
+            Continuar
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 // Quick manual top-up for a client who ran out of solicitudes — same
 // bonus_requests_quota mechanism as a purchased image pack (see
 // /api/admin/grant-requests), just free and one click. Deliberately a
 // single fixed amount, not a picker: this is the "start simple" version —
 // a designer selling image packs from the panel already exists for anyone
-// who wants a specific amount.
-function GrantRequestsButton({ userId }: { userId: string }) {
-  const qc = useQueryClient();
+// who wants a specific amount. Lives inside EditUserModal, next to the
+// membership status it affects, not in the table row — same place every
+// other per-user admin action (activar membresía, editar marca) already is.
+function GrantRequestsButton({ userId, onGranted }: { userId: string; onGranted: () => void }) {
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
+  const [error, setError] = useState(false);
 
   async function grant() {
     setBusy(true);
+    setError(false);
     try {
       const res = await fetch("/api/admin/grant-requests", {
         method: "POST",
@@ -2166,25 +2256,30 @@ function GrantRequestsButton({ userId }: { userId: string }) {
         body: JSON.stringify({ userId, amount: 10 }),
       });
       const data = (await res.json()) as { ok: boolean };
-      if (!data.ok) return;
-      setDone(true);
-      await qc.invalidateQueries({ queryKey: ["admin-overview"] });
-      window.setTimeout(() => setDone(false), 2000);
+      if (!data.ok) {
+        setError(true);
+        return;
+      }
+      onGranted();
+    } catch {
+      setError(true);
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <button
-      type="button"
-      onClick={grant}
-      disabled={busy}
-      title="Regalar 10 solicitudes extra a este usuario"
-      className="mt-1 rounded-full border border-wit-blue/25 px-2 py-0.5 text-[11px] font-bold text-wit-blue transition-colors hover:bg-wit-blue/10 disabled:opacity-50"
-    >
-      {done ? "+10 ✓" : busy ? "..." : "+10"}
-    </button>
+    <div className="flex shrink-0 flex-col items-end gap-1">
+      <button
+        type="button"
+        onClick={grant}
+        disabled={busy}
+        className="shrink-0 rounded-xl border border-wit-blue/25 px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10 disabled:opacity-50"
+      >
+        {busy ? "Regalando..." : "+10 solicitudes"}
+      </button>
+      {error ? <p className="text-[11px] text-red-600">No se pudo. Intenta de nuevo.</p> : null}
+    </div>
   );
 }
 
@@ -2335,7 +2430,9 @@ function EditUserModal({
                 {activating ? "Activando..." : "Activar membresía"}
               </button>
             </div>
-          ) : null}
+          ) : (
+            <GrantRequestsButton userId={user.id} onGranted={onSaved} />
+          )}
         </div>
         {activateMsg ? <p className="mt-2 text-xs text-red-600">{activateMsg}</p> : null}
 
