@@ -6,6 +6,7 @@ import type * as LeafletNS from "leaflet";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowUpCircle,
   Briefcase,
   Building2,
   Cake,
@@ -482,11 +483,22 @@ function Panel() {
           <Link to="/">
             <WitersLogo compact />
           </Link>
-          <UserMenu
-            name={me.data.user?.name ?? ""}
-            onOpenProfile={() => setView("perfil")}
-            onLogout={logout}
-          />
+          <div className="flex items-center gap-3">
+            {active && membership?.plan !== "scale" ? (
+              <Link
+                to="/upgrade"
+                className="flex items-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10"
+              >
+                <ArrowUpCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
+                Upgrade
+              </Link>
+            ) : null}
+            <UserMenu
+              name={me.data.user?.name ?? ""}
+              onOpenProfile={() => setView("perfil")}
+              onLogout={logout}
+            />
+          </div>
         </div>
       </header>
 

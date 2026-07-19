@@ -36,6 +36,14 @@ function Checkout() {
   const [loading, setLoading] = useState(false);
 
   const active = me.data?.membership?.status === "active";
+  // Already active on this exact plan = nothing to do (blocked below).
+  // Active on a *different* plan = an upgrade/downgrade, not a duplicate
+  // activation — same price/quota math via currentPriceFor, since
+  // activated_at (and therefore the promo window) never resets on a plan
+  // change. See /api/checkout's matching guard and /upgrade, the
+  // client-facing entry point for this flow.
+  const currentPlanId = me.data?.membership?.plan;
+  const isSwitch = active && currentPlanId !== plan.id;
   const price = currentPriceFor(plan, me.data?.membership?.activated_at ?? null);
 
   async function pay(e: React.FormEvent) {
@@ -122,10 +130,26 @@ function Checkout() {
       <main className="mx-auto grid w-full max-w-4xl gap-10 px-5 pb-24 pt-8 lg:grid-cols-[1fr_1fr]">
         <section>
           <h1 className="text-4xl font-extrabold tracking-tighter text-wit-ink">
-            Activa tu <span className="wit-underline text-wit-blue">membresía</span>
+            {isSwitch ? (
+              <>
+                Cambia tu <span className="wit-underline text-wit-blue">plan</span>
+              </>
+            ) : (
+              <>
+                Activa tu <span className="wit-underline text-wit-blue">membresía</span>
+              </>
+            )}
           </h1>
           <p className="mt-4 text-base leading-relaxed text-wit-gray">
-            Activa tu suscripción y tu cuenta queda lista para pedir creatividades con IA.
+            {isSwitch ? (
+              <>
+                Pasas de <strong className="text-wit-ink">{getPlan(currentPlanId).nombre}</strong> a{" "}
+                <strong className="text-wit-ink">{plan.nombre}</strong>. Tus solicitudes usadas este
+                mes y tus solicitudes de paquetes no se pierden.
+              </>
+            ) : (
+              "Activa tu suscripción y tu cuenta queda lista para pedir creatividades con IA."
+            )}
           </p>
 
           <div className="mt-8 rounded-3xl bg-wit-navy p-7 text-white">
@@ -165,7 +189,7 @@ function Checkout() {
         </section>
 
         <section>
-          {active ? (
+          {active && !isSwitch ? (
             <div className="rounded-3xl border border-wit-blue/20 bg-white p-8 text-center">
               <p className="text-lg font-bold text-wit-ink">Tu membresía ya está activa.</p>
               <Link
@@ -285,7 +309,11 @@ function Checkout() {
                 disabled={loading}
                 className="mt-6 w-full rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
               >
-                {loading ? "Procesando pago..." : `Pagar ${fmt(price)} MXN`}
+                {loading
+                  ? "Procesando pago..."
+                  : isSwitch
+                    ? `Cambiar a ${plan.nombre} — ${fmt(price)} MXN`
+                    : `Pagar ${fmt(price)} MXN`}
               </button>
               <p className="mt-3 text-center text-[11px] leading-relaxed text-wit-gray">
                 Entorno de pago en modo de activación directa. La pasarela definitiva (Stripe o

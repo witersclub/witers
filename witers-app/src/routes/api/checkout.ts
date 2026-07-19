@@ -27,10 +27,14 @@ export const Route = createFileRoute("/api/checkout")({
         const plan = getPlan(parsed.data.plan);
 
         const existing = await db()
-          .prepare("SELECT id, status, activated_at FROM memberships WHERE user_id = ?1")
+          .prepare("SELECT id, status, plan, activated_at FROM memberships WHERE user_id = ?1")
           .bind(user.id)
-          .first<{ id: string; status: string; activated_at: string | null }>();
-        if (existing?.status === "active") {
+          .first<{ id: string; status: string; plan: string; activated_at: string | null }>();
+        // Active on this exact plan already — nothing to do. Active on a
+        // *different* plan is a legitimate upgrade/downgrade, not a
+        // duplicate activation, so it falls through to the same UPDATE
+        // below (see /upgrade for the client-facing entry point).
+        if (existing?.status === "active" && existing.plan === plan.id) {
           return json({ ok: false, error: "ya_activa" }, { status: 409 });
         }
 

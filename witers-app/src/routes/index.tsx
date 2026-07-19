@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
+import { MembershipPlanCards } from "../components/witers/membership-cards";
 import { MetaAdsDashboardCard, WhatsAppPhoneMockup } from "../components/witers/meta-ads-card";
 import {
   AspectRatioPicker,
@@ -12,7 +13,7 @@ import {
   StylePicker,
 } from "../components/witers/lab-pickers";
 import { useDraggableMarquee } from "../hooks/use-draggable-marquee";
-import { MEMBERSHIP_PLANS, PROMO_MESES } from "../lib/membership-plans";
+import { PROMO_MESES } from "../lib/membership-plans";
 import { saveTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe } from "../lib/witers-client";
 
@@ -530,21 +531,9 @@ function CtaFinal() {
 
 /* ---------------- 9. MEMBRESÍA ---------------- */
 
-// Essential stays brand blue; Grow (the "middle" tier) reads as platinum —
-// a brushed silver gradient, not another shade of blue — and Scale reads as
-// black, so the three cards feel like a visible step up rather than three
-// blue boxes with different numbers.
-const TIER_HEADER_BG: Record<string, string> = {
-  essential: "bg-wit-blue",
-  grow: "bg-[linear-gradient(135deg,#aeb6c0,#6b7280_55%,#464b54)]",
-  scale: "bg-[linear-gradient(135deg,#2a2a2d,#000000_60%,#000000)]",
-};
-
 function Membresia() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
-  const fmt = (n: number) =>
-    "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (
     <section id="membresia" className="relative overflow-hidden bg-wit-navy py-20 md:py-28">
       <div
@@ -572,91 +561,13 @@ function Membresia() {
           </p>
         </div>
 
-        <div className="mx-auto mt-14 grid max-w-6xl gap-6 lg:grid-cols-3">
-          {MEMBERSHIP_PLANS.map((m) => {
-            const descuento = Math.round((1 - m.precioPromo / m.precioRegular) * 100);
-            return (
-              <div
-                key={m.id}
-                className={`relative flex flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_40px_120px_rgba(0,71,255,0.25)] ${
-                  m.destacada ? "ring-2 ring-[#9aa3b2] lg:-translate-y-4" : ""
-                }`}
-              >
-                <div className={`px-7 py-6 text-white ${TIER_HEADER_BG[m.id]}`}>
-                  {m.destacada ? (
-                    <span className="mx-auto mb-2 block w-fit rounded-full bg-white px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-wit-blue">
-                      Más popular
-                    </span>
-                  ) : null}
-                  <p className="text-center text-lg font-extrabold uppercase tracking-[0.12em] text-white">
-                    WITERS {m.nombre}
-                  </p>
-                  <p className="mt-1.5 text-sm font-semibold text-white/95">{m.tagline}</p>
-                  <div className="mt-4 flex items-center gap-2">
-                    <span className="text-sm text-white/50 line-through">
-                      {fmt(m.precioRegular)}
-                    </span>
-                    <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-extrabold text-white">
-                      -{descuento}%
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-end gap-2">
-                    <span className="font-wit-mono text-4xl font-semibold leading-none">
-                      {fmt(m.precioPromo)}
-                    </span>
-                    <span className="pb-1 text-xs font-semibold leading-tight text-white/85">
-                      MXN/mes
-                      <br />+ IVA
-                    </span>
-                  </div>
-                  <p className="mt-2 text-[11px] leading-relaxed text-white/60">
-                    Precio especial válido tus primeros {PROMO_MESES} meses. Del mes{" "}
-                    {PROMO_MESES + 1} en adelante: {fmt(m.precioRegular)} MXN + IVA al mes.
-                  </p>
-                </div>
-
-                <p className="border-b border-wit-ink/10 px-7 py-5 text-sm leading-relaxed text-wit-gray">
-                  {m.descripcion}
-                </p>
-
-                <ul className="flex-1 space-y-3.5 px-7 py-7">
-                  {m.beneficios.map((b) => (
-                    <li key={b} className="flex items-start gap-3 text-sm text-wit-ink">
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        stroke="#0047FF"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="mt-0.5 shrink-0"
-                      >
-                        <path d="M3.5 10.5 8 15l8.5-9.5" />
-                      </svg>
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="px-7 pb-7">
-                  <Link
-                    to={signedIn ? "/checkout" : "/registro"}
-                    search={{ plan: m.id }}
-                    className={`block w-full rounded-2xl px-6 py-3.5 text-center text-base font-bold text-white transition-all duration-200 active:scale-[0.99] ${
-                      m.destacada
-                        ? "bg-wit-blue hover:brightness-110"
-                        : "bg-wit-navy hover:bg-wit-blue"
-                    }`}
-                  >
-                    Quiero {m.nombre}
-                  </Link>
-                </div>
-              </div>
-            );
+        <MembershipPlanCards
+          ctaFor={(m) => ({
+            to: signedIn ? "/checkout" : "/registro",
+            search: { plan: m.id },
+            label: `Quiero ${m.nombre}`,
           })}
-        </div>
+        />
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs text-white/50">
           Pago con tarjeta de crédito o débito. Activación inmediata. Suscripción con renovación
           automática mensual — puedes cancelar cuando quieras.{" "}
