@@ -57,6 +57,7 @@ import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAdminVerifyPinRouteImport } from './routes/api/admin/verify-pin'
 import { Route as ApiAdminUpdateRequestRouteImport } from './routes/api/admin/update-request'
 import { Route as ApiAdminUpdateDesignerRouteImport } from './routes/api/admin/update-designer'
 import { Route as ApiAdminUpdateBrandProfileRouteImport } from './routes/api/admin/update-brand-profile'
@@ -316,6 +317,11 @@ const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
   path: '/api/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminVerifyPinRoute = ApiAdminVerifyPinRouteImport.update({
+  id: '/api/admin/verify-pin',
+  path: '/api/admin/verify-pin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminUpdateRequestRoute = ApiAdminUpdateRequestRouteImport.update({
   id: '/api/admin/update-request',
   path: '/api/admin/update-request',
@@ -459,6 +465,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
+  '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
@@ -526,6 +533,7 @@ export interface FileRoutesByTo {
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
+  '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
@@ -594,6 +602,7 @@ export interface FileRoutesById {
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
+  '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
@@ -663,6 +672,7 @@ export interface FileRouteTypes {
     | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
     | '/api/admin/update-request'
+    | '/api/admin/verify-pin'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
@@ -730,6 +740,7 @@ export interface FileRouteTypes {
     | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
     | '/api/admin/update-request'
+    | '/api/admin/verify-pin'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
@@ -797,6 +808,7 @@ export interface FileRouteTypes {
     | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
     | '/api/admin/update-request'
+    | '/api/admin/verify-pin'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
@@ -865,6 +877,7 @@ export interface RootRouteChildren {
   ApiAdminUpdateBrandProfileRoute: typeof ApiAdminUpdateBrandProfileRoute
   ApiAdminUpdateDesignerRoute: typeof ApiAdminUpdateDesignerRoute
   ApiAdminUpdateRequestRoute: typeof ApiAdminUpdateRequestRoute
+  ApiAdminVerifyPinRoute: typeof ApiAdminVerifyPinRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
@@ -1219,6 +1232,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/verify-pin': {
+      id: '/api/admin/verify-pin'
+      path: '/api/admin/verify-pin'
+      fullPath: '/api/admin/verify-pin'
+      preLoaderRoute: typeof ApiAdminVerifyPinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/update-request': {
       id: '/api/admin/update-request'
       path: '/api/admin/update-request'
@@ -1393,6 +1413,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminUpdateBrandProfileRoute: ApiAdminUpdateBrandProfileRoute,
   ApiAdminUpdateDesignerRoute: ApiAdminUpdateDesignerRoute,
   ApiAdminUpdateRequestRoute: ApiAdminUpdateRequestRoute,
+  ApiAdminVerifyPinRoute: ApiAdminVerifyPinRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,

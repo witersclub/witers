@@ -2038,14 +2038,6 @@ function EditDesignerModal({
 
 /* ---------- users & payments ---------- */
 
-// Client-side speed bump, not a real access boundary — /admin already
-// requires role = 'admin' server-side (see requireAdminUser), so this code
-// only exists to stop editing a user from being a single accidental click
-// for the admins already in this panel. Anyone who can open devtools can
-// read it out of the bundle, so it must never be treated as protecting
-// anything the server itself doesn't also check.
-const EDIT_USER_PIN = "0722";
-
 function UsersTable({ rows }: { rows: AdminUser[] }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<AdminUser | null>(null);
@@ -2169,16 +2161,38 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
 
 function PinGateModal({ onClose, onConfirmed }: { onClose: () => void; onConfirmed: () => void }) {
   const [code, setCode] = useState("");
-  const [error, setError] = useState(false);
+  const [checking, setChecking] = useState(false);
+  // "wrong" = bad code, try again. "unset" = ADMIN_EDIT_PIN isn't
+  // configured server-side yet — a different problem than a typo, so it
+  // gets its own message instead of just "Código incorrecto."
+  const [error, setError] = useState<"wrong" | "unset" | null>(null);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (code === EDIT_USER_PIN) {
-      onConfirmed();
-      return;
+    setChecking(true);
+    setError(null);
+    try {
+      // Verified server-side (see /api/admin/verify-pin) precisely so the
+      // real code never ships in this file's JS bundle — only "correct or
+      // not" crosses the network, never the value itself.
+      const res = await fetch("/api/admin/verify-pin", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (data.ok) {
+        onConfirmed();
+        return;
+      }
+      setError(data.error === "sin_configurar" ? "unset" : "wrong");
+      setCode("");
+    } catch {
+      setError("wrong");
+      setCode("");
+    } finally {
+      setChecking(false);
     }
-    setError(true);
-    setCode("");
   }
 
   return (
@@ -2202,17 +2216,22 @@ function PinGateModal({ onClose, onConfirmed }: { onClose: () => void; onConfirm
           maxLength={4}
           value={code}
           onChange={(e) => {
-            setError(false);
+            setError(null);
             setCode(e.target.value.replace(/[^\d]/g, "").slice(0, 4));
           }}
           className={`mt-4 w-full rounded-xl border px-4 py-3 text-center font-wit-mono text-lg tracking-[0.5em] outline-none ${
-            error
+            error === "wrong"
               ? "border-red-400 focus:border-red-500"
               : "border-wit-ink/15 focus:border-wit-blue"
           }`}
           placeholder="····"
         />
-        {error ? <p className="mt-2 text-xs text-red-600">Código incorrecto.</p> : null}
+        {error === "wrong" ? <p className="mt-2 text-xs text-red-600">Código incorrecto.</p> : null}
+        {error === "unset" ? (
+          <p className="mt-2 text-xs text-amber-600">
+            Todavía no se configuró el código (ADMIN_EDIT_PIN) en el servidor.
+          </p>
+        ) : null}
         <div className="mt-4 flex gap-2">
           <button
             type="button"
@@ -2223,10 +2242,10 @@ function PinGateModal({ onClose, onConfirmed }: { onClose: () => void; onConfirm
           </button>
           <button
             type="submit"
-            disabled={code.length !== 4}
+            disabled={code.length !== 4 || checking}
             className="flex-1 rounded-xl bg-wit-blue px-4 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
           >
-            Continuar
+            {checking ? "Verificando..." : "Continuar"}
           </button>
         </div>
       </form>

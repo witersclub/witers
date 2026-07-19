@@ -8,6 +8,7 @@
   //   3. npx wrangler r2 bucket create witers-assets
   //   4. npx wrangler d1 migrations apply witers-db --remote
   //   5. npx wrangler secret put OPENAI_API_KEY  (for AI intake + image generation, optional)
+  //   6. npx wrangler secret put ADMIN_EDIT_PIN  (code the admin panel asks for before editing a user)
   "name": "witers",
 
   "main": "dist/server/server.js",
