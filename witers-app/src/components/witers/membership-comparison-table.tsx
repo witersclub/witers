@@ -1,12 +1,15 @@
 // Detailed feature-by-feature comparison, below the 3 fichas — for
 // visitors who've already scanned the cards and want the full breakdown
-// before deciding. First column stays fixed while the 3 plan columns
-// scroll horizontally on narrow screens (3 data columns + labels don't
-// fit a phone width side by side).
+// before deciding. Below lg (the same breakpoint the fichas stack at),
+// 3 columns side by side don't fit a phone screen without horizontal
+// scrolling, which felt clunky — so mobile gets a plan-switcher instead:
+// tap a tab, see that plan's full feature list in one column, no
+// sideways movement at all. Desktop keeps the full side-by-side table.
+import { useState } from "react";
 import { Check, Minus } from "lucide-react";
 
 import { COMPARISON_ROWS, type ComparisonValue } from "../../lib/membership-comparison";
-import { MEMBERSHIP_PLANS } from "../../lib/membership-plans";
+import { MEMBERSHIP_PLANS, type PlanId } from "../../lib/membership-plans";
 
 function Cell({ value }: { value: ComparisonValue }) {
   if (value === true) {
@@ -23,16 +26,20 @@ function Cell({ value }: { value: ComparisonValue }) {
 }
 
 export function MembershipComparisonTable() {
+  const [activePlan, setActivePlan] = useState<PlanId>("grow");
+
   return (
     <div className="mx-auto mt-16 max-w-5xl">
       <p className="text-center text-sm font-bold uppercase tracking-[0.22em] text-white/50">
         Compara a detalle
       </p>
-      <div className="mt-6 overflow-x-auto rounded-[28px] border border-white/10">
-        <table className="w-full min-w-[640px] border-collapse text-left">
+
+      {/* Desktop / tablet: full side-by-side table, 3 columns fit fine. */}
+      <div className="mt-6 hidden overflow-hidden rounded-[28px] border border-white/10 lg:block">
+        <table className="w-full border-collapse text-left">
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 w-[42%] bg-wit-navy px-5 py-5 align-bottom sm:w-[38%]" />
+              <th className="w-[38%] bg-wit-navy px-5 py-5 align-bottom" />
               {MEMBERSHIP_PLANS.map((m) => (
                 <th
                   key={m.id}
@@ -58,7 +65,7 @@ export function MembershipComparisonTable() {
               return (
                 <tr key={row.label}>
                   <td
-                    className={`sticky left-0 z-10 px-5 py-4 text-sm text-white/80 ${
+                    className={`px-5 py-4 text-sm text-white/80 ${
                       striped ? "bg-wit-navy-soft" : "bg-wit-navy"
                     }`}
                   >
@@ -79,6 +86,40 @@ export function MembershipComparisonTable() {
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile: one plan at a time, switched with tabs — nothing scrolls sideways. */}
+      <div className="mt-6 lg:hidden">
+        <div className="flex gap-1 rounded-full bg-white/5 p-1">
+          {MEMBERSHIP_PLANS.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setActivePlan(m.id)}
+              className={`flex-1 rounded-full px-3 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors ${
+                activePlan === m.id ? "bg-wit-blue text-white" : "text-white/60"
+              }`}
+            >
+              {m.nombre}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 overflow-hidden rounded-[24px] border border-white/10">
+          {COMPARISON_ROWS.map((row, i) => (
+            <div
+              key={row.label}
+              className={`flex items-center justify-between gap-4 px-5 py-4 ${
+                i % 2 === 1 ? "bg-wit-navy-soft" : "bg-wit-navy"
+              }`}
+            >
+              <span className="text-sm text-white/80">{row.label}</span>
+              <div className="shrink-0">
+                <Cell value={row.values[activePlan]} />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
