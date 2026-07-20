@@ -59,7 +59,20 @@ export function buildDesignPrompt(input: DesignPromptInput): string {
 
   if (input.brandColors)
     parts.push(`Usa esta paleta de colores de marca de forma consistente: ${input.brandColors}.`);
-  if (input.promoPrice) parts.push(`Destaca este precio o promoción: "${input.promoPrice}".`);
+  // Always an explicit statement either way — never silence on price. A
+  // missing line here reads as "not asked about," not "no price," which
+  // an image-generating AI downstream can (and has) filled in with a
+  // fabricated number. Spelling out "no price" removes that ambiguity
+  // instead of leaving it to be inferred from an absent sentence.
+  if (input.promoPrice) {
+    parts.push(
+      `Destaca este precio o promoción exacto, copiado tal cual sin cambiar un solo dígito ni redondearlo: "${input.promoPrice}".`,
+    );
+  } else {
+    parts.push(
+      "El cliente no proporcionó ningún precio, descuento ni promoción — esta pieza NO debe mostrar ninguna cifra de precio inventada.",
+    );
+  }
   if (input.requiredText)
     // Respuesta cruda del cliente, tal como la escribió — puede venir
     // coloquial ("sí, de 12,000 a 5,999"). No se le dice a la IA que la

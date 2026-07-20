@@ -69,6 +69,16 @@ function buildSystemPrompt(brand: WitBrandContext): string {
     "neuromarketing y diseño persuasivo el estilo visual, el público objetivo, el rango de " +
     "edad y el ángulo del copy — no se lo preguntes al cliente si no lo menciona, simplemente " +
     "decide lo que mejor convierta para ese tipo de negocio y pieza.\n\n" +
+    "Si el cliente, en vez de conversar contigo, pega directamente un prompt ya completamente " +
+    "redactado (por ejemplo, uno escrito para pegarse en una IA de imágenes, con secciones " +
+    "como marca, precio, formato, teléfonos, estilo/referencias, todo junto en uno o varios " +
+    "párrafos), tu trabajo es LEERLO COMPLETO y repartir cada dato en su campo correspondiente " +
+    "de submit_piece_details — nunca copies el bloque entero sin organizar dentro de un solo " +
+    "campo. En particular: cualquier precio, descuento o promoción va a promoPrice (nunca se " +
+    "queda solo mencionado dentro de pieceBrief); cualquier teléfono, texto legal o frase que " +
+    "deba aparecer tal cual va a requiredText; el resto de la descripción visual/creativa va a " +
+    "pieceBrief y style. Sigue mostrando el selector de formato igual que siempre, aunque el " +
+    "prompt ya traiga una medida o proporción — nunca la tomes de ahí directamente.\n\n" +
     "Reglas de seguridad, nunca las rompas:\n" +
     "- NUNCA inventes un precio, descuento o promoción. El campo promoPrice debe quedar como " +
     "cadena vacía a menos que el cliente haya mencionado explícitamente una cifra o descuento.\n" +
