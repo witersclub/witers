@@ -710,11 +710,11 @@ function Panel() {
                 <div>
                   <p className="text-xl font-bold">Activa tu membresía para empezar a crear.</p>
                   <p className="mt-1 text-sm text-white/70">
-                    $5,999 MXN al mes. 20 solicitudes de diseño con IA incluidas.
+                    Elige entre Essential, Grow o Scale — desde $5,999 MXN al mes.
                   </p>
                 </div>
                 <Link
-                  to="/checkout"
+                  to="/upgrade"
                   className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:brightness-110"
                 >
                   Quiero mi membresía
