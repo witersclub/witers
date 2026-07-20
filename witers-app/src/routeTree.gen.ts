@@ -24,7 +24,9 @@ import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as AdminLabRouteImport } from './routes/admin-lab'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiVideoRequestsRouteImport } from './routes/api/video-requests'
 import { Route as ApiUserRouteImport } from './routes/api/user'
+import { Route as ApiUploadVideoRawRouteImport } from './routes/api/upload-video-raw'
 import { Route as ApiUploadReferenceRouteImport } from './routes/api/upload-reference'
 import { Route as ApiSubmitSatisfactionRouteImport } from './routes/api/submit-satisfaction'
 import { Route as ApiRequestsRouteImport } from './routes/api/requests'
@@ -52,7 +54,9 @@ import { Route as ApiPublicBrandsRouteImport } from './routes/api/public/brands'
 import { Route as ApiPublicBrandLogoRouteImport } from './routes/api/public/brand-logo'
 import { Route as ApiOnboardingDraftRouteImport } from './routes/api/onboarding/draft'
 import { Route as ApiOnboardingCompleteRouteImport } from './routes/api/onboarding/complete'
+import { Route as ApiDesignerVideoRequestsRouteImport } from './routes/api/designer/video-requests'
 import { Route as ApiDesignerRequestsRouteImport } from './routes/api/designer/requests'
+import { Route as ApiDesignerClaimVideoRouteImport } from './routes/api/designer/claim-video'
 import { Route as ApiDesignerClaimRouteImport } from './routes/api/designer/claim'
 import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
@@ -66,6 +70,7 @@ import { Route as ApiAdminToggleLogoVisibilityRouteImport } from './routes/api/a
 import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overview'
 import { Route as ApiAdminGrantRequestsRouteImport } from './routes/api/admin/grant-requests'
 import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
+import { Route as ApiAdminDeliverVideoRouteImport } from './routes/api/admin/deliver-video'
 import { Route as ApiAdminDeliverRouteImport } from './routes/api/admin/deliver'
 import { Route as ApiAdminDeleteRequestRouteImport } from './routes/api/admin/delete-request'
 import { Route as ApiAdminDeactivateDesignerRouteImport } from './routes/api/admin/deactivate-designer'
@@ -152,9 +157,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiVideoRequestsRoute = ApiVideoRequestsRouteImport.update({
+  id: '/api/video-requests',
+  path: '/api/video-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiUserRoute = ApiUserRouteImport.update({
   id: '/api/user',
   path: '/api/user',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUploadVideoRawRoute = ApiUploadVideoRawRouteImport.update({
+  id: '/api/upload-video-raw',
+  path: '/api/upload-video-raw',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiUploadReferenceRoute = ApiUploadReferenceRouteImport.update({
@@ -293,9 +308,20 @@ const ApiOnboardingCompleteRoute = ApiOnboardingCompleteRouteImport.update({
   path: '/api/onboarding/complete',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDesignerVideoRequestsRoute =
+  ApiDesignerVideoRequestsRouteImport.update({
+    id: '/api/designer/video-requests',
+    path: '/api/designer/video-requests',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiDesignerRequestsRoute = ApiDesignerRequestsRouteImport.update({
   id: '/api/designer/requests',
   path: '/api/designer/requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDesignerClaimVideoRoute = ApiDesignerClaimVideoRouteImport.update({
+  id: '/api/designer/claim-video',
+  path: '/api/designer/claim-video',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDesignerClaimRoute = ApiDesignerClaimRouteImport.update({
@@ -363,6 +389,11 @@ const ApiAdminGrantRequestsRoute = ApiAdminGrantRequestsRouteImport.update({
 const ApiAdminDiscardResultRoute = ApiAdminDiscardResultRouteImport.update({
   id: '/api/admin/discard-result',
   path: '/api/admin/discard-result',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminDeliverVideoRoute = ApiAdminDeliverVideoRouteImport.update({
+  id: '/api/admin/deliver-video',
+  path: '/api/admin/deliver-video',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAdminDeliverRoute = ApiAdminDeliverRouteImport.update({
@@ -454,7 +485,9 @@ export interface FileRoutesByFullPath {
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
+  '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
+  '/api/video-requests': typeof ApiVideoRequestsRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
   '/api/admin/activate-change': typeof ApiAdminActivateChangeRoute
@@ -465,6 +498,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
+  '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
@@ -478,7 +512,9 @@ export interface FileRoutesByFullPath {
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
+  '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
   '/api/onboarding/complete': typeof ApiOnboardingCompleteRoute
   '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
@@ -523,7 +559,9 @@ export interface FileRoutesByTo {
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
+  '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
+  '/api/video-requests': typeof ApiVideoRequestsRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
   '/api/admin/activate-change': typeof ApiAdminActivateChangeRoute
@@ -534,6 +572,7 @@ export interface FileRoutesByTo {
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
+  '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
@@ -547,7 +586,9 @@ export interface FileRoutesByTo {
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
+  '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
   '/api/onboarding/complete': typeof ApiOnboardingCompleteRoute
   '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
@@ -593,7 +634,9 @@ export interface FileRoutesById {
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
+  '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
+  '/api/video-requests': typeof ApiVideoRequestsRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
   '/api/admin/activate-change': typeof ApiAdminActivateChangeRoute
@@ -604,6 +647,7 @@ export interface FileRoutesById {
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
+  '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
@@ -617,7 +661,9 @@ export interface FileRoutesById {
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
+  '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
   '/api/onboarding/complete': typeof ApiOnboardingCompleteRoute
   '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
@@ -664,7 +710,9 @@ export interface FileRouteTypes {
     | '/api/requests'
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
+    | '/api/upload-video-raw'
     | '/api/user'
+    | '/api/video-requests'
     | '/api/account/change-password'
     | '/api/account/update-name'
     | '/api/admin/activate-change'
@@ -675,6 +723,7 @@ export interface FileRouteTypes {
     | '/api/admin/deactivate-designer'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
+    | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
     | '/api/admin/overview'
@@ -688,7 +737,9 @@ export interface FileRouteTypes {
     | '/api/auth/me'
     | '/api/auth/register'
     | '/api/designer/claim'
+    | '/api/designer/claim-video'
     | '/api/designer/requests'
+    | '/api/designer/video-requests'
     | '/api/onboarding/complete'
     | '/api/onboarding/draft'
     | '/api/public/brand-logo'
@@ -733,7 +784,9 @@ export interface FileRouteTypes {
     | '/api/requests'
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
+    | '/api/upload-video-raw'
     | '/api/user'
+    | '/api/video-requests'
     | '/api/account/change-password'
     | '/api/account/update-name'
     | '/api/admin/activate-change'
@@ -744,6 +797,7 @@ export interface FileRouteTypes {
     | '/api/admin/deactivate-designer'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
+    | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
     | '/api/admin/overview'
@@ -757,7 +811,9 @@ export interface FileRouteTypes {
     | '/api/auth/me'
     | '/api/auth/register'
     | '/api/designer/claim'
+    | '/api/designer/claim-video'
     | '/api/designer/requests'
+    | '/api/designer/video-requests'
     | '/api/onboarding/complete'
     | '/api/onboarding/draft'
     | '/api/public/brand-logo'
@@ -802,7 +858,9 @@ export interface FileRouteTypes {
     | '/api/requests'
     | '/api/submit-satisfaction'
     | '/api/upload-reference'
+    | '/api/upload-video-raw'
     | '/api/user'
+    | '/api/video-requests'
     | '/api/account/change-password'
     | '/api/account/update-name'
     | '/api/admin/activate-change'
@@ -813,6 +871,7 @@ export interface FileRouteTypes {
     | '/api/admin/deactivate-designer'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
+    | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
     | '/api/admin/overview'
@@ -826,7 +885,9 @@ export interface FileRouteTypes {
     | '/api/auth/me'
     | '/api/auth/register'
     | '/api/designer/claim'
+    | '/api/designer/claim-video'
     | '/api/designer/requests'
+    | '/api/designer/video-requests'
     | '/api/onboarding/complete'
     | '/api/onboarding/draft'
     | '/api/public/brand-logo'
@@ -872,7 +933,9 @@ export interface RootRouteChildren {
   ApiRequestsRoute: typeof ApiRequestsRoute
   ApiSubmitSatisfactionRoute: typeof ApiSubmitSatisfactionRoute
   ApiUploadReferenceRoute: typeof ApiUploadReferenceRoute
+  ApiUploadVideoRawRoute: typeof ApiUploadVideoRawRoute
   ApiUserRoute: typeof ApiUserRoute
+  ApiVideoRequestsRoute: typeof ApiVideoRequestsRoute
   ApiAccountChangePasswordRoute: typeof ApiAccountChangePasswordRoute
   ApiAccountUpdateNameRoute: typeof ApiAccountUpdateNameRoute
   ApiAdminActivateChangeRoute: typeof ApiAdminActivateChangeRoute
@@ -883,6 +946,7 @@ export interface RootRouteChildren {
   ApiAdminDeactivateDesignerRoute: typeof ApiAdminDeactivateDesignerRoute
   ApiAdminDeleteRequestRoute: typeof ApiAdminDeleteRequestRoute
   ApiAdminDeliverRoute: typeof ApiAdminDeliverRoute
+  ApiAdminDeliverVideoRoute: typeof ApiAdminDeliverVideoRoute
   ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
   ApiAdminGrantRequestsRoute: typeof ApiAdminGrantRequestsRoute
   ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
@@ -896,7 +960,9 @@ export interface RootRouteChildren {
   ApiAuthMeRoute: typeof ApiAuthMeRoute
   ApiAuthRegisterRoute: typeof ApiAuthRegisterRoute
   ApiDesignerClaimRoute: typeof ApiDesignerClaimRoute
+  ApiDesignerClaimVideoRoute: typeof ApiDesignerClaimVideoRoute
   ApiDesignerRequestsRoute: typeof ApiDesignerRequestsRoute
+  ApiDesignerVideoRequestsRoute: typeof ApiDesignerVideoRequestsRoute
   ApiOnboardingCompleteRoute: typeof ApiOnboardingCompleteRoute
   ApiOnboardingDraftRoute: typeof ApiOnboardingDraftRoute
   ApiPublicBrandLogoRoute: typeof ApiPublicBrandLogoRoute
@@ -1014,11 +1080,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/video-requests': {
+      id: '/api/video-requests'
+      path: '/api/video-requests'
+      fullPath: '/api/video-requests'
+      preLoaderRoute: typeof ApiVideoRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/user': {
       id: '/api/user'
       path: '/api/user'
       fullPath: '/api/user'
       preLoaderRoute: typeof ApiUserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/upload-video-raw': {
+      id: '/api/upload-video-raw'
+      path: '/api/upload-video-raw'
+      fullPath: '/api/upload-video-raw'
+      preLoaderRoute: typeof ApiUploadVideoRawRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/upload-reference': {
@@ -1210,11 +1290,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOnboardingCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/designer/video-requests': {
+      id: '/api/designer/video-requests'
+      path: '/api/designer/video-requests'
+      fullPath: '/api/designer/video-requests'
+      preLoaderRoute: typeof ApiDesignerVideoRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/designer/requests': {
       id: '/api/designer/requests'
       path: '/api/designer/requests'
       fullPath: '/api/designer/requests'
       preLoaderRoute: typeof ApiDesignerRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/designer/claim-video': {
+      id: '/api/designer/claim-video'
+      path: '/api/designer/claim-video'
+      fullPath: '/api/designer/claim-video'
+      preLoaderRoute: typeof ApiDesignerClaimVideoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/designer/claim': {
@@ -1306,6 +1400,13 @@ declare module '@tanstack/react-router' {
       path: '/api/admin/discard-result'
       fullPath: '/api/admin/discard-result'
       preLoaderRoute: typeof ApiAdminDiscardResultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/deliver-video': {
+      id: '/api/admin/deliver-video'
+      path: '/api/admin/deliver-video'
+      fullPath: '/api/admin/deliver-video'
+      preLoaderRoute: typeof ApiAdminDeliverVideoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/deliver': {
@@ -1416,7 +1517,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiRequestsRoute: ApiRequestsRoute,
   ApiSubmitSatisfactionRoute: ApiSubmitSatisfactionRoute,
   ApiUploadReferenceRoute: ApiUploadReferenceRoute,
+  ApiUploadVideoRawRoute: ApiUploadVideoRawRoute,
   ApiUserRoute: ApiUserRoute,
+  ApiVideoRequestsRoute: ApiVideoRequestsRoute,
   ApiAccountChangePasswordRoute: ApiAccountChangePasswordRoute,
   ApiAccountUpdateNameRoute: ApiAccountUpdateNameRoute,
   ApiAdminActivateChangeRoute: ApiAdminActivateChangeRoute,
@@ -1427,6 +1530,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminDeactivateDesignerRoute: ApiAdminDeactivateDesignerRoute,
   ApiAdminDeleteRequestRoute: ApiAdminDeleteRequestRoute,
   ApiAdminDeliverRoute: ApiAdminDeliverRoute,
+  ApiAdminDeliverVideoRoute: ApiAdminDeliverVideoRoute,
   ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
   ApiAdminGrantRequestsRoute: ApiAdminGrantRequestsRoute,
   ApiAdminOverviewRoute: ApiAdminOverviewRoute,
@@ -1440,7 +1544,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthMeRoute: ApiAuthMeRoute,
   ApiAuthRegisterRoute: ApiAuthRegisterRoute,
   ApiDesignerClaimRoute: ApiDesignerClaimRoute,
+  ApiDesignerClaimVideoRoute: ApiDesignerClaimVideoRoute,
   ApiDesignerRequestsRoute: ApiDesignerRequestsRoute,
+  ApiDesignerVideoRequestsRoute: ApiDesignerVideoRequestsRoute,
   ApiOnboardingCompleteRoute: ApiOnboardingCompleteRoute,
   ApiOnboardingDraftRoute: ApiOnboardingDraftRoute,
   ApiPublicBrandLogoRoute: ApiPublicBrandLogoRoute,

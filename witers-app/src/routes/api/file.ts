@@ -83,6 +83,21 @@ export const Route = createFileRoute("/api/file")({
           }
         } else if (member && key.startsWith(`refs/${member.id}/`)) {
           allowed = true;
+        } else if (member && key.startsWith(`video-raw/${member.id}/`)) {
+          allowed = true;
+        } else if (key.startsWith("video-deliveries/")) {
+          // video-deliveries/{videoRequestId}/... — same "owner or staff"
+          // rule as deliveries/, just against video_requests instead of
+          // design_requests (no "latest only" narrowing here: a video
+          // request only ever gets one delivered_key, never superseded).
+          const videoRequestId = key.split("/")[1] ?? "";
+          const row = await db()
+            .prepare("SELECT user_id FROM video_requests WHERE id = ?1 AND delivered_key = ?2")
+            .bind(videoRequestId, key)
+            .first<{ user_id: string }>();
+          if (row && member) {
+            allowed = row.user_id === member.id;
+          }
         }
 
         if (!allowed) {

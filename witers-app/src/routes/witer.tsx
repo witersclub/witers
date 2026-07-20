@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
 import { WitersLogo } from "../components/witers/brand";
+import { StaffVideoRequestsPanel } from "../components/witers/staff-video-requests";
 
 export const Route = createFileRoute("/witer")({
   head: () => ({
@@ -82,6 +83,7 @@ function DesignerPanel() {
     refetchInterval: 20_000,
   });
   const [tab, setTab] = useState<"en_proceso" | "en_revision" | "finalizadas">("en_proceso");
+  const [mode, setMode] = useState<"diseno" | "video">("diseno");
   // Lifted above the individual request cards: a card that just got sent
   // moves out of "En proceso" the instant the list refetches, which would
   // unmount a toast rendered inside it before the client ever saw it. Kept
@@ -155,13 +157,41 @@ function DesignerPanel() {
 
       <main className="mx-auto max-w-6xl px-5 py-10">
         <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink">
-          Solicitudes de <span className="text-wit-blue">diseño</span>
+          Solicitudes de{" "}
+          <span className="text-wit-blue">{mode === "diseno" ? "diseño" : "video"}</span>
         </h1>
         <p className="mt-2 text-sm text-wit-gray">
           Toma una solicitud para trabajarla — así nadie más la duplica.
         </p>
 
-        {overview.isLoading ? (
+        <div className="wit-glass mt-5 inline-flex gap-1 rounded-2xl p-1 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+          <button
+            type="button"
+            onClick={() => setMode("diseno")}
+            className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+              mode === "diseno"
+                ? "bg-wit-blue text-white"
+                : "text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
+            }`}
+          >
+            Diseño
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("video")}
+            className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+              mode === "video"
+                ? "bg-wit-blue text-white"
+                : "text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
+            }`}
+          >
+            Video
+          </button>
+        </div>
+
+        {mode === "video" ? (
+          <StaffVideoRequestsPanel me={String(platform.data.id)} />
+        ) : overview.isLoading ? (
           <div className="mt-6 space-y-4">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />

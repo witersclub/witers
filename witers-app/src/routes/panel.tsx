@@ -61,6 +61,7 @@ import {
   ProductPhotoUploadPicker,
   uploadReferenceFile,
 } from "../components/witers/lab-pickers";
+import { VideoRequestsPanel } from "../components/witers/video-requests";
 import { IMAGE_PACKS } from "../lib/image-packs";
 import { getPlan } from "../lib/membership-plans";
 import { consumeTeaserAnswers } from "../lib/teaser-handoff";
@@ -188,7 +189,9 @@ function Panel() {
   // Top-level areas of the panel — Creatividad wraps everything that
   // existed before this section was introduced (solicitudes + hacer
   // solicitud); Activos de marca and Campañas are new.
-  const [section, setSection] = useState<"creatividad" | "activos" | "campanas">("creatividad");
+  const [section, setSection] = useState<"creatividad" | "activos" | "campanas" | "videos">(
+    "creatividad",
+  );
   // A separate top-level view, not a 4th SectionNav pill — account settings
   // aren't a "work area" like Creatividad/Activos/Campañas, they live behind
   // the avatar menu instead, same as most account dashboards.
@@ -735,6 +738,14 @@ function Panel() {
               <div className="mt-8">
                 <ActivosDeMarca brandProfile={brandProfile} />
               </div>
+            ) : section === "videos" ? (
+              <div className="mt-8">
+                <VideoRequestsPanel
+                  active={active}
+                  quotaUsed={membership?.video_requests_used ?? 0}
+                  quotaTotal={membership?.video_requests_quota ?? 0}
+                />
+              </div>
             ) : (
               <div className="mt-8">
                 <CampanasPanel />
@@ -1023,10 +1034,11 @@ function PanelTab({
 
 /* ---------- top-level panel sections ---------- */
 
-const SECTIONS: { id: "creatividad" | "activos" | "campanas"; label: string }[] = [
+const SECTIONS: { id: "creatividad" | "activos" | "campanas" | "videos"; label: string }[] = [
   { id: "creatividad", label: "Creatividad" },
   { id: "activos", label: "Activos de marca" },
   { id: "campanas", label: "Campañas" },
+  { id: "videos", label: "Videos" },
 ];
 
 // Avatar + dropdown in the header, replacing the old plain "Cerrar sesión"
@@ -1408,6 +1420,16 @@ function MembershipSummaryCard({
                 </p>
               ) : null}
             </div>
+            {membership.video_requests_quota > 0 ? (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+                  Videos usados
+                </p>
+                <p className="mt-0.5 font-wit-mono text-lg font-semibold text-wit-ink">
+                  {membership.video_requests_used}/{membership.video_requests_quota}
+                </p>
+              </div>
+            ) : null}
             {activatedLabel ? (
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
@@ -1708,8 +1730,8 @@ function SectionNav({
   section,
   onChange,
 }: {
-  section: "creatividad" | "activos" | "campanas";
-  onChange: (section: "creatividad" | "activos" | "campanas") => void;
+  section: "creatividad" | "activos" | "campanas" | "videos";
+  onChange: (section: "creatividad" | "activos" | "campanas" | "videos") => void;
 }) {
   return (
     <div className="wit-glass mt-8 inline-flex gap-1 rounded-2xl p-1 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
