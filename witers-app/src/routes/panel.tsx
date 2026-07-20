@@ -481,7 +481,7 @@ function Panel() {
           </div>
         </div>
       ) : null}
-      <header className="wit-glass border-b border-wit-ink/10">
+      <header className="wit-glass relative z-40 border-b border-wit-ink/10">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <Link to="/">
             <WitersLogo compact />

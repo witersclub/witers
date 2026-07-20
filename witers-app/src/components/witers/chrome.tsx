@@ -31,7 +31,7 @@ export function SiteHeader() {
     { href: "/pauta", label: "Campañas de Meta" },
     { href: "/nuestra-historia", label: "Nuestra historia" },
     { href: "/nuestra-historia#valores", label: "Comunidad" },
-    { href: "#membresia", label: "Membresía" },
+    { href: "/#membresia", label: "Membresía" },
   ];
 
   return (
@@ -173,7 +173,7 @@ export function SiteFooter() {
               <a href="/nuestra-historia" className="hover:text-white">
                 Nuestra historia
               </a>
-              <a href="#membresia" className="hover:text-white">
+              <a href="/#membresia" className="hover:text-white">
                 Membresía
               </a>
               <Link to="/ingresar" className="hover:text-white">
