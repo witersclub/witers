@@ -126,7 +126,7 @@ function TabletLogoGrid({ className = "" }: { className?: string }) {
   return (
     <div className={`[perspective:1600px] ${className}`}>
       <div className="rounded-[32px] border-[10px] border-wit-ink bg-wit-ink shadow-[0_60px_120px_rgba(5,13,40,0.4)] transition-transform duration-500 [transform:rotateY(-8deg)_rotateX(3deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)]">
-        <div className="relative overflow-hidden rounded-[20px] bg-[linear-gradient(160deg,#1a5bff,#0b1f8f)] p-4 sm:p-6">
+        <div className="relative overflow-hidden rounded-[20px] bg-[linear-gradient(160deg,#8b9099,#3d4046)] p-4 sm:p-6">
           <div className="flex items-center justify-between text-[10px] font-semibold text-white/90 sm:text-xs">
             <span>9:41</span>
             <span className="flex items-center gap-1.5">

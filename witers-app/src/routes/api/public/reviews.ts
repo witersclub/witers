@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/public/reviews")({
         const rows = await db()
           .prepare(
             `SELECT r.id AS request_id, r.satisfaction_rating AS rating, r.satisfaction_feedback AS feedback,
-                    r.company_name AS company_name, u.name AS client_name,
+                    r.company_name AS company_name, u.id AS client_id, u.name AS client_name,
                     res.r2_key AS r2_key, res.image_url AS image_url
              FROM design_requests r
              JOIN users u ON u.id = r.user_id
@@ -29,12 +29,37 @@ export const Route = createFileRoute("/api/public/reviews")({
                AND r.satisfaction_rating IS NOT NULL
                AND res.id IS NOT NULL
              ORDER BY r.satisfaction_submitted_at DESC
-             LIMIT 20`,
+             LIMIT 200`,
           )
           .all();
 
-        const reviews = (rows.results ?? []).map((row) => {
-          const r = row as Record<string, unknown>;
+        // A client who rates many requests in a row would otherwise fill
+        // the whole carousel by recency alone. Cap each client at 2 pieces
+        // and interleave clients round-robin (instead of dumping one
+        // client's reviews back to back) so the final 20 stay varied.
+        const byClient = new Map<string, Record<string, unknown>[]>();
+        const clientOrder: string[] = [];
+        for (const row of (rows.results ?? []) as Record<string, unknown>[]) {
+          const clientId = String(row.client_id);
+          let group = byClient.get(clientId);
+          if (!group) {
+            group = [];
+            byClient.set(clientId, group);
+            clientOrder.push(clientId);
+          }
+          if (group.length < 2) group.push(row);
+        }
+
+        const interleaved: Record<string, unknown>[] = [];
+        for (let slot = 0; slot < 2; slot++) {
+          for (const clientId of clientOrder) {
+            const piece = byClient.get(clientId)?.[slot];
+            if (piece) interleaved.push(piece);
+          }
+        }
+
+        const reviews = interleaved.slice(0, 20).map((row) => {
+          const r = row;
           const fullName = typeof r.client_name === "string" ? r.client_name.trim() : "";
           const firstName = fullName ? fullName.split(/\s+/)[0] : "Cliente WITERS";
           return {
