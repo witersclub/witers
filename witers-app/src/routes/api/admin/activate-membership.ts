@@ -26,12 +26,20 @@ export const Route = createFileRoute("/api/admin/activate-membership")({
         const plan = getPlan(parsed.data.plan);
 
         const existing = await db()
-          .prepare("SELECT id, status, activated_at FROM memberships WHERE user_id = ?1")
+          .prepare("SELECT id, status, plan, activated_at FROM memberships WHERE user_id = ?1")
           .bind(parsed.data.userId)
-          .first<{ id: string; status: string; activated_at: string | null }>();
-        if (existing?.status === "active") {
+          .first<{ id: string; status: string; plan: string; activated_at: string | null }>();
+        // Already on this exact plan — nothing to do. Already active on a
+        // *different* plan is a legitimate admin-side plan change (e.g. the
+        // client asked to switch, or paid for the new plan outside the
+        // app), not a duplicate activation, so it falls through to the same
+        // UPDATE below — same distinction /api/checkout.ts makes for the
+        // client-facing upgrade flow, just free instead of charged since an
+        // admin is doing it directly.
+        if (existing?.status === "active" && existing.plan === plan.id) {
           return json({ ok: false, error: "ya_activa" }, { status: 409 });
         }
+        const isPlanChange = existing?.status === "active" && existing.plan !== plan.id;
         const price = currentPriceFor(plan, existing?.activated_at ?? null);
 
         const membershipId = existing?.id ?? crypto.randomUUID();
@@ -39,32 +47,47 @@ export const Route = createFileRoute("/api/admin/activate-membership")({
           await db()
             .prepare(
               `UPDATE memberships
-               SET status = 'active', plan = ?2, price_mxn = ?3, requests_quota = ?4,
+               SET status = 'active', plan = ?2, price_mxn = ?3, requests_quota = ?4, video_requests_quota = ?5,
                    activated_at = COALESCE(activated_at, datetime('now'))
                WHERE id = ?1`,
             )
-            .bind(membershipId, plan.id, price, plan.requestsQuota)
+            .bind(membershipId, plan.id, price, plan.requestsQuota, plan.videoRequestsQuota)
             .run();
         } else {
           await db()
             .prepare(
-              `INSERT INTO memberships (id, user_id, status, plan, price_mxn, requests_quota, activated_at)
-               VALUES (?1, ?2, 'active', ?3, ?4, ?5, datetime('now'))`,
+              `INSERT INTO memberships (id, user_id, status, plan, price_mxn, requests_quota, video_requests_quota, activated_at)
+               VALUES (?1, ?2, 'active', ?3, ?4, ?5, ?6, datetime('now'))`,
             )
-            .bind(membershipId, parsed.data.userId, plan.id, price, plan.requestsQuota)
+            .bind(
+              membershipId,
+              parsed.data.userId,
+              plan.id,
+              price,
+              plan.requestsQuota,
+              plan.videoRequestsQuota,
+            )
             .run();
         }
 
         // Marked distinctly from real checkout payments (provider 'admin',
         // not 'sandbox'/'stripe') so the Pagos tab can tell manual
         // activations apart from ones the client actually paid online for.
+        // A plan change is logged the same way but at $0 — the admin isn't
+        // charging the client through this action, just recording the switch.
         const paymentId = crypto.randomUUID();
         await db()
           .prepare(
             `INSERT INTO payments (id, user_id, membership_id, amount_mxn, method, provider, provider_ref, status)
              VALUES (?1, ?2, ?3, ?4, 'manual', 'admin', ?5, 'paid')`,
           )
-          .bind(paymentId, parsed.data.userId, membershipId, price, `admin:${auth.user.id}`)
+          .bind(
+            paymentId,
+            parsed.data.userId,
+            membershipId,
+            isPlanChange ? 0 : price,
+            `admin:${auth.user.id}`,
+          )
           .run();
 
         return json({ ok: true });
