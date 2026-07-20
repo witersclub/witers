@@ -24,7 +24,14 @@ const SYSTEM_PROMPT =
   "únicamente el dato útil (aquí, el descuento de $12,000 a $5,999) y descarta las " +
   "muletillas conversacionales ('sí,', 'no,', 'pues', 'este', 'o sea', etc.) — pero NUNCA " +
   "inventes ni elimines un dato real: cualquier nombre propio, color, cifra, precio o " +
-  "instrucción concreta del cliente debe conservarse sin alterar su significado. Si el " +
+  "instrucción concreta del cliente debe conservarse sin alterar su significado. " +
+  "Trato especial para cifras (precios, descuentos, teléfonos, medidas en píxeles, " +
+  "resolución, etc.): cópialas siempre carácter por carácter, exactamente como aparecen en " +
+  "el brief — nunca las redondees, nunca cambies un solo dígito, y nunca confundas una cifra " +
+  "con otra aunque el brief traiga varias juntas o mezcladas (por ejemplo, no confundas un " +
+  "precio con una medida de píxeles o con un número de teléfono). Si el brief NO menciona " +
+  "ningún precio o promoción, la pieza final tampoco debe mencionar ninguno — nunca agregues " +
+  "un precio que no esté explícitamente en el brief, bajo ninguna circunstancia. Si el " +
   "cliente pide explícitamente que una frase aparezca tal cual en la pieza (por ejemplo, " +
   "entre comillas o diciendo 'debe decir exactamente...'), esa frase sí se conserva literal, " +
   "palabra por palabra, aunque el resto de su respuesta sí se limpie. " +

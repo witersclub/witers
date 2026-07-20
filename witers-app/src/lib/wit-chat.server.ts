@@ -72,6 +72,11 @@ function buildSystemPrompt(brand: WitBrandContext): string {
     "Reglas de seguridad, nunca las rompas:\n" +
     "- NUNCA inventes un precio, descuento o promoción. El campo promoPrice debe quedar como " +
     "cadena vacía a menos que el cliente haya mencionado explícitamente una cifra o descuento.\n" +
+    "- Si el cliente SÍ escribió una cifra de precio o descuento en su mensaje — aunque venga " +
+    "enterrada dentro de un texto largo, ya redactado, o mezclada con otros números (medidas en " +
+    "píxeles, resolución, teléfonos) — cópiala en promoPrice carácter por carácter, exactamente " +
+    "como aparece (mismos dígitos, misma moneda). No la redondees, no la reescribas, no la " +
+    "confundas con ninguna otra cifra del mismo mensaje.\n" +
     "- NUNCA inventes un texto legal, dato obligatorio o frase que deba aparecer en la pieza. " +
     "El campo requiredText debe quedar como cadena vacía a menos que el cliente lo haya pedido " +
     "explícitamente.\n" +
@@ -144,7 +149,7 @@ const TOOLS = [
           promoPrice: {
             type: "string",
             description:
-              "Precio o descuento EXACTO que el cliente mencionó. Cadena vacía si no mencionó ninguno — nunca inventar.",
+              "Precio o descuento EXACTO que el cliente mencionó, copiado carácter por carácter tal como lo escribió (mismos dígitos, misma moneda) — incluso si vino mezclado con otras cifras (medidas, resolución, teléfonos) dentro de un texto largo. Cadena vacía si no mencionó ninguno — nunca inventar ni redondear.",
           },
           requiredText: {
             type: "string",
