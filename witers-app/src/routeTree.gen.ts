@@ -24,6 +24,7 @@ import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as AdminLabRouteImport } from './routes/admin-lab'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiWitVideoIdeaRouteImport } from './routes/api/wit-video-idea'
 import { Route as ApiVideoRequestsRouteImport } from './routes/api/video-requests'
 import { Route as ApiUserRouteImport } from './routes/api/user'
 import { Route as ApiUploadVideoRawRouteImport } from './routes/api/upload-video-raw'
@@ -155,6 +156,11 @@ const AdminRoute = AdminRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWitVideoIdeaRoute = ApiWitVideoIdeaRouteImport.update({
+  id: '/api/wit-video-idea',
+  path: '/api/wit-video-idea',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiVideoRequestsRoute = ApiVideoRequestsRouteImport.update({
@@ -488,6 +494,7 @@ export interface FileRoutesByFullPath {
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
   '/api/video-requests': typeof ApiVideoRequestsRoute
+  '/api/wit-video-idea': typeof ApiWitVideoIdeaRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
   '/api/admin/activate-change': typeof ApiAdminActivateChangeRoute
@@ -562,6 +569,7 @@ export interface FileRoutesByTo {
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
   '/api/video-requests': typeof ApiVideoRequestsRoute
+  '/api/wit-video-idea': typeof ApiWitVideoIdeaRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
   '/api/admin/activate-change': typeof ApiAdminActivateChangeRoute
@@ -637,6 +645,7 @@ export interface FileRoutesById {
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
   '/api/video-requests': typeof ApiVideoRequestsRoute
+  '/api/wit-video-idea': typeof ApiWitVideoIdeaRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
   '/api/admin/activate-change': typeof ApiAdminActivateChangeRoute
@@ -713,6 +722,7 @@ export interface FileRouteTypes {
     | '/api/upload-video-raw'
     | '/api/user'
     | '/api/video-requests'
+    | '/api/wit-video-idea'
     | '/api/account/change-password'
     | '/api/account/update-name'
     | '/api/admin/activate-change'
@@ -787,6 +797,7 @@ export interface FileRouteTypes {
     | '/api/upload-video-raw'
     | '/api/user'
     | '/api/video-requests'
+    | '/api/wit-video-idea'
     | '/api/account/change-password'
     | '/api/account/update-name'
     | '/api/admin/activate-change'
@@ -861,6 +872,7 @@ export interface FileRouteTypes {
     | '/api/upload-video-raw'
     | '/api/user'
     | '/api/video-requests'
+    | '/api/wit-video-idea'
     | '/api/account/change-password'
     | '/api/account/update-name'
     | '/api/admin/activate-change'
@@ -936,6 +948,7 @@ export interface RootRouteChildren {
   ApiUploadVideoRawRoute: typeof ApiUploadVideoRawRoute
   ApiUserRoute: typeof ApiUserRoute
   ApiVideoRequestsRoute: typeof ApiVideoRequestsRoute
+  ApiWitVideoIdeaRoute: typeof ApiWitVideoIdeaRoute
   ApiAccountChangePasswordRoute: typeof ApiAccountChangePasswordRoute
   ApiAccountUpdateNameRoute: typeof ApiAccountUpdateNameRoute
   ApiAdminActivateChangeRoute: typeof ApiAdminActivateChangeRoute
@@ -1078,6 +1091,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/wit-video-idea': {
+      id: '/api/wit-video-idea'
+      path: '/api/wit-video-idea'
+      fullPath: '/api/wit-video-idea'
+      preLoaderRoute: typeof ApiWitVideoIdeaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/video-requests': {
@@ -1520,6 +1540,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUploadVideoRawRoute: ApiUploadVideoRawRoute,
   ApiUserRoute: ApiUserRoute,
   ApiVideoRequestsRoute: ApiVideoRequestsRoute,
+  ApiWitVideoIdeaRoute: ApiWitVideoIdeaRoute,
   ApiAccountChangePasswordRoute: ApiAccountChangePasswordRoute,
   ApiAccountUpdateNameRoute: ApiAccountUpdateNameRoute,
   ApiAdminActivateChangeRoute: ApiAdminActivateChangeRoute,

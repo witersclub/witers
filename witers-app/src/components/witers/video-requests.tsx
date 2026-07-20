@@ -15,6 +15,7 @@ import {
   Instagram,
   Loader2,
   Music2,
+  Pencil,
   Sparkles,
   Upload,
   Video as VideoIcon,
@@ -22,6 +23,9 @@ import {
   Youtube,
   type LucideIcon,
 } from "lucide-react";
+
+import { ChatBubble } from "./chat-intake";
+import { MicButton } from "./mic-button";
 
 type VideoRequestRow = {
   id: string;
@@ -298,10 +302,20 @@ function VStep({
   );
 }
 
+// "composing": client is typing/dictating their raw idea to Wit.
+// "thinking": waiting on /api/wit-video-idea.
+// "reviewing": Wit replied with a structured title+purpose, shown editable
+// before moving on. "manual": classic two-field form, either chosen
+// directly or landed on after Wit failed to respond.
+type IdeaStage = "composing" | "thinking" | "reviewing" | "manual";
+
 function VideoWizard({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState("");
+  const [ideaStage, setIdeaStage] = useState<IdeaStage>("composing");
+  const [ideaText, setIdeaText] = useState("");
+  const [ideaError, setIdeaError] = useState<string | null>(null);
   const [platform, setPlatform] = useState<string | null>(null);
   const [durationTarget, setDurationTarget] = useState("");
   const [tone, setTone] = useState("");
@@ -344,6 +358,37 @@ function VideoWizard({ onClose, onCreated }: { onClose: () => void; onCreated: (
           f.name === file.name && f.status === "uploading" ? { ...f, status: "error" } : f,
         ),
       );
+    }
+  }
+
+  async function sendIdeaToWit() {
+    if (ideaText.trim().length < 5) return;
+    setIdeaError(null);
+    setIdeaStage("thinking");
+    try {
+      const res = await fetch("/api/wit-video-idea", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: ideaText.trim() }),
+      });
+      const data = (await res.json().catch(() => null)) as {
+        ok: boolean;
+        title?: string;
+        purpose?: string;
+      } | null;
+      if (!data?.ok || !data.title || !data.purpose) {
+        setIdeaError("Wit no pudo estructurar tu idea — no te preocupes, ya la copiamos abajo.");
+        setPurpose(ideaText.trim());
+        setIdeaStage("manual");
+        return;
+      }
+      setTitle(data.title);
+      setPurpose(data.purpose);
+      setIdeaStage("reviewing");
+    } catch {
+      setIdeaError("Wit no pudo estructurar tu idea — no te preocupes, ya la copiamos abajo.");
+      setPurpose(ideaText.trim());
+      setIdeaStage("manual");
     }
   }
 
@@ -395,18 +440,98 @@ function VideoWizard({ onClose, onCreated }: { onClose: () => void; onCreated: (
         <X className="h-5 w-5" strokeWidth={2.25} />
       </button>
 
-      {step === 0 ? (
+      {step === 0 && (ideaStage === "composing" || ideaStage === "thinking") ? (
+        <div className="mx-auto flex h-full max-w-lg flex-col px-5 py-8">
+          <div className="mb-6">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+              Paso 1 de {total}
+            </p>
+            <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-wit-ink">
+              <VideoIcon className="h-6 w-6 text-wit-blue" strokeWidth={1.75} /> ¿Qué video quieres
+              crear hoy?
+            </h2>
+          </div>
+
+          <div className="flex-1 space-y-4">
+            <ChatBubble
+              role="assistant"
+              text="Cuéntame la idea con tus palabras, como se te ocurra — puedes escribirla o hablarla con el micrófono. Yo le doy estructura."
+            />
+            {ideaStage === "thinking" ? <ChatBubble role="assistant" typingDots /> : null}
+            <div className="relative">
+              <textarea
+                value={ideaText}
+                onChange={(e) => setIdeaText(e.target.value)}
+                disabled={ideaStage === "thinking"}
+                rows={5}
+                placeholder="Ej. Quiero un video mostrando el antes y después de un tratamiento, tono cercano, para Instagram..."
+                className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 pr-14 text-sm outline-none focus:border-wit-blue disabled:opacity-60"
+              />
+              <MicButton
+                value={ideaText}
+                onChange={setIdeaText}
+                className="absolute bottom-3 right-3"
+              />
+            </div>
+            {ideaError ? <p className="text-xs text-red-600">{ideaError}</p> : null}
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
+            >
+              ← Atrás
+            </button>
+            <button
+              type="button"
+              onClick={() => setIdeaStage("manual")}
+              className="text-sm font-semibold text-wit-gray underline-offset-2 hover:text-wit-ink hover:underline"
+            >
+              Prefiero escribirlo yo
+            </button>
+            <button
+              type="button"
+              disabled={ideaText.trim().length < 5 || ideaStage === "thinking"}
+              onClick={sendIdeaToWit}
+              className="ml-auto rounded-full bg-wit-blue px-6 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-40"
+            >
+              {ideaStage === "thinking" ? "Wit está pensando..." : "Continuar"}
+            </button>
+          </div>
+        </div>
+      ) : step === 0 ? (
         <VStep
           qIndex={0}
           total={total}
           icon={VideoIcon}
-          question="¿Qué video quieres crear?"
-          subtitle="Un título corto y para qué lo vas a usar."
+          question={ideaStage === "reviewing" ? "Esto entendió Wit" : "¿Qué video quieres crear?"}
+          subtitle={
+            ideaStage === "reviewing"
+              ? "Ajusta el título o el propósito si algo no cuadra."
+              : "Un título corto y para qué lo vas a usar."
+          }
           onBack={onClose}
           onNext={() => setStep(1)}
           nextDisabled={title.trim().length < 3 || purpose.trim().length < 10}
         >
           <div className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setIdeaStage("composing")}
+              className="flex items-center gap-1.5 text-xs font-semibold text-wit-blue hover:underline"
+            >
+              <Pencil className="h-3 w-3" strokeWidth={2.5} />
+              {ideaStage === "reviewing" ? "Volver a contarle la idea a Wit" : "Probar con Wit"}
+            </button>
+            {ideaStage === "reviewing" ? (
+              <ChatBubble
+                role="assistant"
+                text="Así quedó estructurada tu idea — la puedes ajustar antes de continuar."
+              />
+            ) : null}
+            {ideaError ? <p className="text-xs text-amber-600">{ideaError}</p> : null}
             <input
               type="text"
               value={title}
