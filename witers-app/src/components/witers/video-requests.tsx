@@ -1,12 +1,11 @@
 // Client-facing "solicitudes de video" — the video counterpart of
 // panel.tsx's image-request flow (Grow/Scale already sell "2/4 videos" in
-// membership-plans.ts, this is what actually fulfills it). Deliberately
-// self-contained (own query, own portal-mounted wizard) so it can be
-// dropped into a panel.tsx section the same way CampanasPanel is, without
-// growing that already-large file further.
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+// membership-plans.ts, this is what actually fulfills it). Lives inside
+// Creatividad as a sibling of the image flow (same "hacer solicitud / mis
+// solicitudes" shape) rather than its own top-level section — panel.tsx
+// owns the query, the tab state, and the wizard portal, exactly like it
+// does for images; this file just exports the pieces it composes.
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import {
   CheckCircle2,
   Clapperboard,
@@ -27,7 +26,7 @@ import {
 import { ChatBubble } from "./chat-intake";
 import { MicButton } from "./mic-button";
 
-type VideoRequestRow = {
+export type VideoRequestRow = {
   id: string;
   status: string;
   title: string;
@@ -75,111 +74,87 @@ const PLATFORM_OPTIONS: { id: string; label: string; aspect: string; icon: Lucid
 const VIDEO_ACCEPT = "video/mp4,video/quicktime,video/webm";
 const MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
 
-export function VideoRequestsPanel({
+// Same landing pattern as panel.tsx's HablaConWitScreen (images) — a big
+// centered call to action, not a form. Shows an upgrade nudge instead of
+// the CTA when the plan doesn't include video at all, and a "used up for
+// this month" message instead when the quota's just exhausted.
+export function VideoLandingScreen({
   active,
   quotaUsed,
   quotaTotal,
+  onStart,
 }: {
   active: boolean;
   quotaUsed: number;
   quotaTotal: number;
+  onStart: () => void;
 }) {
-  const qc = useQueryClient();
-  const [wizardOpen, setWizardOpen] = useState(false);
-
-  const query = useQuery({
-    queryKey: ["video-requests"],
-    queryFn: async () => {
-      const res = await fetch("/api/video-requests", { credentials: "include" });
-      if (!res.ok) return { ok: false, videoRequests: [] as VideoRequestRow[] };
-      return (await res.json()) as { ok: boolean; videoRequests: VideoRequestRow[] };
-    },
-  });
-
-  const rows = query.data?.videoRequests ?? [];
   const remaining = quotaTotal - quotaUsed;
+  const blocked = !active || remaining <= 0;
 
   return (
-    <section>
-      <div className="wit-glass flex flex-wrap items-center justify-between gap-4 rounded-3xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-        <div>
-          <p className="text-lg font-bold text-wit-ink">Solicitudes de video</p>
-          <p className="mt-1 text-sm text-wit-gray">
-            {quotaTotal > 0
-              ? `${quotaUsed} de ${quotaTotal} videos usados este mes.`
-              : "Tu plan actual no incluye videos."}
-          </p>
-        </div>
+    <div className="flex flex-col items-center justify-center gap-8 rounded-3xl bg-wit-ice py-20 text-center">
+      <div className="wit-float">
+        <VideoIcon className="h-11 w-11 text-wit-blue" strokeWidth={1.5} />
+      </div>
+      <p className="max-w-xs text-base text-wit-gray">
+        {quotaTotal === 0
+          ? "Los planes Grow y Scale incluyen videos para redes sociales."
+          : remaining <= 0
+            ? "Ya usaste tus videos disponibles este mes. Vuelven a estar disponibles en tu próximo ciclo."
+            : "Cuéntanos qué video quieres crear y sube tu metraje — nosotros lo editamos."}
+      </p>
+      {quotaTotal === 0 ? (
+        <a
+          href="/upgrade"
+          className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
+        >
+          Ver planes
+        </a>
+      ) : (
         <button
           type="button"
-          onClick={() => setWizardOpen(true)}
-          disabled={!active || quotaTotal === 0 || remaining <= 0}
-          className="flex items-center gap-1.5 rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-wit-blue-deep disabled:cursor-not-allowed disabled:opacity-40"
+          onClick={onStart}
+          disabled={blocked}
+          className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <VideoIcon className="h-4 w-4" strokeWidth={2.3} />
-          Nueva solicitud de video
+          🎬 Nueva solicitud de video
         </button>
-      </div>
-
-      {quotaTotal === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-wit-ink/15 p-6 text-center">
-          <p className="text-sm text-wit-gray">
-            Los planes Grow y Scale incluyen videos para redes sociales.
-          </p>
-          <a
-            href="/upgrade"
-            className="mt-3 inline-block rounded-full bg-wit-blue px-5 py-2.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-          >
-            Ver planes
-          </a>
-        </div>
-      ) : remaining <= 0 ? (
-        <p className="mt-4 rounded-xl bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
-          Ya usaste tus videos disponibles este mes. Vuelven a estar disponibles en tu próximo
-          ciclo.
+      )}
+      {quotaTotal > 0 ? (
+        <p className="text-xs font-semibold text-wit-gray">
+          {quotaUsed} de {quotaTotal} videos usados este mes.
         </p>
       ) : null}
+    </div>
+  );
+}
 
-      <div className="mt-6">
-        {query.isLoading ? (
-          <div className="space-y-4">
-            {[0, 1].map((i) => (
-              <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />
-            ))}
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="wit-glass rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
-            <p className="text-base font-semibold text-wit-ink">
-              Aún no tienes solicitudes de video.
-            </p>
-            <p className="mt-1 text-sm text-wit-gray">
-              Sube tu metraje y cuéntanos qué necesitas — nosotros lo editamos.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {rows.map((r) => (
-              <VideoEntry key={r.id} row={r} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {wizardOpen
-        ? createPortal(
-            <div className="fixed inset-0 z-50 bg-white">
-              <VideoWizard
-                onClose={() => setWizardOpen(false)}
-                onCreated={() => {
-                  void qc.invalidateQueries({ queryKey: ["video-requests"] });
-                  void qc.invalidateQueries({ queryKey: ["me"] });
-                  setWizardOpen(false);
-                }}
-              />
-            </div>,
-            document.body,
-          )
-        : null}
+export function VideoRequestList({ rows, loading }: { rows: VideoRequestRow[]; loading: boolean }) {
+  return (
+    <section>
+      {loading ? (
+        <div className="space-y-4">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="wit-glass rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
+          <p className="text-base font-semibold text-wit-ink">
+            Aún no tienes solicitudes de video.
+          </p>
+          <p className="mt-1 text-sm text-wit-gray">
+            Sube tu metraje y cuéntanos qué necesitas — nosotros lo editamos.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {rows.map((r) => (
+            <VideoEntry key={r.id} row={r} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -309,7 +284,13 @@ function VStep({
 // directly or landed on after Wit failed to respond.
 type IdeaStage = "composing" | "thinking" | "reviewing" | "manual";
 
-function VideoWizard({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+export function VideoWizard({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState("");

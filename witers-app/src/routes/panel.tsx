@@ -61,7 +61,12 @@ import {
   ProductPhotoUploadPicker,
   uploadReferenceFile,
 } from "../components/witers/lab-pickers";
-import { VideoRequestsPanel } from "../components/witers/video-requests";
+import {
+  VideoLandingScreen,
+  VideoRequestList,
+  VideoWizard,
+  type VideoRequestRow,
+} from "../components/witers/video-requests";
 import { IMAGE_PACKS } from "../lib/image-packs";
 import { getPlan } from "../lib/membership-plans";
 import { consumeTeaserAnswers } from "../lib/teaser-handoff";
@@ -189,9 +194,12 @@ function Panel() {
   // Top-level areas of the panel — Creatividad wraps everything that
   // existed before this section was introduced (solicitudes + hacer
   // solicitud); Activos de marca and Campañas are new.
-  const [section, setSection] = useState<"creatividad" | "activos" | "campanas" | "videos">(
-    "creatividad",
-  );
+  const [section, setSection] = useState<"creatividad" | "activos" | "campanas">("creatividad");
+  // Within Creatividad: images and video are two sibling request types with
+  // the same "hacer solicitud / mis solicitudes" shape, not two separate
+  // top-level areas — a client thinks of both as "creatividad", just a
+  // different medium.
+  const [creativeMode, setCreativeMode] = useState<"imagenes" | "videos">("imagenes");
   // A separate top-level view, not a 4th SectionNav pill — account settings
   // aren't a "work area" like Creatividad/Activos/Campañas, they live behind
   // the avatar menu instead, same as most account dashboards.
@@ -201,6 +209,8 @@ function Panel() {
   // should be the first thing anyone sees, not something they have to
   // switch to.
   const [tab, setTab] = useState<"solicitudes" | "nueva">("nueva");
+  const [videoTab, setVideoTab] = useState<"solicitudes" | "nueva">("nueva");
+  const [videoWizardOpen, setVideoWizardOpen] = useState(false);
   // The chat is a takeover of the content area, not a third tab — a totally
   // new client (no requests yet) lands straight on it; a returning one opens
   // it with the glowing "Chat IA" button and closes it (or taps a tab) to
@@ -239,6 +249,17 @@ function Panel() {
       const res = await fetch("/api/requests", { credentials: "include" });
       if (!res.ok) return { ok: false, requests: [] as RequestRow[] };
       return (await res.json()) as { ok: boolean; requests: RequestRow[] };
+    },
+    enabled: Boolean(me.data?.ok),
+    refetchInterval: 30_000,
+  });
+
+  const videoRequests = useQuery({
+    queryKey: ["video-requests"],
+    queryFn: async () => {
+      const res = await fetch("/api/video-requests", { credentials: "include" });
+      if (!res.ok) return { ok: false, videoRequests: [] as VideoRequestRow[] };
+      return (await res.json()) as { ok: boolean; videoRequests: VideoRequestRow[] };
     },
     enabled: Boolean(me.data?.ok),
     refetchInterval: 30_000,
@@ -336,6 +357,7 @@ function Panel() {
     ? membership.requests_quota + membership.bonus_requests_quota - membership.requests_used
     : 0;
   const rows = requests.data?.requests ?? [];
+  const videoRows = videoRequests.data?.videoRequests ?? [];
   // "Impact panel" stats — closes the loop from pedir → pieza → campaña →
   // resultado, and doubles as the client's own history read back as an
   // achievement instead of a task list. All computed from data already
@@ -704,47 +726,103 @@ function Panel() {
 
             {section === "creatividad" ? (
               <>
-                <div className="mt-6 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+                {/* Imágenes and video are two sibling request types inside
+                    Creatividad, not separate top-level areas — same
+                    "hacer solicitud / mis solicitudes" shape either way,
+                    just swapping which one's showing. */}
+                <div className="mt-6 inline-flex gap-1 rounded-full bg-wit-mist/60 p-1">
                   <button
                     type="button"
-                    onClick={() => setTab("nueva")}
-                    className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+                    onClick={() => setCreativeMode("imagenes")}
+                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+                      creativeMode === "imagenes"
+                        ? "bg-white text-wit-ink shadow-sm"
+                        : "text-wit-gray hover:text-wit-ink"
+                    }`}
                   >
-                    ✨ Hacer solicitud
+                    Imágenes
                   </button>
-                  <PanelTab
-                    active={tab === "solicitudes"}
-                    onClick={() => setTab("solicitudes")}
-                    label="Mis solicitudes"
-                    count={rows.length}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setCreativeMode("videos")}
+                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+                      creativeMode === "videos"
+                        ? "bg-white text-wit-ink shadow-sm"
+                        : "text-wit-gray hover:text-wit-ink"
+                    }`}
+                  >
+                    Videos
+                  </button>
                 </div>
 
-                <div className="mt-8">
-                  {tab === "nueva" ? (
-                    <HablaConWitScreen onStart={openChat} />
-                  ) : (
-                    <RequestList
-                      rows={rows}
-                      loading={requests.isLoading}
-                      onNew={() => setTab("nueva")}
-                      pageId={brandProfile?.meta_page_id ?? null}
-                      onPautar={openPauta}
-                    />
-                  )}
-                </div>
+                {creativeMode === "imagenes" ? (
+                  <>
+                    <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+                      <button
+                        type="button"
+                        onClick={() => setTab("nueva")}
+                        className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+                      >
+                        ✨ Hacer solicitud
+                      </button>
+                      <PanelTab
+                        active={tab === "solicitudes"}
+                        onClick={() => setTab("solicitudes")}
+                        label="Mis solicitudes"
+                        count={rows.length}
+                      />
+                    </div>
+
+                    <div className="mt-8">
+                      {tab === "nueva" ? (
+                        <HablaConWitScreen onStart={openChat} />
+                      ) : (
+                        <RequestList
+                          rows={rows}
+                          loading={requests.isLoading}
+                          onNew={() => setTab("nueva")}
+                          pageId={brandProfile?.meta_page_id ?? null}
+                          onPautar={openPauta}
+                        />
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+                      <button
+                        type="button"
+                        onClick={() => setVideoTab("nueva")}
+                        className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+                      >
+                        🎬 Nueva solicitud
+                      </button>
+                      <PanelTab
+                        active={videoTab === "solicitudes"}
+                        onClick={() => setVideoTab("solicitudes")}
+                        label="Mis solicitudes"
+                        count={videoRows.length}
+                      />
+                    </div>
+
+                    <div className="mt-8">
+                      {videoTab === "nueva" ? (
+                        <VideoLandingScreen
+                          active={active}
+                          quotaUsed={membership?.video_requests_used ?? 0}
+                          quotaTotal={membership?.video_requests_quota ?? 0}
+                          onStart={() => setVideoWizardOpen(true)}
+                        />
+                      ) : (
+                        <VideoRequestList rows={videoRows} loading={videoRequests.isLoading} />
+                      )}
+                    </div>
+                  </>
+                )}
               </>
             ) : section === "activos" ? (
               <div className="mt-8">
                 <ActivosDeMarca brandProfile={brandProfile} />
-              </div>
-            ) : section === "videos" ? (
-              <div className="mt-8">
-                <VideoRequestsPanel
-                  active={active}
-                  quotaUsed={membership?.video_requests_used ?? 0}
-                  quotaTotal={membership?.video_requests_quota ?? 0}
-                />
               </div>
             ) : (
               <div className="mt-8">
@@ -815,6 +893,23 @@ function Panel() {
                 setPacksOpen(false);
               }}
             />,
+            document.body,
+          )
+        : null}
+
+      {videoWizardOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-50 bg-white">
+              <VideoWizard
+                onClose={() => setVideoWizardOpen(false)}
+                onCreated={() => {
+                  void qc.invalidateQueries({ queryKey: ["video-requests"] });
+                  void qc.invalidateQueries({ queryKey: ["me"] });
+                  setVideoWizardOpen(false);
+                  setVideoTab("solicitudes");
+                }}
+              />
+            </div>,
             document.body,
           )
         : null}
@@ -1034,11 +1129,10 @@ function PanelTab({
 
 /* ---------- top-level panel sections ---------- */
 
-const SECTIONS: { id: "creatividad" | "activos" | "campanas" | "videos"; label: string }[] = [
+const SECTIONS: { id: "creatividad" | "activos" | "campanas"; label: string }[] = [
   { id: "creatividad", label: "Creatividad" },
   { id: "activos", label: "Activos de marca" },
   { id: "campanas", label: "Campañas" },
-  { id: "videos", label: "Videos" },
 ];
 
 // Avatar + dropdown in the header, replacing the old plain "Cerrar sesión"
@@ -1730,8 +1824,8 @@ function SectionNav({
   section,
   onChange,
 }: {
-  section: "creatividad" | "activos" | "campanas" | "videos";
-  onChange: (section: "creatividad" | "activos" | "campanas" | "videos") => void;
+  section: "creatividad" | "activos" | "campanas";
+  onChange: (section: "creatividad" | "activos" | "campanas") => void;
 }) {
   return (
     <div className="wit-glass mt-8 inline-flex gap-1 rounded-2xl p-1 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
