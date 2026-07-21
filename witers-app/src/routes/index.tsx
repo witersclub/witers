@@ -213,15 +213,15 @@ function Testimonios() {
               key={r.request_id}
               className="w-64 shrink-0 overflow-hidden rounded-[24px] bg-white shadow-[0_20px_60px_rgba(5,13,40,0.12)]"
             >
-              <img src={r.src} alt="" loading="lazy" className="h-64 w-full object-cover" />
-              <div className="p-5">
+              <img src={r.src} alt="" loading="lazy" className="aspect-[3/4] w-full object-cover" />
+              <div className="p-4">
                 <Stars rating={r.rating} size={14} />
                 {r.feedback ? (
-                  <p className="mt-2 line-clamp-3 text-sm italic leading-relaxed text-wit-ink">
+                  <p className="mt-1.5 line-clamp-2 text-sm italic leading-snug text-wit-ink">
                     &ldquo;{r.feedback}&rdquo;
                   </p>
                 ) : null}
-                <div className="mt-3 flex items-center gap-2.5">
+                <div className="mt-2.5 flex items-center gap-2.5">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wit-blue text-xs font-bold text-white">
                     {r.first_name.slice(0, 1).toUpperCase()}
                   </span>
