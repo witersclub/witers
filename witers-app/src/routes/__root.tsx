@@ -22,6 +22,8 @@ function isStaleChunkError(error: Error | undefined | null): boolean {
   );
 }
 
+import { IosInstallHint } from "../components/witers/ios-install-hint";
+
 import appCss from "../styles.css?url";
 
 const TITLE = "WITERS. La comunidad del ingenio";
@@ -41,11 +43,18 @@ function buildHead() {
       { property: "og:image", content: "/assets/og.jpg" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:image", content: "/assets/og.jpg" },
+      { name: "theme-color", content: "#0047ff" },
+      // iOS ignores manifest.json's display/icons — these are the tags
+      // Safari actually reads for "Agregar a pantalla de inicio".
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "WITERS" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   };
 }
@@ -56,9 +65,7 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <p className="text-6xl font-extrabold tracking-tight text-wit-blue">404</p>
         <h1 className="mt-3 text-2xl font-bold text-wit-ink">Página no encontrada</h1>
-        <p className="mt-2 text-base text-wit-gray">
-          La página que buscas no existe o fue movida.
-        </p>
+        <p className="mt-2 text-base text-wit-gray">La página que buscas no existe o fue movida.</p>
         <Link
           to="/"
           className="mt-6 inline-flex items-center rounded-full bg-wit-blue px-6 py-3 font-semibold text-white transition hover:bg-wit-blue-deep"
@@ -119,7 +126,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             Ir al inicio
           </a>
         </div>
-        <p className="mt-6 break-words font-wit-mono text-[11px] text-wit-gray/70">{error.message}</p>
+        <p className="mt-6 break-words font-wit-mono text-[11px] text-wit-gray/70">
+          {error.message}
+        </p>
       </div>
     </div>
   );
@@ -155,10 +164,17 @@ function RootComponent() {
     sessionStorage.removeItem(RELOAD_GUARD_KEY);
   }, []);
 
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <IosInstallHint />
     </QueryClientProvider>
   );
 }
