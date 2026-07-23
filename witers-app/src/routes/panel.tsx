@@ -5052,11 +5052,11 @@ function WitConversation({
 /* ---------- new request form ---------- */
 
 const STYLE_CHIPS = [
-  "Minimalista",
-  "Premium / Elegante",
-  "Colorido",
-  "Corporativo",
-  "Divertido / Bold",
+  { value: "Minimalista", labelEs: "Minimalista", labelEn: "Minimalist" },
+  { value: "Premium / Elegante", labelEs: "Premium / Elegante", labelEn: "Premium / Elegant" },
+  { value: "Colorido", labelEs: "Colorido", labelEn: "Colorful" },
+  { value: "Corporativo", labelEs: "Corporativo", labelEn: "Corporate" },
+  { value: "Divertido / Bold", labelEs: "Divertido / Bold", labelEn: "Fun / Bold" },
 ];
 const AGE_CHIPS = ["18-24", "25-34", "35-44", "45-54", "55+"];
 const RATIO_LABEL: Record<string, { es: string; en: string }> = {
@@ -5090,6 +5090,7 @@ function RatioSwatch({ w, h, active }: { w: number; h: number; active: boolean }
 // inset-x-0 (not a fixed width) so it always lines up under the field
 // and never overflows sideways on narrow screens.
 function FieldSuggestion({ text, onPick }: { text: string; onPick: () => void }) {
+  const { t } = useLanguage();
   return (
     <button
       type="button"
@@ -5098,7 +5099,7 @@ function FieldSuggestion({ text, onPick }: { text: string; onPick: () => void })
       className="absolute inset-x-0 top-full z-10 mt-1 rounded-xl border border-wit-ink/15 bg-white px-4 py-2.5 text-left shadow-lg hover:bg-wit-mist/40"
     >
       <span className="block text-[10px] font-bold uppercase tracking-wide text-wit-gray">
-        Usaste antes
+        {t("Usaste antes", "You used before")}
       </span>
       <span className="line-clamp-2 text-sm text-wit-ink">{text}</span>
     </button>
@@ -5209,11 +5210,21 @@ function NewRequestForm({
       form.companyName.trim().length < 2 ||
       form.pieceBrief.trim().length < 10
     ) {
-      setError("Revisa los campos obligatorios: título, empresa y qué quieres en la pieza.");
+      setError(
+        t(
+          "Revisa los campos obligatorios: título, empresa y qué quieres en la pieza.",
+          "Check the required fields: title, company and what you want in the piece.",
+        ),
+      );
       return;
     }
     if (!logoLocked && !noLogo && !useSameLogo && !logoFile) {
-      setError("Sube tu logotipo, marca 'No tengo logotipo' o usa el de tu solicitud anterior.");
+      setError(
+        t(
+          "Sube tu logotipo, marca 'No tengo logotipo' o usa el de tu solicitud anterior.",
+          "Upload your logo, check 'I have no logo' or use the one from your previous request.",
+        ),
+      );
       return;
     }
     setStep("preview");
@@ -5240,7 +5251,12 @@ function NewRequestForm({
       } else if (logoFile) {
         logoKey = await upload(logoFile);
         if (!logoKey) {
-          setError("No pudimos subir tu logotipo (PNG, JPG o WebP, máx. 8 MB).");
+          setError(
+            t(
+              "No pudimos subir tu logotipo (PNG, JPG o WebP, máx. 8 MB).",
+              "We could not upload your logo (PNG, JPG or WebP, max. 8 MB).",
+            ),
+          );
           setLoading(false);
           return;
         }
@@ -5250,7 +5266,12 @@ function NewRequestForm({
       if (productPhotoFile) {
         productPhotoKey = await upload(productPhotoFile);
         if (!productPhotoKey) {
-          setError("No pudimos subir la foto del producto (PNG, JPG o WebP, máx. 8 MB).");
+          setError(
+            t(
+              "No pudimos subir la foto del producto (PNG, JPG o WebP, máx. 8 MB).",
+              "We could not upload the product photo (PNG, JPG or WebP, max. 8 MB).",
+            ),
+          );
           setLoading(false);
           return;
         }
@@ -5280,10 +5301,16 @@ function NewRequestForm({
       if (!data.ok) {
         setError(
           data.error === "sin_saldo"
-            ? "Ya usaste todas tus solicitudes disponibles."
+            ? t(
+                "Ya usaste todas tus solicitudes disponibles.",
+                "You have already used all your available requests.",
+              )
             : data.error === "sin_membresia"
-              ? "Necesitas una membresía activa para enviar solicitudes."
-              : "Revisa los campos obligatorios.",
+              ? t(
+                  "Necesitas una membresía activa para enviar solicitudes.",
+                  "You need an active membership to send requests.",
+                )
+              : t("Revisa los campos obligatorios.", "Check the required fields."),
         );
         setStep("form");
         return;
@@ -5296,10 +5323,20 @@ function NewRequestForm({
       setUseSameLogo(false);
       setProductPhotoFile(null);
       setStep("form");
-      setOkMsg("Solicitud enviada. El equipo WITERS ya está trabajando en ella.");
+      setOkMsg(
+        t(
+          "Solicitud enviada. El equipo WITERS ya está trabajando en ella.",
+          "Request sent. The WITERS team is already working on it.",
+        ),
+      );
       onCreated();
     } catch {
-      setError("No pudimos enviar tu solicitud. Intenta de nuevo.");
+      setError(
+        t(
+          "No pudimos enviar tu solicitud. Intenta de nuevo.",
+          "We could not send your request. Try again.",
+        ),
+      );
       setStep("form");
     } finally {
       setLoading(false);
@@ -5760,7 +5797,10 @@ function NewRequestForm({
               onChange={(e) => setForm({ ...form, style: e.target.value })}
               {...suggestionHandlers("style")}
               className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-              placeholder={t("U otro estilo en tus palabras...", "Or another style in your own words...")}
+              placeholder={t(
+                "U otro estilo en tus palabras...",
+                "Or another style in your own words...",
+              )}
             />
             {activeSuggestion === "style" && previousAnswers?.style ? (
               <FieldSuggestion
