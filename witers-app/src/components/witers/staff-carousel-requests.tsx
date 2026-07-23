@@ -3,7 +3,9 @@
 // separately). Self-contained the same way, so witer.tsx only needs a mode
 // toggle + this import, not a rewrite.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
+
+import { CopiedNotice, RATIO_PROMPT } from "./staff-request-card";
 
 type CarouselSlide = {
   id: string;
@@ -205,7 +207,16 @@ function StaffCarouselCard({ row, me }: { row: StaffCarouselRequest; me: string 
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {slides.map((s) => (
-          <CarouselSlideSlot key={s.id} slide={s} carouselRequestId={row.id} canDeliver={mine} />
+          <CarouselSlideSlot
+            key={s.id}
+            slide={s}
+            carouselRequestId={row.id}
+            canDeliver={mine}
+            carouselTitle={row.title}
+            companyName={row.company_name}
+            brandColors={row.brand_colors}
+            aspectRatio={row.aspect_ratio}
+          />
         ))}
       </div>
 
@@ -218,14 +229,60 @@ function CarouselSlideSlot({
   slide,
   carouselRequestId,
   canDeliver,
+  carouselTitle,
+  companyName,
+  brandColors,
+  aspectRatio,
 }: {
   slide: CarouselSlide;
   carouselRequestId: string;
   canDeliver: boolean;
+  carouselTitle: string;
+  companyName: string | null;
+  brandColors: string | null;
+  aspectRatio: string;
 }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Same shape as staff-request-card.tsx's buildBasePrompt(), adapted for a
+  // carousel lámina: the brand context (company/colors/ratio) lives on the
+  // parent carousel row, not per-slide, and a designer working one lámina
+  // needs to know it's part of a 4-slide sequence to keep them consistent
+  // with each other, not just individually good.
+  function buildSlidePrompt(): string {
+    const position = `Lámina ${slide.slide_index} de 4 de un carrusel para redes sociales titulado "${carouselTitle}".`;
+    const titlePart = slide.title ? ` Título de esta lámina: "${slide.title}".` : "";
+    const company = companyName
+      ? ` La empresa se llama "${companyName}", debe quedar clara la marca en la pieza.`
+      : "";
+    const colors = brandColors ? ` Paleta de colores de marca: ${brandColors}.` : "";
+    const ratio = RATIO_PROMPT[aspectRatio] ?? aspectRatio;
+    return `Creatividad publicitaria profesional de alta calidad, parte de un carrusel de 4 láminas para Instagram/Facebook. ${position}${titlePart} Brief de esta lámina: ${slide.brief}.${company}${colors} Mantén consistencia visual (paleta, tipografía, estilo) con el resto de las láminas del carrusel. Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, luz de estudio. Usa ${ratio}.`;
+  }
+
+  async function copyText(text: string, key: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopiedKey(null), 1800);
+    } catch {
+      setMsg("No pudimos copiar. Selecciona el texto manualmente.");
+    }
+  }
+
+  async function copyPrompt() {
+    await copyText(buildSlidePrompt(), "base");
+  }
+
+  async function copyChangePrompt() {
+    const prompt = `Corrige esta lámina de carrusel aplicando este cambio solicitado por el cliente: ${slide.change_request_note}. Mantén todo lo demás igual a la versión anterior. Contexto original de la lámina: ${buildSlidePrompt()}`;
+    await copyText(prompt, "change");
+  }
 
   async function deliver(file: File) {
     setBusy(true);
@@ -265,10 +322,33 @@ function CarouselSlideSlot({
       </div>
       <p className="mt-1.5 text-xs text-wit-ink">{slide.brief}</p>
 
+      <div className="relative mt-2 inline-block">
+        <button
+          type="button"
+          onClick={copyPrompt}
+          className="rounded-full border border-wit-ink/15 px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+        >
+          Copiar prompt
+        </button>
+        {copiedKey === "base" ? <CopiedNotice /> : null}
+      </div>
+
       {slide.change_request_note ? (
-        <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          {slide.change_request_note}
-        </p>
+        <>
+          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            {slide.change_request_note}
+          </p>
+          <div className="relative mt-2 inline-block">
+            <button
+              type="button"
+              onClick={copyChangePrompt}
+              className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:border-amber-500"
+            >
+              Copiar prompt del cambio
+            </button>
+            {copiedKey === "change" ? <CopiedNotice /> : null}
+          </div>
+        </>
       ) : null}
 
       {slide.delivered_key ? (
