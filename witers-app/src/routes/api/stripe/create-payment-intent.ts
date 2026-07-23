@@ -6,6 +6,7 @@ import { getPlan, isPlanId } from "../../../lib/membership-plans";
 import {
   computeChargeAmount,
   pesosToCentavos,
+  STRIPE_MIN_MXN,
   stripeClient,
   stripePublishableKey,
 } from "../../../lib/stripe.server";
@@ -62,6 +63,11 @@ async function handlePost(request: Request) {
   // same "nothing to confirm with Stripe" path as a free plan switch.
   if (finalAmount <= 0) {
     return json({ ok: true, free: true, publishableKey });
+  }
+  // Between $0 and Stripe's $10 MXN floor there's nothing valid to charge —
+  // reject with a clear reason instead of letting Stripe's API call fail.
+  if (finalAmount < STRIPE_MIN_MXN) {
+    return json({ ok: false, error: "monto_muy_bajo" }, { status: 400 });
   }
 
   const intent = await stripeClient().paymentIntents.create({

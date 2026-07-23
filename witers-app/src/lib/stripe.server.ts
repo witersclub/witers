@@ -57,3 +57,9 @@ export function computeChargeAmount(
 export function pesosToCentavos(pesos: number): number {
   return Math.round(pesos * 100);
 }
+
+// Stripe rejects any MXN PaymentIntent under $10.00 — a discount code steep
+// enough to undercut that (e.g. 99.9% off a low-tier plan) needs catching
+// before the API call, with a message that actually explains why, instead
+// of surfacing Stripe's raw "Amount must be at least..." error.
+export const STRIPE_MIN_MXN = 10;

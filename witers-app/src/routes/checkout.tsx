@@ -270,6 +270,8 @@ const DISCOUNT_ERROR_LABEL: Record<string, string> = {
   codigo_invalido: "Ese código no existe o ya no está activo.",
   codigo_expirado: "Ese código ya expiró.",
   codigo_agotado: "Ese código ya alcanzó su límite de usos.",
+  monto_muy_bajo:
+    "Ese descuento deja el cobro por debajo del mínimo permitido por Stripe ($10 MXN). Prueba con un porcentaje menor.",
 };
 
 // Creates the PaymentIntent (or detects a free switch) before rendering
