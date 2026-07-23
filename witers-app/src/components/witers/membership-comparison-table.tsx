@@ -10,6 +10,7 @@ import { Check, Minus } from "lucide-react";
 
 import { COMPARISON_ROWS, type ComparisonValue } from "../../lib/membership-comparison";
 import { MEMBERSHIP_PLANS, type PlanId } from "../../lib/membership-plans";
+import { useLanguage } from "../../lib/i18n";
 
 function Cell({ value }: { value: ComparisonValue }) {
   if (value === true) {
@@ -26,12 +27,13 @@ function Cell({ value }: { value: ComparisonValue }) {
 }
 
 export function MembershipComparisonTable() {
+  const { t } = useLanguage();
   const [activePlan, setActivePlan] = useState<PlanId>("grow");
 
   return (
     <div className="mx-auto mt-16 max-w-5xl">
       <p className="text-center text-sm font-bold uppercase tracking-[0.22em] text-white/50">
-        Compara a detalle
+        {t("Compara a detalle", "Compare in detail")}
       </p>
 
       {/* Desktop / tablet: full side-by-side table, 3 columns fit fine. */}
@@ -49,7 +51,7 @@ export function MembershipComparisonTable() {
                 >
                   {m.destacada ? (
                     <span className="mb-1.5 inline-block rounded-full bg-wit-blue px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">
-                      Más popular
+                      {t("Más popular", "Most popular")}
                     </span>
                   ) : null}
                   <p className="text-sm font-extrabold uppercase tracking-[0.1em] text-white">

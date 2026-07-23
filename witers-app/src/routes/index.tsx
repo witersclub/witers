@@ -14,6 +14,7 @@ import {
   StylePicker,
 } from "../components/witers/lab-pickers";
 import { useDraggableMarquee } from "../hooks/use-draggable-marquee";
+import { useLanguage } from "../lib/i18n";
 import { PROMO_MESES } from "../lib/membership-plans";
 import { saveTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe } from "../lib/witers-client";
@@ -108,10 +109,14 @@ function useReviews() {
 }
 
 function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
+  const { t } = useLanguage();
   const STAR_PATH =
     "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.367 2.446a1 1 0 00-.363 1.118l1.287 3.957c.3.922-.755 1.688-1.539 1.118l-3.367-2.446a1 1 0 00-1.176 0l-3.367 2.446c-.784.57-1.838-.196-1.539-1.118l1.286-3.957a1 1 0 00-.363-1.118L2.98 9.385c-.783-.57-.38-1.81.588-1.81h4.163a1 1 0 00.95-.69l1.286-3.958z";
   return (
-    <div className="flex items-center gap-0.5" aria-label={`${rating} de 5 estrellas`}>
+    <div
+      className="flex items-center gap-0.5"
+      aria-label={t(`${rating} de 5 estrellas`, `${rating} out of 5 stars`)}
+    >
       {[1, 2, 3, 4, 5].map((n) => (
         <svg key={n} width={size} height={size} viewBox="0 0 20 20">
           <path d={STAR_PATH} fill={n <= Math.round(rating) ? "#0047FF" : "#0047FF22"} />
@@ -124,30 +129,33 @@ function Stars({ rating, size = 16 }: { rating: number; size?: number }) {
 function Hero() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
+  const { t } = useLanguage();
 
   return (
     <section className="relative overflow-hidden pb-16 pt-32 md:pb-24 md:pt-40">
       <div className="relative mx-auto max-w-3xl px-5 text-center md:px-[110px]">
         <span className="wit-rise inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-white/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue backdrop-blur-sm">
-          Branding · Marketing · IA
+          {t("Branding · Marketing · IA", "Branding · Marketing · AI")}
         </span>
         <h1 className="wit-rise wit-rise-d1 mx-auto mt-7 max-w-2xl text-5xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-7xl">
-          Elevemos tu{" "}
+          {t("Elevemos tu", "Let's elevate your")}{" "}
           <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
-            marca
+            {t("marca", "brand")}
           </span>
           .
         </h1>
         <p className="wit-rise wit-rise-d2 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-wit-gray">
-          Estrategia, diseño y tecnología para marcas que quieren dejar huella. Únete a la comunidad
-          y empieza a crear hoy.
+          {t(
+            "Estrategia, diseño y tecnología para marcas que quieren dejar huella. Únete a la comunidad y empieza a crear hoy.",
+            "Strategy, design, and technology for brands that want to leave a mark. Join the community and start creating today.",
+          )}
         </p>
         <div className="wit-rise wit-rise-d2 mt-9 flex flex-col items-center gap-5">
           <Link
             to={signedIn ? "/panel" : "/registro"}
             className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-8 py-4 text-base font-bold uppercase tracking-[0.06em] text-white shadow-[0_18px_40px_rgba(0,71,255,0.38)] transition-all duration-200 hover:shadow-[0_22px_48px_rgba(0,71,255,0.48)] active:scale-[0.98]"
           >
-            Unirme ahora
+            {t("Unirme ahora", "Join now")}
             <svg
               width="16"
               height="16"
@@ -163,7 +171,7 @@ function Hero() {
             </svg>
           </Link>
           <a href="/nuestra-historia" className="wit-navlink text-sm font-semibold text-wit-ink">
-            Conocer la comunidad
+            {t("Conocer la comunidad", "Meet the community")}
           </a>
         </div>
       </div>
@@ -174,6 +182,7 @@ function Hero() {
 /* ---------------- 1a. RESULTADOS REALES (imagen + reseña) ---------------- */
 
 function Testimonios() {
+  const { t } = useLanguage();
   const reviews = useReviews();
   const list = reviews.data?.reviews ?? [];
 
@@ -194,11 +203,14 @@ function Testimonios() {
     <section className="relative overflow-hidden bg-white/55 py-20 backdrop-blur-2xl md:py-28">
       <div className="px-5 md:px-[110px]">
         <p className="text-center text-sm font-bold uppercase tracking-[0.3em] text-wit-blue">
-          Resultados reales
+          {t("Resultados reales", "Real results")}
         </p>
         <h2 className="mt-2 text-center text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
-          Lo que dicen quienes ya{" "}
-          <span className="wit-underline italic text-wit-blue">confiaron en nosotros</span>.
+          {t("Lo que dicen quienes ya", "What those who already")}{" "}
+          <span className="wit-underline italic text-wit-blue">
+            {t("confiaron en nosotros", "trusted us have to say")}
+          </span>
+          .
         </h2>
       </div>
 
@@ -326,6 +338,7 @@ function BrandTickerSlot({ brands, offsetMs }: { brands: Brand[]; offsetMs: numb
 }
 
 function MarcasQueConfian() {
+  const { t } = useLanguage();
   const brands = useQuery({
     queryKey: ["public-brands"],
     queryFn: async () => {
@@ -345,7 +358,8 @@ function MarcasQueConfian() {
     <section className="relative bg-white py-16 md:py-20">
       <div className="px-5 md:px-[110px]">
         <p className="text-center text-base text-wit-gray">
-          Marcas que ya confían en <strong className="text-wit-ink">WITERS</strong>
+          {t("Marcas que ya confían en", "Brands that already trust")}{" "}
+          <strong className="text-wit-ink">WITERS</strong>
         </p>
 
         {/* Desktop/tablet: every brand, always a single straight row — never
@@ -386,13 +400,30 @@ function MarcasQueConfian() {
 // signup, where a real client relationship (and the membership that pays
 // for actual generation) already exists.
 const PRUEBA_STEPS = [
-  { field: "pieceType", text: "¿Qué tipo de pieza quieres crear hoy?" },
-  { field: "aspectRatio", text: "¿Qué forma tiene la pieza que te imaginas?" },
-  { field: "colors", text: "¿Tienes colores de marca? Si no, elige los que más te gusten." },
-  { field: "style", text: "¿Qué estilo visual te gustaría?" },
+  {
+    field: "pieceType",
+    es: "¿Qué tipo de pieza quieres crear hoy?",
+    en: "What type of piece do you want to create today?",
+  },
+  {
+    field: "aspectRatio",
+    es: "¿Qué forma tiene la pieza que te imaginas?",
+    en: "What shape does the piece you're imagining have?",
+  },
+  {
+    field: "colors",
+    es: "¿Tienes colores de marca? Si no, elige los que más te gusten.",
+    en: "Do you have brand colors? If not, pick the ones you like best.",
+  },
+  {
+    field: "style",
+    es: "¿Qué estilo visual te gustaría?",
+    en: "What visual style would you like?",
+  },
 ] as const;
 
 function PruebaInteractiva() {
+  const { t } = useLanguage();
   const [started, setStarted] = useState(false);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -419,10 +450,10 @@ function PruebaInteractiva() {
     <section className="relative overflow-hidden bg-white/55 py-16 backdrop-blur-2xl md:py-20">
       <div className="mx-auto max-w-sm px-5">
         <p className="wit-rise text-center text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
-          Pruébalo tú mismo
+          {t("Pruébalo tú mismo", "Try it yourself")}
         </p>
         <h2 className="wit-rise mt-2 text-center text-2xl font-extrabold tracking-tighter text-wit-ink md:text-3xl">
-          Arma tu pieza en 4 pasos
+          {t("Arma tu pieza en 4 pasos", "Build your piece in 4 steps")}
         </h2>
 
         <div className="wit-glass mt-8 rounded-3xl p-6 shadow-[0_20px_50px_rgba(5,13,40,0.08)]">
@@ -432,14 +463,17 @@ function PruebaInteractiva() {
                 <WMark size={34} />
               </div>
               <p className="max-w-xs text-sm text-wit-gray">
-                Cuéntanos qué quieres crear hoy y armamos tu pieza juntos.
+                {t(
+                  "Cuéntanos qué quieres crear hoy y armamos tu pieza juntos.",
+                  "Tell us what you want to create today and we'll build your piece together.",
+                )}
               </p>
               <button
                 type="button"
                 onClick={() => setStarted(true)}
                 className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
               >
-                ✨ Habla con Wit ✨
+                ✨ {t("Habla con Wit", "Talk to Wit")} ✨
               </button>
             </div>
           ) : !done ? (
@@ -449,7 +483,7 @@ function PruebaInteractiva() {
                   <WMark size={13} />
                 </span>
                 <p className="rounded-2xl rounded-bl-sm bg-wit-mist/50 px-4 py-2.5 text-sm text-wit-ink">
-                  {current.text}
+                  {t(current.es, current.en)}
                 </p>
               </div>
               {activeInput}
@@ -465,9 +499,14 @@ function PruebaInteractiva() {
               <div className="wit-float">
                 <WMark size={30} />
               </div>
-              <p className="text-base font-bold text-wit-ink">¡Nos encantó lo que armaste!</p>
+              <p className="text-base font-bold text-wit-ink">
+                {t("¡Nos encantó lo que armaste!", "We loved what you put together!")}
+              </p>
               <p className="text-sm text-wit-gray">
-                Crea tu cuenta para que empecemos a diseñar tu pieza de verdad.
+                {t(
+                  "Crea tu cuenta para que empecemos a diseñar tu pieza de verdad.",
+                  "Create your account so we can start designing your piece for real.",
+                )}
               </p>
               <div className="mt-2 flex w-full flex-col gap-2">
                 <Link
@@ -475,14 +514,14 @@ function PruebaInteractiva() {
                   onClick={() => saveTeaserAnswers(answers)}
                   className="rounded-full bg-wit-blue px-6 py-3 text-center text-sm font-bold text-white hover:bg-wit-blue-deep"
                 >
-                  Crear cuenta gratis
+                  {t("Crear cuenta gratis", "Create free account")}
                 </Link>
                 <Link
                   to="/ingresar"
                   onClick={() => saveTeaserAnswers(answers)}
                   className="rounded-full border border-wit-ink/15 px-6 py-3 text-center text-sm font-bold text-wit-ink hover:bg-wit-mist/40"
                 >
-                  Ya tengo cuenta
+                  {t("Ya tengo cuenta", "I already have an account")}
                 </Link>
               </div>
             </div>
@@ -498,19 +537,21 @@ function PruebaInteractiva() {
 function CtaFinal() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
+  const { t } = useLanguage();
   return (
     <section className="relative bg-white py-16 md:py-20">
       <div className="flex flex-col items-start gap-8 border-t border-wit-ink/10 px-5 pt-14 md:flex-row md:items-center md:justify-between md:px-[110px]">
         <h2 className="text-2xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
-          Tu marca tiene algo único.
+          {t("Tu marca tiene algo único.", "Your brand has something unique.")}
           <br />
-          Hagamos que el mundo <span className="italic text-wit-blue">la vea</span>.
+          {t("Hagamos que el mundo", "Let's make the world")}{" "}
+          <span className="italic text-wit-blue">{t("la vea", "see it")}</span>.
         </h2>
         <Link
           to={signedIn ? "/panel" : "/registro"}
           className="group inline-flex shrink-0 items-center gap-2.5 rounded-full border border-wit-ink/15 bg-white px-7 py-3.5 text-sm font-bold uppercase tracking-[0.08em] text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.08)] transition-all duration-200 hover:bg-wit-ink hover:text-white active:scale-[0.98]"
         >
-          Hablemos de tu proyecto
+          {t("Hablemos de tu proyecto", "Let's talk about your project")}
           <svg
             width="15"
             height="15"
@@ -535,6 +576,7 @@ function CtaFinal() {
 function Membresia() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
+  const { t } = useLanguage();
   return (
     <section id="membresia" className="relative overflow-hidden bg-wit-navy py-20 md:py-28">
       <div
@@ -547,18 +589,29 @@ function Membresia() {
       <div className="relative px-5 md:px-[110px]">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-[#5c85ff]/40 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#9db4ff]">
-            Promoción Julio 2026 · Para nuevos suscriptores
+            {t(
+              "Promoción Julio 2026 · Para nuevos suscriptores",
+              "July 2026 Promo · For new subscribers",
+            )}
           </span>
           <h2 className="mt-5 text-4xl font-extrabold tracking-tighter text-white md:text-6xl">
-            Únete a la comunidad
+            {t("Únete a la comunidad", "Join the community")}
             <br />
-            del <span className="wit-underline text-[#5c85ff]">ingenio</span>
+            {t("del", "of")}{" "}
+            <span className="wit-underline text-[#5c85ff]">{t("ingenio", "ingenuity")}</span>
           </h2>
           <p className="mt-6 text-lg leading-relaxed text-white/70">
-            Elige el nivel de acompañamiento que tu marca necesita. Todo el poder del{" "}
-            <strong className="text-white">ingenio</strong>, la{" "}
-            <strong className="text-white">estrategia</strong> y la{" "}
-            <strong className="text-white">inteligencia artificial</strong> trabajando para ti.
+            {t(
+              "Elige el nivel de acompañamiento que tu marca necesita. Todo el poder del",
+              "Choose the level of support your brand needs. All the power of",
+            )}{" "}
+            <strong className="text-white">{t("ingenio", "ingenuity")}</strong>
+            {t(", la", ",")} <strong className="text-white">{t("estrategia", "strategy")}</strong>{" "}
+            {t("y la", "and")}{" "}
+            <strong className="text-white">
+              {t("inteligencia artificial", "artificial intelligence")}
+            </strong>{" "}
+            {t("trabajando para ti.", "working for you.")}
           </p>
         </div>
 
@@ -566,14 +619,16 @@ function Membresia() {
           ctaFor={(m) => ({
             to: signedIn ? "/checkout" : "/registro",
             search: { plan: m.id },
-            label: `Quiero ${m.nombre}`,
+            label: t(`Quiero ${m.nombre}`, `I want ${m.nombre}`),
           })}
         />
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs text-white/50">
-          Pago con tarjeta de crédito o débito. Activación inmediata. Suscripción con renovación
-          automática mensual — puedes cancelar cuando quieras.{" "}
+          {t(
+            "Pago con tarjeta de crédito o débito. Activación inmediata. Suscripción con renovación automática mensual — puedes cancelar cuando quieras.",
+            "Pay with credit or debit card. Immediate activation. Subscription with automatic monthly renewal — cancel anytime.",
+          )}{" "}
           <Link to="/terminos" className="underline hover:text-white">
-            Ver términos y condiciones
+            {t("Ver términos y condiciones", "View terms and conditions")}
           </Link>
           .
         </p>
@@ -587,13 +642,14 @@ function Membresia() {
 /* ---------------- 9b. CAMPAÑAS TEASER ---------------- */
 
 function CampanasTeaser() {
+  const { t } = useLanguage();
   return (
     <section className="relative overflow-hidden bg-white py-20 md:py-28">
       <div className="mx-auto max-w-2xl px-5 text-center md:px-[110px]">
         <h2 className="text-3xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-5xl">
-          De la pieza a la{" "}
+          {t("De la pieza a la", "From piece to")}{" "}
           <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
-            campaña
+            {t("campaña", "campaign")}
           </span>
           .
         </h2>
@@ -610,20 +666,22 @@ function CampanasTeaser() {
             Meta Ads
           </span>
           <h3 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-5xl">
-            Tu pieza no se queda
+            {t("Tu pieza no se queda", "Your piece doesn't stop")}
             <br />
-            en <span className="italic text-wit-blue">"me gusta"</span>.
+            {t("en", "at")}{" "}
+            <span className="italic text-wit-blue">"{t("me gusta", "a like")}"</span>.
           </h3>
           <p className="mt-6 max-w-md text-lg leading-relaxed text-wit-gray">
-            El equipo de WITERS se encarga de que tenga el mayor alcance para tus ventas — la
-            convertimos en una campaña real de Meta Ads, configurada, medible y lista para vender.
-            Sin salir de WITERS.
+            {t(
+              "El equipo de WITERS se encarga de que tenga el mayor alcance para tus ventas — la convertimos en una campaña real de Meta Ads, configurada, medible y lista para vender. Sin salir de WITERS.",
+              "The WITERS team makes sure it gets the reach your sales need — we turn it into a real Meta Ads campaign, fully set up, measurable, and ready to sell. Without ever leaving WITERS.",
+            )}
           </p>
           <Link
             to="/pauta"
             className="group mt-8 inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-7 py-3.5 text-sm font-bold uppercase tracking-[0.06em] text-white shadow-[0_18px_40px_rgba(0,71,255,0.38)] transition-all duration-200 hover:shadow-[0_22px_48px_rgba(0,71,255,0.48)] active:scale-[0.98]"
           >
-            Quiero campañas
+            {t("Quiero campañas", "I want campaigns")}
             <svg
               width="16"
               height="16"
@@ -646,77 +704,155 @@ function CampanasTeaser() {
 
 /* ---------------- 10. FAQ ---------------- */
 
-const FAQS: { q: string; a: ReactNode }[] = [
-  {
-    q: "¿Qué incluye la membresía?",
-    a: (
-      <div className="space-y-3">
-        <p>Depende del nivel que elijas:</p>
-        <ul className="space-y-1.5">
-          <li>
-            <strong className="text-wit-ink">Essential</strong> — 10 solicitudes de diseño y 2
-            campañas publicitarias al mes, con acompañamiento estratégico y entregas en alta
-            resolución.
-          </li>
-          <li>
-            <strong className="text-wit-ink">Grow</strong> — 15 solicitudes, 3 campañas, más
-            carruseles y videos para redes, planeación de contenido, asesoría estratégica
-            personalizada y reporte semanal de desempeño.
-          </li>
-          <li>
-            <strong className="text-wit-ink">Scale</strong> — 20 solicitudes, 4 campañas, más
-            carruseles y videos, auditoría y reunión mensual de estrategia, y prioridad alta en
-            tiempos de entrega.
-          </li>
-        </ul>
-        <p>Los tres incluyen panel exclusivo para dar seguimiento a cada solicitud.</p>
-      </div>
-    ),
-  },
-  {
-    q: "¿Cómo funciona la promoción de julio 2026?",
-    a: `Los nuevos suscriptores obtienen 30% de descuento durante sus primeros ${PROMO_MESES} meses consecutivos. A partir del mes ${PROMO_MESES + 1}, la mensualidad se cobra al precio regular del paquete contratado. Todos los precios publicados son más IVA.`,
-  },
-  {
-    q: "¿Cómo se paga?",
-    a: (
-      <div className="space-y-3">
-        <p>
-          Con tarjeta de crédito o débito desde la propia plataforma, mes a mes. Elige el nivel que
-          mejor se ajuste a tu marca — Essential, Grow o Scale — y tu cuenta se activa de inmediato.
-        </p>
-        <p>
-          La suscripción se renueva automáticamente cada mes. Puedes cancelarla cuando quieras, sin
-          penalización; la cancelación aplica al terminar el periodo ya pagado, sin reembolsos por
-          el tiempo restante. Consulta los{" "}
-          <Link to="/terminos" className="font-semibold text-wit-blue underline">
-            términos y condiciones
-          </Link>{" "}
-          completos.
-        </p>
-      </div>
-    ),
-  },
-  {
-    q: "¿Cómo uso la plataforma?",
-    a: "Crea tu cuenta, activa tu membresía y entra a tu panel. Ahí describes la imagen que necesitas (producto, estilo, formato), envías la solicitud y das seguimiento a su estado hasta descargar el resultado final.",
-  },
-  {
-    q: "¿Qué tipo de imágenes puedo solicitar?",
-    a: "Creatividades publicitarias para redes sociales, anuncios, banners, imágenes de producto y piezas de campaña. Cada solicitud la trabaja el equipo de WITERS, con IA como herramienta de apoyo.",
-  },
-];
+type FaqEntry = { q: string; a: ReactNode };
+
+function buildFaqsEs(): FaqEntry[] {
+  return [
+    {
+      q: "¿Qué incluye la membresía?",
+      a: (
+        <div className="space-y-3">
+          <p>Depende del nivel que elijas:</p>
+          <ul className="space-y-1.5">
+            <li>
+              <strong className="text-wit-ink">Essential</strong> — 10 solicitudes de diseño y 2
+              campañas publicitarias al mes, con acompañamiento estratégico y entregas en alta
+              resolución.
+            </li>
+            <li>
+              <strong className="text-wit-ink">Grow</strong> — 15 solicitudes, 3 campañas, más
+              carruseles y videos para redes, planeación de contenido, asesoría estratégica
+              personalizada y reporte semanal de desempeño.
+            </li>
+            <li>
+              <strong className="text-wit-ink">Scale</strong> — 20 solicitudes, 4 campañas, más
+              carruseles y videos, auditoría y reunión mensual de estrategia, y prioridad alta en
+              tiempos de entrega.
+            </li>
+          </ul>
+          <p>Los tres incluyen panel exclusivo para dar seguimiento a cada solicitud.</p>
+        </div>
+      ),
+    },
+    {
+      q: "¿Cómo funciona la promoción de julio 2026?",
+      a: `Los nuevos suscriptores obtienen 30% de descuento durante sus primeros ${PROMO_MESES} meses consecutivos. A partir del mes ${PROMO_MESES + 1}, la mensualidad se cobra al precio regular del paquete contratado. Todos los precios publicados son más IVA.`,
+    },
+    {
+      q: "¿Cómo se paga?",
+      a: (
+        <div className="space-y-3">
+          <p>
+            Con tarjeta de crédito o débito desde la propia plataforma, mes a mes. Elige el nivel
+            que mejor se ajuste a tu marca — Essential, Grow o Scale — y tu cuenta se activa de
+            inmediato.
+          </p>
+          <p>
+            La suscripción se renueva automáticamente cada mes. Puedes cancelarla cuando quieras,
+            sin penalización; la cancelación aplica al terminar el periodo ya pagado, sin reembolsos
+            por el tiempo restante. Consulta los{" "}
+            <Link to="/terminos" className="font-semibold text-wit-blue underline">
+              términos y condiciones
+            </Link>{" "}
+            completos.
+          </p>
+        </div>
+      ),
+    },
+    {
+      q: "¿Cómo uso la plataforma?",
+      a: "Crea tu cuenta, activa tu membresía y entra a tu panel. Ahí describes la imagen que necesitas (producto, estilo, formato), envías la solicitud y das seguimiento a su estado hasta descargar el resultado final.",
+    },
+    {
+      q: "¿Qué tipo de imágenes puedo solicitar?",
+      a: "Creatividades publicitarias para redes sociales, anuncios, banners, imágenes de producto y piezas de campaña. Cada solicitud la trabaja el equipo de WITERS, con IA como herramienta de apoyo.",
+    },
+  ];
+}
+
+function buildFaqsEn(): FaqEntry[] {
+  return [
+    {
+      q: "What's included in the membership?",
+      a: (
+        <div className="space-y-3">
+          <p>It depends on the tier you choose:</p>
+          <ul className="space-y-1.5">
+            <li>
+              <strong className="text-wit-ink">Essential</strong> — 10 design requests and 2 ad
+              campaigns a month, with strategic support and high-resolution deliverables.
+            </li>
+            <li>
+              <strong className="text-wit-ink">Grow</strong> — 15 requests, 3 campaigns, plus
+              carousels and videos for social, content planning, personalized strategic advice, and
+              a weekly performance report.
+            </li>
+            <li>
+              <strong className="text-wit-ink">Scale</strong> — 20 requests, 4 campaigns, plus
+              carousels and videos, a monthly audit and strategy meeting, and top priority on
+              turnaround times.
+            </li>
+          </ul>
+          <p>All three include an exclusive panel to track every request.</p>
+        </div>
+      ),
+    },
+    {
+      q: "How does the July 2026 promotion work?",
+      a: `New subscribers get a 30% discount for their first ${PROMO_MESES} consecutive months. Starting month ${PROMO_MESES + 1}, the monthly fee is charged at the regular price of the plan you signed up for. All published prices are before tax.`,
+    },
+    {
+      q: "How do I pay?",
+      a: (
+        <div className="space-y-3">
+          <p>
+            With a credit or debit card right on the platform, month to month. Choose the tier that
+            best fits your brand — Essential, Grow, or Scale — and your account activates
+            immediately.
+          </p>
+          <p>
+            The subscription renews automatically every month. You can cancel anytime, with no
+            penalty; cancellation takes effect at the end of the period you've already paid for,
+            with no refunds for remaining time. See the full{" "}
+            <Link to="/terminos" className="font-semibold text-wit-blue underline">
+              terms and conditions
+            </Link>
+            .
+          </p>
+        </div>
+      ),
+    },
+    {
+      q: "How do I use the platform?",
+      a: "Create your account, activate your membership, and go to your panel. There you describe the image you need (product, style, format), submit the request, and track its status until you download the final result.",
+    },
+    {
+      q: "What kind of images can I request?",
+      a: "Ad creatives for social media, ads, banners, product images, and campaign pieces. Every request is worked by the WITERS team, using AI as a supporting tool.",
+    },
+  ];
+}
 
 function Faq() {
+  const { lang } = useLanguage();
   const [openIdx, setOpenIdx] = useState<number | null>(0);
+  const faqs = lang === "en" ? buildFaqsEn() : buildFaqsEs();
   return (
     <section className="relative bg-white py-20 md:py-24">
       <div className="mx-auto max-w-3xl px-5">
         <h2 className="text-center text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
-          Preguntas <span className="wit-underline text-wit-blue">frecuentes</span>
+          {lang === "en" ? (
+            <>
+              Frequently asked <span className="wit-underline text-wit-blue">questions</span>
+            </>
+          ) : (
+            <>
+              Preguntas <span className="wit-underline text-wit-blue">frecuentes</span>
+            </>
+          )}
         </h2>
         <div className="mt-10 divide-y divide-wit-ink/10 border-y border-wit-ink/10">
-          {FAQS.map((f, i) => {
+          {faqs.map((f, i) => {
             const open = openIdx === i;
             return (
               <div key={f.q}>

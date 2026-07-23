@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { useLanguage } from "../../lib/i18n";
 import { WMark } from "./brand";
 
 // The full conversational "intake" engine shared by the admin lab
@@ -118,12 +119,12 @@ export function ChatIntakeFlow({
   pickerFor,
   onComplete,
   pending = false,
-  pendingLabel = "Un momento...",
-  doneLabel = "¡Listo!",
+  pendingLabel,
+  doneLabel,
   resultSlot = null,
   restart,
   externalError = null,
-  eyebrow = "Hagamos tu pieza juntos",
+  eyebrow,
   onClose,
   initialAnswers,
   onAnswer,
@@ -157,6 +158,10 @@ export function ChatIntakeFlow({
   // onto submitAnswer/saveEdit.
   onAnswer?: (answers: Record<string, string>) => void;
 }) {
+  const { t } = useLanguage();
+  const resolvedPendingLabel = pendingLabel ?? t("Un momento...", "One moment...");
+  const resolvedDoneLabel = doneLabel ?? t("¡Listo!", "Done!");
+  const resolvedEyebrow = eyebrow ?? t("Hagamos tu pieza juntos", "Let's make your piece together");
   const [answers, setAnswers] = useState<Record<string, string>>(() => ({ ...initialAnswers }));
   const [stepIndex, setStepIndex] = useState(() =>
     advancePastKnown(questions, 0, initialAnswers ?? {}),
@@ -189,7 +194,7 @@ export function ChatIntakeFlow({
   const answeredEntries = questions.slice(0, stepIndex).map((q) => ({
     field: q.field,
     question: q.text,
-    answer: (answers[q.field] ?? "").trim() || "Omitido",
+    answer: (answers[q.field] ?? "").trim() || t("Omitido", "Skipped"),
   }));
 
   // Keep the conversation scrolled to the latest message as it grows.
@@ -260,7 +265,7 @@ export function ChatIntakeFlow({
     if (!q || done) return;
     const text = rawText.trim();
     if (!text && q.required) {
-      setError("Este dato es necesario para continuar.");
+      setError(t("Este dato es necesario para continuar.", "This field is required to continue."));
       return;
     }
     setError(null);
@@ -299,7 +304,7 @@ export function ChatIntakeFlow({
     const q = questions.find((x) => x.field === field);
     const text = editValue.trim();
     if (q?.required && !text) {
-      setError("Este dato es necesario para continuar.");
+      setError(t("Este dato es necesario para continuar.", "This field is required to continue."));
       return;
     }
     setError(null);
@@ -336,7 +341,12 @@ export function ChatIntakeFlow({
     };
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!Ctor) {
-      setError("Tu navegador no soporta reconocimiento de voz — escribe tu respuesta.");
+      setError(
+        t(
+          "Tu navegador no soporta reconocimiento de voz — escribe tu respuesta.",
+          "Your browser doesn't support voice recognition — type your answer instead.",
+        ),
+      );
       return;
     }
     const recognition = new Ctor();
@@ -358,7 +368,12 @@ export function ChatIntakeFlow({
       if (event.error === "no-speech") return;
       manualStopRef.current = true;
       setListening(false);
-      setError("No pudimos usar el micrófono. Revisa los permisos del navegador.");
+      setError(
+        t(
+          "No pudimos usar el micrófono. Revisa los permisos del navegador.",
+          "We couldn't use the microphone. Check your browser permissions.",
+        ),
+      );
     };
     recognition.onend = () => {
       setListening(false);
@@ -403,7 +418,7 @@ export function ChatIntakeFlow({
       >
         <input
           type="text"
-          aria-label="Tu respuesta"
+          aria-label={t("Tu respuesta", "Your answer")}
           value={currentAnswer}
           onChange={(e) => {
             // Keep the ref the mic's onresult callback builds on top of in
@@ -415,7 +430,9 @@ export function ChatIntakeFlow({
             setCurrentAnswer(e.target.value);
           }}
           disabled={done}
-          placeholder={done ? "" : "Escribe o presiona el micrófono..."}
+          placeholder={
+            done ? "" : t("Escribe o presiona el micrófono...", "Type or press the microphone...")
+          }
           // text-base (16px), not text-sm — iOS Safari auto-zooms the whole
           // page on focus for any input under 16px, forcing an awkward
           // manual pinch-to-zoom-out afterward.
@@ -442,7 +459,11 @@ export function ChatIntakeFlow({
               <button
                 type="button"
                 onClick={toggleMic}
-                aria-label={listening ? "Pausar micrófono" : "Activar micrófono"}
+                aria-label={
+                  listening
+                    ? t("Pausar micrófono", "Pause microphone")
+                    : t("Activar micrófono", "Turn on microphone")
+                }
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all ${
                   listening
                     ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_6px_rgba(239,68,68,0.15)]"
@@ -467,7 +488,7 @@ export function ChatIntakeFlow({
             {showSend ? (
               <button
                 type="submit"
-                aria-label="Enviar respuesta"
+                aria-label={t("Enviar respuesta", "Send answer")}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wit-blue text-white transition-all hover:bg-wit-blue-deep"
               >
                 <svg
@@ -491,8 +512,11 @@ export function ChatIntakeFlow({
       {listening ? (
         <p className="mt-1.5 text-center text-[11px] text-wit-gray">
           {showSend
-            ? "Te escucho — sigue hablando o pulsa enviar cuando termines"
-            : "Te escucho — sigue hablando"}
+            ? t(
+                "Te escucho — sigue hablando o pulsa enviar cuando termines",
+                "I'm listening — keep talking or tap send when you're done",
+              )
+            : t("Te escucho — sigue hablando", "I'm listening — keep talking")}
         </p>
       ) : null}
     </>
@@ -516,7 +540,7 @@ export function ChatIntakeFlow({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar chat"
+            aria-label={t("Cerrar chat", "Close chat")}
             className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
           >
             ×
@@ -525,7 +549,7 @@ export function ChatIntakeFlow({
         <div className="wit-float">
           <WMark size={32} />
         </div>
-        <p className="mt-3 text-base font-medium text-wit-ink">{eyebrow}</p>
+        <p className="mt-3 text-base font-medium text-wit-ink">{resolvedEyebrow}</p>
         <p className="mt-2 text-sm text-wit-gray">{questions[0]?.text}</p>
 
         {shownError ? (
@@ -539,7 +563,7 @@ export function ChatIntakeFlow({
             onClick={() => submitAnswer("")}
             className="mt-3 text-xs font-semibold text-wit-gray hover:text-wit-ink"
           >
-            Omitir
+            {t("Omitir", "Skip")}
           </button>
         ) : null}
       </div>
@@ -553,7 +577,7 @@ export function ChatIntakeFlow({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar chat"
+            aria-label={t("Cerrar chat", "Close chat")}
             className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
           >
             ×
@@ -562,7 +586,7 @@ export function ChatIntakeFlow({
         <div className="wit-float">
           <WMark size={26} />
         </div>
-        <p className="text-sm font-medium text-wit-ink">{eyebrow}</p>
+        <p className="text-sm font-medium text-wit-ink">{resolvedEyebrow}</p>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
@@ -579,7 +603,7 @@ export function ChatIntakeFlow({
                     <input
                       autoFocus
                       type="text"
-                      aria-label="Editar respuesta"
+                      aria-label={t("Editar respuesta", "Edit answer")}
                       value={editValue}
                       onChange={(ev) => setEditValue(ev.target.value)}
                       onKeyDown={(ev) => {
@@ -598,14 +622,14 @@ export function ChatIntakeFlow({
                       onClick={cancelEditing}
                       className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
                     >
-                      Cancelar
+                      {t("Cancelar", "Cancel")}
                     </button>
                     <button
                       type="button"
                       onClick={saveEdit}
                       className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
                     >
-                      Guardar
+                      {t("Guardar", "Save")}
                     </button>
                   </div>
                 </div>
@@ -650,7 +674,7 @@ export function ChatIntakeFlow({
                         >
                           <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
                         </svg>
-                        Editar
+                        {t("Editar", "Edit")}
                       </button>
                       <span
                         aria-hidden="true"
@@ -677,20 +701,23 @@ export function ChatIntakeFlow({
                   }}
                   className="-mt-2 ml-8 self-start text-xs font-semibold text-wit-gray hover:text-wit-ink"
                 >
-                  Omitir
+                  {t("Omitir", "Skip")}
                 </button>
               ) : null}
             </>
           ) : (
             <>
-              <ChatBubble role="assistant" text={pending ? pendingLabel : doneLabel} />
+              <ChatBubble
+                role="assistant"
+                text={pending ? resolvedPendingLabel : resolvedDoneLabel}
+              />
               {!pending && restart ? (
                 <button
                   type="button"
                   onClick={restart}
                   className="-mt-2 ml-8 self-start text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
                 >
-                  ↺ Nueva conversación
+                  ↺ {t("Nueva conversación", "New conversation")}
                 </button>
               ) : null}
               {!pending ? resultSlot : null}

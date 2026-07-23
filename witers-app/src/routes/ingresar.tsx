@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { WitersLogo } from "../components/witers/brand";
+import { useLanguage } from "../lib/i18n";
 
 export const Route = createFileRoute("/ingresar")({
   head: () => ({
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/ingresar")({
 function Ingresar() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,18 +37,31 @@ function Ingresar() {
       if (!data.ok) {
         setError(
           data.error === "cuenta_dada_de_baja"
-            ? "Esta cuenta fue dada de baja. Contacta a WITERS si crees que es un error."
-            : "Correo o contraseña incorrectos.",
+            ? t(
+                "Esta cuenta fue dada de baja. Contacta a WITERS si crees que es un error.",
+                "This account has been deactivated. Contact WITERS if you think this is a mistake.",
+              )
+            : t("Correo o contraseña incorrectos.", "Incorrect email or password."),
         );
         return;
       }
       await qc.invalidateQueries({ queryKey: ["me"] });
       // Staff accounts land in their own work panel, not the client one —
       // a designer login has no business seeing the membership/checkout UI.
-      const dest = data.user?.role === "designer" ? "/witer" : data.user?.role === "admin" ? "/admin" : "/panel";
+      const dest =
+        data.user?.role === "designer"
+          ? "/witer"
+          : data.user?.role === "admin"
+            ? "/admin"
+            : "/panel";
       navigate({ to: dest });
     } catch {
-      setError("No pudimos iniciar sesión. Intenta de nuevo.");
+      setError(
+        t(
+          "No pudimos iniciar sesión. Intenta de nuevo.",
+          "We couldn't sign you in. Please try again.",
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -59,22 +74,26 @@ function Ingresar() {
           <WitersLogo />
         </Link>
         <Link to="/registro" className="wit-navlink text-sm font-medium text-wit-ink">
-          Crear cuenta
+          {t("Crear cuenta", "Create account")}
         </Link>
       </div>
 
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 pb-24">
         <h1 className="text-4xl font-extrabold tracking-tighter text-wit-ink">
-          Hola de nuevo, <span className="wit-underline text-wit-blue">Witer</span>
+          {t("Hola de nuevo,", "Welcome back,")}{" "}
+          <span className="wit-underline text-wit-blue">Witer</span>
         </h1>
         <p className="mt-4 text-base leading-relaxed text-wit-gray">
-          Ingresa para dar seguimiento a tus solicitudes y crear nuevas creatividades.
+          {t(
+            "Ingresa para dar seguimiento a tus solicitudes y crear nuevas creatividades.",
+            "Log in to track your requests and create new creatives.",
+          )}
         </p>
 
         <form onSubmit={submit} className="mt-9 space-y-5">
           <div>
             <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-              Correo electrónico
+              {t("Correo electrónico", "Email")}
             </label>
             <input
               id="email"
@@ -83,12 +102,12 @@ function Ingresar() {
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
-              placeholder="tu@correo.com"
+              placeholder={t("tu@correo.com", "you@email.com")}
             />
           </div>
           <div>
             <label htmlFor="password" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-              Contraseña
+              {t("Contraseña", "Password")}
             </label>
             <input
               id="password"
@@ -97,7 +116,7 @@ function Ingresar() {
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
-              placeholder="Tu contraseña"
+              placeholder={t("Tu contraseña", "Your password")}
             />
           </div>
 
@@ -110,11 +129,10 @@ function Ingresar() {
             disabled={loading}
             className="w-full rounded-xl bg-wit-blue px-6 py-3.5 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
           >
-            {loading ? "Ingresando..." : "Ingresar"}
+            {loading ? t("Ingresando...", "Logging in...") : t("Ingresar", "Log in")}
           </button>
         </form>
       </main>
     </div>
   );
 }
-

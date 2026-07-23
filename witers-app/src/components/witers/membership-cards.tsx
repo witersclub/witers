@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Star } from "lucide-react";
 
 import { MEMBERSHIP_PLANS, PROMO_MESES, type MembershipPlan } from "../../lib/membership-plans";
+import { useLanguage } from "../../lib/i18n";
 
 type GeoPrice =
   | { ok: true; show: false }
@@ -48,6 +49,7 @@ export type PlanCta = {
 };
 
 export function MembershipPlanCards({ ctaFor }: { ctaFor: (plan: MembershipPlan) => PlanCta }) {
+  const { t } = useLanguage();
   const fmt = (n: number) =>
     "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const geoPrice = useGeoPrice();
@@ -74,7 +76,7 @@ export function MembershipPlanCards({ ctaFor }: { ctaFor: (plan: MembershipPlan)
             {m.destacada ? (
               <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-wit-blue shadow-[0_8px_20px_rgba(0,0,0,0.22)]">
                 <Star className="h-3 w-3" fill="currentColor" strokeWidth={0} />
-                Más popular
+                {t("Más popular", "Most popular")}
               </span>
             ) : null}
             <div
@@ -95,17 +97,25 @@ export function MembershipPlanCards({ ctaFor }: { ctaFor: (plan: MembershipPlan)
                   {fmt(m.precioPromo)}
                 </span>
                 <span className="pb-1 text-xs font-semibold leading-tight text-white/85">
-                  MXN/mes
-                  <br />+ IVA
+                  {t("MXN/mes", "MXN/mo")}
+                  <br />
+                  {t("+ IVA", "+ VAT")}
                 </span>
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-white/60">
-                Precio especial válido tus primeros {PROMO_MESES} meses. Del mes {PROMO_MESES + 1}{" "}
-                en adelante: {fmt(m.precioRegular)} MXN + IVA al mes.
+                {t(
+                  `Precio especial válido tus primeros ${PROMO_MESES} meses. Del mes ${
+                    PROMO_MESES + 1
+                  } en adelante: ${fmt(m.precioRegular)} MXN + IVA al mes.`,
+                  `Special price valid for your first ${PROMO_MESES} months. From month ${
+                    PROMO_MESES + 1
+                  } onward: ${fmt(m.precioRegular)} MXN + VAT per month.`,
+                )}
               </p>
               {geoPrice.data?.ok && geoPrice.data.show ? (
                 <p className="mt-1 text-[11px] font-semibold text-white/70">
-                  ≈ {fmtGeo(geoPrice.data.amounts[m.id], geoPrice.data.currency)}/mes
+                  ≈ {fmtGeo(geoPrice.data.amounts[m.id], geoPrice.data.currency)}
+                  {t("/mes", "/mo")}
                 </p>
               ) : null}
             </div>

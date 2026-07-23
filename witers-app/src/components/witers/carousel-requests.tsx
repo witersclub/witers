@@ -15,6 +15,7 @@ import { WMark } from "./brand";
 import { ChatBubble } from "./chat-intake";
 import { AspectRatioPicker } from "./lab-pickers";
 import { MicButton } from "./mic-button";
+import { useLanguage } from "../../lib/i18n";
 
 export type CarouselSlideInfo = {
   id: string;
@@ -47,11 +48,11 @@ function parseSlides(row: CarouselRequestRow): CarouselSlideInfo[] {
   }
 }
 
-const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  nueva: { label: "En cola", cls: "bg-amber-50 text-amber-700" },
-  en_proceso: { label: "En diseño", cls: "bg-amber-50 text-amber-700" },
-  completada: { label: "Listo", cls: "bg-emerald-50 text-emerald-700" },
-  rechazada: { label: "Rechazada", cls: "bg-red-50 text-red-600" },
+const STATUS_LABEL: Record<string, { es: string; en: string; cls: string }> = {
+  nueva: { es: "En cola", en: "Queued", cls: "bg-amber-50 text-amber-700" },
+  en_proceso: { es: "En diseño", en: "In design", cls: "bg-amber-50 text-amber-700" },
+  completada: { es: "Listo", en: "Ready", cls: "bg-emerald-50 text-emerald-700" },
+  rechazada: { es: "Rechazada", en: "Rejected", cls: "bg-red-50 text-red-600" },
 };
 
 // Same landing pattern as VideoLandingScreen (and panel.tsx's
@@ -67,6 +68,7 @@ export function CarouselLandingScreen({
   quotaTotal: number;
   onStart: () => void;
 }) {
+  const { t } = useLanguage();
   const remaining = quotaTotal - quotaUsed;
   const blocked = !active || remaining <= 0;
 
@@ -77,17 +79,26 @@ export function CarouselLandingScreen({
       </div>
       <p className="max-w-xs text-base text-wit-gray">
         {quotaTotal === 0
-          ? "Los planes Grow y Scale incluyen carruseles para redes sociales."
+          ? t(
+              "Los planes Grow y Scale incluyen carruseles para redes sociales.",
+              "The Grow and Scale plans include carousels for social media.",
+            )
           : remaining <= 0
-            ? "Ya usaste tus carruseles disponibles este mes. Vuelven a estar disponibles en tu próximo ciclo."
-            : "Cuéntale a Wit de qué quieres tu carrusel — él arma las 4 láminas contigo."}
+            ? t(
+                "Ya usaste tus carruseles disponibles este mes. Vuelven a estar disponibles en tu próximo ciclo.",
+                "You've used up your available carousels this month. They'll be available again next cycle.",
+              )
+            : t(
+                "Cuéntale a Wit de qué quieres tu carrusel — él arma las 4 láminas contigo.",
+                "Tell Wit what you want your carousel to be about — he'll build the 4 slides with you.",
+              )}
       </p>
       {quotaTotal === 0 ? (
         <a
           href="/upgrade"
           className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
         >
-          Ver planes
+          {t("Ver planes", "View plans")}
         </a>
       ) : (
         <button
@@ -96,12 +107,15 @@ export function CarouselLandingScreen({
           disabled={blocked}
           className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          🖼️ Nuevo carrusel
+          {t("🖼️ Nuevo carrusel", "🖼️ New carousel")}
         </button>
       )}
       {quotaTotal > 0 ? (
         <p className="text-xs font-semibold text-wit-gray">
-          {quotaUsed} de {quotaTotal} carruseles usados este mes.
+          {t(
+            `${quotaUsed} de ${quotaTotal} carruseles usados este mes.`,
+            `${quotaUsed} of ${quotaTotal} carousels used this month.`,
+          )}
         </p>
       ) : null}
     </div>
@@ -115,6 +129,7 @@ export function CarouselRequestList({
   rows: CarouselRequestRow[];
   loading: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <section>
       {loading ? (
@@ -125,9 +140,14 @@ export function CarouselRequestList({
         </div>
       ) : rows.length === 0 ? (
         <div className="wit-glass rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
-          <p className="text-base font-semibold text-wit-ink">Aún no tienes carruseles.</p>
+          <p className="text-base font-semibold text-wit-ink">
+            {t("Aún no tienes carruseles.", "You don't have any carousels yet.")}
+          </p>
           <p className="mt-1 text-sm text-wit-gray">
-            Cuéntale a Wit de qué quieres tu carrusel de 4 láminas.
+            {t(
+              "Cuéntale a Wit de qué quieres tu carrusel de 4 láminas.",
+              "Tell Wit what you want your 4-slide carousel to be about.",
+            )}
           </p>
         </div>
       ) : (
@@ -143,6 +163,7 @@ export function CarouselRequestList({
 
 function CarouselEntry({ row }: { row: CarouselRequestRow }) {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const st = STATUS_LABEL[row.status] ?? STATUS_LABEL.nueva;
   const slides = parseSlides(row);
   // null = closed, 0 = "todo el carrusel", 1-4 = esa lámina puntual.
@@ -208,7 +229,7 @@ function CarouselEntry({ row }: { row: CarouselRequestRow }) {
           {row.status === "en_proceso" || row.status === "nueva" ? (
             <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2.5} />
           ) : null}
-          {st.label}
+          {t(st.es, st.en)}
         </span>
       </div>
 

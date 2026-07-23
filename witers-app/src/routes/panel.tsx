@@ -74,6 +74,7 @@ import {
   type CarouselRequestRow,
 } from "../components/witers/carousel-requests";
 import { IMAGE_PACKS } from "../lib/image-packs";
+import { useLanguage, LanguageToggle } from "../lib/i18n";
 import { getPlan } from "../lib/membership-plans";
 import { consumeTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe, type Me } from "../lib/witers-client";
@@ -540,6 +541,7 @@ function Panel() {
                 Upgrade
               </Link>
             ) : null}
+            <LanguageToggle />
             <UserMenu
               name={me.data.user?.name ?? ""}
               onOpenProfile={() => setView("perfil")}

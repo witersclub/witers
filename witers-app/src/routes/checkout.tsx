@@ -14,6 +14,7 @@ import {
   type MembershipPlan,
 } from "../lib/membership-plans";
 import { useMe } from "../lib/witers-client";
+import { useLanguage } from "../lib/i18n";
 
 // loadStripe() fetches Stripe.js and must only run once per key — the
 // publishable key doesn't change mid-session, so a tiny module-level cache
@@ -45,6 +46,7 @@ export const Route = createFileRoute("/checkout")({
 });
 
 function Checkout() {
+  const { t, lang } = useLanguage();
   const me = useMe();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -115,7 +117,10 @@ function Checkout() {
           navigate({ to: "/panel" });
           return null;
         }
-        return "No pudimos activar tu membresía. Intenta de nuevo.";
+        return t(
+          "No pudimos activar tu membresía. Intenta de nuevo.",
+          "We couldn't activate your membership. Please try again.",
+        );
       }
       await qc.invalidateQueries({ queryKey: ["me"] });
       setSuccess({
@@ -125,7 +130,10 @@ function Checkout() {
       });
       return null;
     } catch {
-      return "No pudimos activar tu membresía. Intenta de nuevo.";
+      return t(
+        "No pudimos activar tu membresía. Intenta de nuevo.",
+        "We couldn't activate your membership. Please try again.",
+      );
     }
   }
 
@@ -154,20 +162,23 @@ function Checkout() {
       <div className="wit-page flex min-h-dvh flex-col items-center justify-center gap-5 px-5 text-center">
         <WitersLogo />
         <p className="max-w-sm text-base text-wit-gray">
-          Para activar tu membresía primero crea tu cuenta o ingresa.
+          {t(
+            "Para activar tu membresía primero crea tu cuenta o ingresa.",
+            "To activate your membership, first create your account or log in.",
+          )}
         </p>
         <div className="flex gap-3">
           <Link
             to="/registro"
             className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
           >
-            Crear cuenta
+            {t("Crear cuenta", "Create account")}
           </Link>
           <Link
             to="/ingresar"
             className="rounded-full border border-wit-ink/15 px-6 py-3 text-sm font-semibold text-wit-ink hover:border-wit-blue"
           >
-            Ingresar
+            {t("Ingresar", "Log in")}
           </Link>
         </div>
       </div>
@@ -181,7 +192,7 @@ function Checkout() {
           <WitersLogo />
         </Link>
         <Link to="/panel" className="wit-navlink text-sm font-medium text-wit-ink">
-          Mi panel
+          {t("Mi panel", "My dashboard")}
         </Link>
       </div>
 
@@ -189,8 +200,18 @@ function Checkout() {
         <section>
           <h1 className="text-4xl font-extrabold tracking-tighter text-wit-ink">
             {isSwitch ? (
+              lang === "en" ? (
+                <>
+                  Change your <span className="wit-underline text-wit-blue">plan</span>
+                </>
+              ) : (
+                <>
+                  Cambia tu <span className="wit-underline text-wit-blue">plan</span>
+                </>
+              )
+            ) : lang === "en" ? (
               <>
-                Cambia tu <span className="wit-underline text-wit-blue">plan</span>
+                Activate your <span className="wit-underline text-wit-blue">membership</span>
               </>
             ) : (
               <>
@@ -200,22 +221,43 @@ function Checkout() {
           </h1>
           <p className="mt-4 text-base leading-relaxed text-wit-gray">
             {isSwitch ? (
-              <>
-                Pasas de <strong className="text-wit-ink">{getPlan(currentPlanId).nombre}</strong> a{" "}
-                <strong className="text-wit-ink">{plan.nombre}</strong>. Tus solicitudes usadas este
-                mes y tus solicitudes de paquetes no se pierden.{" "}
-                {chargeAmount > 0 ? (
-                  <>
-                    Solo pagas la diferencia con lo que ya cubriste este mes:{" "}
-                    <strong className="text-wit-ink">{fmt(chargeAmountWithIva)} MXN</strong> (IVA
-                    incluido).
-                  </>
-                ) : (
-                  "El cambio no tiene costo adicional este mes."
-                )}
-              </>
+              lang === "en" ? (
+                <>
+                  You're moving from{" "}
+                  <strong className="text-wit-ink">{getPlan(currentPlanId).nombre}</strong> to{" "}
+                  <strong className="text-wit-ink">{plan.nombre}</strong>. Your requests used this
+                  month and your package requests aren't lost.{" "}
+                  {chargeAmount > 0 ? (
+                    <>
+                      You only pay the difference from what you already covered this month:{" "}
+                      <strong className="text-wit-ink">{fmt(chargeAmountWithIva)} MXN</strong> (tax
+                      included).
+                    </>
+                  ) : (
+                    "The change has no additional cost this month."
+                  )}
+                </>
+              ) : (
+                <>
+                  Pasas de <strong className="text-wit-ink">{getPlan(currentPlanId).nombre}</strong>{" "}
+                  a <strong className="text-wit-ink">{plan.nombre}</strong>. Tus solicitudes usadas
+                  este mes y tus solicitudes de paquetes no se pierden.{" "}
+                  {chargeAmount > 0 ? (
+                    <>
+                      Solo pagas la diferencia con lo que ya cubriste este mes:{" "}
+                      <strong className="text-wit-ink">{fmt(chargeAmountWithIva)} MXN</strong> (IVA
+                      incluido).
+                    </>
+                  ) : (
+                    "El cambio no tiene costo adicional este mes."
+                  )}
+                </>
+              )
             ) : (
-              "Activa tu suscripción y tu cuenta queda lista para pedir creatividades con IA."
+              t(
+                "Activa tu suscripción y tu cuenta queda lista para pedir creatividades con IA.",
+                "Activate your subscription and your account will be ready to request AI creatives.",
+              )
             )}
           </p>
 
@@ -225,15 +267,28 @@ function Checkout() {
             </p>
             <p className="mt-1 text-sm text-white/80">{plan.tagline}</p>
             <p className="mt-3 font-wit-mono text-5xl font-semibold">{fmt(price)}</p>
-            <p className="mt-1 text-sm text-white/75">MXN al mes + IVA</p>
+            <p className="mt-1 text-sm text-white/75">
+              {t("MXN al mes + IVA", "MXN per month + tax")}
+            </p>
             {price === plan.precioPromo ? (
               <p className="mt-2 text-[11px] leading-relaxed text-white/60">
-                Precio de promoción, válido tus primeros 3 meses. Después: {fmt(plan.precioRegular)}{" "}
-                MXN + IVA al mes.
+                {lang === "en" ? (
+                  <>
+                    Promo price, valid for your first 3 months. After that:{" "}
+                    {fmt(plan.precioRegular)} MXN + tax per month.
+                  </>
+                ) : (
+                  <>
+                    Precio de promoción, válido tus primeros 3 meses. Después:{" "}
+                    {fmt(plan.precioRegular)} MXN + IVA al mes.
+                  </>
+                )}
               </p>
             ) : null}
             <div className="mt-4 flex items-center justify-between border-t border-white/15 pt-4 text-sm">
-              <span className="text-white/70">Total con IVA (16%)</span>
+              <span className="text-white/70">
+                {t("Total con IVA (16%)", "Total with tax (16%)")}
+              </span>
               <span className="font-wit-mono font-bold">{fmt(withIva(price))} MXN</span>
             </div>
             <ul className="mt-6 space-y-3">
@@ -262,12 +317,14 @@ function Checkout() {
         <section>
           {active && !isSwitch ? (
             <div className="rounded-3xl border border-wit-blue/20 bg-white p-8 text-center">
-              <p className="text-lg font-bold text-wit-ink">Tu membresía ya está activa.</p>
+              <p className="text-lg font-bold text-wit-ink">
+                {t("Tu membresía ya está activa.", "Your membership is already active.")}
+              </p>
               <Link
                 to="/panel"
                 className="mt-5 inline-block rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
               >
-                Ir a mi panel
+                {t("Ir a mi panel", "Go to my dashboard")}
               </Link>
             </div>
           ) : (
@@ -302,6 +359,7 @@ function CheckoutSuccessScreen({
   fmt: (n: number) => string;
   onContinue: () => void;
 }) {
+  const { t, lang } = useLanguage();
   return (
     <div className="wit-page flex min-h-dvh flex-col items-center justify-center gap-6 px-5 text-center">
       <div className="wit-float flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500 shadow-[0_20px_50px_rgba(16,185,129,0.35)]">
@@ -321,12 +379,24 @@ function CheckoutSuccessScreen({
 
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">
-          Pago exitoso
+          {t("Pago exitoso", "Payment successful")}
         </p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tighter text-wit-ink sm:text-4xl">
           {wasSwitch ? (
+            lang === "en" ? (
+              <>
+                Now you have{" "}
+                <span className="wit-underline text-wit-blue">WITERS {plan.nombre}</span>
+              </>
+            ) : (
+              <>
+                Ahora tienes{" "}
+                <span className="wit-underline text-wit-blue">WITERS {plan.nombre}</span>
+              </>
+            )
+          ) : lang === "en" ? (
             <>
-              Ahora tienes <span className="wit-underline text-wit-blue">WITERS {plan.nombre}</span>
+              Welcome to <span className="wit-underline text-wit-blue">WITERS {plan.nombre}</span>
             </>
           ) : (
             <>
@@ -336,8 +406,14 @@ function CheckoutSuccessScreen({
         </h1>
         <p className="mx-auto mt-4 max-w-sm text-base text-wit-gray">
           {amountPaid > 0
-            ? `Se cobraron ${fmt(amountPaid)} MXN a tu tarjeta. Tu membresía ya está activa.`
-            : "Tu membresía ya está activa, sin costo adicional este mes."}
+            ? t(
+                `Se cobraron ${fmt(amountPaid)} MXN a tu tarjeta. Tu membresía ya está activa.`,
+                `${fmt(amountPaid)} MXN was charged to your card. Your membership is now active.`,
+              )
+            : t(
+                "Tu membresía ya está activa, sin costo adicional este mes.",
+                "Your membership is now active, with no additional cost this month.",
+              )}
         </p>
       </div>
 
@@ -346,7 +422,7 @@ function CheckoutSuccessScreen({
         onClick={onContinue}
         className="wit-glow-button mt-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
       >
-        Ir a mi panel
+        {t("Ir a mi panel", "Go to my dashboard")}
       </button>
     </div>
   );
@@ -367,12 +443,20 @@ type PaymentIntentResponse =
 
 const PAYMENT_CARD_CLASS = "rounded-3xl bg-white p-8 shadow-[0_20px_60px_rgba(5,13,40,0.08)]";
 
-const DISCOUNT_ERROR_LABEL: Record<string, string> = {
-  codigo_invalido: "Ese código no existe o ya no está activo.",
-  codigo_expirado: "Ese código ya expiró.",
-  codigo_agotado: "Ese código ya alcanzó su límite de usos.",
-  monto_muy_bajo:
-    "Ese descuento deja el cobro por debajo del mínimo permitido por Stripe ($10 MXN). Prueba con un porcentaje menor.",
+const DISCOUNT_ERROR_LABEL: Record<string, { es: string; en: string }> = {
+  codigo_invalido: {
+    es: "Ese código no existe o ya no está activo.",
+    en: "That code doesn't exist or is no longer active.",
+  },
+  codigo_expirado: { es: "Ese código ya expiró.", en: "That code has already expired." },
+  codigo_agotado: {
+    es: "Ese código ya alcanzó su límite de usos.",
+    en: "That code has already reached its usage limit.",
+  },
+  monto_muy_bajo: {
+    es: "Ese descuento deja el cobro por debajo del mínimo permitido por Stripe ($10 MXN). Prueba con un porcentaje menor.",
+    en: "That discount leaves the charge below Stripe's minimum allowed amount ($10 MXN). Try a smaller percentage.",
+  },
 };
 
 // Creates the PaymentIntent (or detects a free switch) before rendering
@@ -389,6 +473,7 @@ function PaymentSection(props: {
   onFinalize: (paymentIntentId?: string, paidAmountWithIva?: number) => Promise<string | null>;
 }) {
   const { plan, isSwitch, chargeAmount, fmt, onFinalize } = props;
+  const { t } = useLanguage();
   const [codeInput, setCodeInput] = useState("");
   const [appliedCode, setAppliedCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -427,11 +512,15 @@ function PaymentSection(props: {
   // screen next to the input so the client knows why.
   useEffect(() => {
     if (isDiscountError && !intentQuery.data?.ok) {
+      const label = DISCOUNT_ERROR_LABEL[intentQuery.data?.error ?? ""];
       setCodeError(
-        DISCOUNT_ERROR_LABEL[intentQuery.data?.error ?? ""] ?? "No pudimos aplicar ese código.",
+        label
+          ? t(label.es, label.en)
+          : t("No pudimos aplicar ese código.", "We couldn't apply that code."),
       );
       setAppliedCode("");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDiscountError, intentQuery.data]);
 
   if (intentQuery.isLoading || isDiscountError) {
@@ -446,7 +535,10 @@ function PaymentSection(props: {
     return (
       <div className={PAYMENT_CARD_CLASS}>
         <p className="text-sm text-red-600">
-          No pudimos preparar el pago. Refresca la página e intenta de nuevo.
+          {t(
+            "No pudimos preparar el pago. Refresca la página e intenta de nuevo.",
+            "We couldn't prepare the payment. Refresh the page and try again.",
+          )}
         </p>
       </div>
     );
@@ -515,18 +607,27 @@ function DiscountCodeBar({
   onApply: () => void;
   onRemove: () => void;
 }) {
+  const { t, lang } = useLanguage();
   if (appliedCode) {
     return (
       <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
         <span className="font-bold text-emerald-700">
-          Código <span className="font-wit-mono">{appliedCode}</span> aplicado
+          {lang === "en" ? (
+            <>
+              Code <span className="font-wit-mono">{appliedCode}</span> applied
+            </>
+          ) : (
+            <>
+              Código <span className="font-wit-mono">{appliedCode}</span> aplicado
+            </>
+          )}
         </span>
         <button
           type="button"
           onClick={onRemove}
           className="text-xs font-bold text-emerald-700 underline"
         >
-          Quitar
+          {t("Quitar", "Remove")}
         </button>
       </div>
     );
@@ -543,7 +644,7 @@ function DiscountCodeBar({
         <input
           value={codeInput}
           onChange={(e) => onCodeInputChange(e.target.value)}
-          placeholder="¿Tienes un código de descuento?"
+          placeholder={t("¿Tienes un código de descuento?", "Have a discount code?")}
           className="flex-1 rounded-xl border border-wit-ink/15 px-3.5 py-2.5 text-sm uppercase outline-none focus:border-wit-blue"
         />
         <button
@@ -551,7 +652,7 @@ function DiscountCodeBar({
           disabled={!codeInput.trim()}
           className="shrink-0 rounded-xl bg-wit-ink px-4 py-2.5 text-sm font-bold text-white hover:bg-wit-ink/90 disabled:opacity-40"
         >
-          Aplicar
+          {t("Aplicar", "Apply")}
         </button>
       </form>
       {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
@@ -568,6 +669,7 @@ function FreeSwitchCard({
   plan: MembershipPlan;
   onFinalize: (paymentIntentId?: string, paidAmountWithIva?: number) => Promise<string | null>;
 }) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -581,9 +683,14 @@ function FreeSwitchCard({
 
   return (
     <div className={PAYMENT_CARD_CLASS}>
-      <h2 className="text-xl font-bold text-wit-ink">Confirmar cambio de plan</h2>
+      <h2 className="text-xl font-bold text-wit-ink">
+        {t("Confirmar cambio de plan", "Confirm plan change")}
+      </h2>
       <p className="mt-1 text-xs text-wit-gray">
-        Este cambio no tiene costo adicional este mes — no necesitas ingresar datos de pago.
+        {t(
+          "Este cambio no tiene costo adicional este mes — no necesitas ingresar datos de pago.",
+          "This change has no additional cost this month — you don't need to enter payment details.",
+        )}
       </p>
       {error ? (
         <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
@@ -594,7 +701,12 @@ function FreeSwitchCard({
         disabled={loading}
         className="mt-6 w-full rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
       >
-        {loading ? "Confirmando..." : `Cambiar a ${plan.nombre} — sin costo adicional`}
+        {loading
+          ? t("Confirmando...", "Confirming...")
+          : t(
+              `Cambiar a ${plan.nombre} — sin costo adicional`,
+              `Switch to ${plan.nombre} — no additional cost`,
+            )}
       </button>
     </div>
   );

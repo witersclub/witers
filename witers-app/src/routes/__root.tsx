@@ -23,6 +23,7 @@ function isStaleChunkError(error: Error | undefined | null): boolean {
 }
 
 import { IosInstallHint } from "../components/witers/ios-install-hint";
+import { LanguageProvider } from "../lib/i18n";
 
 import appCss from "../styles.css?url";
 
@@ -172,9 +173,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-      <IosInstallHint />
+      <LanguageProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+        <IosInstallHint />
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

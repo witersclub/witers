@@ -4,6 +4,7 @@ import { useState } from "react";
 import { z } from "zod";
 
 import { WitersLogo } from "../components/witers/brand";
+import { useLanguage } from "../lib/i18n";
 import { isPlanId } from "../lib/membership-plans";
 
 export const Route = createFileRoute("/registro")({
@@ -26,6 +27,7 @@ function Registro() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { plan } = Route.useSearch();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,15 +48,26 @@ function Registro() {
       if (!data.ok) {
         setError(
           data.error === "correo_registrado"
-            ? "Ese correo ya tiene una cuenta. Intenta ingresar."
-            : "Revisa tus datos: nombre, correo válido y contraseña de al menos 8 caracteres.",
+            ? t(
+                "Ese correo ya tiene una cuenta. Intenta ingresar.",
+                "That email already has an account. Try logging in instead.",
+              )
+            : t(
+                "Revisa tus datos: nombre, correo válido y contraseña de al menos 8 caracteres.",
+                "Check your details: name, a valid email, and a password of at least 8 characters.",
+              ),
         );
         return;
       }
       await qc.invalidateQueries({ queryKey: ["me"] });
       navigate({ to: "/checkout", search: plan ? { plan } : {} });
     } catch {
-      setError("No pudimos crear tu cuenta. Intenta de nuevo.");
+      setError(
+        t(
+          "No pudimos crear tu cuenta. Intenta de nuevo.",
+          "We couldn't create your account. Please try again.",
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -67,23 +80,27 @@ function Registro() {
           <WitersLogo />
         </Link>
         <Link to="/ingresar" className="wit-navlink text-sm font-medium text-wit-ink">
-          Ingresar
+          {t("Ingresar", "Log in")}
         </Link>
       </div>
 
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 pb-24">
         <h1 className="text-4xl font-extrabold tracking-tighter text-wit-ink">
-          Crea tu <span className="wit-underline text-wit-blue">cuenta</span>
+          {t("Crea tu", "Create your")}{" "}
+          <span className="wit-underline text-wit-blue">{t("cuenta", "account")}</span>
         </h1>
         <p className="mt-4 text-base leading-relaxed text-wit-gray">
-          Da el primer paso: crea tu cuenta y activa tu membresía para entrar a la comunidad del{" "}
-          <strong className="text-wit-blue">ingenio</strong>.
+          {t(
+            "Da el primer paso: crea tu cuenta y activa tu membresía para entrar a la comunidad del",
+            "Take the first step: create your account and activate your membership to join the community of",
+          )}{" "}
+          <strong className="text-wit-blue">{t("ingenio", "ingenuity")}</strong>.
         </p>
 
         <form onSubmit={submit} className="mt-9 space-y-5">
           <div>
             <label htmlFor="name" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-              Nombre completo
+              {t("Nombre completo", "Full name")}
             </label>
             <input
               id="name"
@@ -98,7 +115,7 @@ function Registro() {
           </div>
           <div>
             <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-              Correo electrónico
+              {t("Correo electrónico", "Email address")}
             </label>
             <input
               id="email"
@@ -112,7 +129,7 @@ function Registro() {
           </div>
           <div>
             <label htmlFor="password" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-              Contraseña
+              {t("Contraseña", "Password")}
             </label>
             <input
               id="password"
@@ -122,7 +139,7 @@ function Registro() {
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
-              placeholder="Mínimo 8 caracteres"
+              placeholder={t("Mínimo 8 caracteres", "Minimum 8 characters")}
             />
           </div>
 
@@ -136,15 +153,15 @@ function Registro() {
               className="mt-0.5 h-4 w-4 shrink-0 rounded border-wit-ink/25 text-wit-blue accent-[#0047ff]"
             />
             <span>
-              Acepto los{" "}
+              {t("Acepto los", "I accept the")}{" "}
               <Link
                 to="/terminos"
                 target="_blank"
                 className="font-semibold text-wit-blue underline hover:text-wit-blue-deep"
               >
-                términos y condiciones
+                {t("términos y condiciones", "terms and conditions")}
               </Link>{" "}
-              de WITERS.
+              {t("de WITERS.", "of WITERS.")}
             </span>
           </label>
 
@@ -157,10 +174,15 @@ function Registro() {
             disabled={loading || !acceptedTerms}
             className="w-full rounded-xl bg-wit-blue px-6 py-3.5 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
           >
-            {loading ? "Creando cuenta..." : "Crear cuenta"}
+            {loading
+              ? t("Creando cuenta...", "Creating account...")
+              : t("Crear cuenta", "Create account")}
           </button>
           <p className="text-center text-xs text-wit-gray">
-            El acceso con Google estará disponible próximamente.
+            {t(
+              "El acceso con Google estará disponible próximamente.",
+              "Sign in with Google will be available soon.",
+            )}
           </p>
         </form>
       </main>

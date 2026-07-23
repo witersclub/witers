@@ -2,6 +2,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
+import { useLanguage, LanguageToggle } from "../../lib/i18n";
 import { useMe } from "../../lib/witers-client";
 import {
   CtaPill,
@@ -18,6 +19,7 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -27,11 +29,11 @@ export function SiteHeader() {
   }, []);
 
   const links = [
-    { href: "/marca", label: "Branding" },
-    { href: "/pauta", label: "Campañas de Meta" },
-    { href: "/nuestra-historia", label: "Nuestra historia" },
-    { href: "/nuestra-historia#valores", label: "Comunidad" },
-    { href: "/#membresia", label: "Membresía" },
+    { href: "/marca", label: t("Branding", "Branding") },
+    { href: "/pauta", label: t("Campañas de Meta", "Meta Campaigns") },
+    { href: "/nuestra-historia", label: t("Nuestra historia", "Our story") },
+    { href: "/nuestra-historia#valores", label: t("Comunidad", "Community") },
+    { href: "/#membresia", label: t("Membresía", "Membership") },
   ];
 
   return (
@@ -58,12 +60,13 @@ export function SiteHeader() {
               to="/ingresar"
               className="inline-flex items-center rounded-full border border-wit-blue px-5 py-2.5 text-sm font-semibold text-wit-ink transition-colors duration-200 hover:bg-wit-blue/5 hover:text-wit-blue"
             >
-              Ingresar
+              {t("Ingresar", "Log in")}
             </Link>
           ) : null}
           <CtaPill to={signedIn ? "/panel" : "/registro"}>
-            {signedIn ? "Mi panel" : "Unirme a WITERS"}
+            {signedIn ? t("Mi panel", "My panel") : t("Unirme a WITERS", "Join WITERS")}
           </CtaPill>
+          <LanguageToggle />
         </nav>
 
         {/* Mobile: a returning client shouldn't have to open the hamburger
@@ -75,7 +78,7 @@ export function SiteHeader() {
             to={signedIn ? "/panel" : "/ingresar"}
             className="inline-flex items-center rounded-full border border-wit-blue px-3.5 py-2 text-xs font-semibold text-wit-ink transition-colors duration-200 hover:bg-wit-blue/5 hover:text-wit-blue"
           >
-            {signedIn ? "Mi panel" : "Ingresar"}
+            {signedIn ? t("Mi panel", "My panel") : t("Ingresar", "Log in")}
           </Link>
           <button
             type="button"
@@ -112,8 +115,9 @@ export function SiteHeader() {
               </a>
             ))}
             <CtaPill to={signedIn ? "/panel" : "/registro"}>
-              {signedIn ? "Mi panel" : "Unirme a WITERS"}
+              {signedIn ? t("Mi panel", "My panel") : t("Unirme a WITERS", "Join WITERS")}
             </CtaPill>
+            <LanguageToggle className="self-start" />
           </div>
         </div>
       ) : null}
@@ -122,14 +126,15 @@ export function SiteHeader() {
 }
 
 const FOOTER_BADGES = [
-  { icon: IconIngenio, label: "INGENIO" },
-  { icon: IconEstrategia, label: "ESTRATEGIA" },
-  { icon: IconInnovacion, label: "INNOVACIÓN" },
-  { icon: IconComunidad, label: "COMUNIDAD" },
-  { icon: IconCrecimiento, label: "CRECIMIENTO" },
+  { icon: IconIngenio, es: "INGENIO", en: "INGENUITY" },
+  { icon: IconEstrategia, es: "ESTRATEGIA", en: "STRATEGY" },
+  { icon: IconInnovacion, es: "INNOVACIÓN", en: "INNOVATION" },
+  { icon: IconComunidad, es: "COMUNIDAD", en: "COMMUNITY" },
+  { icon: IconCrecimiento, es: "CRECIMIENTO", en: "GROWTH" },
 ];
 
 export function SiteFooter() {
+  const { t } = useLanguage();
   return (
     <footer className="relative mt-24">
       <div className="absolute inset-x-0 top-0 h-16 rounded-b-[100%_100%]" aria-hidden="true" />
@@ -144,17 +149,19 @@ export function SiteFooter() {
                 />
               </svg>
               <p className="max-w-xs text-xl font-bold leading-snug">
-                EL INGENIO ES LA IDEA QUE{" "}
-                <span className="text-wit-blue brightness-150">IMPULSA EL CAMBIO.</span>
+                {t("EL INGENIO ES LA IDEA QUE", "INGENUITY IS THE IDEA THAT")}{" "}
+                <span className="text-wit-blue brightness-150">
+                  {t("IMPULSA EL CAMBIO.", "DRIVES CHANGE.")}
+                </span>
               </p>
             </div>
 
             <div className="grid grid-cols-3 gap-x-8 gap-y-6 sm:grid-cols-5">
               {FOOTER_BADGES.map((b) => (
-                <div key={b.label} className="flex flex-col items-center gap-2 text-[#9fb4ff]">
+                <div key={b.es} className="flex flex-col items-center gap-2 text-[#9fb4ff]">
                   <b.icon size={26} />
                   <span className="text-[10px] font-semibold tracking-[0.18em] text-white/85">
-                    {b.label}
+                    {t(b.es, b.en)}
                   </span>
                 </div>
               ))}
@@ -168,24 +175,25 @@ export function SiteFooter() {
                 Branding
               </a>
               <a href="/pauta" className="hover:text-white">
-                Campañas de Meta
+                {t("Campañas de Meta", "Meta Campaigns")}
               </a>
               <a href="/nuestra-historia" className="hover:text-white">
-                Nuestra historia
+                {t("Nuestra historia", "Our story")}
               </a>
               <a href="/#membresia" className="hover:text-white">
-                Membresía
+                {t("Membresía", "Membership")}
               </a>
               <Link to="/ingresar" className="hover:text-white">
-                Ingresar
+                {t("Ingresar", "Log in")}
               </Link>
               <a href="mailto:hola@witers.com" className="hover:text-white">
                 hola@witers.com
               </a>
             </nav>
             <p className="text-xs text-white/45">
-              WITERS. La comunidad del <span className="text-[#9fb4ff]">ingenio</span>. Hecho en
-              México.
+              {t("WITERS. La comunidad del", "WITERS. The community of")}{" "}
+              <span className="text-[#9fb4ff]">{t("ingenio", "ingenuity")}</span>.{" "}
+              {t("Hecho en México.", "Made in Mexico.")}
             </p>
           </div>
         </div>
