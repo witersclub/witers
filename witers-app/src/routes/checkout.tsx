@@ -6,7 +6,13 @@ import { useState } from "react";
 import { z } from "zod";
 
 import { WitersLogo } from "../components/witers/brand";
-import { currentPriceFor, getPlan, isPlanId, type MembershipPlan } from "../lib/membership-plans";
+import {
+  currentPriceFor,
+  getPlan,
+  isPlanId,
+  withIva,
+  type MembershipPlan,
+} from "../lib/membership-plans";
 import { useMe } from "../lib/witers-client";
 
 // loadStripe() fetches Stripe.js and must only run once per key — the
@@ -65,6 +71,10 @@ function Checkout() {
   // there's no refund path for what was already paid on the pricier plan.
   const oldPrice = isSwitch ? currentPriceFor(getPlan(currentPlanId), activatedAt) : 0;
   const chargeAmount = isSwitch ? Math.max(0, price - oldPrice) : price;
+  // Every published price is "más IVA" (/terminos) — this is what's
+  // actually charged, and must match /api/stripe/create-payment-intent's
+  // math exactly or Stripe verification in /api/checkout rejects it.
+  const chargeAmountWithIva = withIva(chargeAmount);
 
   // Activates the membership in the DB — called once Stripe has confirmed a
   // real charge (paymentIntentId set) or immediately for a free plan
@@ -163,7 +173,8 @@ function Checkout() {
                 {chargeAmount > 0 ? (
                   <>
                     Solo pagas la diferencia con lo que ya cubriste este mes:{" "}
-                    <strong className="text-wit-ink">{fmt(chargeAmount)} MXN</strong>.
+                    <strong className="text-wit-ink">{fmt(chargeAmountWithIva)} MXN</strong> (IVA
+                    incluido).
                   </>
                 ) : (
                   "El cambio no tiene costo adicional este mes."
@@ -187,6 +198,10 @@ function Checkout() {
                 MXN + IVA al mes.
               </p>
             ) : null}
+            <div className="mt-4 flex items-center justify-between border-t border-white/15 pt-4 text-sm">
+              <span className="text-white/70">Total con IVA (16%)</span>
+              <span className="font-wit-mono font-bold">{fmt(withIva(price))} MXN</span>
+            </div>
             <ul className="mt-6 space-y-3">
               {plan.beneficios.map((b) => (
                 <li key={b} className="flex items-start gap-2.5 text-sm text-white/90">
@@ -226,7 +241,6 @@ function Checkout() {
               plan={plan}
               isSwitch={isSwitch}
               chargeAmount={chargeAmount}
-              price={price}
               fmt={fmt}
               onFinalize={finalizeCheckout}
             />
@@ -239,7 +253,13 @@ function Checkout() {
 
 type PaymentIntentResponse =
   | { ok: true; free: true; publishableKey: string }
-  | { ok: true; free: false; clientSecret: string; publishableKey: string }
+  | {
+      ok: true;
+      free: false;
+      clientSecret: string;
+      publishableKey: string;
+      chargeAmountWithIva: number;
+    }
   | { ok: false; error?: string };
 
 const PAYMENT_CARD_CLASS = "rounded-3xl bg-white p-8 shadow-[0_20px_60px_rgba(5,13,40,0.08)]";
@@ -251,11 +271,10 @@ function PaymentSection(props: {
   plan: MembershipPlan;
   isSwitch: boolean;
   chargeAmount: number;
-  price: number;
   fmt: (n: number) => string;
   onFinalize: (paymentIntentId?: string) => Promise<string | null>;
 }) {
-  const { plan, isSwitch, chargeAmount, price, fmt, onFinalize } = props;
+  const { plan, isSwitch, chargeAmount, fmt, onFinalize } = props;
 
   const intentQuery = useQuery({
     queryKey: ["stripe-payment-intent", plan.id, chargeAmount],
@@ -299,8 +318,7 @@ function PaymentSection(props: {
       <StripeCheckoutForm
         plan={plan}
         isSwitch={isSwitch}
-        chargeAmount={chargeAmount}
-        price={price}
+        amountWithIva={intentQuery.data.chargeAmountWithIva}
         fmt={fmt}
         onFinalize={onFinalize}
       />
@@ -354,15 +372,13 @@ function FreeSwitchCard({
 function StripeCheckoutForm({
   plan,
   isSwitch,
-  chargeAmount,
-  price,
+  amountWithIva,
   fmt,
   onFinalize,
 }: {
   plan: MembershipPlan;
   isSwitch: boolean;
-  chargeAmount: number;
-  price: number;
+  amountWithIva: number;
   fmt: (n: number) => string;
   onFinalize: (paymentIntentId?: string) => Promise<string | null>;
 }) {
@@ -419,8 +435,8 @@ function StripeCheckoutForm({
         {loading
           ? "Procesando pago..."
           : isSwitch
-            ? `Cambiar a ${plan.nombre} — ${fmt(chargeAmount)} MXN`
-            : `Pagar ${fmt(price)} MXN`}
+            ? `Cambiar a ${plan.nombre} — ${fmt(amountWithIva)} MXN`
+            : `Pagar ${fmt(amountWithIva)} MXN`}
       </button>
       <p className="mt-3 text-center text-[11px] leading-relaxed text-wit-gray">
         Pago procesado de forma segura por Stripe. Nunca almacenamos los datos de tu tarjeta.

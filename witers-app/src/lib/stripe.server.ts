@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 
-import { currentPriceFor, getPlan, type MembershipPlan } from "./membership-plans";
+import { currentPriceFor, getPlan, withIva, type MembershipPlan } from "./membership-plans";
 
 let client: Stripe | null = null;
 
@@ -23,15 +23,24 @@ export function stripePublishableKey(): string | null {
 // shown, the amount a PaymentIntent charges, and the amount actually
 // activated in the DB can never drift apart. `existing` is the caller's
 // current membership row (or null/undefined for a first-time activation).
+//
+// `price`/`chargeAmount` stay pre-tax — that's the plan's list price
+// (matches the homepage cards and memberships.price_mxn, a plan-price
+// snapshot, not a billing record). `chargeAmountWithIva` is what's actually
+// charged and what payments.amount_mxn records — every published price is
+// "más IVA" (see /terminos), so the real charge is never the bare number.
 export function computeChargeAmount(
   plan: MembershipPlan,
   existing: { status: string; plan: string; activated_at: string | null } | null | undefined,
-): { price: number; chargeAmount: number; isSwitch: boolean } {
+): { price: number; chargeAmount: number; chargeAmountWithIva: number; isSwitch: boolean } {
   const price = currentPriceFor(plan, existing?.activated_at ?? null);
   const isSwitch = Boolean(existing?.status === "active" && existing.plan !== plan.id);
-  if (!isSwitch) return { price, chargeAmount: price, isSwitch };
+  if (!isSwitch) {
+    return { price, chargeAmount: price, chargeAmountWithIva: withIva(price), isSwitch };
+  }
   const oldPrice = currentPriceFor(getPlan(existing!.plan), existing!.activated_at);
-  return { price, chargeAmount: Math.max(0, price - oldPrice), isSwitch };
+  const chargeAmount = Math.max(0, price - oldPrice);
+  return { price, chargeAmount, chargeAmountWithIva: withIva(chargeAmount), isSwitch };
 }
 
 // MXN, like every other currency Stripe supports at 2 decimals, is charged

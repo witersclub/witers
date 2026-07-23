@@ -40,8 +40,9 @@ export const Route = createFileRoute("/api/checkout")({
 
         // Recomputed independently from the DB — never trust a client-sent
         // price. Must match exactly what /api/stripe/create-payment-intent
-        // charged, or the PaymentIntent verification below rejects it.
-        const { price, chargeAmount } = computeChargeAmount(plan, existing);
+        // charged (IVA included), or the PaymentIntent verification below
+        // rejects it.
+        const { price, chargeAmount, chargeAmountWithIva } = computeChargeAmount(plan, existing);
         let paymentIntentId: string | null = null;
 
         if (chargeAmount > 0) {
@@ -65,7 +66,7 @@ export const Route = createFileRoute("/api/checkout")({
             intent.status === "succeeded" &&
             intent.metadata.userId === user.id &&
             intent.metadata.plan === plan.id &&
-            intent.amount === pesosToCentavos(chargeAmount);
+            intent.amount === pesosToCentavos(chargeAmountWithIva);
           if (!matches) {
             return json({ ok: false, error: "pago_invalido" }, { status: 400 });
           }
@@ -99,16 +100,20 @@ export const Route = createFileRoute("/api/checkout")({
             .run();
         }
 
+        // amount_mxn records what was actually charged (IVA included) — a
+        // free switch charges $0 either way, so chargeAmount and
+        // chargeAmountWithIva agree there.
+        const paidAmount = chargeAmount > 0 ? chargeAmountWithIva : chargeAmount;
         const paymentId = crypto.randomUUID();
         await db()
           .prepare(
             `INSERT INTO payments (id, user_id, membership_id, amount_mxn, method, provider, provider_ref, status)
              VALUES (?1, ?2, ?3, ?4, 'card', 'stripe', ?5, 'paid')`,
           )
-          .bind(paymentId, user.id, membershipId, chargeAmount, paymentIntentId)
+          .bind(paymentId, user.id, membershipId, paidAmount, paymentIntentId)
           .run();
 
-        return json({ ok: true, membershipId, paymentId, chargeAmount });
+        return json({ ok: true, membershipId, paymentId, chargeAmount: paidAmount });
       },
     },
   },

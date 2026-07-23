@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/stripe/create-payment-intent")({
           return json({ ok: false, error: "ya_activa" }, { status: 409 });
         }
 
-        const { chargeAmount } = computeChargeAmount(plan, existing);
+        const { chargeAmount, chargeAmountWithIva } = computeChargeAmount(plan, existing);
         const publishableKey = stripePublishableKey();
         if (!publishableKey)
           return json({ ok: false, error: "stripe_no_configurado" }, { status: 500 });
@@ -49,14 +49,24 @@ export const Route = createFileRoute("/api/stripe/create-payment-intent")({
         }
 
         const intent = await stripeClient().paymentIntents.create({
-          amount: pesosToCentavos(chargeAmount),
+          amount: pesosToCentavos(chargeAmountWithIva),
           currency: "mxn",
           receipt_email: user.email,
-          metadata: { userId: user.id, plan: plan.id, chargeAmountMxn: String(chargeAmount) },
+          metadata: {
+            userId: user.id,
+            plan: plan.id,
+            chargeAmountWithIvaMxn: String(chargeAmountWithIva),
+          },
           automatic_payment_methods: { enabled: true },
         });
 
-        return json({ ok: true, free: false, clientSecret: intent.client_secret, publishableKey });
+        return json({
+          ok: true,
+          free: false,
+          clientSecret: intent.client_secret,
+          publishableKey,
+          chargeAmountWithIva,
+        });
       },
     },
   },

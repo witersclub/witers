@@ -114,3 +114,12 @@ export function currentPriceFor(plan: MembershipPlan, activatedAt: string | null
   if (!activatedAt) return plan.precioPromo;
   return monthsSince(activatedAt) < PROMO_MESES ? plan.precioPromo : plan.precioRegular;
 }
+
+// Every published price (plan cards, /terminos) is stated "más IVA" — the
+// number a client is shown and charged is never the bare plan price, it's
+// always this. Rounded to centavos so downstream cents conversion for
+// Stripe (pesosToCentavos) never carries a fractional-centavo remainder.
+export const IVA_RATE = 0.16;
+export function withIva(pesos: number): number {
+  return Math.round(pesos * (1 + IVA_RATE) * 100) / 100;
+}
