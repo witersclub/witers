@@ -3988,6 +3988,7 @@ function BrandAssetCard({
   accept: string;
   acceptHint: string;
 }) {
+  const { t } = useLanguage();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -3998,7 +3999,12 @@ function BrandAssetCard({
     try {
       const key = await uploadReferenceFile(file);
       if (!key) {
-        setError(`No pudimos subir el archivo (${acceptHint}).`);
+        setError(
+          t(
+            `No pudimos subir el archivo (${acceptHint}).`,
+            `We couldn't upload the file (${acceptHint}).`,
+          ),
+        );
         return;
       }
       const res = await fetch(uploadEndpoint, {
@@ -4008,7 +4014,12 @@ function BrandAssetCard({
       });
       const data = (await res.json()) as { ok: boolean };
       if (!data.ok) {
-        setError("No pudimos guardar el archivo. Intenta de nuevo.");
+        setError(
+          t(
+            "No pudimos guardar el archivo. Intenta de nuevo.",
+            "We couldn't save the file. Try again.",
+          ),
+        );
         return;
       }
       onUploaded();
@@ -4048,24 +4059,31 @@ function BrandAssetCard({
             />
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-wit-ink">Archivo guardado</p>
+            <p className="truncate text-sm font-semibold text-wit-ink">
+              {t("Archivo guardado", "File saved")}
+            </p>
             <a
               href={`/api/file?key=${encodeURIComponent(fileKey)}&download=1`}
               className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
             >
-              Descargar
+              {t("Descargar", "Download")}
             </a>
           </div>
         </div>
       ) : (
         <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
-          Aún no tienes {title.toLowerCase()} guardado.
+          {t(
+            `Aún no tienes ${title.toLowerCase()} guardado.`,
+            `You don't have a saved ${title.toLowerCase()} yet.`,
+          )}
         </p>
       )}
 
       <label className="mt-4 block">
         <span className="sr-only">
-          {fileKey ? `Reemplazar ${title.toLowerCase()}` : `Subir ${title.toLowerCase()}`}
+          {fileKey
+            ? t(`Reemplazar ${title.toLowerCase()}`, `Replace ${title.toLowerCase()}`)
+            : t(`Subir ${title.toLowerCase()}`, `Upload ${title.toLowerCase()}`)}
         </span>
         <input
           type="file"
@@ -4076,7 +4094,11 @@ function BrandAssetCard({
         />
       </label>
       <p className="mt-1.5 text-[11px] text-wit-gray">{acceptHint}</p>
-      {uploading ? <p className="mt-2 text-xs font-semibold text-wit-blue">Subiendo...</p> : null}
+      {uploading ? (
+        <p className="mt-2 text-xs font-semibold text-wit-blue">
+          {t("Subiendo...", "Uploading...")}
+        </p>
+      ) : null}
       {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
     </div>
   );
@@ -4088,35 +4110,41 @@ function BrandAssetCard({
 // it just points the client at email instead of pretending there's a real
 // flow behind it.
 function LogoCard({ fileKey }: { fileKey: string | null }) {
+  const { t } = useLanguage();
   const [requested, setRequested] = useState(false);
 
   return (
     <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-      <p className="text-lg font-bold text-wit-ink">Logotipo</p>
+      <p className="text-lg font-bold text-wit-ink">{t("Logotipo", "Logo")}</p>
       <p className="mt-1 text-sm text-wit-gray">
-        El logotipo que usamos en cada pieza que creamos para ti.
+        {t(
+          "El logotipo que usamos en cada pieza que creamos para ti.",
+          "The logo we use on every piece we create for you.",
+        )}
       </p>
 
       {fileKey ? (
         <div className="mt-5 flex items-center gap-4 rounded-2xl border border-wit-ink/10 p-4">
           <img
             src={`/api/file?key=${encodeURIComponent(fileKey)}`}
-            alt="Logotipo"
+            alt={t("Logotipo", "Logo")}
             className="h-16 w-16 shrink-0 rounded-xl border border-wit-ink/10 object-cover"
           />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-wit-ink">Archivo guardado</p>
+            <p className="truncate text-sm font-semibold text-wit-ink">
+              {t("Archivo guardado", "File saved")}
+            </p>
             <a
               href={`/api/file?key=${encodeURIComponent(fileKey)}&download=1`}
               className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
             >
-              Descargar
+              {t("Descargar", "Download")}
             </a>
           </div>
         </div>
       ) : (
         <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
-          Aún no tienes logotipo guardado.
+          {t("Aún no tienes logotipo guardado.", "You don't have a saved logo yet.")}
         </p>
       )}
 
@@ -4125,12 +4153,14 @@ function LogoCard({ fileKey }: { fileKey: string | null }) {
         onClick={() => setRequested(true)}
         className="mt-4 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
       >
-        Solicitar cambio de logotipo
+        {t("Solicitar cambio de logotipo", "Request a logo change")}
       </button>
       {requested ? (
         <p className="mt-3 rounded-xl bg-wit-ice px-3.5 py-2.5 text-xs text-wit-ink">
-          Muy pronto vas a poder platicar esto directo con soporte desde aquí. Mientras tanto,
-          escríbenos a{" "}
+          {t(
+            "Muy pronto vas a poder platicar esto directo con soporte desde aquí. Mientras tanto, escríbenos a",
+            "Soon you'll be able to talk to support about this right here. In the meantime, email us at",
+          )}{" "}
           <a
             href="mailto:hola@witers.com"
             className="font-semibold text-wit-blue hover:text-wit-blue-deep"
@@ -4150,6 +4180,7 @@ function LogoCard({ fileKey }: { fileKey: string | null }) {
 // so picking/editing colors here looks and works exactly the same as
 // answering the colors question anywhere else in the app.
 function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -4170,7 +4201,12 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
       });
       const data = (await res.json()) as { ok: boolean };
       if (!data.ok) {
-        setError("No pudimos guardar tus colores. Intenta de nuevo.");
+        setError(
+          t(
+            "No pudimos guardar tus colores. Intenta de nuevo.",
+            "We couldn't save your colors. Try again.",
+          ),
+        );
         return;
       }
       setEditing(false);
@@ -4182,9 +4218,12 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
 
   return (
     <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-      <p className="text-lg font-bold text-wit-ink">Colores de marca</p>
+      <p className="text-lg font-bold text-wit-ink">{t("Colores de marca", "Brand colors")}</p>
       <p className="mt-1 text-sm text-wit-gray">
-        Los colores que usamos en cada pieza que creamos para ti.
+        {t(
+          "Los colores que usamos en cada pieza que creamos para ti.",
+          "The colors we use on every piece we create for you.",
+        )}
       </p>
 
       {editing ? (
@@ -4195,7 +4234,7 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
             onClick={() => setEditing(false)}
             className="mx-auto mt-3 block text-xs font-semibold text-wit-gray hover:text-wit-ink"
           >
-            Cancelar
+            {t("Cancelar", "Cancel")}
           </button>
         </div>
       ) : colorList.length ? (
@@ -4211,7 +4250,7 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
         </div>
       ) : (
         <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
-          Aún no tienes colores de marca guardados.
+          {t("Aún no tienes colores de marca guardados.", "You don't have saved brand colors yet.")}
         </p>
       )}
 
@@ -4221,16 +4260,21 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
           onClick={() => setEditing(true)}
           className="mt-4 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
         >
-          {colorList.length ? "Editar colores" : "Elegir colores"}
+          {colorList.length
+            ? t("Editar colores", "Edit colors")
+            : t("Elegir colores", "Choose colors")}
         </button>
       ) : null}
-      {saving ? <p className="mt-2 text-xs font-semibold text-wit-blue">Guardando...</p> : null}
+      {saving ? (
+        <p className="mt-2 text-xs font-semibold text-wit-blue">{t("Guardando...", "Saving...")}</p>
+      ) : null}
       {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
     </div>
   );
 }
 
 function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
 
   function refresh() {
@@ -4242,14 +4286,17 @@ function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null })
       <BrandColorsCard brandProfile={brandProfile} />
       <LogoCard fileKey={brandProfile?.logo_key ?? null} />
       <BrandAssetCard
-        title="Manual de marca"
-        description="Tus lineamientos de marca — colores, tipografías, uso del logo."
+        title={t("Manual de marca", "Brand manual")}
+        description={t(
+          "Tus lineamientos de marca — colores, tipografías, uso del logo.",
+          "Your brand guidelines — colors, fonts, logo usage.",
+        )}
         fileKey={brandProfile?.brand_manual_key ?? null}
         isPdf={true}
         onUploaded={refresh}
         uploadEndpoint="/api/brand-profile-manual"
         accept="application/pdf"
-        acceptHint="PDF, máx. 15 MB"
+        acceptHint={t("PDF, máx. 15 MB", "PDF, max. 15 MB")}
       />
     </div>
   );
