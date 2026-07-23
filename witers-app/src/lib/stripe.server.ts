@@ -7,11 +7,20 @@ let client: Stripe | null = null;
 // Workers' fetch-based runtime needs Stripe's fetch HTTP client instead of
 // the Node http client the SDK defaults to — same nodejs_compat setup this
 // app already uses for everything else, Stripe just needs telling.
+// telemetry: false matters more than it looks — the SDK otherwise fires a
+// best-effort, never-awaited "request latency" ping after the main call
+// resolves. Workers tears down a request's I/O the moment the handler's
+// response is returned, and that orphaned fetch is exactly the kind of
+// dangling promise that can surface as "the Promise did not resolve to
+// Response" instead of a clean error.
 export function stripeClient(): Stripe {
   if (client) return client;
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) throw new Error("STRIPE_SECRET_KEY no está configurada");
-  client = new Stripe(secretKey, { httpClient: Stripe.createFetchHttpClient() });
+  client = new Stripe(secretKey, {
+    httpClient: Stripe.createFetchHttpClient(),
+    telemetry: false,
+  });
   return client;
 }
 
