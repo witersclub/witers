@@ -76,11 +76,29 @@ function Checkout() {
   // math exactly or Stripe verification in /api/checkout rejects it.
   const chargeAmountWithIva = withIva(chargeAmount);
 
+  // Set once /api/checkout confirms the membership actually activated —
+  // holds the payment page open on a dedicated success screen instead of
+  // jumping straight to /panel, so a real charge always gets a visible
+  // "this worked" moment before the page changes under the client.
+  const [success, setSuccess] = useState<{
+    plan: MembershipPlan;
+    wasSwitch: boolean;
+    amountPaid: number;
+  } | null>(null);
+
   // Activates the membership in the DB — called once Stripe has confirmed a
   // real charge (paymentIntentId set) or immediately for a free plan
-  // switch/downgrade (omitted). Returns an error string for the caller to
-  // display, or null on success (navigation happens here either way).
-  async function finalizeCheckout(paymentIntentId?: string): Promise<string | null> {
+  // switch/downgrade (omitted). paidAmountWithIva is the amount actually
+  // charged (post-discount, from the PaymentIntent the caller already has —
+  // never the sticker chargeAmountWithIva computed above, which ignores any
+  // discount code applied inside PaymentSection) — shown on the success
+  // screen so it matches the real charge on the client's card. Returns an
+  // error string for the caller to display, or null on success (the success
+  // screen takes over from here).
+  async function finalizeCheckout(
+    paymentIntentId?: string,
+    paidAmountWithIva?: number,
+  ): Promise<string | null> {
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -100,11 +118,27 @@ function Checkout() {
         return "No pudimos activar tu membresía. Intenta de nuevo.";
       }
       await qc.invalidateQueries({ queryKey: ["me"] });
-      navigate({ to: "/panel" });
+      setSuccess({
+        plan,
+        wasSwitch: isSwitch,
+        amountPaid: paidAmountWithIva ?? chargeAmountWithIva,
+      });
       return null;
     } catch {
       return "No pudimos activar tu membresía. Intenta de nuevo.";
     }
+  }
+
+  if (success) {
+    return (
+      <CheckoutSuccessScreen
+        plan={success.plan}
+        wasSwitch={success.wasSwitch}
+        amountPaid={success.amountPaid}
+        fmt={fmt}
+        onContinue={() => navigate({ to: "/panel" })}
+      />
+    );
   }
 
   if (me.isLoading) {
@@ -251,6 +285,73 @@ function Checkout() {
   );
 }
 
+// The one confirmation moment a real charge gets — replaces the old
+// behavior of navigating straight to /panel the instant /api/checkout
+// returns ok:true, which left a client staring at their card getting
+// charged with no visible "this worked" anywhere on screen.
+function CheckoutSuccessScreen({
+  plan,
+  wasSwitch,
+  amountPaid,
+  fmt,
+  onContinue,
+}: {
+  plan: MembershipPlan;
+  wasSwitch: boolean;
+  amountPaid: number;
+  fmt: (n: number) => string;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="wit-page flex min-h-dvh flex-col items-center justify-center gap-6 px-5 text-center">
+      <div className="wit-float flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500 shadow-[0_20px_50px_rgba(16,185,129,0.35)]">
+        <svg
+          width="38"
+          height="38"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#fff"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M4 12.5 9.5 18 20 6" />
+        </svg>
+      </div>
+
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600">
+          Pago exitoso
+        </p>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tighter text-wit-ink sm:text-4xl">
+          {wasSwitch ? (
+            <>
+              Ahora tienes <span className="wit-underline text-wit-blue">WITERS {plan.nombre}</span>
+            </>
+          ) : (
+            <>
+              Bienvenida a <span className="wit-underline text-wit-blue">WITERS {plan.nombre}</span>
+            </>
+          )}
+        </h1>
+        <p className="mx-auto mt-4 max-w-sm text-base text-wit-gray">
+          {amountPaid > 0
+            ? `Se cobraron ${fmt(amountPaid)} MXN a tu tarjeta. Tu membresía ya está activa.`
+            : "Tu membresía ya está activa, sin costo adicional este mes."}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={onContinue}
+        className="wit-glow-button mt-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
+      >
+        Ir a mi panel
+      </button>
+    </div>
+  );
+}
+
 type PaymentIntentResponse =
   | { ok: true; free: true; publishableKey: string }
   | {
@@ -285,7 +386,7 @@ function PaymentSection(props: {
   isSwitch: boolean;
   chargeAmount: number;
   fmt: (n: number) => string;
-  onFinalize: (paymentIntentId?: string) => Promise<string | null>;
+  onFinalize: (paymentIntentId?: string, paidAmountWithIva?: number) => Promise<string | null>;
 }) {
   const { plan, isSwitch, chargeAmount, fmt, onFinalize } = props;
   const [codeInput, setCodeInput] = useState("");
@@ -451,7 +552,7 @@ function FreeSwitchCard({
   onFinalize,
 }: {
   plan: MembershipPlan;
-  onFinalize: (paymentIntentId?: string) => Promise<string | null>;
+  onFinalize: (paymentIntentId?: string, paidAmountWithIva?: number) => Promise<string | null>;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -459,7 +560,7 @@ function FreeSwitchCard({
   async function handleClick() {
     setLoading(true);
     setError(null);
-    const err = await onFinalize();
+    const err = await onFinalize(undefined, 0);
     if (err) setError(err);
     setLoading(false);
   }
@@ -500,7 +601,7 @@ function StripeCheckoutForm({
   amountWithIva: number;
   discountPercent: number | null;
   fmt: (n: number) => string;
-  onFinalize: (paymentIntentId?: string) => Promise<string | null>;
+  onFinalize: (paymentIntentId?: string, paidAmountWithIva?: number) => Promise<string | null>;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -529,7 +630,7 @@ function StripeCheckoutForm({
       return;
     }
 
-    const finalizeError = await onFinalize(paymentIntent.id);
+    const finalizeError = await onFinalize(paymentIntent.id, amountWithIva);
     if (finalizeError) setError(finalizeError);
     setLoading(false);
   }
