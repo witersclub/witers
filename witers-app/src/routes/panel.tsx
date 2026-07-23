@@ -196,6 +196,7 @@ type PautaRequestInfo = {
 
 function Panel() {
   const me = useMe();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const qc = useQueryClient();
   // Top-level areas of the panel — Creatividad wraps everything that
@@ -342,13 +343,16 @@ function Panel() {
       <div className="wit-page flex min-h-dvh flex-col items-center justify-center gap-5 px-5 text-center">
         <WitersLogo />
         <p className="max-w-sm text-base text-wit-gray">
-          Ingresa a tu cuenta para ver tu panel de solicitudes.
+          {t(
+            "Ingresa a tu cuenta para ver tu panel de solicitudes.",
+            "Log in to your account to see your requests panel.",
+          )}
         </p>
         <Link
           to="/ingresar"
           className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
         >
-          Ingresar
+          {t("Ingresar", "Log in")}
         </Link>
       </div>
     );
@@ -361,13 +365,16 @@ function Panel() {
       <div className="wit-page flex min-h-dvh flex-col items-center justify-center gap-5 px-5 text-center">
         <WitersLogo />
         <p className="max-w-sm text-base text-wit-gray">
-          Esta cuenta es de diseñador. Ve a tu panel de trabajo.
+          {t(
+            "Esta cuenta es de diseñador. Ve a tu panel de trabajo.",
+            "This account is a designer account. Go to your work panel.",
+          )}
         </p>
         <Link
           to="/witer"
           className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
         >
-          Ir a mi panel
+          {t("Ir a mi panel", "Go to my panel")}
         </Link>
       </div>
     );
@@ -522,7 +529,7 @@ function Panel() {
             >
               <path d="M5 13l4 4L19 7" />
             </svg>
-            Enviado
+            {t("Enviado", "Sent")}
           </div>
         </div>
       ) : null}
@@ -538,7 +545,7 @@ function Panel() {
                 className="flex items-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10"
               >
                 <ArrowUpCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
-                Upgrade
+                {t("Upgrade", "Upgrade")}
               </Link>
             ) : null}
             <LanguageToggle />
@@ -564,17 +571,25 @@ function Panel() {
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
-                    Hola, <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
+                    {t("Hola,", "Hi,")}{" "}
+                    <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
                   </h1>
                   {streakWeeks > 0 ? (
                     <span className="flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
                       <Flame className="h-3.5 w-3.5" strokeWidth={2} />
-                      {streakWeeks} {streakWeeks === 1 ? "semana seguida" : "semanas seguidas"}
+                      {streakWeeks}{" "}
+                      {t(
+                        streakWeeks === 1 ? "semana seguida" : "semanas seguidas",
+                        streakWeeks === 1 ? "week in a row" : "weeks in a row",
+                      )}
                     </span>
                   ) : null}
                 </div>
                 <p className="mt-2 text-base text-wit-gray">
-                  Pide creatividades y da seguimiento a cada solicitud desde aquí.
+                  {t(
+                    "Pide creatividades y da seguimiento a cada solicitud desde aquí.",
+                    "Request creatives and track every request from here.",
+                  )}
                 </p>
               </div>
 
@@ -582,7 +597,7 @@ function Panel() {
                 <div className="wit-glass flex items-center gap-4 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
-                      Solicitudes disponibles
+                      {t("Solicitudes disponibles", "Requests available")}
                     </p>
                     <p className="font-wit-mono text-3xl font-semibold text-wit-ink">
                       {active ? remaining : 0}
@@ -594,7 +609,10 @@ function Panel() {
                     </p>
                     {membership && membership.bonus_requests_quota > 0 ? (
                       <p className="mt-0.5 text-[11px] font-semibold text-wit-blue">
-                        +{membership.bonus_requests_quota} de paquetes comprados
+                        {t(
+                          `+${membership.bonus_requests_quota} de paquetes comprados`,
+                          `+${membership.bonus_requests_quota} from purchased packs`,
+                        )}
                       </p>
                     ) : null}
                   </div>
@@ -602,7 +620,12 @@ function Panel() {
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
                     >
-                      {active ? `${getPlan(membership?.plan).nombre} activa` : "Sin membresía"}
+                      {active
+                        ? t(
+                            `${getPlan(membership?.plan).nombre} activa`,
+                            `${getPlan(membership?.plan).nombre} active`,
+                          )
+                        : t("Sin membresía", "No membership")}
                     </span>
                   </div>
                 </div>
@@ -613,7 +636,7 @@ function Panel() {
                     className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/25 bg-white px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/5"
                   >
                     <PackagePlus className="h-3.5 w-3.5" strokeWidth={2.4} />
-                    Comprar paquete de imágenes
+                    {t("Comprar paquete de imágenes", "Buy an image pack")}
                   </button>
                 ) : null}
               </div>
@@ -632,7 +655,7 @@ function Panel() {
                   ref={piecesTileRef}
                   role="button"
                   tabIndex={0}
-                  aria-label="Ver piezas creadas"
+                  aria-label={t("Ver piezas creadas", "View created pieces")}
                   onPointerDown={handlePiecesPointerDown}
                   onPointerUp={endPiecesPress}
                   onPointerLeave={endPiecesPress}
@@ -648,7 +671,10 @@ function Panel() {
                   <Images className="h-4 w-4 text-white/70" strokeWidth={1.75} />
                   <p className="mt-1.5 text-lg font-extrabold">{piecesCreated}</p>
                   <p className="text-[10px] leading-tight text-white/70">
-                    {piecesCreated === 1 ? "pieza creada" : "piezas creadas"}
+                    {t(
+                      piecesCreated === 1 ? "pieza creada" : "piezas creadas",
+                      piecesCreated === 1 ? "piece created" : "pieces created",
+                    )}
                   </p>
                 </div>
                 {campaignsLaunched > 0 ? (
@@ -656,7 +682,10 @@ function Panel() {
                     <Rocket className="h-4 w-4 text-white/70" strokeWidth={1.75} />
                     <p className="mt-1.5 text-lg font-extrabold">{campaignsLaunched}</p>
                     <p className="text-[10px] leading-tight text-white/70">
-                      {campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas"}
+                      {t(
+                        campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas",
+                        campaignsLaunched === 1 ? "campaign launched" : "campaigns launched",
+                      )}
                     </p>
                   </div>
                 ) : null}
@@ -666,7 +695,9 @@ function Panel() {
                     <p className="mt-1.5 text-lg font-extrabold">
                       {totalReach.toLocaleString("es-MX")}
                     </p>
-                    <p className="text-[10px] text-white/70">personas alcanzadas</p>
+                    <p className="text-[10px] text-white/70">
+                      {t("personas alcanzadas", "people reached")}
+                    </p>
                   </div>
                 ) : null}
               </div>
@@ -732,16 +763,24 @@ function Panel() {
             {!active ? (
               <div className="mt-8 flex flex-col items-start gap-4 rounded-3xl bg-wit-navy p-8 text-white md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-xl font-bold">Activa tu membresía para empezar a crear.</p>
+                  <p className="text-xl font-bold">
+                    {t(
+                      "Activa tu membresía para empezar a crear.",
+                      "Activate your membership to start creating.",
+                    )}
+                  </p>
                   <p className="mt-1 text-sm text-white/70">
-                    Elige entre Essential, Grow o Scale — desde $5,999 MXN al mes.
+                    {t(
+                      "Elige entre Essential, Grow o Scale — desde $5,999 MXN al mes.",
+                      "Choose Essential, Grow, or Scale — starting at $5,999 MXN a month.",
+                    )}
                   </p>
                 </div>
                 <Link
                   to="/upgrade"
                   className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:brightness-110"
                 >
-                  Quiero mi membresía
+                  {t("Quiero mi membresía", "I want my membership")}
                 </Link>
               </div>
             ) : null}
@@ -764,7 +803,7 @@ function Panel() {
                         : "text-wit-gray hover:text-wit-ink"
                     }`}
                   >
-                    Imágenes
+                    {t("Imágenes", "Images")}
                   </button>
                   <button
                     type="button"
@@ -775,7 +814,7 @@ function Panel() {
                         : "text-wit-gray hover:text-wit-ink"
                     }`}
                   >
-                    Videos
+                    {t("Videos", "Videos")}
                   </button>
                   <button
                     type="button"
@@ -786,7 +825,7 @@ function Panel() {
                         : "text-wit-gray hover:text-wit-ink"
                     }`}
                   >
-                    Carruseles
+                    {t("Carruseles", "Carousels")}
                   </button>
                 </div>
 
@@ -798,12 +837,12 @@ function Panel() {
                         onClick={() => setTab("nueva")}
                         className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
                       >
-                        ✨ Hacer solicitud
+                        ✨ {t("Hacer solicitud", "Make a request")}
                       </button>
                       <PanelTab
                         active={tab === "solicitudes"}
                         onClick={() => setTab("solicitudes")}
-                        label="Mis solicitudes"
+                        label={t("Mis solicitudes", "My requests")}
                         count={rows.length}
                       />
                     </div>
@@ -830,12 +869,12 @@ function Panel() {
                         onClick={() => setVideoTab("nueva")}
                         className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
                       >
-                        🎬 Nueva solicitud
+                        🎬 {t("Nueva solicitud", "New request")}
                       </button>
                       <PanelTab
                         active={videoTab === "solicitudes"}
                         onClick={() => setVideoTab("solicitudes")}
-                        label="Mis solicitudes"
+                        label={t("Mis solicitudes", "My requests")}
                         count={videoRows.length}
                       />
                     </div>
@@ -861,12 +900,12 @@ function Panel() {
                         onClick={() => setCarouselTab("nueva")}
                         className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
                       >
-                        🖼️ Nuevo carrusel
+                        🖼️ {t("Nuevo carrusel", "New carousel")}
                       </button>
                       <PanelTab
                         active={carouselTab === "solicitudes"}
                         onClick={() => setCarouselTab("solicitudes")}
-                        label="Mis solicitudes"
+                        label={t("Mis solicitudes", "My requests")}
                         count={carouselRows.length}
                       />
                     </div>
@@ -909,9 +948,12 @@ function Panel() {
                 key={chatKey}
                 disabledReason={
                   !active
-                    ? "Tu membresía no está activa todavía."
+                    ? t("Tu membresía no está activa todavía.", "Your membership isn't active yet.")
                     : remaining <= 0
-                      ? "Ya usaste todas tus solicitudes disponibles este mes."
+                      ? t(
+                          "Ya usaste todas tus solicitudes disponibles este mes.",
+                          "You've already used all your available requests this month.",
+                        )
                       : null
                 }
                 brandProfile={brandProfile}
@@ -989,11 +1031,14 @@ function Panel() {
               <CarouselWizard
                 disabledReason={
                   !active
-                    ? "Tu membresía no está activa todavía."
+                    ? t("Tu membresía no está activa todavía.", "Your membership isn't active yet.")
                     : (membership?.carousel_requests_quota ?? 0) -
                           (membership?.carousel_requests_used ?? 0) <=
                         0
-                      ? "Ya usaste todos tus carruseles disponibles este mes."
+                      ? t(
+                          "Ya usaste todos tus carruseles disponibles este mes.",
+                          "You've already used all your available carousels this month.",
+                        )
                       : null
                 }
                 onClose={() => setCarouselWizardOpen(false)}
@@ -1017,16 +1062,34 @@ function Panel() {
 // because LogoUploadPicker already has its own "No tengo logotipo"
 // checkbox as the one non-blocking escape valve; the required flag only
 // gates the generic type-or-speak composer, never a dedicated picker.
-const ONBOARDING_QUESTIONS: { field: string; text: string; required: boolean }[] = [
-  { field: "companyName", text: "¿Cuál es el nombre de tu empresa o marca?", required: true },
-  {
-    field: "colors",
-    text: "¿Tienes colores de marca que debamos usar? Si no tienes, elige los que más te gusten.",
-    required: true,
-  },
-  { field: "businessType", text: "¿En qué categoría cae tu negocio?", required: true },
-  { field: "logoKey", text: "Sube tu logotipo.", required: true },
-];
+function buildOnboardingQuestions(
+  t: (es: string, en: string) => string,
+): { field: string; text: string; required: boolean }[] {
+  return [
+    {
+      field: "companyName",
+      text: t(
+        "¿Cuál es el nombre de tu empresa o marca?",
+        "What's the name of your company or brand?",
+      ),
+      required: true,
+    },
+    {
+      field: "colors",
+      text: t(
+        "¿Tienes colores de marca que debamos usar? Si no tienes, elige los que más te gusten.",
+        "Do you have brand colors we should use? If not, pick the ones you like best.",
+      ),
+      required: true,
+    },
+    {
+      field: "businessType",
+      text: t("¿En qué categoría cae tu negocio?", "What category does your business fall under?"),
+      required: true,
+    },
+    { field: "logoKey", text: t("Sube tu logotipo.", "Upload your logo."), required: true },
+  ];
+}
 
 // Mandatory, one-time chat that runs before anything else in the panel —
 // collects the brand identity that /api/requests used to only infer from
@@ -1035,6 +1098,8 @@ const ONBOARDING_QUESTIONS: { field: string; text: string; required: boolean }[]
 // closes the tab partway through picks up exactly where they left off.
 function OnboardingGate({ onDone }: { onDone: () => void }) {
   const qc = useQueryClient();
+  const { t } = useLanguage();
+  const ONBOARDING_QUESTIONS = buildOnboardingQuestions(t);
   const draftQuery = useQuery({
     queryKey: ["onboarding-draft"],
     queryFn: async () => {
@@ -1086,13 +1151,21 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
       });
       const data = (await res.json()) as { ok: boolean; message?: string };
       if (!data.ok) {
-        setSendError(data.message ?? "Revisa tus respuestas e intenta de nuevo.");
+        setSendError(
+          data.message ??
+            t("Revisa tus respuestas e intenta de nuevo.", "Check your answers and try again."),
+        );
         setSending(false);
         return;
       }
       onDone();
     } catch {
-      setSendError("No pudimos guardar los datos de tu marca. Intenta de nuevo.");
+      setSendError(
+        t(
+          "No pudimos guardar los datos de tu marca. Intenta de nuevo.",
+          "We couldn't save your brand data. Try again.",
+        ),
+      );
       setSending(false);
     }
   }
@@ -1122,14 +1195,17 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
   return (
     <div className="mx-auto flex h-[calc(100dvh-260px)] min-h-[420px] w-full max-w-2xl flex-col">
       <p className="mb-2 shrink-0 rounded-xl bg-wit-blue/5 px-3 py-2 text-center text-xs font-medium text-wit-blue">
-        Antes de tu primera solicitud, cuéntanos de tu marca — solo te lo preguntamos una vez.
+        {t(
+          "Antes de tu primera solicitud, cuéntanos de tu marca — solo te lo preguntamos una vez.",
+          "Before your first request, tell us about your brand — we only ask this once.",
+        )}
       </p>
       <ChatIntakeFlow
         key={resetKey}
         questions={ONBOARDING_QUESTIONS}
         pickerFor={pickerFor}
         initialAnswers={draftQuery.data?.answers}
-        eyebrow="Conozcamos tu marca"
+        eyebrow={t("Conozcamos tu marca", "Let's get to know your brand")}
         onAnswer={(answers) => {
           void fetch("/api/onboarding/draft", {
             method: "POST",
@@ -1139,11 +1215,11 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
         }}
         onComplete={(answers) => void finish(answers)}
         pending={sending}
-        pendingLabel="Guardando los datos de tu marca..."
+        pendingLabel={t("Guardando los datos de tu marca...", "Saving your brand data...")}
         doneLabel={
           sendError
-            ? "No pudimos guardar los datos de tu marca."
-            : "Los datos de tu marca han sido creados."
+            ? t("No pudimos guardar los datos de tu marca.", "We couldn't save your brand data.")
+            : t("Los datos de tu marca han sido creados.", "Your brand data has been created.")
         }
         externalError={sendError}
         restart={() => void restart()}
@@ -1154,7 +1230,7 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
               onClick={() => lastAnswers && void finish(lastAnswers)}
               className="-mt-2 ml-8 self-start rounded-full bg-wit-blue px-5 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
             >
-              Reintentar
+              {t("Reintentar", "Retry")}
             </button>
           ) : null
         }
@@ -1168,20 +1244,24 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
 // client (not just brand-new ones) sees this moment instead of only
 // stumbling into it once.
 function HablaConWitScreen({ onStart }: { onStart: () => void }) {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-col items-center justify-center gap-8 rounded-3xl bg-wit-ice py-20 text-center">
       <div className="wit-float">
         <WMark size={44} />
       </div>
       <p className="max-w-xs text-base text-wit-gray">
-        Cuéntanos qué quieres crear hoy y armamos tu pieza juntos.
+        {t(
+          "Cuéntanos qué quieres crear hoy y armamos tu pieza juntos.",
+          "Tell us what you want to create today and we'll build your piece together.",
+        )}
       </p>
       <button
         type="button"
         onClick={onStart}
         className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
       >
-        ✨ Habla con Wit ✨
+        ✨ {t("Habla con Wit", "Talk to Wit")} ✨
       </button>
     </div>
   );
@@ -1224,10 +1304,10 @@ function PanelTab({
 
 /* ---------- top-level panel sections ---------- */
 
-const SECTIONS: { id: "creatividad" | "activos" | "campanas"; label: string }[] = [
-  { id: "creatividad", label: "Creatividad" },
-  { id: "activos", label: "Activos de marca" },
-  { id: "campanas", label: "Campañas" },
+const SECTIONS: { id: "creatividad" | "activos" | "campanas"; es: string; en: string }[] = [
+  { id: "creatividad", es: "Creatividad", en: "Creative" },
+  { id: "activos", es: "Activos de marca", en: "Brand assets" },
+  { id: "campanas", es: "Campañas", en: "Campaigns" },
 ];
 
 // Avatar + dropdown in the header, replacing the old plain "Cerrar sesión"
@@ -1243,6 +1323,7 @@ function UserMenu({
   onOpenProfile: () => void;
   onLogout: () => void;
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const initial = (name.trim()[0] ?? "?").toUpperCase();
@@ -1262,7 +1343,7 @@ function UserMenu({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label="Menú de cuenta"
+        aria-label={t("Menú de cuenta", "Account menu")}
         className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2.5 transition-colors hover:bg-wit-mist/50 sm:pr-3"
       >
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wit-blue text-sm font-bold text-white">
@@ -1287,7 +1368,7 @@ function UserMenu({
             className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-medium text-wit-ink hover:bg-wit-mist/50"
           >
             <User size={16} strokeWidth={1.75} />
-            Mi perfil
+            {t("Mi perfil", "My profile")}
           </button>
           <button
             type="button"
@@ -1298,7 +1379,7 @@ function UserMenu({
             className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
           >
             <LogOut size={16} strokeWidth={1.75} />
-            Cerrar sesión
+            {t("Cerrar sesión", "Log out")}
           </button>
         </div>
       ) : null}
@@ -1309,6 +1390,7 @@ function UserMenu({
 /* ---------------- MI PERFIL ---------------- */
 
 function PerfilView({ me, onBack }: { me: Me; onBack: () => void }) {
+  const { t } = useLanguage();
   const plan = me.membership ? getPlan(me.membership.plan) : null;
   return (
     <div className="mx-auto max-w-2xl">
@@ -1318,11 +1400,18 @@ function PerfilView({ me, onBack }: { me: Me; onBack: () => void }) {
         className="flex items-center gap-1.5 text-sm font-semibold text-wit-gray hover:text-wit-ink"
       >
         <ArrowLeft size={16} strokeWidth={2.25} />
-        Volver al panel
+        {t("Volver al panel", "Back to panel")}
       </button>
 
-      <h1 className="mt-4 text-3xl font-extrabold tracking-tighter text-wit-ink">Mi perfil</h1>
-      <p className="mt-1 text-sm text-wit-gray">Tus datos de cuenta, seguridad y membresía.</p>
+      <h1 className="mt-4 text-3xl font-extrabold tracking-tighter text-wit-ink">
+        {t("Mi perfil", "My profile")}
+      </h1>
+      <p className="mt-1 text-sm text-wit-gray">
+        {t(
+          "Tus datos de cuenta, seguridad y membresía.",
+          "Your account, security, and membership details.",
+        )}
+      </p>
 
       <div className="mt-8 space-y-6">
         <AccountCard user={me.user} />
@@ -1335,6 +1424,7 @@ function PerfilView({ me, onBack }: { me: Me; onBack: () => void }) {
 
 function AccountCard({ user }: { user: Me["user"] }) {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -1353,12 +1443,22 @@ function AccountCard({ user }: { user: Me["user"] }) {
       const data = (await res.json()) as { ok: boolean };
       if (data.ok) {
         await qc.invalidateQueries({ queryKey: ["me"] });
-        setMsg("Nombre actualizado.");
+        setMsg(t("Nombre actualizado.", "Name updated."));
       } else {
-        setMsg("No pudimos guardar el cambio. Intenta de nuevo.");
+        setMsg(
+          t(
+            "No pudimos guardar el cambio. Intenta de nuevo.",
+            "We couldn't save the change. Try again.",
+          ),
+        );
       }
     } catch {
-      setMsg("No pudimos guardar el cambio. Intenta de nuevo.");
+      setMsg(
+        t(
+          "No pudimos guardar el cambio. Intenta de nuevo.",
+          "We couldn't save the change. Try again.",
+        ),
+      );
     } finally {
       setSaving(false);
     }
@@ -1374,13 +1474,18 @@ function AccountCard({ user }: { user: Me["user"] }) {
 
   return (
     <section className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-      <p className="text-lg font-bold text-wit-ink">Datos de la cuenta</p>
-      <p className="mt-1 text-sm text-wit-gray">Tu nombre, correo y antigüedad en WITERS.</p>
+      <p className="text-lg font-bold text-wit-ink">{t("Datos de la cuenta", "Account details")}</p>
+      <p className="mt-1 text-sm text-wit-gray">
+        {t(
+          "Tu nombre, correo y antigüedad en WITERS.",
+          "Your name, email, and time as a WITERS member.",
+        )}
+      </p>
 
       <div className="mt-6 space-y-4">
         <div>
           <label htmlFor="pname" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Nombre completo
+            {t("Nombre completo", "Full name")}
           </label>
           <input
             id="pname"
@@ -1392,12 +1497,14 @@ function AccountCard({ user }: { user: Me["user"] }) {
           />
         </div>
         <div>
-          <p className="mb-1.5 block text-sm font-semibold text-wit-ink">Correo electrónico</p>
+          <p className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            {t("Correo electrónico", "Email address")}
+          </p>
           <p className="rounded-xl border border-wit-ink/10 bg-wit-mist/30 px-4 py-3 text-base text-wit-gray">
             {user?.email}
           </p>
           <p className="mt-1.5 text-xs text-wit-gray">
-            ¿Necesitas cambiarlo? Escríbenos a{" "}
+            {t("¿Necesitas cambiarlo? Escríbenos a", "Need to change it? Email us at")}{" "}
             <a
               href="mailto:hola@witers.com"
               className="font-semibold text-wit-blue underline-offset-2 hover:underline"
@@ -1408,7 +1515,9 @@ function AccountCard({ user }: { user: Me["user"] }) {
           </p>
         </div>
         {memberSince ? (
-          <p className="text-xs text-wit-gray">Miembro desde el {memberSince}.</p>
+          <p className="text-xs text-wit-gray">
+            {t(`Miembro desde el ${memberSince}.`, `Member since ${memberSince}.`)}
+          </p>
         ) : null}
       </div>
 
@@ -1420,13 +1529,14 @@ function AccountCard({ user }: { user: Me["user"] }) {
         onClick={save}
         className="mt-5 rounded-2xl bg-wit-blue px-6 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {saving ? "Guardando..." : "Guardar cambios"}
+        {saving ? t("Guardando...", "Saving...") : t("Guardar cambios", "Save changes")}
       </button>
     </section>
   );
 }
 
 function PasswordCard() {
+  const { t } = useLanguage();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -1457,12 +1567,20 @@ function PasswordCard() {
       } else {
         setError(
           data.error === "contrasena_actual_incorrecta"
-            ? "Tu contraseña actual no es correcta."
-            : "No pudimos cambiar tu contraseña. Intenta de nuevo.",
+            ? t("Tu contraseña actual no es correcta.", "Your current password is incorrect.")
+            : t(
+                "No pudimos cambiar tu contraseña. Intenta de nuevo.",
+                "We couldn't change your password. Try again.",
+              ),
         );
       }
     } catch {
-      setError("No pudimos cambiar tu contraseña. Intenta de nuevo.");
+      setError(
+        t(
+          "No pudimos cambiar tu contraseña. Intenta de nuevo.",
+          "We couldn't change your password. Try again.",
+        ),
+      );
     } finally {
       setSaving(false);
     }
@@ -1470,13 +1588,15 @@ function PasswordCard() {
 
   return (
     <section className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-      <p className="text-lg font-bold text-wit-ink">Seguridad</p>
-      <p className="mt-1 text-sm text-wit-gray">Cambia tu contraseña cuando quieras.</p>
+      <p className="text-lg font-bold text-wit-ink">{t("Seguridad", "Security")}</p>
+      <p className="mt-1 text-sm text-wit-gray">
+        {t("Cambia tu contraseña cuando quieras.", "Change your password whenever you want.")}
+      </p>
 
       <form onSubmit={submit} className="mt-6 space-y-4">
         <div>
           <label htmlFor="pw-current" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Contraseña actual
+            {t("Contraseña actual", "Current password")}
           </label>
           <input
             id="pw-current"
@@ -1491,7 +1611,7 @@ function PasswordCard() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="pw-new" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-              Nueva contraseña
+              {t("Nueva contraseña", "New password")}
             </label>
             <input
               id="pw-new"
@@ -1501,13 +1621,13 @@ function PasswordCard() {
               autoComplete="new-password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
-              placeholder="Mínimo 8 caracteres"
+              placeholder={t("Mínimo 8 caracteres", "At least 8 characters")}
               className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
             />
           </div>
           <div>
             <label htmlFor="pw-confirm" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-              Confirmar nueva contraseña
+              {t("Confirmar nueva contraseña", "Confirm new password")}
             </label>
             <input
               id="pw-confirm"
@@ -1519,7 +1639,9 @@ function PasswordCard() {
               className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
             />
             {confirm && next !== confirm ? (
-              <p className="mt-1 text-xs text-red-600">Las contraseñas no coinciden.</p>
+              <p className="mt-1 text-xs text-red-600">
+                {t("Las contraseñas no coinciden.", "Passwords don't match.")}
+              </p>
             ) : null}
           </div>
         </div>
@@ -1529,7 +1651,7 @@ function PasswordCard() {
         ) : null}
         {success ? (
           <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            Contraseña actualizada.
+            {t("Contraseña actualizada.", "Password updated.")}
           </p>
         ) : null}
 
@@ -1538,7 +1660,7 @@ function PasswordCard() {
           disabled={!canSubmit || saving}
           className="rounded-2xl bg-wit-blue px-6 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {saving ? "Guardando..." : "Cambiar contraseña"}
+          {saving ? t("Guardando...", "Saving...") : t("Cambiar contraseña", "Change password")}
         </button>
       </form>
     </section>
@@ -1922,6 +2044,7 @@ function SectionNav({
   section: "creatividad" | "activos" | "campanas";
   onChange: (section: "creatividad" | "activos" | "campanas") => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="wit-glass mt-8 inline-flex gap-1 rounded-2xl p-1 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       {SECTIONS.map((s) => (
@@ -1935,7 +2058,7 @@ function SectionNav({
               : "text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
           }`}
         >
-          {s.label}
+          {t(s.es, s.en)}
         </button>
       ))}
     </div>
