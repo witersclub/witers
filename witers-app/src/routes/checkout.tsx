@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 
 import { WitersLogo } from "../components/witers/brand";
@@ -259,14 +259,25 @@ type PaymentIntentResponse =
       clientSecret: string;
       publishableKey: string;
       chargeAmountWithIva: number;
+      discountCode: string | null;
+      discountPercent: number | null;
     }
   | { ok: false; error?: string };
 
 const PAYMENT_CARD_CLASS = "rounded-3xl bg-white p-8 shadow-[0_20px_60px_rgba(5,13,40,0.08)]";
 
+const DISCOUNT_ERROR_LABEL: Record<string, string> = {
+  codigo_invalido: "Ese código no existe o ya no está activo.",
+  codigo_expirado: "Ese código ya expiró.",
+  codigo_agotado: "Ese código ya alcanzó su límite de usos.",
+};
+
 // Creates the PaymentIntent (or detects a free switch) before rendering
 // either the Stripe card form or a plain confirm button — Elements needs a
-// clientSecret up front, it can't be created after the form mounts.
+// clientSecret up front, it can't be created after the form mounts. A
+// discount code changes the charged amount, so applying/removing one
+// creates a brand-new PaymentIntent (and remounts <Elements> with its
+// clientSecret) rather than trying to mutate the existing one.
 function PaymentSection(props: {
   plan: MembershipPlan;
   isSwitch: boolean;
@@ -275,20 +286,38 @@ function PaymentSection(props: {
   onFinalize: (paymentIntentId?: string) => Promise<string | null>;
 }) {
   const { plan, isSwitch, chargeAmount, fmt, onFinalize } = props;
+  const [codeInput, setCodeInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState("");
+  const [codeError, setCodeError] = useState<string | null>(null);
 
   const intentQuery = useQuery({
-    queryKey: ["stripe-payment-intent", plan.id, chargeAmount],
+    queryKey: ["stripe-payment-intent", plan.id, chargeAmount, appliedCode],
     queryFn: async () => {
       const res = await fetch("/api/stripe/create-payment-intent", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ plan: plan.id }),
+        body: JSON.stringify({ plan: plan.id, discountCode: appliedCode || undefined }),
       });
       return (await res.json()) as PaymentIntentResponse;
     },
   });
 
-  if (intentQuery.isLoading) {
+  const isDiscountError =
+    !intentQuery.data?.ok && Boolean(intentQuery.data?.error) && appliedCode !== "";
+
+  // A rejected code falls back to paying full price automatically instead
+  // of leaving the whole payment form blocked — the error message stays on
+  // screen next to the input so the client knows why.
+  useEffect(() => {
+    if (isDiscountError && !intentQuery.data?.ok) {
+      setCodeError(
+        DISCOUNT_ERROR_LABEL[intentQuery.data?.error ?? ""] ?? "No pudimos aplicar ese código.",
+      );
+      setAppliedCode("");
+    }
+  }, [isDiscountError, intentQuery.data]);
+
+  if (intentQuery.isLoading || isDiscountError) {
     return (
       <div className={PAYMENT_CARD_CLASS}>
         <div className="h-40 animate-pulse rounded-2xl bg-wit-mist/40" />
@@ -306,23 +335,110 @@ function PaymentSection(props: {
     );
   }
 
+  const discountBar = (
+    <DiscountCodeBar
+      codeInput={codeInput}
+      onCodeInputChange={setCodeInput}
+      appliedCode={appliedCode}
+      error={codeError}
+      onApply={() => {
+        setCodeError(null);
+        setAppliedCode(codeInput.trim());
+      }}
+      onRemove={() => {
+        setCodeInput("");
+        setAppliedCode("");
+        setCodeError(null);
+      }}
+    />
+  );
+
   if (intentQuery.data.free) {
-    return <FreeSwitchCard plan={plan} onFinalize={onFinalize} />;
+    return (
+      <div className="space-y-4">
+        {discountBar}
+        <FreeSwitchCard plan={plan} onFinalize={onFinalize} />
+      </div>
+    );
   }
 
   return (
-    <Elements
-      stripe={getStripePromise(intentQuery.data.publishableKey)}
-      options={{ clientSecret: intentQuery.data.clientSecret, locale: "es" }}
-    >
-      <StripeCheckoutForm
-        plan={plan}
-        isSwitch={isSwitch}
-        amountWithIva={intentQuery.data.chargeAmountWithIva}
-        fmt={fmt}
-        onFinalize={onFinalize}
-      />
-    </Elements>
+    <div className="space-y-4">
+      {discountBar}
+      <Elements
+        key={intentQuery.data.clientSecret}
+        stripe={getStripePromise(intentQuery.data.publishableKey)}
+        options={{ clientSecret: intentQuery.data.clientSecret, locale: "es" }}
+      >
+        <StripeCheckoutForm
+          plan={plan}
+          isSwitch={isSwitch}
+          amountWithIva={intentQuery.data.chargeAmountWithIva}
+          discountPercent={intentQuery.data.discountPercent}
+          fmt={fmt}
+          onFinalize={onFinalize}
+        />
+      </Elements>
+    </div>
+  );
+}
+
+function DiscountCodeBar({
+  codeInput,
+  onCodeInputChange,
+  appliedCode,
+  error,
+  onApply,
+  onRemove,
+}: {
+  codeInput: string;
+  onCodeInputChange: (v: string) => void;
+  appliedCode: string;
+  error: string | null;
+  onApply: () => void;
+  onRemove: () => void;
+}) {
+  if (appliedCode) {
+    return (
+      <div className="flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
+        <span className="font-bold text-emerald-700">
+          Código <span className="font-wit-mono">{appliedCode}</span> aplicado
+        </span>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-xs font-bold text-emerald-700 underline"
+        >
+          Quitar
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-2xl border border-wit-ink/10 bg-white p-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (codeInput.trim()) onApply();
+        }}
+        className="flex gap-2"
+      >
+        <input
+          value={codeInput}
+          onChange={(e) => onCodeInputChange(e.target.value)}
+          placeholder="¿Tienes un código de descuento?"
+          className="flex-1 rounded-xl border border-wit-ink/15 px-3.5 py-2.5 text-sm uppercase outline-none focus:border-wit-blue"
+        />
+        <button
+          type="submit"
+          disabled={!codeInput.trim()}
+          className="shrink-0 rounded-xl bg-wit-ink px-4 py-2.5 text-sm font-bold text-white hover:bg-wit-ink/90 disabled:opacity-40"
+        >
+          Aplicar
+        </button>
+      </form>
+      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+    </div>
   );
 }
 
@@ -373,12 +489,14 @@ function StripeCheckoutForm({
   plan,
   isSwitch,
   amountWithIva,
+  discountPercent,
   fmt,
   onFinalize,
 }: {
   plan: MembershipPlan;
   isSwitch: boolean;
   amountWithIva: number;
+  discountPercent: number | null;
   fmt: (n: number) => string;
   onFinalize: (paymentIntentId?: string) => Promise<string | null>;
 }) {
@@ -418,6 +536,11 @@ function StripeCheckoutForm({
     <form onSubmit={handleSubmit} className={PAYMENT_CARD_CLASS}>
       <h2 className="text-xl font-bold text-wit-ink">Datos de pago</h2>
       <p className="mt-1 text-xs text-wit-gray">Pago seguro procesado por Stripe.</p>
+      {discountPercent ? (
+        <p className="mt-1 text-xs font-bold text-emerald-700">
+          Descuento de {discountPercent}% aplicado.
+        </p>
+      ) : null}
 
       <div className="mt-6">
         <PaymentElement />

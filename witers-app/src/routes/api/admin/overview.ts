@@ -58,12 +58,17 @@ export const Route = createFileRoute("/api/admin/overview")({
           )
           .all();
 
+        const discountCodes = await db()
+          .prepare(`SELECT * FROM discount_codes ORDER BY created_at DESC LIMIT 200`)
+          .all();
+
         return json({
           ok: true,
           users: users.results ?? [],
           requests: requests.results ?? [],
           payments: payments.results ?? [],
           designers: designers.results ?? [],
+          discountCodes: discountCodes.results ?? [],
         });
       },
     },

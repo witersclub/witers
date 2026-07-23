@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { applyDiscount, validateDiscountCode } from "../../../lib/discount-codes.server";
 import { getPlan, isPlanId } from "../../../lib/membership-plans";
 import {
   computeChargeAmount,
@@ -10,7 +11,10 @@ import {
 } from "../../../lib/stripe.server";
 import { db, getSessionUser, json } from "../../../lib/witers-auth.server";
 
-const schema = z.object({ plan: z.string().refine(isPlanId) });
+const schema = z.object({
+  plan: z.string().refine(isPlanId),
+  discountCode: z.string().max(30).optional(),
+});
 
 // Creates the Stripe PaymentIntent a checkout submission confirms against.
 // Recomputes the charge amount server-side from the DB (never trusts a
@@ -48,14 +52,35 @@ export const Route = createFileRoute("/api/stripe/create-payment-intent")({
           return json({ ok: true, free: true, publishableKey });
         }
 
+        // Discount is optional and, if given, must be valid — an invalid/
+        // expired/exhausted code fails the whole request rather than
+        // silently charging full price, so the client always knows why.
+        let discountCode: string | null = null;
+        let discountPercent: number | null = null;
+        let finalAmount = chargeAmountWithIva;
+        if (parsed.data.discountCode) {
+          const check = await validateDiscountCode(parsed.data.discountCode);
+          if (!check.ok) return json({ ok: false, error: check.error }, { status: 400 });
+          discountCode = check.row.code;
+          discountPercent = check.row.discount_percent;
+          finalAmount = applyDiscount(chargeAmountWithIva, discountPercent);
+        }
+
+        // A big enough discount (up to 100%) can bring the charge to $0 —
+        // same "nothing to confirm with Stripe" path as a free plan switch.
+        if (finalAmount <= 0) {
+          return json({ ok: true, free: true, publishableKey });
+        }
+
         const intent = await stripeClient().paymentIntents.create({
-          amount: pesosToCentavos(chargeAmountWithIva),
+          amount: pesosToCentavos(finalAmount),
           currency: "mxn",
           receipt_email: user.email,
           metadata: {
             userId: user.id,
             plan: plan.id,
-            chargeAmountWithIvaMxn: String(chargeAmountWithIva),
+            chargeAmountWithIvaMxn: String(finalAmount),
+            ...(discountCode ? { discountCode, discountPercent: String(discountPercent) } : {}),
           },
           automatic_payment_methods: { enabled: true },
         });
@@ -65,7 +90,9 @@ export const Route = createFileRoute("/api/stripe/create-payment-intent")({
           free: false,
           clientSecret: intent.client_secret,
           publishableKey,
-          chargeAmountWithIva,
+          chargeAmountWithIva: finalAmount,
+          discountCode,
+          discountPercent,
         });
       },
     },

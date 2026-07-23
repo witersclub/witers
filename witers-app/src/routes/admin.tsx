@@ -125,12 +125,24 @@ type AdminDesigner = {
   completed_count: number;
 };
 
+type AdminDiscountCode = {
+  id: string;
+  code: string;
+  discount_percent: number;
+  max_uses: number | null;
+  uses_count: number;
+  active: number;
+  expires_at: string | null;
+  created_at: string;
+};
+
 type Overview = {
   ok: boolean;
   users: AdminUser[];
   requests: AdminRequest[];
   payments: AdminPayment[];
   designers: AdminDesigner[];
+  discountCodes: AdminDiscountCode[];
 };
 
 /* ---------- dashboard data helpers ---------- */
@@ -729,7 +741,7 @@ function Admin() {
           ) : tab === "usuarios" ? (
             <UsersTable rows={data.users} />
           ) : (
-            <PaymentsTable rows={data.payments} />
+            <PagosPanel payments={data.payments} discountCodes={data.discountCodes} />
           )}
         </main>
       </div>
@@ -2596,6 +2608,226 @@ function EditUserModal({
         </form>
       </div>
     </div>
+  );
+}
+
+type PagosTab = "historial" | "descuentos";
+
+function PagosPanel({
+  payments,
+  discountCodes,
+}: {
+  payments: AdminPayment[];
+  discountCodes: AdminDiscountCode[];
+}) {
+  const [tab, setTab] = useState<PagosTab>("historial");
+  return (
+    <div>
+      <div className="mt-6 flex gap-5 overflow-x-auto border-b border-wit-ink/10">
+        <AdminSubTab
+          active={tab === "historial"}
+          onClick={() => setTab("historial")}
+          label="Historial"
+          count={0}
+        />
+        <AdminSubTab
+          active={tab === "descuentos"}
+          onClick={() => setTab("descuentos")}
+          label="Códigos de descuento"
+          count={discountCodes.filter((c) => c.active).length}
+        />
+      </div>
+      {tab === "historial" ? (
+        <PaymentsTable rows={payments} />
+      ) : (
+        <DiscountCodesPanel rows={discountCodes} />
+      )}
+    </div>
+  );
+}
+
+function DiscountCodesPanel({ rows }: { rows: AdminDiscountCode[] }) {
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+
+  async function deactivate(id: string) {
+    await fetch("/api/admin/deactivate-discount-code", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    await qc.invalidateQueries({ queryKey: ["admin-overview"] });
+  }
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-wit-gray">
+          Códigos que un cliente puede usar en el checkout para un descuento porcentual sobre el
+          precio con IVA.
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowForm((v) => !v)}
+          className="shrink-0 rounded-xl bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
+        >
+          {showForm ? "Cancelar" : "+ Nuevo código"}
+        </button>
+      </div>
+
+      {showForm ? (
+        <CreateDiscountCodeForm
+          onCreated={() => {
+            setShowForm(false);
+            void qc.invalidateQueries({ queryKey: ["admin-overview"] });
+          }}
+        />
+      ) : null}
+
+      <div className="mt-5 overflow-x-auto rounded-2xl bg-white shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+        <table className="w-full min-w-[640px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-wit-ink/10 text-xs uppercase tracking-wider text-wit-gray">
+              <th className="px-5 py-3.5">Código</th>
+              <th className="px-5 py-3.5">Descuento</th>
+              <th className="px-5 py-3.5">Usos</th>
+              <th className="px-5 py-3.5">Expira</th>
+              <th className="px-5 py-3.5">Estado</th>
+              <th className="px-5 py-3.5" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.id} className="border-b border-wit-ink/5 last:border-0">
+                <td className="px-5 py-3.5 font-wit-mono font-bold">{c.code}</td>
+                <td className="px-5 py-3.5">{c.discount_percent}%</td>
+                <td className="px-5 py-3.5 text-xs text-wit-gray">
+                  {c.uses_count}
+                  {c.max_uses !== null ? ` / ${c.max_uses}` : ""}
+                </td>
+                <td className="px-5 py-3.5 text-xs text-wit-gray">
+                  {c.expires_at ? new Date(c.expires_at).toLocaleDateString("es-MX") : "Nunca"}
+                </td>
+                <td className="px-5 py-3.5">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                      c.active ? "bg-emerald-50 text-emerald-700" : "bg-wit-mist/60 text-wit-gray"
+                    }`}
+                  >
+                    {c.active ? "Activo" : "Desactivado"}
+                  </span>
+                </td>
+                <td className="px-5 py-3.5 text-right">
+                  {c.active ? (
+                    <button
+                      type="button"
+                      onClick={() => deactivate(c.id)}
+                      className="text-xs font-bold text-red-600 hover:underline"
+                    >
+                      Desactivar
+                    </button>
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-wit-gray">
+            Sin códigos de descuento todavía.
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function CreateDiscountCodeForm({ onCreated }: { onCreated: () => void }) {
+  const [code, setCode] = useState("");
+  const [discountPercent, setDiscountPercent] = useState("");
+  const [maxUses, setMaxUses] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const percent = Number(discountPercent);
+    if (!code.trim() || !(percent > 0 && percent <= 100)) {
+      setError("Revisa el código y el porcentaje (0.1 – 100).");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/create-discount-code", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          code,
+          discountPercent: percent,
+          maxUses: maxUses.trim() ? Number(maxUses) : null,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setError(data.error === "codigo_ya_existe" ? "Ese código ya existe." : "No se pudo crear.");
+        return;
+      }
+      onCreated();
+    } catch {
+      setError("No se pudo crear. Intenta de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-wit-ink/10 bg-wit-mist/20 p-4"
+    >
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-wit-ink">Código</label>
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="PRUEBA999"
+          className="w-40 rounded-lg border border-wit-ink/15 px-3 py-2 text-sm font-wit-mono uppercase outline-none focus:border-wit-blue"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-wit-ink">Descuento %</label>
+        <input
+          value={discountPercent}
+          onChange={(e) => setDiscountPercent(e.target.value)}
+          type="number"
+          step="0.1"
+          min="0.1"
+          max="100"
+          placeholder="99.9"
+          className="w-28 rounded-lg border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-wit-ink">Usos máximos</label>
+        <input
+          value={maxUses}
+          onChange={(e) => setMaxUses(e.target.value)}
+          type="number"
+          min="1"
+          placeholder="Sin límite"
+          className="w-32 rounded-lg border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={busy}
+        className="rounded-lg bg-wit-blue px-4 py-2 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+      >
+        {busy ? "Creando..." : "Crear código"}
+      </button>
+      {error ? <p className="w-full text-xs text-red-600">{error}</p> : null}
+    </form>
   );
 }
 

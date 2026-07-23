@@ -75,7 +75,9 @@ import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/di
 import { Route as ApiAdminDeliverVideoRouteImport } from './routes/api/admin/deliver-video'
 import { Route as ApiAdminDeliverRouteImport } from './routes/api/admin/deliver'
 import { Route as ApiAdminDeleteRequestRouteImport } from './routes/api/admin/delete-request'
+import { Route as ApiAdminDeactivateDiscountCodeRouteImport } from './routes/api/admin/deactivate-discount-code'
 import { Route as ApiAdminDeactivateDesignerRouteImport } from './routes/api/admin/deactivate-designer'
+import { Route as ApiAdminCreateDiscountCodeRouteImport } from './routes/api/admin/create-discount-code'
 import { Route as ApiAdminCreateDesignerRouteImport } from './routes/api/admin/create-designer'
 import { Route as ApiAdminApproveResultRouteImport } from './routes/api/admin/approve-result'
 import { Route as ApiAdminAiFillRouteImport } from './routes/api/admin/ai-fill'
@@ -419,10 +421,22 @@ const ApiAdminDeleteRequestRoute = ApiAdminDeleteRequestRouteImport.update({
   path: '/api/admin/delete-request',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminDeactivateDiscountCodeRoute =
+  ApiAdminDeactivateDiscountCodeRouteImport.update({
+    id: '/api/admin/deactivate-discount-code',
+    path: '/api/admin/deactivate-discount-code',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminDeactivateDesignerRoute =
   ApiAdminDeactivateDesignerRouteImport.update({
     id: '/api/admin/deactivate-designer',
     path: '/api/admin/deactivate-designer',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAdminCreateDiscountCodeRoute =
+  ApiAdminCreateDiscountCodeRouteImport.update({
+    id: '/api/admin/create-discount-code',
+    path: '/api/admin/create-discount-code',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiAdminCreateDesignerRoute = ApiAdminCreateDesignerRouteImport.update({
@@ -509,7 +523,9 @@ export interface FileRoutesByFullPath {
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
+  '/api/admin/create-discount-code': typeof ApiAdminCreateDiscountCodeRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
+  '/api/admin/deactivate-discount-code': typeof ApiAdminDeactivateDiscountCodeRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
@@ -585,7 +601,9 @@ export interface FileRoutesByTo {
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
+  '/api/admin/create-discount-code': typeof ApiAdminCreateDiscountCodeRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
+  '/api/admin/deactivate-discount-code': typeof ApiAdminDeactivateDiscountCodeRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
@@ -662,7 +680,9 @@ export interface FileRoutesById {
   '/api/admin/ai-fill': typeof ApiAdminAiFillRoute
   '/api/admin/approve-result': typeof ApiAdminApproveResultRoute
   '/api/admin/create-designer': typeof ApiAdminCreateDesignerRoute
+  '/api/admin/create-discount-code': typeof ApiAdminCreateDiscountCodeRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
+  '/api/admin/deactivate-discount-code': typeof ApiAdminDeactivateDiscountCodeRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
@@ -740,7 +760,9 @@ export interface FileRouteTypes {
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
+    | '/api/admin/create-discount-code'
     | '/api/admin/deactivate-designer'
+    | '/api/admin/deactivate-discount-code'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/deliver-video'
@@ -816,7 +838,9 @@ export interface FileRouteTypes {
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
+    | '/api/admin/create-discount-code'
     | '/api/admin/deactivate-designer'
+    | '/api/admin/deactivate-discount-code'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/deliver-video'
@@ -892,7 +916,9 @@ export interface FileRouteTypes {
     | '/api/admin/ai-fill'
     | '/api/admin/approve-result'
     | '/api/admin/create-designer'
+    | '/api/admin/create-discount-code'
     | '/api/admin/deactivate-designer'
+    | '/api/admin/deactivate-discount-code'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/deliver-video'
@@ -969,7 +995,9 @@ export interface RootRouteChildren {
   ApiAdminAiFillRoute: typeof ApiAdminAiFillRoute
   ApiAdminApproveResultRoute: typeof ApiAdminApproveResultRoute
   ApiAdminCreateDesignerRoute: typeof ApiAdminCreateDesignerRoute
+  ApiAdminCreateDiscountCodeRoute: typeof ApiAdminCreateDiscountCodeRoute
   ApiAdminDeactivateDesignerRoute: typeof ApiAdminDeactivateDesignerRoute
+  ApiAdminDeactivateDiscountCodeRoute: typeof ApiAdminDeactivateDiscountCodeRoute
   ApiAdminDeleteRequestRoute: typeof ApiAdminDeleteRequestRoute
   ApiAdminDeliverRoute: typeof ApiAdminDeliverRoute
   ApiAdminDeliverVideoRoute: typeof ApiAdminDeliverVideoRoute
@@ -1464,11 +1492,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminDeleteRequestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/deactivate-discount-code': {
+      id: '/api/admin/deactivate-discount-code'
+      path: '/api/admin/deactivate-discount-code'
+      fullPath: '/api/admin/deactivate-discount-code'
+      preLoaderRoute: typeof ApiAdminDeactivateDiscountCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/deactivate-designer': {
       id: '/api/admin/deactivate-designer'
       path: '/api/admin/deactivate-designer'
       fullPath: '/api/admin/deactivate-designer'
       preLoaderRoute: typeof ApiAdminDeactivateDesignerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/create-discount-code': {
+      id: '/api/admin/create-discount-code'
+      path: '/api/admin/create-discount-code'
+      fullPath: '/api/admin/create-discount-code'
+      preLoaderRoute: typeof ApiAdminCreateDiscountCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/create-designer': {
@@ -1569,7 +1611,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminAiFillRoute: ApiAdminAiFillRoute,
   ApiAdminApproveResultRoute: ApiAdminApproveResultRoute,
   ApiAdminCreateDesignerRoute: ApiAdminCreateDesignerRoute,
+  ApiAdminCreateDiscountCodeRoute: ApiAdminCreateDiscountCodeRoute,
   ApiAdminDeactivateDesignerRoute: ApiAdminDeactivateDesignerRoute,
+  ApiAdminDeactivateDiscountCodeRoute: ApiAdminDeactivateDiscountCodeRoute,
   ApiAdminDeleteRequestRoute: ApiAdminDeleteRequestRoute,
   ApiAdminDeliverRoute: ApiAdminDeliverRoute,
   ApiAdminDeliverVideoRoute: ApiAdminDeliverVideoRoute,

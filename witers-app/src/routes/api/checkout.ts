@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { applyDiscount, recordDiscountCodeUse } from "../../lib/discount-codes.server";
 import { getPlan, isPlanId } from "../../lib/membership-plans";
 import { computeChargeAmount, pesosToCentavos, stripeClient } from "../../lib/stripe.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
@@ -44,6 +45,13 @@ export const Route = createFileRoute("/api/checkout")({
         // rejects it.
         const { price, chargeAmount, chargeAmountWithIva } = computeChargeAmount(plan, existing);
         let paymentIntentId: string | null = null;
+        // Set only if the PaymentIntent's own metadata says a discount code
+        // was applied when it was created — that metadata is server-set at
+        // creation time and never touched by the client, so it's as trusted
+        // as intent.metadata.userId/plan below.
+        let discountCode: string | null = null;
+        let discountPercent: number | null = null;
+        let paidAmount = chargeAmount > 0 ? chargeAmountWithIva : chargeAmount;
 
         if (chargeAmount > 0) {
           paymentIntentId = parsed.data.paymentIntentId ?? null;
@@ -62,14 +70,24 @@ export const Route = createFileRoute("/api/checkout")({
           }
 
           const intent = await stripeClient().paymentIntents.retrieve(paymentIntentId);
+          discountCode = intent.metadata.discountCode ?? null;
+          discountPercent = intent.metadata.discountPercent
+            ? Number(intent.metadata.discountPercent)
+            : null;
+          const expectedAmount =
+            discountCode && discountPercent !== null
+              ? applyDiscount(chargeAmountWithIva, discountPercent)
+              : chargeAmountWithIva;
+
           const matches =
             intent.status === "succeeded" &&
             intent.metadata.userId === user.id &&
             intent.metadata.plan === plan.id &&
-            intent.amount === pesosToCentavos(chargeAmountWithIva);
+            intent.amount === pesosToCentavos(expectedAmount);
           if (!matches) {
             return json({ ok: false, error: "pago_invalido" }, { status: 400 });
           }
+          paidAmount = expectedAmount;
         }
 
         const membershipId = existing?.id ?? crypto.randomUUID();
@@ -100,18 +118,26 @@ export const Route = createFileRoute("/api/checkout")({
             .run();
         }
 
-        // amount_mxn records what was actually charged (IVA included) — a
-        // free switch charges $0 either way, so chargeAmount and
-        // chargeAmountWithIva agree there.
-        const paidAmount = chargeAmount > 0 ? chargeAmountWithIva : chargeAmount;
+        // amount_mxn records what was actually charged (IVA and any
+        // discount already applied) — a free switch charges $0 either way.
         const paymentId = crypto.randomUUID();
         await db()
           .prepare(
-            `INSERT INTO payments (id, user_id, membership_id, amount_mxn, method, provider, provider_ref, status)
-             VALUES (?1, ?2, ?3, ?4, 'card', 'stripe', ?5, 'paid')`,
+            `INSERT INTO payments (id, user_id, membership_id, amount_mxn, method, provider, provider_ref, status, discount_code, discount_percent)
+             VALUES (?1, ?2, ?3, ?4, 'card', 'stripe', ?5, 'paid', ?6, ?7)`,
           )
-          .bind(paymentId, user.id, membershipId, paidAmount, paymentIntentId)
+          .bind(
+            paymentId,
+            user.id,
+            membershipId,
+            paidAmount,
+            paymentIntentId,
+            discountCode,
+            discountPercent,
+          )
           .run();
+
+        if (discountCode) await recordDiscountCodeUse(discountCode);
 
         return json({ ok: true, membershipId, paymentId, chargeAmount: paidAmount });
       },
