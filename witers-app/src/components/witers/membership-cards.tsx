@@ -3,9 +3,32 @@
 // stay identical between both; only the CTA per card (and which plan, if
 // any, reads as "current") differs, via the ctaFor callback.
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Star } from "lucide-react";
 
 import { MEMBERSHIP_PLANS, PROMO_MESES, type MembershipPlan } from "../../lib/membership-plans";
+
+type GeoPrice =
+  | { ok: true; show: false }
+  | { ok: true; show: true; currency: string; amounts: Record<string, number> };
+
+// Reference-only conversion for a visitor outside Mexico — never the
+// billing amount, which Stripe always charges in MXN regardless of what
+// this shows. Fetched once per page load; a day-old rate is fine for a
+// "roughly this much" line, so no need to refetch on every render/focus
+// (see checkout.tsx's PaymentIntent staleTime for the same reasoning).
+function useGeoPrice() {
+  return useQuery({
+    queryKey: ["geo-price"],
+    queryFn: async () => {
+      const res = await fetch("/api/geo-price", { credentials: "include" });
+      if (!res.ok) return { ok: true, show: false } as GeoPrice;
+      return (await res.json()) as GeoPrice;
+    },
+    staleTime: 60 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+}
 
 // Essential stays brand blue; Grow (the "middle" tier) reads as platinum —
 // a brushed silver gradient, not another shade of blue — and Scale reads as
@@ -27,6 +50,14 @@ export type PlanCta = {
 export function MembershipPlanCards({ ctaFor }: { ctaFor: (plan: MembershipPlan) => PlanCta }) {
   const fmt = (n: number) =>
     "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const geoPrice = useGeoPrice();
+  const fmtGeo = (amount: number, currency: string) => {
+    try {
+      return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
+    } catch {
+      return `${amount.toLocaleString("en-US", { maximumFractionDigits: 0 })} ${currency}`;
+    }
+  };
 
   return (
     <div className="mx-auto mt-14 grid max-w-6xl gap-6 lg:grid-cols-3">
@@ -72,6 +103,11 @@ export function MembershipPlanCards({ ctaFor }: { ctaFor: (plan: MembershipPlan)
                 Precio especial válido tus primeros {PROMO_MESES} meses. Del mes {PROMO_MESES + 1}{" "}
                 en adelante: {fmt(m.precioRegular)} MXN + IVA al mes.
               </p>
+              {geoPrice.data?.ok && geoPrice.data.show ? (
+                <p className="mt-1 text-[11px] font-semibold text-white/70">
+                  ≈ {fmtGeo(geoPrice.data.amounts[m.id], geoPrice.data.currency)}/mes
+                </p>
+              ) : null}
             </div>
 
             <p className="border-b border-wit-ink/10 px-7 py-5 text-sm leading-relaxed text-wit-gray">
