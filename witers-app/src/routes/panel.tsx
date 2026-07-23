@@ -538,18 +538,18 @@ function Panel() {
         </div>
       ) : null}
       <header className="wit-glass relative z-40 border-b border-wit-ink/10">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-          <Link to="/">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-3 sm:px-5">
+          <Link to="/" className="shrink-0">
             <WitersLogo compact />
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             {active && membership?.plan !== "scale" ? (
               <Link
                 to="/upgrade"
-                className="flex items-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10"
+                className="flex items-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-2.5 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10 sm:px-4"
               >
-                <ArrowUpCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
-                {t("Upgrade", "Upgrade")}
+                <ArrowUpCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
+                <span className="hidden sm:inline">{t("Upgrade", "Upgrade")}</span>
               </Link>
             ) : null}
             <LanguageToggle />
