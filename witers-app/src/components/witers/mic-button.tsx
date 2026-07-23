@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+import { useLanguage } from "../../lib/i18n";
+
 // The Web Speech API has no official TS lib entry — same minimal shape
 // chat-intake.tsx declares for its own (more complex, multi-question) mic
 // flow. This is the simple version: one plain text field, dictate straight
@@ -38,6 +40,7 @@ export function MicButton({
   onChange: (next: string) => void;
   className?: string;
 }) {
+  const { t } = useLanguage();
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const baseRef = useRef("");
@@ -142,7 +145,11 @@ export function MicButton({
     <button
       type="button"
       onClick={() => (listening ? stopListening() : startListening())}
-      aria-label={listening ? "Detener micrófono" : "Dictar por voz"}
+      aria-label={
+        listening
+          ? t("Detener micrófono", "Stop microphone")
+          : t("Dictar por voz", "Dictate by voice")
+      }
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all ${
         listening
           ? "animate-pulse bg-red-500 text-white shadow-[0_0_0_4px_rgba(239,68,68,0.15)]"

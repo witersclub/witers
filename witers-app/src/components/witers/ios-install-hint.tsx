@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Share, X } from "lucide-react";
 
+import { useLanguage } from "../../lib/i18n";
+
 const DISMISSED_KEY = "wit_ios_install_hint_dismissed";
 
 // Android/Chrome shows its own "Install app" prompt automatically once the
@@ -26,6 +28,7 @@ function shouldOfferInstallHint(): boolean {
 }
 
 export function IosInstallHint() {
+  const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -46,14 +49,17 @@ export function IosInstallHint() {
     <div className="fixed inset-x-4 bottom-4 z-50 flex items-center gap-3 rounded-2xl bg-wit-ink px-4 py-3.5 text-white shadow-[0_20px_50px_rgba(5,13,40,0.35)] sm:inset-x-auto sm:right-4 sm:w-96">
       <Share className="h-5 w-5 shrink-0 text-white/80" strokeWidth={2} />
       <p className="flex-1 text-sm leading-snug">
-        Toca <span className="font-bold">compartir</span> y luego{" "}
-        <span className="font-bold">&ldquo;Agregar a pantalla de inicio&rdquo;</span> para instalar
-        WITERS como app.
+        {t("Toca", "Tap")} <span className="font-bold">{t("compartir", "share")}</span>{" "}
+        {t("y luego", "and then")}{" "}
+        <span className="font-bold">
+          {t("“Agregar a pantalla de inicio”", "“Add to Home Screen”")}
+        </span>{" "}
+        {t("para instalar WITERS como app.", "to install WITERS as an app.")}
       </p>
       <button
         type="button"
         onClick={dismiss}
-        aria-label="Cerrar"
+        aria-label={t("Cerrar", "Close")}
         className="shrink-0 rounded-full p-1 text-white/60 hover:text-white"
       >
         <X className="h-4 w-4" strokeWidth={2.4} />

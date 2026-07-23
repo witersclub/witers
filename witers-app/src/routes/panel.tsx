@@ -3976,7 +3976,10 @@ function PautaBuilder({
                 ) : null}
                 {suggestionsLoading ? (
                   <p className="text-[11px] text-wit-gray">
-                    {t("Buscando sugerencias relacionadas...", "Searching for related suggestions...")}
+                    {t(
+                      "Buscando sugerencias relacionadas...",
+                      "Searching for related suggestions...",
+                    )}
                   </p>
                 ) : suggestedInterests.length > 0 ? (
                   <div>
@@ -4022,7 +4025,10 @@ function PautaBuilder({
                       autoFocus
                       value={interestQuery}
                       onChange={(e) => setInterestQuery(e.target.value)}
-                      placeholder={t("Ej. yoga, mariscos, bodas...", "E.g. yoga, seafood, weddings...")}
+                      placeholder={t(
+                        "Ej. yoga, mariscos, bodas...",
+                        "E.g. yoga, seafood, weddings...",
+                      )}
                       className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
                     />
                     <p className="mt-1.5 text-[11px] text-wit-gray">
@@ -5061,11 +5067,11 @@ const RATIO_LABEL: Record<string, { es: string; en: string }> = {
   "9:16": { es: "Vertical 9:16 (stories)", en: "Vertical 9:16 (stories)" },
 };
 const RATIO_OPTIONS = [
-  { value: "1:1", w: 1, h: 1, label: "Cuadrado" },
-  { value: "4:3", w: 4, h: 3, label: "Horizontal" },
-  { value: "16:9", w: 16, h: 9, label: "Banner" },
-  { value: "3:4", w: 3, h: 4, label: "Feed" },
-  { value: "9:16", w: 9, h: 16, label: "Stories" },
+  { value: "1:1", w: 1, h: 1, labelEs: "Cuadrado", labelEn: "Square" },
+  { value: "4:3", w: 4, h: 3, labelEs: "Horizontal", labelEn: "Landscape" },
+  { value: "16:9", w: 16, h: 9, labelEs: "Banner", labelEn: "Banner" },
+  { value: "3:4", w: 3, h: 4, labelEs: "Feed", labelEn: "Feed" },
+  { value: "9:16", w: 9, h: 16, labelEs: "Stories", labelEn: "Stories" },
 ];
 
 function RatioSwatch({ w, h, active }: { w: number; h: number; active: boolean }) {
@@ -5124,6 +5130,7 @@ function NewRequestForm({
   brandProfile: BrandProfile | null;
   onCreated: () => void;
 }) {
+  const { t } = useLanguage();
   const [step, setStep] = useState<"form" | "preview">("form");
   const [form, setForm] = useState(EMPTY_FORM);
   const [ageRanges, setAgeRanges] = useState<string[]>([]);
@@ -5300,34 +5307,53 @@ function NewRequestForm({
   }
 
   if (step === "preview") {
+    const previewAspectRatioLabel = RATIO_LABEL[form.aspectRatio];
     return (
       <section className="wit-glass h-fit rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-        <h2 className="text-xl font-bold text-wit-ink">Revisa tu solicitud</h2>
+        <h2 className="text-xl font-bold text-wit-ink">
+          {t("Revisa tu solicitud", "Review your request")}
+        </h2>
         <p className="mt-1 text-sm text-wit-gray">
-          Confirma que todo esté correcto antes de enviarla — usa una de tus solicitudes
-          disponibles.
+          {t(
+            "Confirma que todo esté correcto antes de enviarla — usa una de tus solicitudes disponibles.",
+            "Confirm everything is correct before sending it — this uses one of your available requests.",
+          )}
         </p>
 
         <dl className="mt-6 space-y-4">
-          <PreviewRow label="Título" value={form.title} />
-          <PreviewRow label="Nombre comercial / empresa" value={form.companyName} />
+          <PreviewRow label={t("Título", "Title")} value={form.title} />
+          <PreviewRow
+            label={t("Nombre comercial / empresa", "Business / company name")}
+            value={form.companyName}
+          />
           {form.productName ? (
-            <PreviewRow label="Nombre del producto" value={form.productName} />
+            <PreviewRow label={t("Nombre del producto", "Product name")} value={form.productName} />
           ) : null}
-          <PreviewRow label="Qué quieres que salga en esta pieza" value={form.pieceBrief} />
-          {form.audience ? <PreviewRow label="Público objetivo" value={form.audience} /> : null}
+          <PreviewRow
+            label={t("Qué quieres que salga en esta pieza", "What you want in this piece")}
+            value={form.pieceBrief}
+          />
+          {form.audience ? (
+            <PreviewRow label={t("Público objetivo", "Target audience")} value={form.audience} />
+          ) : null}
           {ageRanges.length ? (
-            <PreviewRow label="Rango de edad" value={ageRanges.join(", ")} />
+            <PreviewRow label={t("Rango de edad", "Age range")} value={ageRanges.join(", ")} />
           ) : null}
           {form.promoPrice ? (
-            <PreviewRow label="Precio o descuento" value={form.promoPrice} />
+            <PreviewRow
+              label={t("Precio o descuento", "Price or discount")}
+              value={form.promoPrice}
+            />
           ) : null}
           {form.requiredText ? (
-            <PreviewRow label="Mensaje o dato extra" value={form.requiredText} />
+            <PreviewRow
+              label={t("Mensaje o dato extra", "Message or extra detail")}
+              value={form.requiredText}
+            />
           ) : null}
           <div>
             <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-              Colores de marca
+              {t("Colores de marca", "Brand colors")}
             </dt>
             <dd className="mt-1.5 flex gap-2">
               {colors.map((c) => (
@@ -5340,25 +5366,35 @@ function NewRequestForm({
               ))}
             </dd>
           </div>
-          {form.style ? <PreviewRow label="Estilo" value={form.style} /> : null}
+          {form.style ? <PreviewRow label={t("Estilo", "Style")} value={form.style} /> : null}
           <PreviewRow
-            label="Formato"
-            value={RATIO_LABEL[form.aspectRatio]?.es ?? form.aspectRatio}
+            label={t("Formato", "Format")}
+            value={
+              previewAspectRatioLabel
+                ? t(previewAspectRatioLabel.es, previewAspectRatioLabel.en)
+                : form.aspectRatio
+            }
           />
           <PreviewRow
-            label="Logotipo"
+            label={t("Logotipo", "Logo")}
             value={
               logoLocked
-                ? "Tu logotipo registrado"
+                ? t("Tu logotipo registrado", "Your registered logo")
                 : noLogo
-                  ? "No tiene logotipo"
+                  ? t("No tiene logotipo", "No logo")
                   : useSameLogo
-                    ? "Mismo logotipo de tu solicitud anterior"
+                    ? t(
+                        "Mismo logotipo de tu solicitud anterior",
+                        "Same logo as your previous request",
+                      )
                     : (logoFile?.name ?? "")
             }
           />
           {productPhotoFile ? (
-            <PreviewRow label="Foto del producto" value={productPhotoFile.name} />
+            <PreviewRow
+              label={t("Foto del producto", "Product photo")}
+              value={productPhotoFile.name}
+            />
           ) : null}
         </dl>
 
@@ -5373,7 +5409,7 @@ function NewRequestForm({
             disabled={loading}
             className="flex-1 rounded-2xl border border-wit-ink/15 px-6 py-4 text-base font-bold text-wit-ink transition-colors hover:border-wit-blue disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Editar
+            {t("Editar", "Edit")}
           </button>
           <button
             type="button"
@@ -5381,7 +5417,7 @@ function NewRequestForm({
             disabled={disabled || loading}
             className="flex-1 rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Enviando..." : "Confirmar y enviar"}
+            {loading ? t("Enviando...", "Sending...") : t("Confirmar y enviar", "Confirm and send")}
           </button>
         </div>
       </section>
@@ -5390,16 +5426,20 @@ function NewRequestForm({
 
   return (
     <section className="wit-glass h-fit rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-      <h2 className="text-xl font-bold text-wit-ink">Nueva solicitud de diseño</h2>
+      <h2 className="text-xl font-bold text-wit-ink">
+        {t("Nueva solicitud de diseño", "New design request")}
+      </h2>
       <p className="mt-1 text-sm text-wit-gray">
-        Describe la creatividad publicitaria que necesitas y nuestro equipo la trabaja, con IA como
-        herramienta de apoyo. Tu solicitud se entrega en un máximo de 3 días hábiles.
+        {t(
+          "Describe la creatividad publicitaria que necesitas y nuestro equipo la trabaja, con IA como herramienta de apoyo. Tu solicitud se entrega en un máximo de 3 días hábiles.",
+          "Describe the advertising creative you need and our team works on it, with AI as a support tool. Your request is delivered within a maximum of 3 business days.",
+        )}
       </p>
 
       <form onSubmit={goToPreview} className="mt-6 space-y-4">
         <div className="relative">
           <label htmlFor="rtitle" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Título
+            {t("Título", "Title")}
           </label>
           <input
             id="rtitle"
@@ -5411,7 +5451,7 @@ function NewRequestForm({
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             {...suggestionHandlers("title")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-            placeholder="Anuncio de lanzamiento para Instagram"
+            placeholder={t("Anuncio de lanzamiento para Instagram", "Launch ad for Instagram")}
           />
           {activeSuggestion === "title" && previousAnswers?.title ? (
             <FieldSuggestion text={previousAnswers.title} onPick={() => pickSuggestion("title")} />
@@ -5419,11 +5459,11 @@ function NewRequestForm({
         </div>
 
         <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
-          Sobre tu empresa
+          {t("Sobre tu empresa", "About your company")}
         </p>
         <div className="relative">
           <label htmlFor="rcompany" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Nombre comercial / de la empresa
+            {t("Nombre comercial / de la empresa", "Business / company name")}
           </label>
           <input
             id="rcompany"
@@ -5436,11 +5476,17 @@ function NewRequestForm({
             onChange={(e) => setForm({ ...form, companyName: e.target.value })}
             {...suggestionHandlers("companyName")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue disabled:bg-wit-mist/40 disabled:text-wit-gray"
-            placeholder="El nombre que va impreso en la pieza"
+            placeholder={t(
+              "El nombre que va impreso en la pieza",
+              "The name that goes printed on the piece",
+            )}
           />
           {brandProfile ? (
             <p className="mt-1.5 text-xs text-wit-gray">
-              Tu empresa ya está registrada. Escríbenos si necesitas cambiarla.
+              {t(
+                "Tu empresa ya está registrada. Escríbenos si necesitas cambiarla.",
+                "Your company is already registered. Message us if you need to change it.",
+              )}
             </p>
           ) : activeSuggestion === "companyName" && previousAnswers?.companyName ? (
             <FieldSuggestion
@@ -5450,11 +5496,12 @@ function NewRequestForm({
           ) : null}
         </div>
         <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
-          Sobre este pedido
+          {t("Sobre este pedido", "About this request")}
         </p>
         <div className="relative">
           <label htmlFor="rproduct" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Nombre del producto <span className="font-normal text-wit-gray">(opcional)</span>
+            {t("Nombre del producto", "Product name")}{" "}
+            <span className="font-normal text-wit-gray">{t("(opcional)", "(optional)")}</span>
           </label>
           <input
             id="rproduct"
@@ -5464,7 +5511,10 @@ function NewRequestForm({
             onChange={(e) => setForm({ ...form, productName: e.target.value })}
             {...suggestionHandlers("productName")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-            placeholder="Si aplica a un producto en particular"
+            placeholder={t(
+              "Si aplica a un producto en particular",
+              "If it applies to a specific product",
+            )}
           />
           {activeSuggestion === "productName" && previousAnswers?.productName ? (
             <FieldSuggestion
@@ -5475,7 +5525,7 @@ function NewRequestForm({
         </div>
         <div className="relative">
           <label htmlFor="rpiecebrief" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Qué quieres que salga en esta pieza
+            {t("Qué quieres que salga en esta pieza", "What you want in this piece")}
           </label>
           <textarea
             id="rpiecebrief"
@@ -5487,7 +5537,10 @@ function NewRequestForm({
             onChange={(e) => setForm({ ...form, pieceBrief: e.target.value })}
             {...suggestionHandlers("pieceBrief")}
             className="w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-            placeholder="Describe el concepto de esta pieza: qué debe mostrar, la idea principal..."
+            placeholder={t(
+              "Describe el concepto de esta pieza: qué debe mostrar, la idea principal...",
+              "Describe the concept for this piece: what it should show, the main idea...",
+            )}
           />
           {activeSuggestion === "pieceBrief" && previousAnswers?.pieceBrief ? (
             <FieldSuggestion
@@ -5498,7 +5551,8 @@ function NewRequestForm({
         </div>
         <div className="relative">
           <label htmlFor="raudience" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Público objetivo <span className="font-normal text-wit-gray">(opcional)</span>
+            {t("Público objetivo", "Target audience")}{" "}
+            <span className="font-normal text-wit-gray">{t("(opcional)", "(optional)")}</span>
           </label>
           <input
             id="raudience"
@@ -5508,7 +5562,10 @@ function NewRequestForm({
             onChange={(e) => setForm({ ...form, audience: e.target.value })}
             {...suggestionHandlers("audience")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-            placeholder="Ej. mujeres emprendedoras, dueños de restaurantes..."
+            placeholder={t(
+              "Ej. mujeres emprendedoras, dueños de restaurantes...",
+              "E.g. women entrepreneurs, restaurant owners...",
+            )}
           />
           {activeSuggestion === "audience" && previousAnswers?.audience ? (
             <FieldSuggestion
@@ -5519,8 +5576,10 @@ function NewRequestForm({
         </div>
         <div>
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
-            Rango de edad{" "}
-            <span className="font-normal text-wit-gray">(opcional, elige uno o varios)</span>
+            {t("Rango de edad", "Age range")}{" "}
+            <span className="font-normal text-wit-gray">
+              {t("(opcional, elige uno o varios)", "(optional, choose one or several)")}
+            </span>
           </p>
           <div className="flex flex-wrap gap-2">
             {AGE_CHIPS.map((a) => (
@@ -5539,7 +5598,8 @@ function NewRequestForm({
         </div>
         <div className="relative">
           <label htmlFor="rpromo" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Precio o descuento <span className="font-normal text-wit-gray">(opcional)</span>
+            {t("Precio o descuento", "Price or discount")}{" "}
+            <span className="font-normal text-wit-gray">{t("(opcional)", "(optional)")}</span>
           </label>
           <input
             id="rpromo"
@@ -5549,7 +5609,7 @@ function NewRequestForm({
             onChange={(e) => setForm({ ...form, promoPrice: e.target.value })}
             {...suggestionHandlers("promoPrice")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-            placeholder="Ej. $500, 20% de descuento..."
+            placeholder={t("Ej. $500, 20% de descuento...", "E.g. $500, 20% off...")}
           />
           {activeSuggestion === "promoPrice" && previousAnswers?.promoPrice ? (
             <FieldSuggestion
@@ -5560,7 +5620,8 @@ function NewRequestForm({
         </div>
         <div className="relative">
           <label htmlFor="rreqtext" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-            Mensaje o dato extra <span className="font-normal text-wit-gray">(opcional)</span>
+            {t("Mensaje o dato extra", "Message or extra detail")}{" "}
+            <span className="font-normal text-wit-gray">{t("(opcional)", "(optional)")}</span>
           </label>
           <input
             id="rreqtext"
@@ -5570,7 +5631,10 @@ function NewRequestForm({
             onChange={(e) => setForm({ ...form, requiredText: e.target.value })}
             {...suggestionHandlers("requiredText")}
             className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-            placeholder="Ej. válido hasta el 31 de julio, nombre de la promoción..."
+            placeholder={t(
+              "Ej. válido hasta el 31 de julio, nombre de la promoción...",
+              "E.g. valid until July 31, name of the promotion...",
+            )}
           />
           {activeSuggestion === "requiredText" && previousAnswers?.requiredText ? (
             <FieldSuggestion
@@ -5579,17 +5643,22 @@ function NewRequestForm({
             />
           ) : null}
           <p className="mt-1.5 text-xs text-wit-gray">
-            Si lo dejas vacío, nuestro equipo de diseño se encarga de la redacción.
+            {t(
+              "Si lo dejas vacío, nuestro equipo de diseño se encarga de la redacción.",
+              "If you leave it blank, our design team takes care of the copy.",
+            )}
           </p>
         </div>
         <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
-          Marca y estilo
+          {t("Marca y estilo", "Brand and style")}
         </p>
         <div>
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
-            Colores de marca{" "}
+            {t("Colores de marca", "Brand colors")}{" "}
             {brandProfile ? null : (
-              <span className="font-normal text-wit-gray">(hasta 3, opcional)</span>
+              <span className="font-normal text-wit-gray">
+                {t("(hasta 3, opcional)", "(up to 3, optional)")}
+              </span>
             )}
           </p>
           {brandProfile ? (
@@ -5602,7 +5671,12 @@ function NewRequestForm({
                   title={c}
                 />
               ))}
-              <p className="text-xs text-wit-gray">Tus colores de marca ya están registrados.</p>
+              <p className="text-xs text-wit-gray">
+                {t(
+                  "Tus colores de marca ya están registrados.",
+                  "Your brand colors are already registered.",
+                )}
+              </p>
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-3">
@@ -5620,7 +5694,7 @@ function NewRequestForm({
                       setColors(next);
                     }}
                     className="h-8 w-8 cursor-pointer rounded-full border border-wit-ink/15 p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch-wrapper]:rounded-full [&::-webkit-color-swatch-wrapper]:p-0"
-                    aria-label={`Color ${i + 1}`}
+                    aria-label={t(`Color ${i + 1}`, `Color ${i + 1}`)}
                   />
                   <input
                     type="text"
@@ -5633,14 +5707,17 @@ function NewRequestForm({
                     maxLength={7}
                     placeholder="#111827"
                     className="w-20 bg-transparent text-sm font-wit-mono text-wit-ink outline-none"
-                    aria-label={`Código hexadecimal del color ${i + 1}`}
+                    aria-label={t(
+                      `Código hexadecimal del color ${i + 1}`,
+                      `Hex code for color ${i + 1}`,
+                    )}
                   />
                   {colors.length > 1 ? (
                     <button
                       type="button"
                       onClick={() => setColors(colors.filter((_, j) => j !== i))}
                       className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-wit-ink text-[10px] leading-none text-white"
-                      aria-label="Quitar color"
+                      aria-label={t("Quitar color", "Remove color")}
                     >
                       ×
                     </button>
@@ -5652,7 +5729,7 @@ function NewRequestForm({
                   type="button"
                   onClick={() => setColors([...colors, "#111827"])}
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-dashed border-wit-ink/25 text-lg text-wit-gray hover:border-wit-blue hover:text-wit-blue"
-                  aria-label="Agregar color"
+                  aria-label={t("Agregar color", "Add color")}
                 >
                   +
                 </button>
@@ -5662,15 +5739,16 @@ function NewRequestForm({
         </div>
         <div>
           <p className="mb-1.5 text-sm font-semibold text-wit-ink">
-            Estilo deseado <span className="font-normal text-wit-gray">(opcional)</span>
+            {t("Estilo deseado", "Desired style")}{" "}
+            <span className="font-normal text-wit-gray">{t("(opcional)", "(optional)")}</span>
           </p>
           <div className="flex flex-wrap gap-2">
             {STYLE_CHIPS.map((s) => (
               <ChipButton
-                key={s}
-                label={s}
-                active={form.style === s}
-                onClick={() => setForm({ ...form, style: form.style === s ? "" : s })}
+                key={s.value}
+                label={t(s.labelEs, s.labelEn)}
+                active={form.style === s.value}
+                onClick={() => setForm({ ...form, style: form.style === s.value ? "" : s.value })}
               />
             ))}
           </div>
@@ -5678,11 +5756,11 @@ function NewRequestForm({
             <input
               type="text"
               maxLength={200}
-              value={STYLE_CHIPS.includes(form.style) ? "" : form.style}
+              value={STYLE_CHIPS.some((s) => s.value === form.style) ? "" : form.style}
               onChange={(e) => setForm({ ...form, style: e.target.value })}
               {...suggestionHandlers("style")}
               className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-              placeholder="U otro estilo en tus palabras..."
+              placeholder={t("U otro estilo en tus palabras...", "Or another style in your own words...")}
             />
             {activeSuggestion === "style" && previousAnswers?.style ? (
               <FieldSuggestion
@@ -5693,9 +5771,13 @@ function NewRequestForm({
           </div>
         </div>
 
-        <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">Archivos</p>
+        <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
+          {t("Archivos", "Files")}
+        </p>
         <div>
-          <label className="mb-1.5 block text-sm font-semibold text-wit-ink">Logotipo</label>
+          <label className="mb-1.5 block text-sm font-semibold text-wit-ink">
+            {t("Logotipo", "Logo")}
+          </label>
           {logoLocked ? (
             <div className="flex items-center gap-3 rounded-xl border border-wit-ink/15 px-4 py-3">
               <img
@@ -5704,7 +5786,10 @@ function NewRequestForm({
                 className="h-10 w-10 rounded-lg border border-wit-ink/10 object-cover"
               />
               <p className="text-sm text-wit-gray">
-                Este es tu logotipo registrado. Escríbenos si necesitas cambiarlo.
+                {t(
+                  "Este es tu logotipo registrado. Escríbenos si necesitas cambiarlo.",
+                  "This is your registered logo. Message us if you need to change it.",
+                )}
               </p>
             </div>
           ) : (
@@ -5725,7 +5810,10 @@ function NewRequestForm({
                     onChange={(e) => selectUseSameLogo(e.target.checked)}
                     className="h-4 w-4 rounded border-wit-ink/30"
                   />
-                  Utilizar el logotipo de la solicitud anterior
+                  {t(
+                    "Utilizar el logotipo de la solicitud anterior",
+                    "Use the logo from your previous request",
+                  )}
                   <img
                     src={`/api/file?key=${encodeURIComponent(previousLogoKey)}`}
                     alt=""
@@ -5740,7 +5828,7 @@ function NewRequestForm({
                   onChange={(e) => selectNoLogo(e.target.checked)}
                   className="h-4 w-4 rounded border-wit-ink/30"
                 />
-                No tengo logotipo
+                {t("No tengo logotipo", "I have no logo")}
               </label>
             </>
           )}
@@ -5750,7 +5838,8 @@ function NewRequestForm({
             htmlFor="rproductphoto"
             className="mb-1.5 block text-sm font-semibold text-wit-ink"
           >
-            Foto del producto <span className="font-normal text-wit-gray">(opcional)</span>
+            {t("Foto del producto", "Product photo")}{" "}
+            <span className="font-normal text-wit-gray">{t("(opcional)", "(optional)")}</span>
           </label>
           <input
             id="rproductphoto"
@@ -5761,7 +5850,9 @@ function NewRequestForm({
           />
         </div>
 
-        <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">Formato</p>
+        <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-wit-blue">
+          {t("Formato", "Format")}
+        </p>
         <div>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {RATIO_OPTIONS.map((r) => (
@@ -5785,7 +5876,9 @@ function NewRequestForm({
                 >
                   {r.value}
                 </span>
-                <span className="text-[10px] leading-none text-wit-gray">{r.label}</span>
+                <span className="text-[10px] leading-none text-wit-gray">
+                  {t(r.labelEs, r.labelEn)}
+                </span>
               </button>
             ))}
           </div>
@@ -5802,11 +5895,14 @@ function NewRequestForm({
           disabled={disabled}
           className="w-full rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Continuar
+          {t("Continuar", "Continue")}
         </button>
         {disabled ? (
           <p className="text-center text-xs text-wit-gray">
-            Necesitas membresía activa y solicitudes disponibles.
+            {t(
+              "Necesitas membresía activa y solicitudes disponibles.",
+              "You need an active membership and available requests.",
+            )}
           </p>
         ) : null}
       </form>

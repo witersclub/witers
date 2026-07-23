@@ -25,6 +25,7 @@ import {
 
 import { ChatBubble } from "./chat-intake";
 import { MicButton } from "./mic-button";
+import { useLanguage } from "../../lib/i18n";
 
 export type VideoRequestRow = {
   id: string;
@@ -56,19 +57,25 @@ function parseRawFiles(row: VideoRequestRow): RawFile[] {
   }
 }
 
-const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  nueva: { label: "En cola", cls: "bg-amber-50 text-amber-700" },
-  en_proceso: { label: "En edición", cls: "bg-amber-50 text-amber-700" },
-  completada: { label: "Listo", cls: "bg-emerald-50 text-emerald-700" },
-  rechazada: { label: "Rechazada", cls: "bg-red-50 text-red-600" },
+const STATUS_LABEL: Record<string, { es: string; en: string; cls: string }> = {
+  nueva: { es: "En cola", en: "Queued", cls: "bg-amber-50 text-amber-700" },
+  en_proceso: { es: "En edición", en: "Editing", cls: "bg-amber-50 text-amber-700" },
+  completada: { es: "Listo", en: "Ready", cls: "bg-emerald-50 text-emerald-700" },
+  rechazada: { es: "Rechazada", en: "Rejected", cls: "bg-red-50 text-red-600" },
 };
 
-const PLATFORM_OPTIONS: { id: string; label: string; aspect: string; icon: LucideIcon }[] = [
-  { id: "instagram", label: "Instagram", aspect: "9:16", icon: Instagram },
-  { id: "tiktok", label: "TikTok", aspect: "9:16", icon: Music2 },
-  { id: "youtube", label: "YouTube", aspect: "16:9", icon: Youtube },
-  { id: "facebook", label: "Facebook", aspect: "1:1", icon: Facebook },
-  { id: "otro", label: "Otro", aspect: "9:16", icon: Clapperboard },
+const PLATFORM_OPTIONS: {
+  id: string;
+  label: string;
+  en: string;
+  aspect: string;
+  icon: LucideIcon;
+}[] = [
+  { id: "instagram", label: "Instagram", en: "Instagram", aspect: "9:16", icon: Instagram },
+  { id: "tiktok", label: "TikTok", en: "TikTok", aspect: "9:16", icon: Music2 },
+  { id: "youtube", label: "YouTube", en: "YouTube", aspect: "16:9", icon: Youtube },
+  { id: "facebook", label: "Facebook", en: "Facebook", aspect: "1:1", icon: Facebook },
+  { id: "otro", label: "Otro", en: "Other", aspect: "9:16", icon: Clapperboard },
 ];
 
 const VIDEO_ACCEPT = "video/mp4,video/quicktime,video/webm";
@@ -89,6 +96,7 @@ export function VideoLandingScreen({
   quotaTotal: number;
   onStart: () => void;
 }) {
+  const { t } = useLanguage();
   const remaining = quotaTotal - quotaUsed;
   const blocked = !active || remaining <= 0;
 
@@ -99,17 +107,26 @@ export function VideoLandingScreen({
       </div>
       <p className="max-w-xs text-base text-wit-gray">
         {quotaTotal === 0
-          ? "Los planes Grow y Scale incluyen videos para redes sociales."
+          ? t(
+              "Los planes Grow y Scale incluyen videos para redes sociales.",
+              "The Grow and Scale plans include videos for social media.",
+            )
           : remaining <= 0
-            ? "Ya usaste tus videos disponibles este mes. Vuelven a estar disponibles en tu próximo ciclo."
-            : "Cuéntanos qué video quieres crear y sube tu metraje — nosotros lo editamos."}
+            ? t(
+                "Ya usaste tus videos disponibles este mes. Vuelven a estar disponibles en tu próximo ciclo.",
+                "You've used up your available videos this month. They'll be available again next cycle.",
+              )
+            : t(
+                "Cuéntanos qué video quieres crear y sube tu metraje — nosotros lo editamos.",
+                "Tell us what video you want to create and upload your footage — we'll edit it.",
+              )}
       </p>
       {quotaTotal === 0 ? (
         <a
           href="/upgrade"
           className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
         >
-          Ver planes
+          {t("Ver planes", "View plans")}
         </a>
       ) : (
         <button
@@ -118,12 +135,15 @@ export function VideoLandingScreen({
           disabled={blocked}
           className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          🎬 Nueva solicitud de video
+          {t("🎬 Nueva solicitud de video", "🎬 New video request")}
         </button>
       )}
       {quotaTotal > 0 ? (
         <p className="text-xs font-semibold text-wit-gray">
-          {quotaUsed} de {quotaTotal} videos usados este mes.
+          {t(
+            `${quotaUsed} de ${quotaTotal} videos usados este mes.`,
+            `${quotaUsed} of ${quotaTotal} videos used this month.`,
+          )}
         </p>
       ) : null}
     </div>
@@ -131,6 +151,7 @@ export function VideoLandingScreen({
 }
 
 export function VideoRequestList({ rows, loading }: { rows: VideoRequestRow[]; loading: boolean }) {
+  const { t } = useLanguage();
   return (
     <section>
       {loading ? (
@@ -142,10 +163,13 @@ export function VideoRequestList({ rows, loading }: { rows: VideoRequestRow[]; l
       ) : rows.length === 0 ? (
         <div className="wit-glass rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
           <p className="text-base font-semibold text-wit-ink">
-            Aún no tienes solicitudes de video.
+            {t("Aún no tienes solicitudes de video.", "You don't have any video requests yet.")}
           </p>
           <p className="mt-1 text-sm text-wit-gray">
-            Sube tu metraje y cuéntanos qué necesitas — nosotros lo editamos.
+            {t(
+              "Sube tu metraje y cuéntanos qué necesitas — nosotros lo editamos.",
+              "Upload your footage and tell us what you need — we'll edit it.",
+            )}
           </p>
         </div>
       ) : (
@@ -160,6 +184,7 @@ export function VideoRequestList({ rows, loading }: { rows: VideoRequestRow[]; l
 }
 
 function VideoEntry({ row }: { row: VideoRequestRow }) {
+  const { t } = useLanguage();
   const st = STATUS_LABEL[row.status] ?? STATUS_LABEL.nueva;
   const platform = PLATFORM_OPTIONS.find((p) => p.id === row.platform);
   const rawFiles = parseRawFiles(row);
@@ -175,8 +200,12 @@ function VideoEntry({ row }: { row: VideoRequestRow }) {
             <p className="truncate text-sm font-bold text-wit-ink">{row.title}</p>
           </div>
           <p className="mt-1 text-xs text-wit-gray">
-            {row.aspect_ratio} · {rawFiles.length} archivo{rawFiles.length === 1 ? "" : "s"} subido
-            {rawFiles.length === 1 ? "" : "s"} ·{" "}
+            {row.aspect_ratio} ·{" "}
+            {t(
+              `${rawFiles.length} archivo${rawFiles.length === 1 ? "" : "s"} subido${rawFiles.length === 1 ? "" : "s"}`,
+              `${rawFiles.length} file${rawFiles.length === 1 ? "" : "s"} uploaded`,
+            )}{" "}
+            ·{" "}
             {new Date(row.created_at + "Z").toLocaleDateString("es-MX", {
               day: "numeric",
               month: "short",
@@ -190,7 +219,7 @@ function VideoEntry({ row }: { row: VideoRequestRow }) {
           {row.status === "en_proceso" || row.status === "nueva" ? (
             <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2.5} />
           ) : null}
-          {st.label}
+          {t(st.es, st.en)}
         </span>
       </div>
 
@@ -207,7 +236,7 @@ function VideoEntry({ row }: { row: VideoRequestRow }) {
             className="flex items-center justify-center gap-1.5 border-t border-wit-ink/10 bg-white py-2.5 text-xs font-bold text-wit-blue hover:bg-wit-mist/40"
           >
             <Download className="h-3.5 w-3.5" strokeWidth={2.3} />
-            Descargar video
+            {t("Descargar video", "Download video")}
           </a>
         </div>
       ) : null}
@@ -228,7 +257,7 @@ function VStep({
   children,
   onBack,
   onNext,
-  nextLabel = "Siguiente",
+  nextLabel,
   nextDisabled = false,
 }: {
   qIndex: number;
@@ -242,11 +271,12 @@ function VStep({
   nextLabel?: string;
   nextDisabled?: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="mx-auto flex h-full max-w-lg flex-col px-5 py-8">
       <div className="mb-6">
         <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-          Paso {qIndex + 1} de {total}
+          {t(`Paso ${qIndex + 1} de ${total}`, `Step ${qIndex + 1} of ${total}`)}
         </p>
         <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-wit-ink">
           <Icon className="h-6 w-6 text-wit-blue" strokeWidth={1.75} /> {question}
@@ -261,7 +291,7 @@ function VStep({
             onClick={onBack}
             className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
           >
-            ← Atrás
+            {t("← Atrás", "← Back")}
           </button>
         ) : null}
         <button
@@ -270,7 +300,7 @@ function VStep({
           onClick={onNext}
           className="ml-auto rounded-full bg-wit-blue px-6 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-40"
         >
-          {nextLabel}
+          {nextLabel ?? t("Siguiente", "Next")}
         </button>
       </div>
     </div>
@@ -291,6 +321,7 @@ export function VideoWizard({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const { t } = useLanguage();
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState("");
@@ -358,7 +389,12 @@ export function VideoWizard({
         purpose?: string;
       } | null;
       if (!data?.ok || !data.title || !data.purpose) {
-        setIdeaError("Wit no pudo estructurar tu idea — no te preocupes, ya la copiamos abajo.");
+        setIdeaError(
+          t(
+            "Wit no pudo estructurar tu idea — no te preocupes, ya la copiamos abajo.",
+            "Wit couldn't structure your idea — don't worry, we already copied it below.",
+          ),
+        );
         setPurpose(ideaText.trim());
         setIdeaStage("manual");
         return;
@@ -367,7 +403,12 @@ export function VideoWizard({
       setPurpose(data.purpose);
       setIdeaStage("reviewing");
     } catch {
-      setIdeaError("Wit no pudo estructurar tu idea — no te preocupes, ya la copiamos abajo.");
+      setIdeaError(
+        t(
+          "Wit no pudo estructurar tu idea — no te preocupes, ya la copiamos abajo.",
+          "Wit couldn't structure your idea — don't worry, we already copied it below.",
+        ),
+      );
       setPurpose(ideaText.trim());
       setIdeaStage("manual");
     }
@@ -376,7 +417,12 @@ export function VideoWizard({
   async function handleSubmit() {
     setError(null);
     if (doneFiles.length === 0) {
-      setError("Sube al menos un video antes de enviar.");
+      setError(
+        t(
+          "Sube al menos un video antes de enviar.",
+          "Upload at least one video before submitting.",
+        ),
+      );
       return;
     }
     setSubmitting(true);
@@ -399,12 +445,22 @@ export function VideoWizard({
       });
       const data = (await res.json().catch(() => null)) as { ok: boolean } | null;
       if (!data?.ok) {
-        setError("No pudimos enviar tu solicitud. Intenta de nuevo.");
+        setError(
+          t(
+            "No pudimos enviar tu solicitud. Intenta de nuevo.",
+            "We couldn't send your request. Try again.",
+          ),
+        );
         return;
       }
       onCreated();
     } catch {
-      setError("No pudimos enviar tu solicitud. Intenta de nuevo.");
+      setError(
+        t(
+          "No pudimos enviar tu solicitud. Intenta de nuevo.",
+          "We couldn't send your request. Try again.",
+        ),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -416,7 +472,7 @@ export function VideoWizard({
         type="button"
         onClick={onClose}
         className="absolute right-5 top-5 z-10 rounded-full p-2 text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
-        aria-label="Cerrar"
+        aria-label={t("Cerrar", "Close")}
       >
         <X className="h-5 w-5" strokeWidth={2.25} />
       </button>
@@ -425,18 +481,21 @@ export function VideoWizard({
         <div className="mx-auto flex h-full max-w-lg flex-col px-5 py-8">
           <div className="mb-6">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-              Paso 1 de {total}
+              {t(`Paso 1 de ${total}`, `Step 1 of ${total}`)}
             </p>
             <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-wit-ink">
-              <VideoIcon className="h-6 w-6 text-wit-blue" strokeWidth={1.75} /> ¿Qué video quieres
-              crear hoy?
+              <VideoIcon className="h-6 w-6 text-wit-blue" strokeWidth={1.75} />{" "}
+              {t("¿Qué video quieres crear hoy?", "What video do you want to create today?")}
             </h2>
           </div>
 
           <div className="flex-1 space-y-4">
             <ChatBubble
               role="assistant"
-              text="Cuéntame la idea con tus palabras, como se te ocurra — puedes escribirla o hablarla con el micrófono. Yo le doy estructura."
+              text={t(
+                "Cuéntame la idea con tus palabras, como se te ocurra — puedes escribirla o hablarla con el micrófono. Yo le doy estructura.",
+                "Tell me your idea in your own words, however it comes to you — you can type it or dictate it with the microphone. I'll give it structure.",
+              )}
             />
             {ideaStage === "thinking" ? <ChatBubble role="assistant" typingDots /> : null}
             <div className="relative">
@@ -445,7 +504,10 @@ export function VideoWizard({
                 onChange={(e) => setIdeaText(e.target.value)}
                 disabled={ideaStage === "thinking"}
                 rows={5}
-                placeholder="Ej. Quiero un video mostrando el antes y después de un tratamiento, tono cercano, para Instagram..."
+                placeholder={t(
+                  "Ej. Quiero un video mostrando el antes y después de un tratamiento, tono cercano, para Instagram...",
+                  "E.g. I want a video showing the before and after of a treatment, warm tone, for Instagram...",
+                )}
                 className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 pr-14 text-sm outline-none focus:border-wit-blue disabled:opacity-60"
               />
               <MicButton
@@ -463,14 +525,14 @@ export function VideoWizard({
               onClick={onClose}
               className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
             >
-              ← Atrás
+              {t("← Atrás", "← Back")}
             </button>
             <button
               type="button"
               onClick={() => setIdeaStage("manual")}
               className="text-sm font-semibold text-wit-gray underline-offset-2 hover:text-wit-ink hover:underline"
             >
-              Prefiero escribirlo yo
+              {t("Prefiero escribirlo yo", "I'd rather write it myself")}
             </button>
             <button
               type="button"
@@ -478,7 +540,9 @@ export function VideoWizard({
               onClick={sendIdeaToWit}
               className="ml-auto rounded-full bg-wit-blue px-6 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-40"
             >
-              {ideaStage === "thinking" ? "Wit está pensando..." : "Continuar"}
+              {ideaStage === "thinking"
+                ? t("Wit está pensando...", "Wit is thinking...")
+                : t("Continuar", "Continue")}
             </button>
           </div>
         </div>
@@ -487,11 +551,21 @@ export function VideoWizard({
           qIndex={0}
           total={total}
           icon={VideoIcon}
-          question={ideaStage === "reviewing" ? "Esto entendió Wit" : "¿Qué video quieres crear?"}
+          question={
+            ideaStage === "reviewing"
+              ? t("Esto entendió Wit", "Here's what Wit understood")
+              : t("¿Qué video quieres crear?", "What video do you want to create?")
+          }
           subtitle={
             ideaStage === "reviewing"
-              ? "Ajusta el título o el propósito si algo no cuadra."
-              : "Un título corto y para qué lo vas a usar."
+              ? t(
+                  "Ajusta el título o el propósito si algo no cuadra.",
+                  "Adjust the title or the purpose if something's off.",
+                )
+              : t(
+                  "Un título corto y para qué lo vas a usar.",
+                  "A short title and what you're going to use it for.",
+                )
           }
           onBack={onClose}
           onNext={() => setStep(1)}
@@ -504,12 +578,17 @@ export function VideoWizard({
               className="flex items-center gap-1.5 text-xs font-semibold text-wit-blue hover:underline"
             >
               <Pencil className="h-3 w-3" strokeWidth={2.5} />
-              {ideaStage === "reviewing" ? "Volver a contarle la idea a Wit" : "Probar con Wit"}
+              {ideaStage === "reviewing"
+                ? t("Volver a contarle la idea a Wit", "Tell Wit the idea again")
+                : t("Probar con Wit", "Try with Wit")}
             </button>
             {ideaStage === "reviewing" ? (
               <ChatBubble
                 role="assistant"
-                text="Así quedó estructurada tu idea — la puedes ajustar antes de continuar."
+                text={t(
+                  "Así quedó estructurada tu idea — la puedes ajustar antes de continuar.",
+                  "Here's your idea structured — you can adjust it before continuing.",
+                )}
               />
             ) : null}
             {ideaError ? <p className="text-xs text-amber-600">{ideaError}</p> : null}
@@ -517,14 +596,17 @@ export function VideoWizard({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Título (ej. Promo de verano)"
+              placeholder={t("Título (ej. Promo de verano)", "Title (e.g. Summer promo)")}
               className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-sm outline-none focus:border-wit-blue"
             />
             <textarea
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
               rows={4}
-              placeholder="¿Qué quieres lograr con este video? ¿Qué debe transmitir?"
+              placeholder={t(
+                "¿Qué quieres lograr con este video? ¿Qué debe transmitir?",
+                "What do you want to achieve with this video? What should it convey?",
+              )}
               className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-sm outline-none focus:border-wit-blue"
             />
           </div>
@@ -534,8 +616,11 @@ export function VideoWizard({
           qIndex={1}
           total={total}
           icon={Sparkles}
-          question="¿Para qué plataforma es?"
-          subtitle="Elige dónde se va a publicar — así ajustamos el formato."
+          question={t("¿Para qué plataforma es?", "Which platform is it for?")}
+          subtitle={t(
+            "Elige dónde se va a publicar — así ajustamos el formato.",
+            "Choose where it'll be published — that way we adjust the format.",
+          )}
           onBack={() => setStep(0)}
           onNext={() => setStep(2)}
           nextDisabled={!platform}
@@ -559,7 +644,7 @@ export function VideoWizard({
                 <span
                   className={`text-xs font-bold ${platform === p.id ? "text-wit-blue" : "text-wit-ink"}`}
                 >
-                  {p.label}
+                  {t(p.label, p.en)}
                 </span>
               </button>
             ))}
@@ -568,7 +653,10 @@ export function VideoWizard({
             type="text"
             value={durationTarget}
             onChange={(e) => setDurationTarget(e.target.value)}
-            placeholder="Duración deseada (opcional, ej. 15-30 seg)"
+            placeholder={t(
+              "Duración deseada (opcional, ej. 15-30 seg)",
+              "Desired duration (optional, e.g. 15-30 sec)",
+            )}
             className="mt-4 w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-sm outline-none focus:border-wit-blue"
           />
         </VStep>
@@ -577,8 +665,11 @@ export function VideoWizard({
           qIndex={2}
           total={total}
           icon={Music2}
-          question="Tono y música"
-          subtitle="Opcional — ayúdanos a darle el ambiente correcto."
+          question={t("Tono y música", "Tone and music")}
+          subtitle={t(
+            "Opcional — ayúdanos a darle el ambiente correcto.",
+            "Optional — help us give it the right mood.",
+          )}
           onBack={() => setStep(1)}
           onNext={() => setStep(3)}
         >
@@ -587,14 +678,20 @@ export function VideoWizard({
               type="text"
               value={tone}
               onChange={(e) => setTone(e.target.value)}
-              placeholder="Tono (ej. divertido, elegante, cercano)"
+              placeholder={t(
+                "Tono (ej. divertido, elegante, cercano)",
+                "Tone (e.g. fun, elegant, warm)",
+              )}
               className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-sm outline-none focus:border-wit-blue"
             />
             <input
               type="text"
               value={musicMood}
               onChange={(e) => setMusicMood(e.target.value)}
-              placeholder="Referencia de música o ambiente (opcional)"
+              placeholder={t(
+                "Referencia de música o ambiente (opcional)",
+                "Music or mood reference (optional)",
+              )}
               className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-sm outline-none focus:border-wit-blue"
             />
           </div>
@@ -604,8 +701,11 @@ export function VideoWizard({
           qIndex={3}
           total={total}
           icon={Sparkles}
-          question="¿Quieres escenas generadas con IA?"
-          subtitle="Podemos resolver tomas específicas con IA cuando no tengas ese metraje."
+          question={t("¿Quieres escenas generadas con IA?", "Do you want AI-generated scenes?")}
+          subtitle={t(
+            "Podemos resolver tomas específicas con IA cuando no tengas ese metraje.",
+            "We can handle specific shots with AI when you don't have that footage.",
+          )}
           onBack={() => setStep(2)}
           onNext={() => setStep(4)}
           nextDisabled={wantsAiScenes && aiScenesNote.trim().length < 5}
@@ -618,14 +718,20 @@ export function VideoWizard({
                 onChange={(e) => setWantsAiScenes(e.target.checked)}
                 className="h-4 w-4 rounded border-wit-ink/30"
               />
-              Sí, quiero algunas escenas resueltas con IA
+              {t(
+                "Sí, quiero algunas escenas resueltas con IA",
+                "Yes, I want some scenes done with AI",
+              )}
             </label>
             {wantsAiScenes ? (
               <textarea
                 value={aiScenesNote}
                 onChange={(e) => setAiScenesNote(e.target.value)}
                 rows={4}
-                placeholder="Describe qué escenas o momentos quieres resueltos con IA"
+                placeholder={t(
+                  "Describe qué escenas o momentos quieres resueltos con IA",
+                  "Describe which scenes or moments you want done with AI",
+                )}
                 className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-sm outline-none focus:border-wit-blue"
               />
             ) : null}
@@ -636,18 +742,25 @@ export function VideoWizard({
           qIndex={4}
           total={total}
           icon={Upload}
-          question="Sube tu metraje"
-          subtitle="Puedes subir varios clips. Formatos MP4, MOV o WebM."
+          question={t("Sube tu metraje", "Upload your footage")}
+          subtitle={t(
+            "Puedes subir varios clips. Formatos MP4, MOV o WebM.",
+            "You can upload several clips. MP4, MOV, or WebM formats.",
+          )}
           onBack={() => setStep(3)}
           onNext={() => setStep(5)}
           nextDisabled={doneFiles.length === 0 || uploading}
-          nextLabel={uploading ? "Subiendo..." : "Siguiente"}
+          nextLabel={uploading ? t("Subiendo...", "Uploading...") : t("Siguiente", "Next")}
         >
           <div className="space-y-3">
             <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-wit-ink/25 px-4 py-8 text-center hover:border-wit-blue">
               <Upload className="h-6 w-6 text-wit-blue" strokeWidth={1.75} />
-              <span className="text-sm font-semibold text-wit-ink">Elegir video(s)</span>
-              <span className="text-xs text-wit-gray">Máximo 500 MB por archivo.</span>
+              <span className="text-sm font-semibold text-wit-ink">
+                {t("Elegir video(s)", "Choose video(s)")}
+              </span>
+              <span className="text-xs text-wit-gray">
+                {t("Máximo 500 MB por archivo.", "Maximum 500 MB per file.")}
+              </span>
               <input
                 type="file"
                 accept={VIDEO_ACCEPT}
@@ -679,7 +792,7 @@ export function VideoWizard({
                         strokeWidth={2.25}
                       />
                     ) : (
-                      <span className="shrink-0 font-bold text-red-600">Error</span>
+                      <span className="shrink-0 font-bold text-red-600">{t("Error", "Error")}</span>
                     )}
                   </li>
                 ))}
@@ -692,10 +805,12 @@ export function VideoWizard({
           qIndex={5}
           total={total}
           icon={CheckCircle2}
-          question="Revisa y envía"
+          question={t("Revisa y envía", "Review and submit")}
           onBack={() => setStep(4)}
           onNext={handleSubmit}
-          nextLabel={submitting ? "Enviando..." : "Enviar solicitud"}
+          nextLabel={
+            submitting ? t("Enviando...", "Sending...") : t("Enviar solicitud", "Submit request")
+          }
           nextDisabled={submitting}
         >
           <div className="space-y-3 text-sm">
@@ -704,27 +819,33 @@ export function VideoWizard({
               <p className="mt-1 text-wit-gray">{purpose}</p>
             </div>
             <p className="text-wit-gray">
-              Plataforma:{" "}
+              {t("Plataforma:", "Platform:")}{" "}
               <span className="font-semibold text-wit-ink">
-                {PLATFORM_OPTIONS.find((p) => p.id === platform)?.label}
+                {(() => {
+                  const p = PLATFORM_OPTIONS.find((p) => p.id === platform);
+                  return p ? t(p.label, p.en) : undefined;
+                })()}
               </span>
               {durationTarget ? ` · ${durationTarget}` : ""}
             </p>
             {tone || musicMood ? (
               <p className="text-wit-gray">
-                {tone ? `Tono: ${tone}` : ""}
+                {tone ? `${t("Tono", "Tone")}: ${tone}` : ""}
                 {tone && musicMood ? " · " : ""}
-                {musicMood ? `Música: ${musicMood}` : ""}
+                {musicMood ? `${t("Música", "Music")}: ${musicMood}` : ""}
               </p>
             ) : null}
             {wantsAiScenes ? (
               <p className="text-wit-gray">
-                Escenas con IA: <span className="font-semibold text-wit-ink">{aiScenesNote}</span>
+                {t("Escenas con IA:", "AI scenes:")}{" "}
+                <span className="font-semibold text-wit-ink">{aiScenesNote}</span>
               </p>
             ) : null}
             <p className="text-wit-gray">
-              {doneFiles.length} archivo{doneFiles.length === 1 ? "" : "s"} de video listo
-              {doneFiles.length === 1 ? "" : "s"} para enviar.
+              {t(
+                `${doneFiles.length} archivo${doneFiles.length === 1 ? "" : "s"} de video listo${doneFiles.length === 1 ? "" : "s"} para enviar.`,
+                `${doneFiles.length} video file${doneFiles.length === 1 ? "" : "s"} ready to send.`,
+              )}
             </p>
             {error ? <p className="text-red-600">{error}</p> : null}
           </div>
