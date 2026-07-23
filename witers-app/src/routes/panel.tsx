@@ -2121,11 +2121,11 @@ const CAMPAIGN_ICON = (
   </svg>
 );
 
-const CAMPAIGN_STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  ACTIVE: { label: "Activa", cls: "bg-emerald-50 text-emerald-700" },
-  PAUSED: { label: "Pausada", cls: "bg-amber-50 text-amber-700" },
-  DELETED: { label: "Eliminada", cls: "bg-red-50 text-red-600" },
-  ARCHIVED: { label: "Archivada", cls: "bg-wit-mist/60 text-wit-gray" },
+const CAMPAIGN_STATUS_LABEL: Record<string, { es: string; en: string; cls: string }> = {
+  ACTIVE: { es: "Activa", en: "Active", cls: "bg-emerald-50 text-emerald-700" },
+  PAUSED: { es: "Pausada", en: "Paused", cls: "bg-amber-50 text-amber-700" },
+  DELETED: { es: "Eliminada", en: "Deleted", cls: "bg-red-50 text-red-600" },
+  ARCHIVED: { es: "Archivada", en: "Archived", cls: "bg-wit-mist/60 text-wit-gray" },
 };
 
 type Campaign = {
@@ -2155,33 +2155,51 @@ function CampaignStat({ label, value }: { label: string; value: string }) {
 // while it's open, matching the "se actualiza sola, no empujado al
 // instante" explanation given for how Meta itself reports ad performance.
 function CampaignCard({ c }: { c: Campaign }) {
+  const { t } = useLanguage();
   const st = CAMPAIGN_STATUS_LABEL[c.metaStatus] ?? {
-    label: c.metaStatus,
+    es: c.metaStatus,
+    en: c.metaStatus,
     cls: "bg-wit-mist/60 text-wit-gray",
   };
   return (
     <div className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base font-bold text-wit-ink">{c.requestTitle}</h3>
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>{st.label}</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
+          {t(st.es, st.en)}
+        </span>
       </div>
       <p className="mt-1.5 text-xs text-wit-gray">
-        Presupuesto: ${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/día
+        {t(
+          `Presupuesto: $${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/día`,
+          `Budget: $${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/day`,
+        )}
       </p>
       {c.insightError ? (
-        <p className="mt-3 text-xs text-red-600">No pudimos leer sus métricas: {c.insightError}</p>
+        <p className="mt-3 text-xs text-red-600">
+          {t(
+            `No pudimos leer sus métricas: ${c.insightError}`,
+            `We couldn't read its metrics: ${c.insightError}`,
+          )}
+        </p>
       ) : (
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <CampaignStat
-            label="Gastado"
+            label={t("Gastado", "Spent")}
             value={`$${Number(c.spend ?? 0).toLocaleString("es-MX")}`}
           />
-          <CampaignStat label="Alcance" value={Number(c.reach ?? 0).toLocaleString("es-MX")} />
           <CampaignStat
-            label="Impresiones"
+            label={t("Alcance", "Reach")}
+            value={Number(c.reach ?? 0).toLocaleString("es-MX")}
+          />
+          <CampaignStat
+            label={t("Impresiones", "Impressions")}
             value={Number(c.impressions ?? 0).toLocaleString("es-MX")}
           />
-          <CampaignStat label="Clics" value={Number(c.clicks ?? 0).toLocaleString("es-MX")} />
+          <CampaignStat
+            label={t("Clics", "Clicks")}
+            value={Number(c.clicks ?? 0).toLocaleString("es-MX")}
+          />
         </div>
       )}
     </div>
@@ -2192,6 +2210,7 @@ function CampaignCard({ c }: { c: Campaign }) {
 // while it's open, matching the "se actualiza sola, no empujado al
 // instante" explanation given for how Meta itself reports ad performance.
 function CampanasPanel() {
+  const { t } = useLanguage();
   const [showArchived, setShowArchived] = useState(false);
   const campaigns = useQuery({
     queryKey: ["campaigns"],
@@ -2229,10 +2248,14 @@ function CampanasPanel() {
         <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
           {CAMPAIGN_ICON}
         </span>
-        <p className="text-lg font-bold text-wit-ink">Aún no tienes campañas</p>
+        <p className="text-lg font-bold text-wit-ink">
+          {t("Aún no tienes campañas", "You don't have any campaigns yet")}
+        </p>
         <p className="max-w-sm text-sm text-wit-gray">
-          Ve a una pieza terminada en "Mis solicitudes" y dale clic en "Quiero pautar" para crear tu
-          primera campaña.
+          {t(
+            'Ve a una pieza terminada en "Mis solicitudes" y dale clic en "Quiero pautar" para crear tu primera campaña.',
+            'Go to a finished piece in "My requests" and click "I want to run ads" to create your first campaign.',
+          )}
         </p>
       </div>
     );
@@ -2245,9 +2268,14 @@ function CampanasPanel() {
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
             {CAMPAIGN_ICON}
           </span>
-          <p className="text-lg font-bold text-wit-ink">No tienes campañas activas</p>
+          <p className="text-lg font-bold text-wit-ink">
+            {t("No tienes campañas activas", "You don't have any active campaigns")}
+          </p>
           <p className="max-w-sm text-sm text-wit-gray">
-            Tus campañas anteriores quedaron archivadas — puedes verlas abajo.
+            {t(
+              "Tus campañas anteriores quedaron archivadas — puedes verlas abajo.",
+              "Your previous campaigns were archived — you can see them below.",
+            )}
           </p>
         </div>
       ) : (
@@ -2260,8 +2288,10 @@ function CampanasPanel() {
             onClick={() => setShowArchived((v) => !v)}
             className="flex w-full items-center justify-between rounded-2xl border border-wit-ink/10 bg-white px-5 py-3 text-sm font-semibold text-wit-gray hover:border-wit-blue/40 hover:text-wit-blue"
           >
-            Archivadas ({archivedRows.length})
-            <span className="text-xs">{showArchived ? "Ocultar ▲" : "Ver ▼"}</span>
+            {t(`Archivadas (${archivedRows.length})`, `Archived (${archivedRows.length})`)}
+            <span className="text-xs">
+              {showArchived ? t("Ocultar ▲", "Hide ▲") : t("Ver ▼", "View ▼")}
+            </span>
           </button>
           {showArchived ? (
             <div className="mt-4 space-y-4">
