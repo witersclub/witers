@@ -29,21 +29,17 @@ export const Route = createFileRoute("/api/admin/activate-membership")({
           .prepare("SELECT id, status, plan, activated_at FROM memberships WHERE user_id = ?1")
           .bind(parsed.data.userId)
           .first<{ id: string; status: string; plan: string; activated_at: string | null }>();
-        // Already on this exact plan — nothing to do. Already active on a
-        // *different* plan is a legitimate admin-side plan change (e.g. the
-        // client asked to switch, or paid for the new plan outside the
-        // app), not a duplicate activation, so it falls through to the same
-        // UPDATE below — same distinction /api/checkout.ts makes for the
-        // client-facing upgrade flow, just free instead of charged since an
-        // admin is doing it directly.
-        if (existing?.status === "active" && existing.plan === plan.id) {
-          return json({ ok: false, error: "ya_activa" }, { status: 409 });
-        }
         const isPlanChange = existing?.status === "active" && existing.plan !== plan.id;
+        const alreadyOnPlan = existing?.status === "active" && existing.plan === plan.id;
         const price = currentPriceFor(plan, existing?.activated_at ?? null);
 
         const membershipId = existing?.id ?? crypto.randomUUID();
         if (existing) {
+          // Always resync quotas here, even when the plan isn't changing —
+          // a quota column added after this membership was last activated
+          // (e.g. carousel_requests_quota) would otherwise stay stuck at
+          // its schema default forever, since nothing else re-derives it
+          // from the plan. Re-running this is harmless/idempotent.
           await db()
             .prepare(
               `UPDATE memberships
@@ -60,6 +56,12 @@ export const Route = createFileRoute("/api/admin/activate-membership")({
               plan.carouselRequestsQuota,
             )
             .run();
+          // Already on this exact plan — quotas are now resynced above,
+          // but there's no plan change or payment to record, so stop here
+          // rather than logging a duplicate $0 "activation" payment.
+          if (alreadyOnPlan) {
+            return json({ ok: true, resynced: true });
+          }
         } else {
           await db()
             .prepare(
