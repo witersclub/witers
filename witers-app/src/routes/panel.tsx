@@ -67,6 +67,12 @@ import {
   VideoWizard,
   type VideoRequestRow,
 } from "../components/witers/video-requests";
+import {
+  CarouselLandingScreen,
+  CarouselRequestList,
+  CarouselWizard,
+  type CarouselRequestRow,
+} from "../components/witers/carousel-requests";
 import { IMAGE_PACKS } from "../lib/image-packs";
 import { getPlan } from "../lib/membership-plans";
 import { consumeTeaserAnswers } from "../lib/teaser-handoff";
@@ -199,7 +205,9 @@ function Panel() {
   // the same "hacer solicitud / mis solicitudes" shape, not two separate
   // top-level areas — a client thinks of both as "creatividad", just a
   // different medium.
-  const [creativeMode, setCreativeMode] = useState<"imagenes" | "videos">("imagenes");
+  const [creativeMode, setCreativeMode] = useState<"imagenes" | "videos" | "carruseles">(
+    "imagenes",
+  );
   // A separate top-level view, not a 4th SectionNav pill — account settings
   // aren't a "work area" like Creatividad/Activos/Campañas, they live behind
   // the avatar menu instead, same as most account dashboards.
@@ -211,6 +219,8 @@ function Panel() {
   const [tab, setTab] = useState<"solicitudes" | "nueva">("nueva");
   const [videoTab, setVideoTab] = useState<"solicitudes" | "nueva">("nueva");
   const [videoWizardOpen, setVideoWizardOpen] = useState(false);
+  const [carouselTab, setCarouselTab] = useState<"solicitudes" | "nueva">("nueva");
+  const [carouselWizardOpen, setCarouselWizardOpen] = useState(false);
   // The chat is a takeover of the content area, not a third tab — a totally
   // new client (no requests yet) lands straight on it; a returning one opens
   // it with the glowing "Chat IA" button and closes it (or taps a tab) to
@@ -260,6 +270,17 @@ function Panel() {
       const res = await fetch("/api/video-requests", { credentials: "include" });
       if (!res.ok) return { ok: false, videoRequests: [] as VideoRequestRow[] };
       return (await res.json()) as { ok: boolean; videoRequests: VideoRequestRow[] };
+    },
+    enabled: Boolean(me.data?.ok),
+    refetchInterval: 30_000,
+  });
+
+  const carouselRequests = useQuery({
+    queryKey: ["carousel-requests"],
+    queryFn: async () => {
+      const res = await fetch("/api/carousel-requests", { credentials: "include" });
+      if (!res.ok) return { ok: false, carouselRequests: [] as CarouselRequestRow[] };
+      return (await res.json()) as { ok: boolean; carouselRequests: CarouselRequestRow[] };
     },
     enabled: Boolean(me.data?.ok),
     refetchInterval: 30_000,
@@ -358,6 +379,7 @@ function Panel() {
     : 0;
   const rows = requests.data?.requests ?? [];
   const videoRows = videoRequests.data?.videoRequests ?? [];
+  const carouselRows = carouselRequests.data?.carouselRequests ?? [];
   // "Impact panel" stats — closes the loop from pedir → pieza → campaña →
   // resultado, and doubles as the client's own history read back as an
   // achievement instead of a task list. All computed from data already
@@ -753,6 +775,17 @@ function Panel() {
                   >
                     Videos
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreativeMode("carruseles")}
+                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+                      creativeMode === "carruseles"
+                        ? "bg-white text-wit-ink shadow-sm"
+                        : "text-wit-gray hover:text-wit-ink"
+                    }`}
+                  >
+                    Carruseles
+                  </button>
                 </div>
 
                 {creativeMode === "imagenes" ? (
@@ -787,7 +820,7 @@ function Panel() {
                       )}
                     </div>
                   </>
-                ) : (
+                ) : creativeMode === "videos" ? (
                   <>
                     <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
                       <button
@@ -815,6 +848,40 @@ function Panel() {
                         />
                       ) : (
                         <VideoRequestList rows={videoRows} loading={videoRequests.isLoading} />
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+                      <button
+                        type="button"
+                        onClick={() => setCarouselTab("nueva")}
+                        className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+                      >
+                        🖼️ Nuevo carrusel
+                      </button>
+                      <PanelTab
+                        active={carouselTab === "solicitudes"}
+                        onClick={() => setCarouselTab("solicitudes")}
+                        label="Mis solicitudes"
+                        count={carouselRows.length}
+                      />
+                    </div>
+
+                    <div className="mt-8">
+                      {carouselTab === "nueva" ? (
+                        <CarouselLandingScreen
+                          active={active}
+                          quotaUsed={membership?.carousel_requests_used ?? 0}
+                          quotaTotal={membership?.carousel_requests_quota ?? 0}
+                          onStart={() => setCarouselWizardOpen(true)}
+                        />
+                      ) : (
+                        <CarouselRequestList
+                          rows={carouselRows}
+                          loading={carouselRequests.isLoading}
+                        />
                       )}
                     </div>
                   </>
@@ -907,6 +974,32 @@ function Panel() {
                   void qc.invalidateQueries({ queryKey: ["me"] });
                   setVideoWizardOpen(false);
                   setVideoTab("solicitudes");
+                }}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {carouselWizardOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-50 bg-white">
+              <CarouselWizard
+                disabledReason={
+                  !active
+                    ? "Tu membresía no está activa todavía."
+                    : (membership?.carousel_requests_quota ?? 0) -
+                          (membership?.carousel_requests_used ?? 0) <=
+                        0
+                      ? "Ya usaste todos tus carruseles disponibles este mes."
+                      : null
+                }
+                onClose={() => setCarouselWizardOpen(false)}
+                onCreated={() => {
+                  void qc.invalidateQueries({ queryKey: ["carousel-requests"] });
+                  void qc.invalidateQueries({ queryKey: ["me"] });
+                  setCarouselWizardOpen(false);
+                  setCarouselTab("solicitudes");
                 }}
               />
             </div>,

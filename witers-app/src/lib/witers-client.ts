@@ -14,6 +14,8 @@ export type Me = {
     bonus_requests_quota: number;
     video_requests_quota: number;
     video_requests_used: number;
+    carousel_requests_quota: number;
+    carousel_requests_used: number;
     activated_at: string | null;
   } | null;
 };

@@ -15,6 +15,7 @@ export type MembershipPlan = {
   precioRegular: number;
   requestsQuota: number;
   videoRequestsQuota: number;
+  carouselRequestsQuota: number;
   destacada?: boolean;
   beneficios: string[];
 };
@@ -34,6 +35,7 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
     precioRegular: 8571.29,
     requestsQuota: 10,
     videoRequestsQuota: 0,
+    carouselRequestsQuota: 0,
     beneficios: [
       "10 solicitudes de diseño al mes",
       "Hasta 2 revisiones por diseño",
@@ -53,6 +55,7 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
     precioRegular: 18571.29,
     requestsQuota: 15,
     videoRequestsQuota: 2,
+    carouselRequestsQuota: 2,
     destacada: true,
     beneficios: [
       "15 solicitudes de diseño al mes",
@@ -76,6 +79,7 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
     precioRegular: 24285.57,
     requestsQuota: 20,
     videoRequestsQuota: 4,
+    carouselRequestsQuota: 4,
     beneficios: [
       "20 solicitudes de diseño al mes",
       "Hasta 3 revisiones por diseño",

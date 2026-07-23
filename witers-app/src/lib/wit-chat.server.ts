@@ -35,6 +35,20 @@ export type WitChatResult =
   | { ok: true; kind: "done"; fields: PieceDetails }
   | { ok: false; error: string };
 
+export type CarouselSlideDraft = { title: string; brief: string };
+
+export type CarouselDetails = {
+  title: string;
+  aspectRatio: string;
+  slides: CarouselSlideDraft[]; // siempre 4, en orden (lámina 1-4)
+};
+
+export type WitCarouselChatResult =
+  | { ok: true; kind: "message"; text: string }
+  | { ok: true; kind: "ask_aspect_ratio" }
+  | { ok: true; kind: "done"; details: CarouselDetails }
+  | { ok: false; error: string };
+
 function buildSystemPrompt(brand: WitBrandContext): string {
   const brandLines = [
     `Nombre de la marca: ${brand.companyName}.`,
@@ -116,6 +130,74 @@ function buildSystemPrompt(brand: WitBrandContext): string {
   );
 }
 
+function buildCarouselSystemPrompt(brand: WitBrandContext): string {
+  const brandLines = [
+    `Nombre de la marca: ${brand.companyName}.`,
+    brand.brandColors
+      ? `Colores de marca ya definidos: ${brand.brandColors} (nunca preguntes por colores, ya están fijos).`
+      : "La marca no tiene colores fijos todavía: puedes sugerir o elegir colores acordes al negocio si hace falta, sin preguntarle al cliente.",
+    brand.businessType
+      ? `Categoría de negocio: ${brand.businessType}.`
+      : "No se especificó categoría de negocio.",
+    brand.hasLogo
+      ? "El cliente ya tiene un logotipo oficial registrado — no lo pidas ni preguntes por él."
+      : "El cliente no tiene logotipo registrado — no lo pidas ni preguntes por él en esta conversación.",
+  ];
+
+  return (
+    "Eres Wit, el director creativo de IA de WITERS, una agencia de branding por membresía. " +
+    "Estás ayudando a un cliente a crear un CARRUSEL de exactamente 4 láminas para redes " +
+    "sociales (Instagram/Facebook) — una secuencia ordenada de 4 imágenes que se deslizan una " +
+    "tras otra, no 4 piezas sueltas. Es una conversación real, cálida y natural, no un " +
+    "formulario: ve una idea a la vez y sé breve (1-3 frases por turno).\n\n" +
+    "En cuanto el cliente te diga por primera vez de qué quiere el carrusel (aunque sea en " +
+    "pocas palabras), tu siguiente mensaje debe presentarle AL MENOS TRES conceptos de carrusel " +
+    "distintos entre sí (cada uno con su propio ángulo/narrativa de 4 láminas), muy breves " +
+    "(una frase cada uno), usando el contexto de la marca. Ciérralo preguntando cuál le gusta " +
+    "más o si prefiere algo distinto.\n\n" +
+    "Ya conoces estos datos de la marca del cliente, así que NUNCA los preguntes:\n" +
+    brandLines.join("\n") +
+    "\n\n" +
+    "Una vez el cliente elige un concepto, tu trabajo es reunir suficiente contexto para " +
+    "redactar las 4 láminas de forma ACERTADA y coherente entre sí — no te conformes con lo " +
+    "mínimo. Si lo que el cliente dio es vago o genérico (por ejemplo 'un carrusel de tips' sin " +
+    "decir de qué, o 'promociona mi negocio' sin decir qué producto o oferta), HAZ preguntas de " +
+    "seguimiento concretas antes de redactar las láminas — nunca inventes datos específicos del " +
+    "negocio (productos, precios, cifras) que el cliente no te haya dado. Cuando el tema ya es " +
+    "claro y tienes lo esencial, decide tú mismo con criterio de neuromarketing y diseño " +
+    "persuasivo el estilo visual, el público objetivo y el ángulo de cada lámina.\n\n" +
+    "Estructura narrativa esperada de las 4 láminas (guíate por esto salvo que el concepto pida " +
+    "algo distinto): lámina 1 = gancho que detiene el scroll y presenta el tema; láminas 2 y 3 = " +
+    "desarrollo del contenido (cada una con su propio punto, no repetitivas entre sí); lámina 4 = " +
+    "cierre con llamado a la acción. Cada lámina necesita su propio brief autosuficiente — un " +
+    "diseñador que solo lea el brief de una lámina, sin ver las otras, debe entender exactamente " +
+    "qué debe mostrar/decir esa lámina — pero las 4 deben leerse como una sola pieza narrativa, " +
+    "no como 4 piezas sin relación.\n\n" +
+    "Reglas de seguridad, nunca las rompas:\n" +
+    "- NUNCA inventes precios, descuentos, cifras de negocio o datos concretos que el cliente no " +
+    "haya mencionado explícitamente. Si el concepto los necesita, pregúntalos antes de redactar.\n" +
+    "- NUNCA inventes un texto legal u obligatorio que deba aparecer en alguna lámina.\n" +
+    "- Nunca menciones limitaciones técnicas, que eres una IA, ni te disculpes por no poder " +
+    "hacer algo — mantente siempre en el rol de director creativo.\n\n" +
+    "Cuando sea el momento adecuado de preguntar el formato/proporción del carrusel (aplica a " +
+    "las 4 láminas por igual — cuadrado, vertical, etc.), NO anuncies primero que vas a " +
+    "preguntarlo: llama directamente a la función show_aspect_ratio_picker en ese mismo turno. " +
+    "La interfaz le mostrará al cliente opciones visuales, y su elección aparecerá como su " +
+    "siguiente mensaje.\n\n" +
+    "IMPORTANTE: SIEMPRE debes llamar a show_aspect_ratio_picker antes de submit_carousel_details, " +
+    "sin excepción, incluso si el cliente ya mencionó un formato — nunca lo asumas por tu cuenta, " +
+    "siempre debe elegirlo él mismo en el selector visual.\n\n" +
+    "En cuanto tengas contexto suficiente para las 4 láminas y el formato ya elegido por el " +
+    "cliente en el selector visual, llama directamente a submit_carousel_details con el título " +
+    "del carrusel, el formato, y las 4 láminas en orden (título y brief cada una), todo en " +
+    "español, en ese mismo turno. No sigas conversando después de eso.\n\n" +
+    "Regla importante sobre estas dos funciones: NUNCA anuncies con texto que vas a mostrar el " +
+    "formato o el resumen final, ni preguntes '¿quieres que continúe?' antes de llamarlas — el " +
+    "selector visual y la tarjeta de resumen que aparecen después de la función SON el punto de " +
+    "confirmación."
+  );
+}
+
 const TOOLS = [
   {
     type: "function",
@@ -168,6 +250,52 @@ const TOOLS = [
           },
         },
         required: ["title", "pieceBrief", "aspectRatio"],
+      },
+    },
+  },
+];
+
+const CAROUSEL_TOOLS = [
+  TOOLS[0], // show_aspect_ratio_picker, sin cambios
+  {
+    type: "function",
+    function: {
+      name: "submit_carousel_details",
+      description:
+        "Llama a esto solo cuando ya tengas las 4 láminas del carrusel listas y coherentes entre sí, incluyendo el formato que el cliente ya eligió en el selector visual.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description: "Título corto para el carrusel completo (máx. 8 palabras).",
+          },
+          aspectRatio: {
+            type: "string",
+            enum: ["1:1", "4:3", "3:4", "16:9", "9:16"],
+            description:
+              "El formato que el cliente eligió en el selector visual, aplica a las 4 láminas.",
+          },
+          slides: {
+            type: "array",
+            minItems: 4,
+            maxItems: 4,
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Título corto de esta lámina." },
+                brief: {
+                  type: "string",
+                  description:
+                    "Qué debe mostrar/decir esta lámina específica — autosuficiente para un diseñador que solo vea esta lámina, pero coherente con la narrativa de las otras 3.",
+                },
+              },
+              required: ["title", "brief"],
+            },
+            description: "Las 4 láminas del carrusel, en orden (lámina 1 primero).",
+          },
+        },
+        required: ["title", "aspectRatio", "slides"],
       },
     },
   },
@@ -285,6 +413,95 @@ export async function runWitChat(
           aspectRatio: args.aspectRatio.trim(),
           promoPrice: args.promoPrice?.trim() || "",
           requiredText: args.requiredText?.trim() || "",
+        },
+      };
+    } catch {
+      return { ok: false, error: "respuesta_invalida" };
+    }
+  }
+
+  const text = message.content?.trim();
+  if (!text) return { ok: false, error: "sin_resultado" };
+  if (looksLikeAspectRatioAnnouncement(text)) {
+    return { ok: true, kind: "ask_aspect_ratio" };
+  }
+  return { ok: true, kind: "message", text };
+}
+
+export async function runWitCarouselChat(
+  history: WitChatMessage[],
+  brand: WitBrandContext,
+): Promise<WitCarouselChatResult> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { ok: false, error: "falta_openai_api_key" };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60_000);
+  let response: Response;
+  try {
+    response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: OPENAI_TEXT_MODEL,
+        temperature: 0.6,
+        messages: [{ role: "system", content: buildCarouselSystemPrompt(brand) }, ...history],
+        tools: CAROUSEL_TOOLS,
+        tool_choice: "auto",
+      }),
+    });
+  } catch {
+    return { ok: false, error: "tiempo_agotado" };
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    console.info("[wit-chat] openai failed (carousel)", response.status, detail.slice(0, 500));
+    return { ok: false, error: "openai_error" };
+  }
+
+  const body = (await response.json()) as OpenAiChatResponse;
+  const message = body.choices?.[0]?.message;
+  if (!message) return { ok: false, error: "sin_resultado" };
+
+  const toolCall = message.tool_calls?.[0];
+  if (toolCall?.function.name === "show_aspect_ratio_picker") {
+    return { ok: true, kind: "ask_aspect_ratio" };
+  }
+  if (toolCall?.function.name === "submit_carousel_details") {
+    try {
+      const args = JSON.parse(toolCall.function.arguments) as Partial<CarouselDetails>;
+      // Same guardrail as the image flow: only trust a format the client
+      // actually clicked in the visual picker, never one the model typed.
+      const pickerWasUsed = history.some(
+        (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
+      );
+      if (
+        !pickerWasUsed ||
+        !args.aspectRatio ||
+        !VALID_ASPECT_RATIOS.has(args.aspectRatio.trim())
+      ) {
+        return { ok: true, kind: "ask_aspect_ratio" };
+      }
+      const slides = (args.slides ?? [])
+        .map((s) => ({ title: s.title?.trim() || "", brief: s.brief?.trim() || "" }))
+        .filter((s) => s.brief);
+      if (slides.length !== 4) {
+        return { ok: false, error: "respuesta_invalida" };
+      }
+      return {
+        ok: true,
+        kind: "done",
+        details: {
+          title: args.title?.trim() || "",
+          aspectRatio: args.aspectRatio.trim(),
+          slides,
         },
       };
     } catch {

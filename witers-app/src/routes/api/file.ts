@@ -98,6 +98,25 @@ export const Route = createFileRoute("/api/file")({
           if (row && member) {
             allowed = row.user_id === member.id;
           }
+        } else if (key.startsWith("carousel-deliveries/")) {
+          // carousel-deliveries/{carouselRequestId}/{slideIndex}-... — same
+          // "owner or staff" rule, against carousel_slides joined to its
+          // parent carousel_requests. A slide can be re-delivered (its
+          // delivered_key changes when a revision is uploaded), so this
+          // only ever matches the current key for that slide, same as the
+          // video case.
+          const carouselRequestId = key.split("/")[1] ?? "";
+          const row = await db()
+            .prepare(
+              `SELECT c.user_id FROM carousel_slides s
+               JOIN carousel_requests c ON c.id = s.carousel_request_id
+               WHERE c.id = ?1 AND s.delivered_key = ?2`,
+            )
+            .bind(carouselRequestId, key)
+            .first<{ user_id: string }>();
+          if (row && member) {
+            allowed = row.user_id === member.id;
+          }
         }
 
         if (!allowed) {

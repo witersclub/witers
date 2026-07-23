@@ -210,6 +210,79 @@ export async function notifyStaffNewVideoRequest(opts: {
   });
 }
 
+export async function notifyStaffNewCarouselRequest(opts: {
+  title: string;
+  clientName: string;
+  companyName: string;
+  panelUrl: string;
+}): Promise<void> {
+  await sendMail({
+    to: STAFF_EMAIL,
+    subject: `Nueva solicitud de carrusel: ${opts.title}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="color: #1450ff;">Nueva solicitud de carrusel</h2>
+        <p><strong>${escapeHtml(opts.clientName)}</strong> (${escapeHtml(opts.companyName)}) envió una nueva solicitud de carrusel (4 láminas):</p>
+        <p style="font-size:16px;"><strong>${escapeHtml(opts.title)}</strong></p>
+        <p style="margin: 24px 0;">
+          <a href="${opts.panelUrl}" style="background:#1450ff;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+            Ver solicitud
+          </a>
+        </p>
+      </div>
+    `,
+  });
+}
+
+export function carouselRequestCompletedEmail(opts: { title: string; requestUrl: string }): {
+  subject: string;
+  html: string;
+} {
+  return {
+    subject: "Tu carrusel ya está listo",
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="color: #1450ff;">¡Tu carrusel está listo!</h2>
+        <p>Hola,</p>
+        <p>Las 4 láminas de tu carrusel <strong>"${escapeHtml(opts.title)}"</strong> ya fueron entregadas por nuestro equipo.</p>
+        <p>Ingresa a tu panel de WITERS para revisarlas, descargarlas, o pedir un cambio en alguna lámina si algo no quedó como esperabas.</p>
+        <p style="margin: 24px 0;">
+          <a href="${opts.requestUrl}" style="background:#1450ff;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+            Ver mi carrusel
+          </a>
+        </p>
+        <p style="color:#666;font-size:13px;">— El equipo de WITERS</p>
+      </div>
+    `,
+  };
+}
+
+export async function notifyStaffCarouselChangeRequested(opts: {
+  title: string;
+  clientName: string;
+  slideLabel: string;
+  message: string;
+  panelUrl: string;
+}): Promise<void> {
+  await sendMail({
+    to: STAFF_EMAIL,
+    subject: `Cambio solicitado en carrusel: ${opts.title}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="color: #1450ff;">Cambio solicitado en un carrusel</h2>
+        <p><strong>${escapeHtml(opts.clientName)}</strong> pidió un cambio en <strong>${escapeHtml(opts.slideLabel)}</strong> de:</p>
+        <p style="font-size:16px;"><strong>${escapeHtml(opts.title)}</strong></p>
+        <p style="background:#f2f5ff;border-radius:8px;padding:12px 16px;">${escapeHtml(opts.message)}</p>
+        <p style="margin: 24px 0;">
+          <a href="${opts.panelUrl}" style="background:#1450ff;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+            Ver solicitud
+          </a>
+        </p>
+      </div>
+    `,
+  });
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

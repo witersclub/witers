@@ -42,12 +42,15 @@ import { Route as ApiGenerateAdCopyRouteImport } from './routes/api/generate-ad-
 import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
+import { Route as ApiCarouselRequestsRouteImport } from './routes/api/carousel-requests'
+import { Route as ApiCarouselRequestChangeRouteImport } from './routes/api/carousel-request-change'
 import { Route as ApiCampaignsCreateRouteImport } from './routes/api/campaigns-create'
 import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
 import { Route as ApiBrandProfileColorsRouteImport } from './routes/api/brand-profile-colors'
 import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
 import { Route as ApiWitChatRouteImport } from './routes/api/wit/chat'
+import { Route as ApiWitCarouselChatRouteImport } from './routes/api/wit/carousel-chat'
 import { Route as ApiStripeCreatePaymentIntentRouteImport } from './routes/api/stripe/create-payment-intent'
 import { Route as ApiPublicShowcaseImageRouteImport } from './routes/api/public/showcase-image'
 import { Route as ApiPublicShowcaseRouteImport } from './routes/api/public/showcase'
@@ -59,7 +62,9 @@ import { Route as ApiOnboardingCompleteRouteImport } from './routes/api/onboardi
 import { Route as ApiDesignerVideoRequestsRouteImport } from './routes/api/designer/video-requests'
 import { Route as ApiDesignerRequestsRouteImport } from './routes/api/designer/requests'
 import { Route as ApiDesignerClaimVideoRouteImport } from './routes/api/designer/claim-video'
+import { Route as ApiDesignerClaimCarouselRouteImport } from './routes/api/designer/claim-carousel'
 import { Route as ApiDesignerClaimRouteImport } from './routes/api/designer/claim'
+import { Route as ApiDesignerCarouselRequestsRouteImport } from './routes/api/designer/carousel-requests'
 import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
@@ -74,6 +79,7 @@ import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overvie
 import { Route as ApiAdminGrantRequestsRouteImport } from './routes/api/admin/grant-requests'
 import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
 import { Route as ApiAdminDeliverVideoRouteImport } from './routes/api/admin/deliver-video'
+import { Route as ApiAdminDeliverCarouselSlideRouteImport } from './routes/api/admin/deliver-carousel-slide'
 import { Route as ApiAdminDeliverRouteImport } from './routes/api/admin/deliver'
 import { Route as ApiAdminDeleteRequestRouteImport } from './routes/api/admin/delete-request'
 import { Route as ApiAdminDeleteDiscountCodeRouteImport } from './routes/api/admin/delete-discount-code'
@@ -254,6 +260,17 @@ const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
   path: '/api/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCarouselRequestsRoute = ApiCarouselRequestsRouteImport.update({
+  id: '/api/carousel-requests',
+  path: '/api/carousel-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCarouselRequestChangeRoute =
+  ApiCarouselRequestChangeRouteImport.update({
+    id: '/api/carousel-request-change',
+    path: '/api/carousel-request-change',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiCampaignsCreateRoute = ApiCampaignsCreateRouteImport.update({
   id: '/api/campaigns-create',
   path: '/api/campaigns-create',
@@ -282,6 +299,11 @@ const ApiBrandProfileRoute = ApiBrandProfileRouteImport.update({
 const ApiWitChatRoute = ApiWitChatRouteImport.update({
   id: '/api/wit/chat',
   path: '/api/wit/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWitCarouselChatRoute = ApiWitCarouselChatRouteImport.update({
+  id: '/api/wit/carousel-chat',
+  path: '/api/wit/carousel-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStripeCreatePaymentIntentRoute =
@@ -341,11 +363,23 @@ const ApiDesignerClaimVideoRoute = ApiDesignerClaimVideoRouteImport.update({
   path: '/api/designer/claim-video',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDesignerClaimCarouselRoute =
+  ApiDesignerClaimCarouselRouteImport.update({
+    id: '/api/designer/claim-carousel',
+    path: '/api/designer/claim-carousel',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiDesignerClaimRoute = ApiDesignerClaimRouteImport.update({
   id: '/api/designer/claim',
   path: '/api/designer/claim',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDesignerCarouselRequestsRoute =
+  ApiDesignerCarouselRequestsRouteImport.update({
+    id: '/api/designer/carousel-requests',
+    path: '/api/designer/carousel-requests',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAuthRegisterRoute = ApiAuthRegisterRouteImport.update({
   id: '/api/auth/register',
   path: '/api/auth/register',
@@ -419,6 +453,12 @@ const ApiAdminDeliverVideoRoute = ApiAdminDeliverVideoRouteImport.update({
   path: '/api/admin/deliver-video',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminDeliverCarouselSlideRoute =
+  ApiAdminDeliverCarouselSlideRouteImport.update({
+    id: '/api/admin/deliver-carousel-slide',
+    path: '/api/admin/deliver-carousel-slide',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminDeliverRoute = ApiAdminDeliverRouteImport.update({
   id: '/api/admin/deliver',
   path: '/api/admin/deliver',
@@ -512,6 +552,8 @@ export interface FileRoutesByFullPath {
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/campaigns-create': typeof ApiCampaignsCreateRoute
+  '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
+  '/api/carousel-requests': typeof ApiCarouselRequestsRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -543,6 +585,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/delete-discount-code': typeof ApiAdminDeleteDiscountCodeRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
+  '/api/admin/deliver-carousel-slide': typeof ApiAdminDeliverCarouselSlideRoute
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
@@ -557,7 +600,9 @@ export interface FileRoutesByFullPath {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/designer/carousel-requests': typeof ApiDesignerCarouselRequestsRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
+  '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
   '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
   '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
@@ -569,6 +614,7 @@ export interface FileRoutesByFullPath {
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
+  '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
 }
 export interface FileRoutesByTo {
@@ -592,6 +638,8 @@ export interface FileRoutesByTo {
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/campaigns-create': typeof ApiCampaignsCreateRoute
+  '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
+  '/api/carousel-requests': typeof ApiCarouselRequestsRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -623,6 +671,7 @@ export interface FileRoutesByTo {
   '/api/admin/delete-discount-code': typeof ApiAdminDeleteDiscountCodeRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
+  '/api/admin/deliver-carousel-slide': typeof ApiAdminDeliverCarouselSlideRoute
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
@@ -637,7 +686,9 @@ export interface FileRoutesByTo {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/designer/carousel-requests': typeof ApiDesignerCarouselRequestsRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
+  '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
   '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
   '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
@@ -649,6 +700,7 @@ export interface FileRoutesByTo {
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
+  '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
 }
 export interface FileRoutesById {
@@ -673,6 +725,8 @@ export interface FileRoutesById {
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/campaigns-create': typeof ApiCampaignsCreateRoute
+  '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
+  '/api/carousel-requests': typeof ApiCarouselRequestsRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
   '/api/file': typeof ApiFileRoute
@@ -704,6 +758,7 @@ export interface FileRoutesById {
   '/api/admin/delete-discount-code': typeof ApiAdminDeleteDiscountCodeRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
+  '/api/admin/deliver-carousel-slide': typeof ApiAdminDeliverCarouselSlideRoute
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
@@ -718,7 +773,9 @@ export interface FileRoutesById {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/designer/carousel-requests': typeof ApiDesignerCarouselRequestsRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
+  '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
   '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
   '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
@@ -730,6 +787,7 @@ export interface FileRoutesById {
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
+  '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
 }
 export interface FileRouteTypes {
@@ -755,6 +813,8 @@ export interface FileRouteTypes {
     | '/api/brand-profile-manual'
     | '/api/campaigns'
     | '/api/campaigns-create'
+    | '/api/carousel-request-change'
+    | '/api/carousel-requests'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -786,6 +846,7 @@ export interface FileRouteTypes {
     | '/api/admin/delete-discount-code'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
+    | '/api/admin/deliver-carousel-slide'
     | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
@@ -800,7 +861,9 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/designer/carousel-requests'
     | '/api/designer/claim'
+    | '/api/designer/claim-carousel'
     | '/api/designer/claim-video'
     | '/api/designer/requests'
     | '/api/designer/video-requests'
@@ -812,6 +875,7 @@ export interface FileRouteTypes {
     | '/api/public/showcase'
     | '/api/public/showcase-image'
     | '/api/stripe/create-payment-intent'
+    | '/api/wit/carousel-chat'
     | '/api/wit/chat'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -835,6 +899,8 @@ export interface FileRouteTypes {
     | '/api/brand-profile-manual'
     | '/api/campaigns'
     | '/api/campaigns-create'
+    | '/api/carousel-request-change'
+    | '/api/carousel-requests'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -866,6 +932,7 @@ export interface FileRouteTypes {
     | '/api/admin/delete-discount-code'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
+    | '/api/admin/deliver-carousel-slide'
     | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
@@ -880,7 +947,9 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/designer/carousel-requests'
     | '/api/designer/claim'
+    | '/api/designer/claim-carousel'
     | '/api/designer/claim-video'
     | '/api/designer/requests'
     | '/api/designer/video-requests'
@@ -892,6 +961,7 @@ export interface FileRouteTypes {
     | '/api/public/showcase'
     | '/api/public/showcase-image'
     | '/api/stripe/create-payment-intent'
+    | '/api/wit/carousel-chat'
     | '/api/wit/chat'
   id:
     | '__root__'
@@ -915,6 +985,8 @@ export interface FileRouteTypes {
     | '/api/brand-profile-manual'
     | '/api/campaigns'
     | '/api/campaigns-create'
+    | '/api/carousel-request-change'
+    | '/api/carousel-requests'
     | '/api/checkout'
     | '/api/close-request'
     | '/api/file'
@@ -946,6 +1018,7 @@ export interface FileRouteTypes {
     | '/api/admin/delete-discount-code'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
+    | '/api/admin/deliver-carousel-slide'
     | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
@@ -960,7 +1033,9 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/designer/carousel-requests'
     | '/api/designer/claim'
+    | '/api/designer/claim-carousel'
     | '/api/designer/claim-video'
     | '/api/designer/requests'
     | '/api/designer/video-requests'
@@ -972,6 +1047,7 @@ export interface FileRouteTypes {
     | '/api/public/showcase'
     | '/api/public/showcase-image'
     | '/api/stripe/create-payment-intent'
+    | '/api/wit/carousel-chat'
     | '/api/wit/chat'
   fileRoutesById: FileRoutesById
 }
@@ -996,6 +1072,8 @@ export interface RootRouteChildren {
   ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
   ApiCampaignsRoute: typeof ApiCampaignsRoute
   ApiCampaignsCreateRoute: typeof ApiCampaignsCreateRoute
+  ApiCarouselRequestChangeRoute: typeof ApiCarouselRequestChangeRoute
+  ApiCarouselRequestsRoute: typeof ApiCarouselRequestsRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiCloseRequestRoute: typeof ApiCloseRequestRoute
   ApiFileRoute: typeof ApiFileRoute
@@ -1027,6 +1105,7 @@ export interface RootRouteChildren {
   ApiAdminDeleteDiscountCodeRoute: typeof ApiAdminDeleteDiscountCodeRoute
   ApiAdminDeleteRequestRoute: typeof ApiAdminDeleteRequestRoute
   ApiAdminDeliverRoute: typeof ApiAdminDeliverRoute
+  ApiAdminDeliverCarouselSlideRoute: typeof ApiAdminDeliverCarouselSlideRoute
   ApiAdminDeliverVideoRoute: typeof ApiAdminDeliverVideoRoute
   ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
   ApiAdminGrantRequestsRoute: typeof ApiAdminGrantRequestsRoute
@@ -1041,7 +1120,9 @@ export interface RootRouteChildren {
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
   ApiAuthRegisterRoute: typeof ApiAuthRegisterRoute
+  ApiDesignerCarouselRequestsRoute: typeof ApiDesignerCarouselRequestsRoute
   ApiDesignerClaimRoute: typeof ApiDesignerClaimRoute
+  ApiDesignerClaimCarouselRoute: typeof ApiDesignerClaimCarouselRoute
   ApiDesignerClaimVideoRoute: typeof ApiDesignerClaimVideoRoute
   ApiDesignerRequestsRoute: typeof ApiDesignerRequestsRoute
   ApiDesignerVideoRequestsRoute: typeof ApiDesignerVideoRequestsRoute
@@ -1053,6 +1134,7 @@ export interface RootRouteChildren {
   ApiPublicShowcaseRoute: typeof ApiPublicShowcaseRoute
   ApiPublicShowcaseImageRoute: typeof ApiPublicShowcaseImageRoute
   ApiStripeCreatePaymentIntentRoute: typeof ApiStripeCreatePaymentIntentRoute
+  ApiWitCarouselChatRoute: typeof ApiWitCarouselChatRoute
   ApiWitChatRoute: typeof ApiWitChatRoute
 }
 
@@ -1289,6 +1371,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/carousel-requests': {
+      id: '/api/carousel-requests'
+      path: '/api/carousel-requests'
+      fullPath: '/api/carousel-requests'
+      preLoaderRoute: typeof ApiCarouselRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/carousel-request-change': {
+      id: '/api/carousel-request-change'
+      path: '/api/carousel-request-change'
+      fullPath: '/api/carousel-request-change'
+      preLoaderRoute: typeof ApiCarouselRequestChangeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/campaigns-create': {
       id: '/api/campaigns-create'
       path: '/api/campaigns-create'
@@ -1329,6 +1425,13 @@ declare module '@tanstack/react-router' {
       path: '/api/wit/chat'
       fullPath: '/api/wit/chat'
       preLoaderRoute: typeof ApiWitChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/wit/carousel-chat': {
+      id: '/api/wit/carousel-chat'
+      path: '/api/wit/carousel-chat'
+      fullPath: '/api/wit/carousel-chat'
+      preLoaderRoute: typeof ApiWitCarouselChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/stripe/create-payment-intent': {
@@ -1408,11 +1511,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDesignerClaimVideoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/designer/claim-carousel': {
+      id: '/api/designer/claim-carousel'
+      path: '/api/designer/claim-carousel'
+      fullPath: '/api/designer/claim-carousel'
+      preLoaderRoute: typeof ApiDesignerClaimCarouselRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/designer/claim': {
       id: '/api/designer/claim'
       path: '/api/designer/claim'
       fullPath: '/api/designer/claim'
       preLoaderRoute: typeof ApiDesignerClaimRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/designer/carousel-requests': {
+      id: '/api/designer/carousel-requests'
+      path: '/api/designer/carousel-requests'
+      fullPath: '/api/designer/carousel-requests'
+      preLoaderRoute: typeof ApiDesignerCarouselRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/register': {
@@ -1511,6 +1628,13 @@ declare module '@tanstack/react-router' {
       path: '/api/admin/deliver-video'
       fullPath: '/api/admin/deliver-video'
       preLoaderRoute: typeof ApiAdminDeliverVideoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/deliver-carousel-slide': {
+      id: '/api/admin/deliver-carousel-slide'
+      path: '/api/admin/deliver-carousel-slide'
+      fullPath: '/api/admin/deliver-carousel-slide'
+      preLoaderRoute: typeof ApiAdminDeliverCarouselSlideRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/deliver': {
@@ -1628,6 +1752,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
   ApiCampaignsRoute: ApiCampaignsRoute,
   ApiCampaignsCreateRoute: ApiCampaignsCreateRoute,
+  ApiCarouselRequestChangeRoute: ApiCarouselRequestChangeRoute,
+  ApiCarouselRequestsRoute: ApiCarouselRequestsRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiCloseRequestRoute: ApiCloseRequestRoute,
   ApiFileRoute: ApiFileRoute,
@@ -1659,6 +1785,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminDeleteDiscountCodeRoute: ApiAdminDeleteDiscountCodeRoute,
   ApiAdminDeleteRequestRoute: ApiAdminDeleteRequestRoute,
   ApiAdminDeliverRoute: ApiAdminDeliverRoute,
+  ApiAdminDeliverCarouselSlideRoute: ApiAdminDeliverCarouselSlideRoute,
   ApiAdminDeliverVideoRoute: ApiAdminDeliverVideoRoute,
   ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
   ApiAdminGrantRequestsRoute: ApiAdminGrantRequestsRoute,
@@ -1673,7 +1800,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
   ApiAuthRegisterRoute: ApiAuthRegisterRoute,
+  ApiDesignerCarouselRequestsRoute: ApiDesignerCarouselRequestsRoute,
   ApiDesignerClaimRoute: ApiDesignerClaimRoute,
+  ApiDesignerClaimCarouselRoute: ApiDesignerClaimCarouselRoute,
   ApiDesignerClaimVideoRoute: ApiDesignerClaimVideoRoute,
   ApiDesignerRequestsRoute: ApiDesignerRequestsRoute,
   ApiDesignerVideoRequestsRoute: ApiDesignerVideoRequestsRoute,
@@ -1685,6 +1814,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicShowcaseRoute: ApiPublicShowcaseRoute,
   ApiPublicShowcaseImageRoute: ApiPublicShowcaseImageRoute,
   ApiStripeCreatePaymentIntentRoute: ApiStripeCreatePaymentIntentRoute,
+  ApiWitCarouselChatRoute: ApiWitCarouselChatRoute,
   ApiWitChatRoute: ApiWitChatRoute,
 }
 export const routeTree = rootRouteImport
