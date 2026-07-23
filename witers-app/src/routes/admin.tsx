@@ -2171,7 +2171,15 @@ function UsersTable({ rows }: { rows: AdminUser[] }) {
   );
 }
 
-function PinGateModal({ onClose, onConfirmed }: { onClose: () => void; onConfirmed: () => void }) {
+function PinGateModal({
+  onClose,
+  onConfirmed,
+  description = "Ingresa el código para editar los datos de este usuario.",
+}: {
+  onClose: () => void;
+  onConfirmed: () => void;
+  description?: string;
+}) {
   const [code, setCode] = useState("");
   const [checking, setChecking] = useState(false);
   // "wrong" = bad code, try again. "unset" = ADMIN_EDIT_PIN isn't
@@ -2218,9 +2226,7 @@ function PinGateModal({ onClose, onConfirmed }: { onClose: () => void; onConfirm
         className="w-full max-w-xs rounded-2xl bg-white p-6 shadow-2xl"
       >
         <h2 className="text-base font-bold text-wit-ink">Código de administrador</h2>
-        <p className="mt-1 text-xs text-wit-gray">
-          Ingresa el código para editar los datos de este usuario.
-        </p>
+        <p className="mt-1 text-xs text-wit-gray">{description}</p>
         <input
           type="password"
           inputMode="numeric"
@@ -2650,6 +2656,11 @@ function DiscountCodesPanel({ rows }: { rows: AdminDiscountCode[] }) {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Editar/Desactivar/Eliminar stay hidden behind the pencil until the PIN
+  // gate confirms — same protection as editar usuario, just scoped to one
+  // row instead of a whole modal. Unlocking one code doesn't unlock others.
+  const [pinTargetId, setPinTargetId] = useState<string | null>(null);
+  const [unlockedId, setUnlockedId] = useState<string | null>(null);
 
   function refresh() {
     return qc.invalidateQueries({ queryKey: ["admin-overview"] });
@@ -2737,42 +2748,68 @@ function DiscountCodesPanel({ rows }: { rows: AdminDiscountCode[] }) {
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <div className="flex items-center justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingId(editingId === c.id ? null : c.id);
-                          setShowForm(false);
-                        }}
-                        className="text-xs font-bold text-wit-blue hover:underline"
-                      >
-                        {editingId === c.id ? "Cerrar" : "Editar"}
-                      </button>
-                      {c.active ? (
+                    {unlockedId === c.id ? (
+                      <div className="flex items-center justify-end gap-3">
                         <button
                           type="button"
-                          onClick={() => toggleActive(c.id, false)}
-                          className="text-xs font-bold text-amber-600 hover:underline"
+                          onClick={() => {
+                            setEditingId(editingId === c.id ? null : c.id);
+                            setShowForm(false);
+                          }}
+                          className="text-xs font-bold text-wit-blue hover:underline"
                         >
-                          Desactivar
+                          {editingId === c.id ? "Cerrar" : "Editar"}
                         </button>
-                      ) : (
+                        {c.active ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleActive(c.id, false)}
+                            className="text-xs font-bold text-amber-600 hover:underline"
+                          >
+                            Desactivar
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => toggleActive(c.id, true)}
+                            className="text-xs font-bold text-emerald-700 hover:underline"
+                          >
+                            Reactivar
+                          </button>
+                        )}
                         <button
                           type="button"
-                          onClick={() => toggleActive(c.id, true)}
-                          className="text-xs font-bold text-emerald-700 hover:underline"
+                          onClick={() => remove(c.id, c.code)}
+                          className="text-xs font-bold text-red-600 hover:underline"
                         >
-                          Reactivar
+                          Eliminar
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => remove(c.id, c.code)}
-                        className="text-xs font-bold text-red-600 hover:underline"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setPinTargetId(c.id)}
+                          aria-label={`Editar código ${c.code}`}
+                          title="Editar"
+                          className="rounded-lg p-2 text-wit-gray transition-colors hover:bg-wit-blue/10 hover:text-wit-blue"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
                 {editingId === c.id ? (
@@ -2798,6 +2835,20 @@ function DiscountCodesPanel({ rows }: { rows: AdminDiscountCode[] }) {
           </p>
         ) : null}
       </div>
+
+      {pinTargetId
+        ? createPortal(
+            <PinGateModal
+              onClose={() => setPinTargetId(null)}
+              onConfirmed={() => {
+                setUnlockedId(pinTargetId);
+                setPinTargetId(null);
+              }}
+              description="Ingresa el código para editar este código de descuento."
+            />,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
