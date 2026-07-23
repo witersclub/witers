@@ -12,7 +12,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Area,
@@ -30,7 +30,18 @@ import {
 } from "recharts";
 
 import { WitersLogo, WMark } from "../components/witers/brand";
+import {
+  CompactRequestCard,
+  FilePreview,
+  PendingCompactCard,
+  StaffRequestCard,
+} from "../components/witers/staff-request-card";
 import { isPlanId, MEMBERSHIP_PLANS, type PlanId } from "../lib/membership-plans";
+
+// Same query key /api/admin/overview's useQuery uses — the shared staff
+// request card invalidates whatever key it's given after claim/deliver/
+// reject/etc, so every card in this panel needs to point at this one.
+const ADMIN_OVERVIEW_QUERY_KEY = ["admin-overview"] as const;
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -563,6 +574,17 @@ function Admin() {
     refetchInterval: 30_000,
   });
   const [tab, setTab] = useState<AdminTab>("dashboard");
+  // Same lifted-toast pattern as witer.tsx's DesignerPanel — a card that
+  // just moved out of its bucket (deliver/reject) would unmount before the
+  // admin ever saw a toast rendered inside it, so this lives at the panel
+  // level instead.
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function showToast(text: string) {
+    setToast(text);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  }
 
   if (platform.isLoading) {
     return (
@@ -735,7 +757,7 @@ function Admin() {
           ) : tab === "dashboard" ? (
             <DashboardView data={data} onNavigateToAttention={() => setTab("solicitudes")} />
           ) : tab === "solicitudes" ? (
-            <RequestsAdmin rows={data.requests} />
+            <RequestsAdmin rows={data.requests} me={String(platform.data.id)} onSent={showToast} />
           ) : tab === "diseñadores" ? (
             <DesignersPanel rows={data.designers} requests={data.requests} />
           ) : tab === "usuarios" ? (
@@ -745,6 +767,14 @@ function Admin() {
           )}
         </main>
       </div>
+
+      {toast ? (
+        <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center px-5">
+          <span className="rounded-full bg-wit-navy px-5 py-2.5 text-sm font-bold text-white shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
+            ✓ {toast}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -761,7 +791,15 @@ const REQUESTS_TAB_META: Record<RequestsTab, { label: string; empty: string }> =
   rechazadas: { label: "Rechazadas", empty: "No hay solicitudes rechazadas." },
 };
 
-function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
+function RequestsAdmin({
+  rows,
+  me,
+  onSent,
+}: {
+  rows: AdminRequest[];
+  me: string;
+  onSent: (text: string) => void;
+}) {
   const [tab, setTab] = useState<RequestsTab>("atencion");
 
   if (rows.length === 0) {
@@ -806,13 +844,50 @@ function RequestsAdmin({ rows }: { rows: AdminRequest[] }) {
         </div>
       ) : (
         <div className="mt-6 space-y-5">
-          {shown.map((r) =>
-            tab === "finalizadas" ? (
-              <FinishedRequestCard key={r.id} row={r} />
-            ) : (
-              <PendingRequestCard key={r.id} row={r} />
-            ),
-          )}
+          {shown.map((r) => {
+            if (tab === "finalizadas") {
+              return <FinishedRequestCard key={r.id} row={r} me={me} onSent={onSent} />;
+            }
+            if (tab === "completadas" || tab === "rechazadas") {
+              // Nothing to act on — same "just monitor" collapsed thumbnail
+              // treatment witer.tsx uses for completada/rechazada rows.
+              return (
+                <CompactRequestCard
+                  key={r.id}
+                  row={r}
+                  me={me}
+                  onSent={onSent}
+                  queryKey={ADMIN_OVERVIEW_QUERY_KEY}
+                  isAdmin
+                />
+              );
+            }
+            if (r.status === "cambio_solicitado") {
+              return (
+                <StaffRequestCard
+                  key={r.id}
+                  row={r}
+                  me={me}
+                  onSent={onSent}
+                  queryKey={ADMIN_OVERVIEW_QUERY_KEY}
+                  isAdmin
+                />
+              );
+            }
+            if (!r.claimed_by) {
+              // Exact same collapsed row + claim button + "Tomada por ti"
+              // the designer panel shows for an unclaimed request.
+              return (
+                <PendingCompactCard
+                  key={r.id}
+                  row={r}
+                  me={me}
+                  queryKey={ADMIN_OVERVIEW_QUERY_KEY}
+                />
+              );
+            }
+            return <ExpandableAdminRequestCard key={r.id} row={r} me={me} onSent={onSent} />;
+          })}
         </div>
       )}
     </div>
@@ -854,14 +929,22 @@ function AdminSubTab({
   );
 }
 
-// Collapsed row for a not-yet-finalized request: title, format, date, and
-// who (if anyone) has claimed it — clicking it expands into the full
-// RequestCard, same simplification as the designer panel instead of
-// dumping every field for every pending request up front. Unclaimed ones
-// get the same rotating "waiting for someone" light as the designer panel.
-function PendingRequestCard({ row }: { row: AdminRequest }) {
+// Collapsed row for a claimed, in-progress request an admin isn't
+// currently acting on — title, format, date, and who has it. Clicking it
+// expands into the full shared StaffRequestCard for oversight/detail,
+// same as before, but that expanded view is now the identical card a
+// designer sees (claim state, copy-prompt feedback, deliver/reject) rather
+// than a separately-maintained one.
+function ExpandableAdminRequestCard({
+  row,
+  me,
+  onSent,
+}: {
+  row: AdminRequest;
+  me: string;
+  onSent: (text: string) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
-  const claimed = Boolean(row.claimed_by_name);
 
   if (expanded) {
     return (
@@ -873,7 +956,13 @@ function PendingRequestCard({ row }: { row: AdminRequest }) {
         >
           ← Ocultar detalle
         </button>
-        <RequestCard row={row} />
+        <StaffRequestCard
+          row={row}
+          me={me}
+          onSent={onSent}
+          queryKey={ADMIN_OVERVIEW_QUERY_KEY}
+          isAdmin
+        />
       </div>
     );
   }
@@ -885,7 +974,7 @@ function PendingRequestCard({ row }: { row: AdminRequest }) {
         ? "bg-red-50 text-red-600"
         : "bg-amber-50 text-amber-700";
 
-  const card = (
+  return (
     <button
       type="button"
       onClick={() => setExpanded(true)}
@@ -903,24 +992,26 @@ function PendingRequestCard({ row }: { row: AdminRequest }) {
         {row.status.replace("_", " ")}
       </span>
       <span className="shrink-0 text-xs font-semibold text-wit-gray">
-        {claimed ? row.claimed_by_name : "Sin tomar"}
+        {row.claimed_by === me ? "Tomada por ti" : row.claimed_by_name}
       </span>
     </button>
-  );
-
-  return claimed ? (
-    card
-  ) : (
-    <div className="wit-pending-glow">
-      <div className="wit-pending-glow-shield">{card}</div>
-    </div>
   );
 }
 
 // Collapsed row for an already-finalized request: title, date, and the
-// delivered thumbnail only — clicking it expands into the full RequestCard
-// instead of always showing every field.
-function FinishedRequestCard({ row }: { row: AdminRequest }) {
+// delivered thumbnail only — clicking it expands into the full shared
+// StaffRequestCard instead of always showing every field, plus two
+// genuinely admin-only actions (toggle logo visibility, delete) appended
+// below it that a designer should never see.
+function FinishedRequestCard({
+  row,
+  me,
+  onSent,
+}: {
+  row: AdminRequest;
+  me: string;
+  onSent: (text: string) => void;
+}) {
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -1001,7 +1092,13 @@ function FinishedRequestCard({ row }: { row: AdminRequest }) {
         >
           ← Ocultar detalle
         </button>
-        <RequestCard row={row} />
+        <StaffRequestCard
+          row={row}
+          me={me}
+          onSent={onSent}
+          queryKey={ADMIN_OVERVIEW_QUERY_KEY}
+          isAdmin
+        />
         {row.logo_key ? (
           <button
             type="button"
@@ -1054,507 +1151,6 @@ function FinishedRequestCard({ row }: { row: AdminRequest }) {
         ✓ Finalizada
       </span>
     </button>
-  );
-}
-
-const RATIO_PROMPT: Record<string, string> = {
-  "1:1": "formato cuadrado 1:1",
-  "4:3": "formato horizontal 4:3",
-  "16:9": "formato horizontal 16:9 (banner)",
-  "3:4": "formato vertical 3:4 (feed)",
-  "9:16": "formato vertical 9:16 (stories)",
-};
-
-function FilePreview({ label, fileKey }: { label: string; fileKey: string }) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-wit-ink/10 bg-white p-3">
-      <a href={`/api/file?key=${encodeURIComponent(fileKey)}`} target="_blank" rel="noreferrer">
-        <img
-          src={`/api/file?key=${encodeURIComponent(fileKey)}`}
-          alt={label}
-          className="h-16 w-16 rounded-lg border border-wit-ink/10 object-cover"
-          loading="lazy"
-        />
-      </a>
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.12em] text-wit-gray">{label}</p>
-        <a
-          href={`/api/file?key=${encodeURIComponent(fileKey)}&download=1`}
-          className="mt-0.5 inline-block text-sm font-semibold text-wit-blue underline-offset-2 hover:underline"
-        >
-          Descargar
-        </a>
-      </div>
-    </div>
-  );
-}
-
-function RequestCard({ row }: { row: AdminRequest }) {
-  const qc = useQueryClient();
-  const [busy, setBusy] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [note, setNote] = useState(row.admin_note ?? "");
-
-  const { drafts, results } = (() => {
-    if (!row.results_json) return { drafts: [] as ResultItem[], results: [] as ResultItem[] };
-    try {
-      const all = (JSON.parse(row.results_json) as ResultItem[]).filter(
-        (x) => x && (x.image_url || x.r2_key),
-      );
-      return {
-        drafts: all.filter((x) => x.kind === "draft"),
-        results: all.filter((x) => x.kind !== "draft"),
-      };
-    } catch {
-      return { drafts: [] as ResultItem[], results: [] as ResultItem[] };
-    }
-  })();
-
-  async function refresh() {
-    await qc.invalidateQueries({ queryKey: ["admin-overview"] });
-  }
-
-  async function copyInfo() {
-    const company = row.company_name
-      ? ` La empresa se llama "${row.company_name}"${row.product_name ? ` y el producto "${row.product_name}"` : ""}, ambos deben aparecer en la pieza.`
-      : "";
-    const pieceBrief = row.piece_brief ? ` Concepto de esta pieza: ${row.piece_brief}.` : "";
-    const style = row.style ? ` Estilo: ${row.style}.` : "";
-    const audience = row.audience
-      ? ` Dirigido a: ${row.audience}${row.age_range ? ` (${row.age_range} años)` : ""}.`
-      : row.age_range
-        ? ` Dirigido a personas de ${row.age_range} años.`
-        : "";
-    const promo = row.promo_price ? ` Precio/descuento a destacar: ${row.promo_price}.` : "";
-    const requiredText = row.required_text
-      ? ` Dato extra del cliente: "${row.required_text}".`
-      : "";
-    const colors = row.brand_colors ? ` Paleta de colores de marca: ${row.brand_colors}.` : "";
-    const ratio = RATIO_PROMPT[row.aspect_ratio] ?? row.aspect_ratio;
-    // No reference-download reminder baked in here on purpose — this text
-    // gets pasted straight into an image-generating AI, which can't act on
-    // a note addressed to the designer. The actual files are already
-    // visible with their own download links right below this button.
-    const localPrompt = `Creatividad publicitaria profesional de alta calidad. ${row.brief}${company}${pieceBrief}${style}${audience}${promo}${requiredText}${colors} Redacta tú el texto final del anuncio a partir de estos datos (el cliente no escribió el copy). Composición limpia y premium, tipografía legible, colores de marca consistentes, luz de estudio. Usa ${ratio}.`;
-    // Prefer the ChatGPT-polished version — falls back to the locally-built
-    // one only if that background call never finished or failed.
-    const prompt = row.ai_prompt ?? localPrompt;
-
-    try {
-      await navigator.clipboard.writeText(prompt);
-      setMsg("Prompt copiado al portapapeles.");
-    } catch {
-      setMsg("No pudimos copiar. Selecciona el texto manualmente.");
-    }
-  }
-
-  async function approve() {
-    setBusy("approve");
-    setMsg(null);
-    try {
-      const res = await fetch("/api/admin/approve-result", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ requestId: row.id }),
-      });
-      const data = (await res.json()) as { ok: boolean };
-      setMsg(
-        data.ok ? "Aprobado y entregado al cliente." : "No pudimos aprobarlo. Intenta de nuevo.",
-      );
-      await refresh();
-    } catch {
-      setMsg("No pudimos aprobarlo. Intenta de nuevo.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function discard(resultId: string) {
-    setBusy(`discard-${resultId}`);
-    setMsg(null);
-    try {
-      const res = await fetch("/api/admin/discard-result", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ resultId }),
-      });
-      const data = (await res.json()) as { ok: boolean };
-      setMsg(data.ok ? "Borrador descartado." : "No pudimos descartarlo.");
-      await refresh();
-    } catch {
-      setMsg("No pudimos descartarlo.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function deliver() {
-    if (!file) return;
-    setBusy("deliver");
-    setMsg(null);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("requestId", row.id);
-      const res = await fetch("/api/admin/deliver", { method: "POST", body: fd });
-      const data = (await res.json()) as { ok: boolean };
-      setMsg(data.ok ? "Archivo entregado al cliente." : "No pudimos subir el archivo.");
-      setFile(null);
-      await refresh();
-    } catch {
-      setMsg("No pudimos subir el archivo.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function setStatus(status: string) {
-    setBusy("status");
-    setMsg(null);
-    try {
-      await fetch("/api/admin/update-request", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ requestId: row.id, status, adminNote: note || undefined }),
-      });
-      await refresh();
-      setMsg("Solicitud actualizada.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function activateChange() {
-    setBusy("activate");
-    setMsg(null);
-    try {
-      const res = await fetch("/api/admin/activate-change", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ requestId: row.id }),
-      });
-      const data = (await res.json()) as { ok: boolean };
-      setMsg(
-        data.ok
-          ? "Pieza activada. Ya está disponible para el equipo de diseño."
-          : "No pudimos activarla. Intenta de nuevo.",
-      );
-      await refresh();
-    } catch {
-      setMsg("No pudimos activarla. Intenta de nuevo.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  return (
-    <article className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-base font-bold text-wit-ink">{row.title}</h3>
-          {row.company_name ? (
-            <p className="mt-0.5 text-sm font-semibold text-wit-blue">
-              {row.company_name}
-              {row.product_name ? ` · ${row.product_name}` : ""}
-            </p>
-          ) : null}
-          <p className="mt-0.5 text-xs text-wit-gray">
-            {row.user_name} ({row.user_email}) · {row.aspect_ratio}
-            {row.style ? ` · ${row.style}` : ""} ·{" "}
-            {new Date(row.created_at + "Z").toLocaleString("es-MX")}
-          </p>
-          <p className="mt-1 text-xs font-semibold">
-            {row.claimed_by_name ? (
-              <span className="text-wit-blue">Atendido por {row.claimed_by_name}</span>
-            ) : (
-              <span className="text-wit-gray">Sin tomar por ningún diseñador</span>
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={copyInfo}
-            className="rounded-full border border-wit-ink/15 px-3 py-1.5 text-xs font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
-          >
-            Copiar prompt
-          </button>
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-bold ${
-              row.status === "cerrada"
-                ? "bg-wit-blue/10 text-wit-blue"
-                : row.status === "completada"
-                  ? "bg-emerald-50 text-emerald-700"
-                  : row.status === "rechazada"
-                    ? "bg-red-50 text-red-600"
-                    : "bg-amber-50 text-amber-700"
-            }`}
-          >
-            {row.status === "cerrada" ? "✓ finalizada" : row.status.replace("_", " ")}
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
-          A qué se dedica la empresa
-        </p>
-        <p className="mt-0.5 whitespace-pre-wrap text-sm text-wit-gray">{row.brief}</p>
-      </div>
-      {row.piece_brief ? (
-        <div className="mt-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
-            Qué quiere el cliente en esta pieza
-          </p>
-          <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium text-wit-ink">
-            {row.piece_brief}
-          </p>
-        </div>
-      ) : null}
-
-      {row.revision_note_1 || row.revision_note_2 ? (
-        <div className="mt-3 space-y-2">
-          {row.revision_note_1 ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-wit-ink">
-              <strong>Cambio 1 solicitado por el cliente:</strong> {row.revision_note_1}
-            </div>
-          ) : null}
-          {row.revision_note_2 ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-wit-ink">
-              <strong>Cambio 2 solicitado por el cliente:</strong> {row.revision_note_2}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {row.audience || row.age_range || row.required_text || row.brand_colors || row.promo_price ? (
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl bg-wit-ice p-4 text-sm sm:grid-cols-4">
-          {row.audience ? (
-            <div>
-              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
-                Público
-              </dt>
-              <dd className="mt-0.5 text-wit-ink">{row.audience}</dd>
-            </div>
-          ) : null}
-          {row.age_range ? (
-            <div>
-              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
-                Edad
-              </dt>
-              <dd className="mt-0.5 text-wit-ink">{row.age_range}</dd>
-            </div>
-          ) : null}
-          {row.promo_price ? (
-            <div>
-              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
-                Precio/Descuento
-              </dt>
-              <dd className="mt-0.5 text-wit-ink">{row.promo_price}</dd>
-            </div>
-          ) : null}
-          {row.required_text ? (
-            <div className="col-span-2">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
-                Mensaje / dato extra del cliente
-              </dt>
-              <dd className="mt-0.5 text-wit-ink">{row.required_text}</dd>
-            </div>
-          ) : null}
-          {row.brand_colors ? (
-            <div>
-              <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-wit-gray">
-                Colores
-              </dt>
-              <dd className="mt-1 flex gap-1.5">
-                {row.brand_colors.split(",").map((c) => (
-                  <span
-                    key={c}
-                    className="h-5 w-5 rounded-full border border-wit-ink/10"
-                    style={{ backgroundColor: c }}
-                    title={c}
-                  />
-                ))}
-              </dd>
-            </div>
-          ) : null}
-        </dl>
-      ) : null}
-
-      {row.logo_key || row.product_photo_key || row.reference_key ? (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {row.logo_key ? <FilePreview label="Logotipo" fileKey={row.logo_key} /> : null}
-          {row.product_photo_key ? (
-            <FilePreview label="Foto del producto" fileKey={row.product_photo_key} />
-          ) : null}
-          {row.reference_key ? (
-            <FilePreview label="Referencia (solicitud anterior)" fileKey={row.reference_key} />
-          ) : null}
-        </div>
-      ) : null}
-
-      {drafts.length > 0 && row.status !== "cerrada" ? (
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-700">
-            Pendiente de tu aprobación — el cliente todavía no la ve
-          </p>
-          <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
-            {drafts.map((res) => {
-              const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
-              return (
-                <div key={res.id} className="space-y-1.5">
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block overflow-hidden rounded-lg border border-amber-300"
-                  >
-                    <img
-                      src={href}
-                      alt="Borrador generado"
-                      className="aspect-square w-full object-cover"
-                      loading="lazy"
-                    />
-                  </a>
-                  <button
-                    type="button"
-                    disabled={busy !== null}
-                    onClick={() => discard(res.id)}
-                    className="w-full rounded-lg border border-wit-ink/15 py-1 text-[11px] font-semibold text-wit-gray hover:border-red-300 hover:text-red-600 disabled:opacity-50"
-                  >
-                    {busy === `discard-${res.id}` ? "..." : "Descartar"}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-3">
-            <button
-              type="button"
-              disabled={busy !== null}
-              onClick={approve}
-              className="rounded-full bg-wit-blue px-5 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
-            >
-              {busy === "approve" ? "Aprobando..." : "Aprobar y enviar al cliente"}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {results.length > 0 ? (
-        <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">
-          {results.map((res) => {
-            const href = res.image_url ?? `/api/file?key=${encodeURIComponent(res.r2_key ?? "")}`;
-            return (
-              <a
-                key={res.id}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-                className="block overflow-hidden rounded-lg border border-wit-ink/10"
-              >
-                <img
-                  src={href}
-                  alt="Resultado entregado"
-                  className="aspect-square w-full object-cover"
-                  loading="lazy"
-                />
-              </a>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {row.status === "cerrada" ? (
-        <p className="mt-4 rounded-xl bg-wit-blue/5 px-4 py-3 text-sm font-semibold text-wit-blue">
-          ✓ El cliente marcó esta solicitud como correcta y finalizada. Ya no se puede editar.
-        </p>
-      ) : row.status === "cambio_solicitado" ? (
-        <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-700">
-            El cliente reportó un error en esta pieza ya finalizada
-          </p>
-          <p className="mt-2 text-sm text-wit-ink">{row.change_request_note}</p>
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={activateChange}
-            className="mt-3 rounded-full bg-wit-blue px-5 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
-          >
-            {busy === "activate" ? "Activando..." : "Activar pieza para cambio"}
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="mt-5 rounded-xl bg-wit-ice p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-wit-ink">
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,application/pdf"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  className="hidden"
-                />
-                <span className="rounded-full border border-wit-ink/20 px-4 py-2 hover:border-wit-blue">
-                  {file ? file.name.slice(0, 24) : "Elegir archivo manual"}
-                </span>
-              </label>
-              {file ? (
-                <button
-                  type="button"
-                  disabled={busy !== null}
-                  onClick={deliver}
-                  className="rounded-full bg-wit-navy px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue disabled:opacity-50"
-                >
-                  {busy === "deliver" ? "Subiendo..." : "Entregar archivo"}
-                </button>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <input
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Nota para el cliente (opcional)"
-              className="min-w-0 flex-1 rounded-lg border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue"
-            />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={busy !== null}
-                onClick={() => setStatus("en_proceso")}
-                className="rounded-full border border-wit-ink/20 px-4 py-2 text-xs font-bold text-wit-ink hover:border-wit-blue"
-              >
-                En proceso
-              </button>
-              <button
-                type="button"
-                disabled={busy !== null}
-                onClick={() => setStatus("completada")}
-                className="rounded-full border border-emerald-300 px-4 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
-              >
-                Completada
-              </button>
-              <button
-                type="button"
-                disabled={busy !== null}
-                onClick={() => setStatus("rechazada")}
-                className="rounded-full border border-red-300 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
-              >
-                Rechazada
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {msg ? (
-        <p className="mt-3 rounded-lg bg-wit-mist/40 px-3 py-2 text-sm text-wit-ink">{msg}</p>
-      ) : null}
-    </article>
   );
 }
 
