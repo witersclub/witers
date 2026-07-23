@@ -393,6 +393,18 @@ function PaymentSection(props: {
   const [appliedCode, setAppliedCode] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
 
+  // Creating a PaymentIntent is a real Stripe API call, not a cheap read —
+  // without staleTime/refetchOnWindowFocus this query (like every other
+  // useQuery in the app) refetches on every remount AND every time the
+  // browser tab regains focus, so a client who just switches tabs and comes
+  // back (or hesitates and re-checks the page) silently spawns a brand-new,
+  // never-confirmed PaymentIntent each time — which is exactly what filled
+  // the Stripe dashboard with "Incompleto" entries. A real card charge is
+  // never affected either way (finalizeCheckout only trusts a PaymentIntent
+  // that Stripe itself reports as succeeded), this only stops the wasted
+  // intent creation. 15 minutes comfortably covers someone filling out card
+  // details; a real amount/discount change still creates a fresh intent
+  // immediately since those are part of the query key.
   const intentQuery = useQuery({
     queryKey: ["stripe-payment-intent", plan.id, chargeAmount, appliedCode],
     queryFn: async () => {
@@ -403,6 +415,8 @@ function PaymentSection(props: {
       });
       return (await res.json()) as PaymentIntentResponse;
     },
+    staleTime: 15 * 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const isDiscountError =
