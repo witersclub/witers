@@ -1675,6 +1675,7 @@ function MembershipSummaryCard({
   plan: ReturnType<typeof getPlan> | null;
 }) {
   const active = membership?.status === "active";
+  const { t } = useLanguage();
   const activatedLabel = membership?.activated_at
     ? new Date(membership.activated_at + "Z").toLocaleDateString("es-MX", {
         day: "numeric",
@@ -1687,24 +1688,33 @@ function MembershipSummaryCard({
 
   return (
     <section className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-      <p className="text-lg font-bold text-wit-ink">Tu membresía</p>
-      <p className="mt-1 text-sm text-wit-gray">Resumen de tu plan actual.</p>
+      <p className="text-lg font-bold text-wit-ink">{t("Tu membresía", "Your membership")}</p>
+      <p className="mt-1 text-sm text-wit-gray">
+        {t("Resumen de tu plan actual.", "Summary of your current plan.")}
+      </p>
 
       {!membership || !plan ? (
         <div className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-5 text-center">
-          <p className="text-sm text-wit-gray">Todavía no tienes una membresía activa.</p>
+          <p className="text-sm text-wit-gray">
+            {t(
+              "Todavía no tienes una membresía activa.",
+              "You don't have an active membership yet.",
+            )}
+          </p>
           <Link
             to="/checkout"
             className="mt-3 inline-block rounded-full bg-wit-blue px-5 py-2.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
           >
-            Activar membresía
+            {t("Activar membresía", "Activate membership")}
           </Link>
         </div>
       ) : (
         <div className="mt-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-wit-navy p-5 text-white">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">Tu plan</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">
+                {t("Tu plan", "Your plan")}
+              </p>
               <p className="mt-1 text-2xl font-extrabold">WITERS {plan.nombre}</p>
             </div>
             <span
@@ -1712,14 +1722,14 @@ function MembershipSummaryCard({
                 active ? "bg-emerald-400/20 text-emerald-300" : "bg-amber-400/20 text-amber-300"
               }`}
             >
-              {active ? "Activa" : membership.status}
+              {active ? t("Activa", "Active") : membership.status}
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-                Solicitudes usadas
+                {t("Solicitudes usadas", "Requests used")}
               </p>
               <p className="mt-0.5 font-wit-mono text-lg font-semibold text-wit-ink">
                 {membership.requests_used}/
@@ -1727,14 +1737,17 @@ function MembershipSummaryCard({
               </p>
               {membership.bonus_requests_quota > 0 ? (
                 <p className="mt-0.5 text-[11px] font-semibold text-wit-blue">
-                  +{membership.bonus_requests_quota} de paquetes
+                  {t(
+                    `+${membership.bonus_requests_quota} de paquetes`,
+                    `+${membership.bonus_requests_quota} from packs`,
+                  )}
                 </p>
               ) : null}
             </div>
             {membership.video_requests_quota > 0 ? (
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-                  Videos usados
+                  {t("Videos usados", "Videos used")}
                 </p>
                 <p className="mt-0.5 font-wit-mono text-lg font-semibold text-wit-ink">
                   {membership.video_requests_used}/{membership.video_requests_quota}
@@ -1744,7 +1757,7 @@ function MembershipSummaryCard({
             {activatedLabel ? (
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-                  Activa desde
+                  {t("Activa desde", "Active since")}
                 </p>
                 <p className="mt-0.5 text-sm font-semibold text-wit-ink">{activatedLabel}</p>
               </div>
@@ -1758,7 +1771,7 @@ function MembershipSummaryCard({
               className="flex w-full items-center justify-center gap-1.5 rounded-full border border-wit-blue/25 px-4 py-2.5 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/5"
             >
               <PackagePlus className="h-3.5 w-3.5" strokeWidth={2.4} />
-              Comprar paquete de imágenes
+              {t("Comprar paquete de imágenes", "Buy an image pack")}
             </button>
           ) : null}
 
@@ -1767,7 +1780,7 @@ function MembershipSummaryCard({
               to="/terminos"
               className="font-semibold text-wit-blue underline-offset-2 hover:underline"
             >
-              Ver términos y condiciones
+              {t("Ver términos y condiciones", "View terms and conditions")}
             </Link>
           </p>
         </div>
@@ -1801,6 +1814,7 @@ function ImagePacksModal({
   onClose: () => void;
   onPurchased: () => void;
 }) {
+  const { t } = useLanguage();
   const [selected, setSelected] = useState<(typeof IMAGE_PACKS)[number] | null>(null);
   const [card, setCard] = useState({ name: "", number: "", exp: "", cvc: "" });
   const [error, setError] = useState<string | null>(null);
@@ -1814,7 +1828,7 @@ function ImagePacksModal({
     setError(null);
     const digits = card.number.replace(/\s+/g, "");
     if (digits.length < 15 || digits.length > 16) {
-      setError("Revisa el número de tarjeta.");
+      setError(t("Revisa el número de tarjeta.", "Check the card number."));
       return;
     }
     setLoading(true);
@@ -1830,12 +1844,22 @@ function ImagePacksModal({
       });
       const data = (await res.json()) as { ok: boolean };
       if (!data.ok) {
-        setError("No pudimos procesar el pago. Intenta de nuevo.");
+        setError(
+          t(
+            "No pudimos procesar el pago. Intenta de nuevo.",
+            "We couldn't process the payment. Try again.",
+          ),
+        );
         return;
       }
       onPurchased();
     } catch {
-      setError("No pudimos procesar el pago. Intenta de nuevo.");
+      setError(
+        t(
+          "No pudimos procesar el pago. Intenta de nuevo.",
+          "We couldn't process the payment. Try again.",
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -1846,16 +1870,21 @@ function ImagePacksModal({
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-7 shadow-[0_30px_80px_rgba(5,13,40,0.25)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-lg font-bold text-wit-ink">Paquetes de imágenes</p>
+            <p className="text-lg font-bold text-wit-ink">
+              {t("Paquetes de imágenes", "Image packs")}
+            </p>
             <p className="mt-1 text-sm text-wit-gray">
-              Solicitudes extra sin subir de plan. No expiran.
+              {t(
+                "Solicitudes extra sin subir de plan. No expiran.",
+                "Extra requests without upgrading your plan. They never expire.",
+              )}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="shrink-0 rounded-full p-1.5 text-wit-gray hover:bg-wit-mist/50 hover:text-wit-ink"
-            aria-label="Cerrar"
+            aria-label={t("Cerrar", "Close")}
           >
             <X className="h-5 w-5" strokeWidth={2.25} />
           </button>
@@ -1875,9 +1904,11 @@ function ImagePacksModal({
                     <Images className="h-5 w-5" strokeWidth={2.2} />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-wit-ink">{pack.images} imágenes</p>
+                    <p className="text-sm font-bold text-wit-ink">
+                      {t(`${pack.images} imágenes`, `${pack.images} images`)}
+                    </p>
                     <span className="inline-block rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                      30% de descuento
+                      {t("30% de descuento", "30% off")}
                     </span>
                   </div>
                 </div>
@@ -1892,8 +1923,10 @@ function ImagePacksModal({
               </button>
             ))}
             <p className="pt-1 text-center text-[11px] leading-relaxed text-wit-gray">
-              Precios en MXN + IVA. Se suman a tu saldo mensual y se quedan disponibles hasta que
-              los uses.
+              {t(
+                "Precios en MXN + IVA. Se suman a tu saldo mensual y se quedan disponibles hasta que los uses.",
+                "Prices in MXN + VAT. They're added to your monthly balance and stay available until you use them.",
+              )}
             </p>
           </div>
         ) : (
@@ -1904,13 +1937,13 @@ function ImagePacksModal({
               className="flex items-center gap-1 text-xs font-semibold text-wit-gray hover:text-wit-ink"
             >
               <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.25} />
-              Elegir otro paquete
+              {t("Elegir otro paquete", "Choose a different pack")}
             </button>
 
             <div className="mt-3 flex items-center justify-between rounded-2xl bg-wit-navy p-4 text-white">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">
-                  {selected.images} imágenes
+                  {t(`${selected.images} imágenes`, `${selected.images} images`)}
                 </p>
                 <p className="mt-1 font-wit-mono text-xl font-semibold">
                   {fmt(selected.precioPromo)}{" "}
@@ -1925,7 +1958,7 @@ function ImagePacksModal({
             <div className="mt-4 space-y-3">
               <div>
                 <label htmlFor="pkname" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-                  Nombre en la tarjeta
+                  {t("Nombre en la tarjeta", "Name on card")}
                 </label>
                 <input
                   id="pkname"
@@ -1935,12 +1968,12 @@ function ImagePacksModal({
                   value={card.name}
                   onChange={(e) => setCard({ ...card, name: e.target.value })}
                   className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
-                  placeholder="Como aparece en la tarjeta"
+                  placeholder={t("Como aparece en la tarjeta", "As it appears on the card")}
                 />
               </div>
               <div>
                 <label htmlFor="pknum" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-                  Número de tarjeta
+                  {t("Número de tarjeta", "Card number")}
                 </label>
                 <input
                   id="pknum"
@@ -1968,7 +2001,7 @@ function ImagePacksModal({
                     htmlFor="pkexp"
                     className="mb-1.5 block text-sm font-semibold text-wit-ink"
                   >
-                    Vencimiento
+                    {t("Vencimiento", "Expiry")}
                   </label>
                   <input
                     id="pkexp"
@@ -1985,7 +2018,7 @@ function ImagePacksModal({
                       })
                     }
                     className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 font-wit-mono text-sm outline-none focus:border-wit-blue"
-                    placeholder="MM/AA"
+                    placeholder={t("MM/AA", "MM/YY")}
                   />
                 </div>
                 <div>
@@ -2019,11 +2052,18 @@ function ImagePacksModal({
               disabled={loading}
               className="mt-5 w-full rounded-2xl bg-wit-blue px-6 py-3.5 text-sm font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
             >
-              {loading ? "Procesando pago..." : `Pagar ${fmt(selected.precioPromo)} MXN`}
+              {loading
+                ? t("Procesando pago...", "Processing payment...")
+                : t(
+                    `Pagar ${fmt(selected.precioPromo)} MXN`,
+                    `Pay ${fmt(selected.precioPromo)} MXN`,
+                  )}
             </button>
             <p className="mt-3 text-center text-[11px] leading-relaxed text-wit-gray">
-              Entorno de pago en modo de activación directa. La pasarela definitiva (Stripe o
-              Mercado Pago) se conecta sin cambiar este flujo.
+              {t(
+                "Entorno de pago en modo de activación directa. La pasarela definitiva (Stripe o Mercado Pago) se conecta sin cambiar este flujo.",
+                "Payment environment in direct-activation mode. The final gateway (Stripe or Mercado Pago) connects without changing this flow.",
+              )}
             </p>
           </form>
         )}
