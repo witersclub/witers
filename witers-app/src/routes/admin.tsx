@@ -12,7 +12,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Area,
@@ -2649,14 +2649,29 @@ function PagosPanel({
 function DiscountCodesPanel({ rows }: { rows: AdminDiscountCode[] }) {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  async function deactivate(id: string) {
-    await fetch("/api/admin/deactivate-discount-code", {
+  function refresh() {
+    return qc.invalidateQueries({ queryKey: ["admin-overview"] });
+  }
+
+  async function toggleActive(id: string, active: boolean) {
+    await fetch("/api/admin/update-discount-code", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, active }),
+    });
+    await refresh();
+  }
+
+  async function remove(id: string, code: string) {
+    if (!confirm(`¿Eliminar el código ${code}? Esto no se puede deshacer.`)) return;
+    await fetch("/api/admin/delete-discount-code", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    await qc.invalidateQueries({ queryKey: ["admin-overview"] });
+    await refresh();
   }
 
   return (
@@ -2668,7 +2683,10 @@ function DiscountCodesPanel({ rows }: { rows: AdminDiscountCode[] }) {
         </p>
         <button
           type="button"
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => {
+            setShowForm((v) => !v);
+            setEditingId(null);
+          }}
           className="shrink-0 rounded-xl bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
         >
           {showForm ? "Cancelar" : "+ Nuevo código"}
@@ -2679,7 +2697,7 @@ function DiscountCodesPanel({ rows }: { rows: AdminDiscountCode[] }) {
         <CreateDiscountCodeForm
           onCreated={() => {
             setShowForm(false);
-            void qc.invalidateQueries({ queryKey: ["admin-overview"] });
+            void refresh();
           }}
         />
       ) : null}
@@ -2698,37 +2716,79 @@ function DiscountCodesPanel({ rows }: { rows: AdminDiscountCode[] }) {
           </thead>
           <tbody>
             {rows.map((c) => (
-              <tr key={c.id} className="border-b border-wit-ink/5 last:border-0">
-                <td className="px-5 py-3.5 font-wit-mono font-bold">{c.code}</td>
-                <td className="px-5 py-3.5">{c.discount_percent}%</td>
-                <td className="px-5 py-3.5 text-xs text-wit-gray">
-                  {c.uses_count}
-                  {c.max_uses !== null ? ` / ${c.max_uses}` : ""}
-                </td>
-                <td className="px-5 py-3.5 text-xs text-wit-gray">
-                  {c.expires_at ? new Date(c.expires_at).toLocaleDateString("es-MX") : "Nunca"}
-                </td>
-                <td className="px-5 py-3.5">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                      c.active ? "bg-emerald-50 text-emerald-700" : "bg-wit-mist/60 text-wit-gray"
-                    }`}
-                  >
-                    {c.active ? "Activo" : "Desactivado"}
-                  </span>
-                </td>
-                <td className="px-5 py-3.5 text-right">
-                  {c.active ? (
-                    <button
-                      type="button"
-                      onClick={() => deactivate(c.id)}
-                      className="text-xs font-bold text-red-600 hover:underline"
+              <Fragment key={c.id}>
+                <tr className="border-b border-wit-ink/5 last:border-0">
+                  <td className="px-5 py-3.5 font-wit-mono font-bold">{c.code}</td>
+                  <td className="px-5 py-3.5">{c.discount_percent}%</td>
+                  <td className="px-5 py-3.5 text-xs text-wit-gray">
+                    {c.uses_count}
+                    {c.max_uses !== null ? ` / ${c.max_uses}` : ""}
+                  </td>
+                  <td className="px-5 py-3.5 text-xs text-wit-gray">
+                    {c.expires_at ? new Date(c.expires_at).toLocaleDateString("es-MX") : "Nunca"}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                        c.active ? "bg-emerald-50 text-emerald-700" : "bg-wit-mist/60 text-wit-gray"
+                      }`}
                     >
-                      Desactivar
-                    </button>
-                  ) : null}
-                </td>
-              </tr>
+                      {c.active ? "Activo" : "Desactivado"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingId(editingId === c.id ? null : c.id);
+                          setShowForm(false);
+                        }}
+                        className="text-xs font-bold text-wit-blue hover:underline"
+                      >
+                        {editingId === c.id ? "Cerrar" : "Editar"}
+                      </button>
+                      {c.active ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleActive(c.id, false)}
+                          className="text-xs font-bold text-amber-600 hover:underline"
+                        >
+                          Desactivar
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => toggleActive(c.id, true)}
+                          className="text-xs font-bold text-emerald-700 hover:underline"
+                        >
+                          Reactivar
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => remove(c.id, c.code)}
+                        className="text-xs font-bold text-red-600 hover:underline"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {editingId === c.id ? (
+                  <tr className="border-b border-wit-ink/5 last:border-0">
+                    <td colSpan={6} className="bg-wit-mist/20 px-5 py-4">
+                      <EditDiscountCodeForm
+                        row={c}
+                        onSaved={() => {
+                          setEditingId(null);
+                          void refresh();
+                        }}
+                      />
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -2739,6 +2799,91 @@ function DiscountCodesPanel({ rows }: { rows: AdminDiscountCode[] }) {
         ) : null}
       </div>
     </div>
+  );
+}
+
+function EditDiscountCodeForm({ row, onSaved }: { row: AdminDiscountCode; onSaved: () => void }) {
+  const [discountPercent, setDiscountPercent] = useState(String(row.discount_percent));
+  const [maxUses, setMaxUses] = useState(row.max_uses !== null ? String(row.max_uses) : "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const percent = Number(discountPercent);
+    if (!(percent > 0 && percent <= 100)) {
+      setError("El porcentaje debe estar entre 0.1 y 100.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/admin/update-discount-code", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: row.id,
+          discountPercent: percent,
+          maxUses: maxUses.trim() ? Number(maxUses) : null,
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) {
+        setError("No se pudo guardar. Intenta de nuevo.");
+        return;
+      }
+      onSaved();
+    } catch {
+      setError("No se pudo guardar. Intenta de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-wit-ink">
+          Código (no editable)
+        </label>
+        <input
+          value={row.code}
+          disabled
+          className="w-40 rounded-lg border border-wit-ink/15 bg-wit-mist/40 px-3 py-2 text-sm font-wit-mono uppercase text-wit-gray"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-wit-ink">Descuento %</label>
+        <input
+          value={discountPercent}
+          onChange={(e) => setDiscountPercent(e.target.value)}
+          type="number"
+          step="0.1"
+          min="0.1"
+          max="100"
+          className="w-28 rounded-lg border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-wit-ink">Usos máximos</label>
+        <input
+          value={maxUses}
+          onChange={(e) => setMaxUses(e.target.value)}
+          type="number"
+          min="1"
+          placeholder="Sin límite"
+          className="w-32 rounded-lg border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={busy}
+        className="rounded-lg bg-wit-blue px-4 py-2 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+      >
+        {busy ? "Guardando..." : "Guardar cambios"}
+      </button>
+      {error ? <p className="w-full text-xs text-red-600">{error}</p> : null}
+    </form>
   );
 }
 

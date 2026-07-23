@@ -66,6 +66,7 @@ import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAdminVerifyPinRouteImport } from './routes/api/admin/verify-pin'
 import { Route as ApiAdminUpdateRequestRouteImport } from './routes/api/admin/update-request'
+import { Route as ApiAdminUpdateDiscountCodeRouteImport } from './routes/api/admin/update-discount-code'
 import { Route as ApiAdminUpdateDesignerRouteImport } from './routes/api/admin/update-designer'
 import { Route as ApiAdminUpdateBrandProfileRouteImport } from './routes/api/admin/update-brand-profile'
 import { Route as ApiAdminToggleLogoVisibilityRouteImport } from './routes/api/admin/toggle-logo-visibility'
@@ -75,6 +76,7 @@ import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/di
 import { Route as ApiAdminDeliverVideoRouteImport } from './routes/api/admin/deliver-video'
 import { Route as ApiAdminDeliverRouteImport } from './routes/api/admin/deliver'
 import { Route as ApiAdminDeleteRequestRouteImport } from './routes/api/admin/delete-request'
+import { Route as ApiAdminDeleteDiscountCodeRouteImport } from './routes/api/admin/delete-discount-code'
 import { Route as ApiAdminDeactivateDiscountCodeRouteImport } from './routes/api/admin/deactivate-discount-code'
 import { Route as ApiAdminDeactivateDesignerRouteImport } from './routes/api/admin/deactivate-designer'
 import { Route as ApiAdminCreateDiscountCodeRouteImport } from './routes/api/admin/create-discount-code'
@@ -374,6 +376,12 @@ const ApiAdminUpdateRequestRoute = ApiAdminUpdateRequestRouteImport.update({
   path: '/api/admin/update-request',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminUpdateDiscountCodeRoute =
+  ApiAdminUpdateDiscountCodeRouteImport.update({
+    id: '/api/admin/update-discount-code',
+    path: '/api/admin/update-discount-code',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminUpdateDesignerRoute = ApiAdminUpdateDesignerRouteImport.update({
   id: '/api/admin/update-designer',
   path: '/api/admin/update-designer',
@@ -421,6 +429,12 @@ const ApiAdminDeleteRequestRoute = ApiAdminDeleteRequestRouteImport.update({
   path: '/api/admin/delete-request',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminDeleteDiscountCodeRoute =
+  ApiAdminDeleteDiscountCodeRouteImport.update({
+    id: '/api/admin/delete-discount-code',
+    path: '/api/admin/delete-discount-code',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminDeactivateDiscountCodeRoute =
   ApiAdminDeactivateDiscountCodeRouteImport.update({
     id: '/api/admin/deactivate-discount-code',
@@ -526,6 +540,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/create-discount-code': typeof ApiAdminCreateDiscountCodeRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
   '/api/admin/deactivate-discount-code': typeof ApiAdminDeactivateDiscountCodeRoute
+  '/api/admin/delete-discount-code': typeof ApiAdminDeleteDiscountCodeRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
@@ -535,6 +550,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
+  '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -604,6 +620,7 @@ export interface FileRoutesByTo {
   '/api/admin/create-discount-code': typeof ApiAdminCreateDiscountCodeRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
   '/api/admin/deactivate-discount-code': typeof ApiAdminDeactivateDiscountCodeRoute
+  '/api/admin/delete-discount-code': typeof ApiAdminDeleteDiscountCodeRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
@@ -613,6 +630,7 @@ export interface FileRoutesByTo {
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
+  '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -683,6 +701,7 @@ export interface FileRoutesById {
   '/api/admin/create-discount-code': typeof ApiAdminCreateDiscountCodeRoute
   '/api/admin/deactivate-designer': typeof ApiAdminDeactivateDesignerRoute
   '/api/admin/deactivate-discount-code': typeof ApiAdminDeactivateDiscountCodeRoute
+  '/api/admin/delete-discount-code': typeof ApiAdminDeleteDiscountCodeRoute
   '/api/admin/delete-request': typeof ApiAdminDeleteRequestRoute
   '/api/admin/deliver': typeof ApiAdminDeliverRoute
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
@@ -692,6 +711,7 @@ export interface FileRoutesById {
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
+  '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -763,6 +783,7 @@ export interface FileRouteTypes {
     | '/api/admin/create-discount-code'
     | '/api/admin/deactivate-designer'
     | '/api/admin/deactivate-discount-code'
+    | '/api/admin/delete-discount-code'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/deliver-video'
@@ -772,6 +793,7 @@ export interface FileRouteTypes {
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
+    | '/api/admin/update-discount-code'
     | '/api/admin/update-request'
     | '/api/admin/verify-pin'
     | '/api/auth/login'
@@ -841,6 +863,7 @@ export interface FileRouteTypes {
     | '/api/admin/create-discount-code'
     | '/api/admin/deactivate-designer'
     | '/api/admin/deactivate-discount-code'
+    | '/api/admin/delete-discount-code'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/deliver-video'
@@ -850,6 +873,7 @@ export interface FileRouteTypes {
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
+    | '/api/admin/update-discount-code'
     | '/api/admin/update-request'
     | '/api/admin/verify-pin'
     | '/api/auth/login'
@@ -919,6 +943,7 @@ export interface FileRouteTypes {
     | '/api/admin/create-discount-code'
     | '/api/admin/deactivate-designer'
     | '/api/admin/deactivate-discount-code'
+    | '/api/admin/delete-discount-code'
     | '/api/admin/delete-request'
     | '/api/admin/deliver'
     | '/api/admin/deliver-video'
@@ -928,6 +953,7 @@ export interface FileRouteTypes {
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
+    | '/api/admin/update-discount-code'
     | '/api/admin/update-request'
     | '/api/admin/verify-pin'
     | '/api/auth/login'
@@ -998,6 +1024,7 @@ export interface RootRouteChildren {
   ApiAdminCreateDiscountCodeRoute: typeof ApiAdminCreateDiscountCodeRoute
   ApiAdminDeactivateDesignerRoute: typeof ApiAdminDeactivateDesignerRoute
   ApiAdminDeactivateDiscountCodeRoute: typeof ApiAdminDeactivateDiscountCodeRoute
+  ApiAdminDeleteDiscountCodeRoute: typeof ApiAdminDeleteDiscountCodeRoute
   ApiAdminDeleteRequestRoute: typeof ApiAdminDeleteRequestRoute
   ApiAdminDeliverRoute: typeof ApiAdminDeliverRoute
   ApiAdminDeliverVideoRoute: typeof ApiAdminDeliverVideoRoute
@@ -1007,6 +1034,7 @@ export interface RootRouteChildren {
   ApiAdminToggleLogoVisibilityRoute: typeof ApiAdminToggleLogoVisibilityRoute
   ApiAdminUpdateBrandProfileRoute: typeof ApiAdminUpdateBrandProfileRoute
   ApiAdminUpdateDesignerRoute: typeof ApiAdminUpdateDesignerRoute
+  ApiAdminUpdateDiscountCodeRoute: typeof ApiAdminUpdateDiscountCodeRoute
   ApiAdminUpdateRequestRoute: typeof ApiAdminUpdateRequestRoute
   ApiAdminVerifyPinRoute: typeof ApiAdminVerifyPinRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
@@ -1429,6 +1457,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminUpdateRequestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/update-discount-code': {
+      id: '/api/admin/update-discount-code'
+      path: '/api/admin/update-discount-code'
+      fullPath: '/api/admin/update-discount-code'
+      preLoaderRoute: typeof ApiAdminUpdateDiscountCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/update-designer': {
       id: '/api/admin/update-designer'
       path: '/api/admin/update-designer'
@@ -1490,6 +1525,13 @@ declare module '@tanstack/react-router' {
       path: '/api/admin/delete-request'
       fullPath: '/api/admin/delete-request'
       preLoaderRoute: typeof ApiAdminDeleteRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/delete-discount-code': {
+      id: '/api/admin/delete-discount-code'
+      path: '/api/admin/delete-discount-code'
+      fullPath: '/api/admin/delete-discount-code'
+      preLoaderRoute: typeof ApiAdminDeleteDiscountCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/deactivate-discount-code': {
@@ -1614,6 +1656,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminCreateDiscountCodeRoute: ApiAdminCreateDiscountCodeRoute,
   ApiAdminDeactivateDesignerRoute: ApiAdminDeactivateDesignerRoute,
   ApiAdminDeactivateDiscountCodeRoute: ApiAdminDeactivateDiscountCodeRoute,
+  ApiAdminDeleteDiscountCodeRoute: ApiAdminDeleteDiscountCodeRoute,
   ApiAdminDeleteRequestRoute: ApiAdminDeleteRequestRoute,
   ApiAdminDeliverRoute: ApiAdminDeliverRoute,
   ApiAdminDeliverVideoRoute: ApiAdminDeliverVideoRoute,
@@ -1623,6 +1666,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminToggleLogoVisibilityRoute: ApiAdminToggleLogoVisibilityRoute,
   ApiAdminUpdateBrandProfileRoute: ApiAdminUpdateBrandProfileRoute,
   ApiAdminUpdateDesignerRoute: ApiAdminUpdateDesignerRoute,
+  ApiAdminUpdateDiscountCodeRoute: ApiAdminUpdateDiscountCodeRoute,
   ApiAdminUpdateRequestRoute: ApiAdminUpdateRequestRoute,
   ApiAdminVerifyPinRoute: ApiAdminVerifyPinRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
