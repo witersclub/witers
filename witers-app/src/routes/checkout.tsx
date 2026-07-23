@@ -1,11 +1,26 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { useState } from "react";
 import { z } from "zod";
 
 import { WitersLogo } from "../components/witers/brand";
-import { currentPriceFor, getPlan, isPlanId } from "../lib/membership-plans";
+import { currentPriceFor, getPlan, isPlanId, type MembershipPlan } from "../lib/membership-plans";
 import { useMe } from "../lib/witers-client";
+
+// loadStripe() fetches Stripe.js and must only run once per key — the
+// publishable key doesn't change mid-session, so a tiny module-level cache
+// keeps re-renders (and StrictMode's double-invoke) from loading it twice.
+const stripePromiseCache = new Map<string, Promise<StripeJs | null>>();
+function getStripePromise(publishableKey: string) {
+  let cached = stripePromiseCache.get(publishableKey);
+  if (!cached) {
+    cached = loadStripe(publishableKey);
+    stripePromiseCache.set(publishableKey, cached);
+  }
+  return cached;
+}
 
 export const Route = createFileRoute("/checkout")({
   validateSearch: z.object({
@@ -31,9 +46,6 @@ function Checkout() {
   const plan = getPlan(planId ?? me.data?.membership?.plan);
   const fmt = (n: number) =>
     "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const [card, setCard] = useState({ name: "", number: "", exp: "", cvc: "" });
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   const active = me.data?.membership?.status === "active";
   // Already active on this exact plan = nothing to do (blocked below).
@@ -54,40 +66,34 @@ function Checkout() {
   const oldPrice = isSwitch ? currentPriceFor(getPlan(currentPlanId), activatedAt) : 0;
   const chargeAmount = isSwitch ? Math.max(0, price - oldPrice) : price;
 
-  async function pay(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const digits = card.number.replace(/\s+/g, "");
-    if (digits.length < 15 || digits.length > 16) {
-      setError("Revisa el número de tarjeta.");
-      return;
-    }
-    setLoading(true);
+  // Activates the membership in the DB — called once Stripe has confirmed a
+  // real charge (paymentIntentId set) or immediately for a free plan
+  // switch/downgrade (omitted). Returns an error string for the caller to
+  // display, or null on success (navigation happens here either way).
+  async function finalizeCheckout(paymentIntentId?: string): Promise<string | null> {
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ cardName: card.name, cardLast4: digits.slice(-4), plan: plan.id }),
+        body: JSON.stringify({ plan: plan.id, paymentIntentId }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (!data.ok) {
         if (data.error === "no_sesion") {
           navigate({ to: "/ingresar" });
-          return;
+          return null;
         }
         if (data.error === "ya_activa") {
           navigate({ to: "/panel" });
-          return;
+          return null;
         }
-        setError("No pudimos procesar el pago. Intenta de nuevo.");
-        return;
+        return "No pudimos activar tu membresía. Intenta de nuevo.";
       }
       await qc.invalidateQueries({ queryKey: ["me"] });
       navigate({ to: "/panel" });
+      return null;
     } catch {
-      setError("No pudimos procesar el pago. Intenta de nuevo.");
-    } finally {
-      setLoading(false);
+      return "No pudimos activar tu membresía. Intenta de nuevo.";
     }
   }
 
@@ -216,131 +222,209 @@ function Checkout() {
               </Link>
             </div>
           ) : (
-            <form
-              onSubmit={pay}
-              className="rounded-3xl bg-white p-8 shadow-[0_20px_60px_rgba(5,13,40,0.08)]"
-            >
-              <h2 className="text-xl font-bold text-wit-ink">Datos de pago</h2>
-              <p className="mt-1 text-xs text-wit-gray">
-                Pago seguro con tarjeta de crédito o débito.
-              </p>
-
-              <div className="mt-6 space-y-4">
-                <div>
-                  <label
-                    htmlFor="cname"
-                    className="mb-1.5 block text-sm font-semibold text-wit-ink"
-                  >
-                    Nombre en la tarjeta
-                  </label>
-                  <input
-                    id="cname"
-                    type="text"
-                    required
-                    minLength={2}
-                    value={card.name}
-                    onChange={(e) => setCard({ ...card, name: e.target.value })}
-                    className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 text-base outline-none focus:border-wit-blue"
-                    placeholder="Como aparece en la tarjeta"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="cnum" className="mb-1.5 block text-sm font-semibold text-wit-ink">
-                    Número de tarjeta
-                  </label>
-                  <input
-                    id="cnum"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="cc-number"
-                    required
-                    value={card.number}
-                    onChange={(e) =>
-                      setCard({
-                        ...card,
-                        number: e.target.value
-                          .replace(/[^\d]/g, "")
-                          .replace(/(\d{4})(?=\d)/g, "$1 ")
-                          .slice(0, 19),
-                      })
-                    }
-                    className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 font-wit-mono text-base outline-none focus:border-wit-blue"
-                    placeholder="4242 4242 4242 4242"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label
-                      htmlFor="cexp"
-                      className="mb-1.5 block text-sm font-semibold text-wit-ink"
-                    >
-                      Vencimiento
-                    </label>
-                    <input
-                      id="cexp"
-                      type="text"
-                      required
-                      value={card.exp}
-                      onChange={(e) =>
-                        setCard({
-                          ...card,
-                          exp: e.target.value
-                            .replace(/[^\d]/g, "")
-                            .replace(/(\d{2})(?=\d)/, "$1/")
-                            .slice(0, 5),
-                        })
-                      }
-                      className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 font-wit-mono text-base outline-none focus:border-wit-blue"
-                      placeholder="MM/AA"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="ccvc"
-                      className="mb-1.5 block text-sm font-semibold text-wit-ink"
-                    >
-                      CVC
-                    </label>
-                    <input
-                      id="ccvc"
-                      type="password"
-                      required
-                      value={card.cvc}
-                      onChange={(e) =>
-                        setCard({ ...card, cvc: e.target.value.replace(/[^\d]/g, "").slice(0, 4) })
-                      }
-                      className="w-full rounded-xl border border-wit-ink/15 px-4 py-3 font-wit-mono text-base outline-none focus:border-wit-blue"
-                      placeholder="123"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {error ? (
-                <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
-              ) : null}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-6 w-full rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
-              >
-                {loading
-                  ? "Procesando pago..."
-                  : isSwitch
-                    ? chargeAmount > 0
-                      ? `Cambiar a ${plan.nombre} — ${fmt(chargeAmount)} MXN`
-                      : `Cambiar a ${plan.nombre} — sin costo adicional`
-                    : `Pagar ${fmt(price)} MXN`}
-              </button>
-              <p className="mt-3 text-center text-[11px] leading-relaxed text-wit-gray">
-                Entorno de pago en modo de activación directa. La pasarela definitiva (Stripe o
-                Mercado Pago) se conecta sin cambiar este flujo.
-              </p>
-            </form>
+            <PaymentSection
+              plan={plan}
+              isSwitch={isSwitch}
+              chargeAmount={chargeAmount}
+              price={price}
+              fmt={fmt}
+              onFinalize={finalizeCheckout}
+            />
           )}
         </section>
       </main>
     </div>
+  );
+}
+
+type PaymentIntentResponse =
+  | { ok: true; free: true; publishableKey: string }
+  | { ok: true; free: false; clientSecret: string; publishableKey: string }
+  | { ok: false; error?: string };
+
+const PAYMENT_CARD_CLASS = "rounded-3xl bg-white p-8 shadow-[0_20px_60px_rgba(5,13,40,0.08)]";
+
+// Creates the PaymentIntent (or detects a free switch) before rendering
+// either the Stripe card form or a plain confirm button — Elements needs a
+// clientSecret up front, it can't be created after the form mounts.
+function PaymentSection(props: {
+  plan: MembershipPlan;
+  isSwitch: boolean;
+  chargeAmount: number;
+  price: number;
+  fmt: (n: number) => string;
+  onFinalize: (paymentIntentId?: string) => Promise<string | null>;
+}) {
+  const { plan, isSwitch, chargeAmount, price, fmt, onFinalize } = props;
+
+  const intentQuery = useQuery({
+    queryKey: ["stripe-payment-intent", plan.id, chargeAmount],
+    queryFn: async () => {
+      const res = await fetch("/api/stripe/create-payment-intent", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ plan: plan.id }),
+      });
+      return (await res.json()) as PaymentIntentResponse;
+    },
+  });
+
+  if (intentQuery.isLoading) {
+    return (
+      <div className={PAYMENT_CARD_CLASS}>
+        <div className="h-40 animate-pulse rounded-2xl bg-wit-mist/40" />
+      </div>
+    );
+  }
+
+  if (!intentQuery.data?.ok) {
+    return (
+      <div className={PAYMENT_CARD_CLASS}>
+        <p className="text-sm text-red-600">
+          No pudimos preparar el pago. Refresca la página e intenta de nuevo.
+        </p>
+      </div>
+    );
+  }
+
+  if (intentQuery.data.free) {
+    return <FreeSwitchCard plan={plan} onFinalize={onFinalize} />;
+  }
+
+  return (
+    <Elements
+      stripe={getStripePromise(intentQuery.data.publishableKey)}
+      options={{ clientSecret: intentQuery.data.clientSecret, locale: "es" }}
+    >
+      <StripeCheckoutForm
+        plan={plan}
+        isSwitch={isSwitch}
+        chargeAmount={chargeAmount}
+        price={price}
+        fmt={fmt}
+        onFinalize={onFinalize}
+      />
+    </Elements>
+  );
+}
+
+// A same-price switch or downgrade — nothing to charge, so no Stripe form
+// at all, just a plain confirm button.
+function FreeSwitchCard({
+  plan,
+  onFinalize,
+}: {
+  plan: MembershipPlan;
+  onFinalize: (paymentIntentId?: string) => Promise<string | null>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleClick() {
+    setLoading(true);
+    setError(null);
+    const err = await onFinalize();
+    if (err) setError(err);
+    setLoading(false);
+  }
+
+  return (
+    <div className={PAYMENT_CARD_CLASS}>
+      <h2 className="text-xl font-bold text-wit-ink">Confirmar cambio de plan</h2>
+      <p className="mt-1 text-xs text-wit-gray">
+        Este cambio no tiene costo adicional este mes — no necesitas ingresar datos de pago.
+      </p>
+      {error ? (
+        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={loading}
+        className="mt-6 w-full rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
+      >
+        {loading ? "Confirmando..." : `Cambiar a ${plan.nombre} — sin costo adicional`}
+      </button>
+    </div>
+  );
+}
+
+// Renders inside <Elements>, so useStripe()/useElements() can see the
+// clientSecret PaymentSection created above.
+function StripeCheckoutForm({
+  plan,
+  isSwitch,
+  chargeAmount,
+  price,
+  fmt,
+  onFinalize,
+}: {
+  plan: MembershipPlan;
+  isSwitch: boolean;
+  chargeAmount: number;
+  price: number;
+  fmt: (n: number) => string;
+  onFinalize: (paymentIntentId?: string) => Promise<string | null>;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setError(null);
+    setLoading(true);
+
+    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      redirect: "if_required",
+    });
+
+    if (confirmError) {
+      setError(confirmError.message ?? "No pudimos procesar el pago. Intenta de nuevo.");
+      setLoading(false);
+      return;
+    }
+    if (paymentIntent?.status !== "succeeded") {
+      setError("El pago no se completó. Intenta de nuevo.");
+      setLoading(false);
+      return;
+    }
+
+    const finalizeError = await onFinalize(paymentIntent.id);
+    if (finalizeError) setError(finalizeError);
+    setLoading(false);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className={PAYMENT_CARD_CLASS}>
+      <h2 className="text-xl font-bold text-wit-ink">Datos de pago</h2>
+      <p className="mt-1 text-xs text-wit-gray">Pago seguro procesado por Stripe.</p>
+
+      <div className="mt-6">
+        <PaymentElement />
+      </div>
+
+      {error ? (
+        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
+      ) : null}
+
+      <button
+        type="submit"
+        disabled={loading || !stripe || !elements}
+        className="mt-6 w-full rounded-2xl bg-wit-blue px-6 py-4 text-base font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:opacity-60"
+      >
+        {loading
+          ? "Procesando pago..."
+          : isSwitch
+            ? `Cambiar a ${plan.nombre} — ${fmt(chargeAmount)} MXN`
+            : `Pagar ${fmt(price)} MXN`}
+      </button>
+      <p className="mt-3 text-center text-[11px] leading-relaxed text-wit-gray">
+        Pago procesado de forma segura por Stripe. Nunca almacenamos los datos de tu tarjeta.
+      </p>
+    </form>
   );
 }

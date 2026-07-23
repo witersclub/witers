@@ -48,6 +48,7 @@ import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-pr
 import { Route as ApiBrandProfileColorsRouteImport } from './routes/api/brand-profile-colors'
 import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
 import { Route as ApiWitChatRouteImport } from './routes/api/wit/chat'
+import { Route as ApiStripeCreatePaymentIntentRouteImport } from './routes/api/stripe/create-payment-intent'
 import { Route as ApiPublicShowcaseImageRouteImport } from './routes/api/public/showcase-image'
 import { Route as ApiPublicShowcaseRouteImport } from './routes/api/public/showcase'
 import { Route as ApiPublicReviewsRouteImport } from './routes/api/public/reviews'
@@ -279,6 +280,12 @@ const ApiWitChatRoute = ApiWitChatRouteImport.update({
   path: '/api/wit/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStripeCreatePaymentIntentRoute =
+  ApiStripeCreatePaymentIntentRouteImport.update({
+    id: '/api/stripe/create-payment-intent',
+    path: '/api/stripe/create-payment-intent',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicShowcaseImageRoute = ApiPublicShowcaseImageRouteImport.update({
   id: '/api/public/showcase-image',
   path: '/api/public/showcase-image',
@@ -529,6 +536,7 @@ export interface FileRoutesByFullPath {
   '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
+  '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/chat': typeof ApiWitChatRoute
 }
 export interface FileRoutesByTo {
@@ -604,6 +612,7 @@ export interface FileRoutesByTo {
   '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
+  '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/chat': typeof ApiWitChatRoute
 }
 export interface FileRoutesById {
@@ -680,6 +689,7 @@ export interface FileRoutesById {
   '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
+  '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/chat': typeof ApiWitChatRoute
 }
 export interface FileRouteTypes {
@@ -757,6 +767,7 @@ export interface FileRouteTypes {
     | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
+    | '/api/stripe/create-payment-intent'
     | '/api/wit/chat'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -832,6 +843,7 @@ export interface FileRouteTypes {
     | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
+    | '/api/stripe/create-payment-intent'
     | '/api/wit/chat'
   id:
     | '__root__'
@@ -907,6 +919,7 @@ export interface FileRouteTypes {
     | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
+    | '/api/stripe/create-payment-intent'
     | '/api/wit/chat'
   fileRoutesById: FileRoutesById
 }
@@ -983,6 +996,7 @@ export interface RootRouteChildren {
   ApiPublicReviewsRoute: typeof ApiPublicReviewsRoute
   ApiPublicShowcaseRoute: typeof ApiPublicShowcaseRoute
   ApiPublicShowcaseImageRoute: typeof ApiPublicShowcaseImageRoute
+  ApiStripeCreatePaymentIntentRoute: typeof ApiStripeCreatePaymentIntentRoute
   ApiWitChatRoute: typeof ApiWitChatRoute
 }
 
@@ -1259,6 +1273,13 @@ declare module '@tanstack/react-router' {
       path: '/api/wit/chat'
       fullPath: '/api/wit/chat'
       preLoaderRoute: typeof ApiWitChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stripe/create-payment-intent': {
+      id: '/api/stripe/create-payment-intent'
+      path: '/api/stripe/create-payment-intent'
+      fullPath: '/api/stripe/create-payment-intent'
+      preLoaderRoute: typeof ApiStripeCreatePaymentIntentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/showcase-image': {
@@ -1575,6 +1596,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicReviewsRoute: ApiPublicReviewsRoute,
   ApiPublicShowcaseRoute: ApiPublicShowcaseRoute,
   ApiPublicShowcaseImageRoute: ApiPublicShowcaseImageRoute,
+  ApiStripeCreatePaymentIntentRoute: ApiStripeCreatePaymentIntentRoute,
   ApiWitChatRoute: ApiWitChatRoute,
 }
 export const routeTree = rootRouteImport

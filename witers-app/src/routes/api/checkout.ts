@@ -1,16 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { currentPriceFor, getPlan, isPlanId } from "../../lib/membership-plans";
+import { getPlan, isPlanId } from "../../lib/membership-plans";
+import { computeChargeAmount, pesosToCentavos, stripeClient } from "../../lib/stripe.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
 const schema = z.object({
-  // Card fields are accepted for UX completeness but NEVER stored. When a real
-  // payment provider (Stripe / Mercado Pago) is wired via website secrets, this
-  // route exchanges them for a provider token instead.
-  cardName: z.string().min(2).max(80),
-  cardLast4: z.string().regex(/^\d{4}$/),
   plan: z.string().refine(isPlanId),
+  // Present only when the charge was > $0 — a Stripe PaymentIntent this
+  // route verifies actually succeeded before touching the DB. Omitted for
+  // a free plan switch/downgrade, where there's nothing to charge.
+  paymentIntentId: z.string().optional(),
 });
 
 export const Route = createFileRoute("/api/checkout")({
@@ -38,22 +38,37 @@ export const Route = createFileRoute("/api/checkout")({
           return json({ ok: false, error: "ya_activa" }, { status: 409 });
         }
 
-        // A returning member keeps their original activated_at (so the 3-month
-        // promo window is anchored to when they first subscribed, not reset on
-        // every reactivation); a brand-new member has none yet, so they always
-        // get the promo price.
-        const price = currentPriceFor(plan, existing?.activated_at ?? null);
+        // Recomputed independently from the DB — never trust a client-sent
+        // price. Must match exactly what /api/stripe/create-payment-intent
+        // charged, or the PaymentIntent verification below rejects it.
+        const { price, chargeAmount } = computeChargeAmount(plan, existing);
+        let paymentIntentId: string | null = null;
 
-        // A plan switch charges only the difference from what they're already
-        // paying this month — not the new plan's full price again — since
-        // there's no real subscription/billing-cycle engine here to prorate
-        // against (no stored renewal date). A downgrade (or same-price swap)
-        // charges nothing; there's no refund path for the difference already
-        // paid on the old plan, so it just takes effect for free.
-        let chargeAmount = price;
-        if (existing?.status === "active" && existing.plan !== plan.id) {
-          const oldPrice = currentPriceFor(getPlan(existing.plan), existing.activated_at);
-          chargeAmount = Math.max(0, price - oldPrice);
+        if (chargeAmount > 0) {
+          paymentIntentId = parsed.data.paymentIntentId ?? null;
+          if (!paymentIntentId) {
+            return json({ ok: false, error: "pago_requerido" }, { status: 400 });
+          }
+          // provider_ref is only ever written below after a verified charge,
+          // so a prior 'paid' row for this same PaymentIntent means it was
+          // already used to activate a membership — reject the replay.
+          const alreadyUsed = await db()
+            .prepare("SELECT id FROM payments WHERE provider_ref = ?1 AND status = 'paid'")
+            .bind(paymentIntentId)
+            .first();
+          if (alreadyUsed) {
+            return json({ ok: false, error: "pago_ya_usado" }, { status: 409 });
+          }
+
+          const intent = await stripeClient().paymentIntents.retrieve(paymentIntentId);
+          const matches =
+            intent.status === "succeeded" &&
+            intent.metadata.userId === user.id &&
+            intent.metadata.plan === plan.id &&
+            intent.amount === pesosToCentavos(chargeAmount);
+          if (!matches) {
+            return json({ ok: false, error: "pago_invalido" }, { status: 400 });
+          }
         }
 
         const membershipId = existing?.id ?? crypto.randomUUID();
@@ -88,9 +103,9 @@ export const Route = createFileRoute("/api/checkout")({
         await db()
           .prepare(
             `INSERT INTO payments (id, user_id, membership_id, amount_mxn, method, provider, provider_ref, status)
-             VALUES (?1, ?2, ?3, ?4, 'card', 'sandbox', ?5, 'paid')`,
+             VALUES (?1, ?2, ?3, ?4, 'card', 'stripe', ?5, 'paid')`,
           )
-          .bind(paymentId, user.id, membershipId, chargeAmount, `card-${parsed.data.cardLast4}`)
+          .bind(paymentId, user.id, membershipId, chargeAmount, paymentIntentId)
           .run();
 
         return json({ ok: true, membershipId, paymentId, chargeAmount });
