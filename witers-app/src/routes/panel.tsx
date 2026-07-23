@@ -153,12 +153,16 @@ function parseResults(row: RequestRow): ResultItem[] {
   }
 }
 
-const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  en_proceso: { label: "En proceso", cls: "bg-amber-50 text-amber-700" },
-  completada: { label: "Completada", cls: "bg-emerald-50 text-emerald-700" },
-  cerrada: { label: "✓ Finalizada", cls: "bg-wit-blue/10 text-wit-blue" },
-  rechazada: { label: "Rechazada", cls: "bg-red-50 text-red-600" },
-  cambio_solicitado: { label: "Cambio en revisión", cls: "bg-amber-50 text-amber-700" },
+const STATUS_LABEL: Record<string, { es: string; en: string; cls: string }> = {
+  en_proceso: { es: "En proceso", en: "In progress", cls: "bg-amber-50 text-amber-700" },
+  completada: { es: "Completada", en: "Completed", cls: "bg-emerald-50 text-emerald-700" },
+  cerrada: { es: "✓ Finalizada", en: "✓ Finished", cls: "bg-wit-blue/10 text-wit-blue" },
+  rechazada: { es: "Rechazada", en: "Rejected", cls: "bg-red-50 text-red-600" },
+  cambio_solicitado: {
+    es: "Cambio en revisión",
+    en: "Change under review",
+    cls: "bg-amber-50 text-amber-700",
+  },
 };
 
 // Consecutive weeks (counting back from the current one) with at least one
@@ -2313,17 +2317,35 @@ type CampaignObjectiveUI = "trafico" | "interaccion" | "ventas";
 const OBJECTIVE_OPTIONS: {
   value: CampaignObjectiveUI;
   icon: LucideIcon;
-  label: string;
-  hint: string;
+  labelEs: string;
+  labelEn: string;
+  hintEs: string;
+  hintEn: string;
 }[] = [
-  { value: "trafico", icon: Link2, label: "Tráfico", hint: "Lleva gente a tu Página o Instagram" },
+  {
+    value: "trafico",
+    icon: Link2,
+    labelEs: "Tráfico",
+    labelEn: "Traffic",
+    hintEs: "Lleva gente a tu Página o Instagram",
+    hintEn: "Bring people to your Page or Instagram",
+  },
   {
     value: "interaccion",
     icon: MessageCircle,
-    label: "Interacción",
-    hint: "Más comentarios, likes y compartidos",
+    labelEs: "Interacción",
+    labelEn: "Engagement",
+    hintEs: "Más comentarios, likes y compartidos",
+    hintEn: "More comments, likes and shares",
   },
-  { value: "ventas", icon: ShoppingCart, label: "Ventas", hint: "Clic directo a tu WhatsApp" },
+  {
+    value: "ventas",
+    icon: ShoppingCart,
+    labelEs: "Ventas",
+    labelEn: "Sales",
+    hintEs: "Clic directo a tu WhatsApp",
+    hintEn: "Direct click to your WhatsApp",
+  },
 ];
 
 function parseAgeRangeClient(ageRange: string | null): { min: number; max: number } {
@@ -2345,18 +2367,18 @@ type InterestHit = { id: string; name: string; audienceSize: number | null };
 // Mexican business — the rest cover the other markets WITERS clients are
 // most likely to have customers/branches in.
 const COUNTRY_CODES = [
-  { code: "+52", flag: "🇲🇽", name: "México" },
-  { code: "+1", flag: "🇺🇸", name: "Estados Unidos" },
-  { code: "+34", flag: "🇪🇸", name: "España" },
-  { code: "+57", flag: "🇨🇴", name: "Colombia" },
-  { code: "+54", flag: "🇦🇷", name: "Argentina" },
-  { code: "+56", flag: "🇨🇱", name: "Chile" },
-  { code: "+51", flag: "🇵🇪", name: "Perú" },
-  { code: "+593", flag: "🇪🇨", name: "Ecuador" },
-  { code: "+502", flag: "🇬🇹", name: "Guatemala" },
-  { code: "+506", flag: "🇨🇷", name: "Costa Rica" },
-  { code: "+507", flag: "🇵🇦", name: "Panamá" },
-  { code: "+58", flag: "🇻🇪", name: "Venezuela" },
+  { code: "+52", flag: "🇲🇽", nameEs: "México", nameEn: "Mexico" },
+  { code: "+1", flag: "🇺🇸", nameEs: "Estados Unidos", nameEn: "United States" },
+  { code: "+34", flag: "🇪🇸", nameEs: "España", nameEn: "Spain" },
+  { code: "+57", flag: "🇨🇴", nameEs: "Colombia", nameEn: "Colombia" },
+  { code: "+54", flag: "🇦🇷", nameEs: "Argentina", nameEn: "Argentina" },
+  { code: "+56", flag: "🇨🇱", nameEs: "Chile", nameEn: "Chile" },
+  { code: "+51", flag: "🇵🇪", nameEs: "Perú", nameEn: "Peru" },
+  { code: "+593", flag: "🇪🇨", nameEs: "Ecuador", nameEn: "Ecuador" },
+  { code: "+502", flag: "🇬🇹", nameEs: "Guatemala", nameEn: "Guatemala" },
+  { code: "+506", flag: "🇨🇷", nameEs: "Costa Rica", nameEn: "Costa Rica" },
+  { code: "+507", flag: "🇵🇦", nameEs: "Panamá", nameEn: "Panama" },
+  { code: "+58", flag: "🇻🇪", nameEs: "Venezuela", nameEn: "Venezuela" },
 ];
 
 // Same country list as COUNTRY_CODES, but ISO 3166-1 alpha-2 for Meta's
@@ -2364,18 +2386,18 @@ const COUNTRY_CODES = [
 // defaults to México but is switchable, since a client may want to target
 // a different country than the one WITERS itself operates from.
 const LOCATION_COUNTRIES = [
-  { code: "MX", flag: "🇲🇽", name: "México" },
-  { code: "US", flag: "🇺🇸", name: "Estados Unidos" },
-  { code: "ES", flag: "🇪🇸", name: "España" },
-  { code: "CO", flag: "🇨🇴", name: "Colombia" },
-  { code: "AR", flag: "🇦🇷", name: "Argentina" },
-  { code: "CL", flag: "🇨🇱", name: "Chile" },
-  { code: "PE", flag: "🇵🇪", name: "Perú" },
-  { code: "EC", flag: "🇪🇨", name: "Ecuador" },
-  { code: "GT", flag: "🇬🇹", name: "Guatemala" },
-  { code: "CR", flag: "🇨🇷", name: "Costa Rica" },
-  { code: "PA", flag: "🇵🇦", name: "Panamá" },
-  { code: "VE", flag: "🇻🇪", name: "Venezuela" },
+  { code: "MX", flag: "🇲🇽", nameEs: "México", nameEn: "Mexico" },
+  { code: "US", flag: "🇺🇸", nameEs: "Estados Unidos", nameEn: "United States" },
+  { code: "ES", flag: "🇪🇸", nameEs: "España", nameEn: "Spain" },
+  { code: "CO", flag: "🇨🇴", nameEs: "Colombia", nameEn: "Colombia" },
+  { code: "AR", flag: "🇦🇷", nameEs: "Argentina", nameEn: "Argentina" },
+  { code: "CL", flag: "🇨🇱", nameEs: "Chile", nameEn: "Chile" },
+  { code: "PE", flag: "🇵🇪", nameEs: "Perú", nameEn: "Peru" },
+  { code: "EC", flag: "🇪🇨", nameEs: "Ecuador", nameEn: "Ecuador" },
+  { code: "GT", flag: "🇬🇹", nameEs: "Guatemala", nameEn: "Guatemala" },
+  { code: "CR", flag: "🇨🇷", nameEs: "Costa Rica", nameEn: "Costa Rica" },
+  { code: "PA", flag: "🇵🇦", nameEs: "Panamá", nameEn: "Panama" },
+  { code: "VE", flag: "🇻🇪", nameEs: "Venezuela", nameEn: "Venezuela" },
 ];
 
 // Same icon repeated across a chip set on purpose — the amounts/durations
@@ -2384,27 +2406,27 @@ const LOCATION_COUNTRIES = [
 // anyway. One consistent icon per question reads cleaner than a forced
 // icon-per-value.
 const BUDGET_CHIPS = [
-  { value: "50", icon: Wallet, label: "$50 / día" },
-  { value: "100", icon: Wallet, label: "$100 / día" },
-  { value: "200", icon: Wallet, label: "$200 / día" },
-  { value: "300", icon: Wallet, label: "$300 / día" },
-  { value: "500", icon: Wallet, label: "$500 / día" },
+  { value: "50", icon: Wallet, labelEs: "$50 / día", labelEn: "$50 / day" },
+  { value: "100", icon: Wallet, labelEs: "$100 / día", labelEn: "$100 / day" },
+  { value: "200", icon: Wallet, labelEs: "$200 / día", labelEn: "$200 / day" },
+  { value: "300", icon: Wallet, labelEs: "$300 / día", labelEn: "$300 / day" },
+  { value: "500", icon: Wallet, labelEs: "$500 / día", labelEn: "$500 / day" },
 ];
 
 const DURATION_CHIPS = [
-  { value: "3", icon: Calendar, label: "3 días" },
-  { value: "7", icon: Calendar, label: "1 semana" },
-  { value: "14", icon: Calendar, label: "2 semanas" },
-  { value: "30", icon: Calendar, label: "1 mes" },
+  { value: "3", icon: Calendar, labelEs: "3 días", labelEn: "3 days" },
+  { value: "7", icon: Calendar, labelEs: "1 semana", labelEn: "1 week" },
+  { value: "14", icon: Calendar, labelEs: "2 semanas", labelEn: "2 weeks" },
+  { value: "30", icon: Calendar, labelEs: "1 mes", labelEn: "1 month" },
 ];
 
 const PAUTA_AGE_CHIPS = [
-  { min: 18, max: 24, icon: User, label: "18 a 24" },
-  { min: 25, max: 34, icon: User, label: "25 a 34" },
-  { min: 35, max: 44, icon: User, label: "35 a 44" },
-  { min: 45, max: 54, icon: User, label: "45 a 54" },
-  { min: 55, max: 65, icon: User, label: "55 a 65" },
-  { min: 18, max: 65, icon: Users, label: "Todas las edades" },
+  { min: 18, max: 24, icon: User, labelEs: "18 a 24", labelEn: "18 to 24" },
+  { min: 25, max: 34, icon: User, labelEs: "25 a 34", labelEn: "25 to 34" },
+  { min: 35, max: 44, icon: User, labelEs: "35 a 44", labelEn: "35 to 44" },
+  { min: 45, max: 54, icon: User, labelEs: "45 a 54", labelEn: "45 to 54" },
+  { min: 55, max: 65, icon: User, labelEs: "55 a 65", labelEn: "55 to 65" },
+  { min: 18, max: 65, icon: Users, labelEs: "Todas las edades", labelEn: "All ages" },
 ];
 
 // Curated so the client never has to type — each icon resolves itself into
@@ -2413,18 +2435,28 @@ const PAUTA_AGE_CHIPS = [
 // just reports "no se pudo" and the campaign proceeds with broad targeting
 // instead of leaving the client stuck on a dead search box.
 const INTEREST_CATEGORIES = [
-  { query: "moda", icon: ShoppingBag, label: "Moda y compras" },
-  { query: "restaurantes", icon: UtensilsCrossed, label: "Restaurantes" },
-  { query: "fitness", icon: Dumbbell, label: "Fitness" },
-  { query: "belleza", icon: Sparkles, label: "Belleza" },
-  { query: "decoración del hogar", icon: Home, label: "Hogar" },
-  { query: "crianza", icon: Users, label: "Familia" },
-  { query: "tecnología", icon: Laptop, label: "Tecnología" },
-  { query: "automóviles", icon: Car, label: "Autos" },
-  { query: "viajes", icon: Plane, label: "Viajes" },
-  { query: "mascotas", icon: PawPrint, label: "Mascotas" },
-  { query: "emprendimiento", icon: Briefcase, label: "Negocios" },
-  { query: "bienes raíces", icon: Building2, label: "Bienes raíces" },
+  { query: "moda", icon: ShoppingBag, labelEs: "Moda y compras", labelEn: "Fashion & shopping" },
+  {
+    query: "restaurantes",
+    icon: UtensilsCrossed,
+    labelEs: "Restaurantes",
+    labelEn: "Restaurants",
+  },
+  { query: "fitness", icon: Dumbbell, labelEs: "Fitness", labelEn: "Fitness" },
+  { query: "belleza", icon: Sparkles, labelEs: "Belleza", labelEn: "Beauty" },
+  { query: "decoración del hogar", icon: Home, labelEs: "Hogar", labelEn: "Home" },
+  { query: "crianza", icon: Users, labelEs: "Familia", labelEn: "Family" },
+  { query: "tecnología", icon: Laptop, labelEs: "Tecnología", labelEn: "Technology" },
+  { query: "automóviles", icon: Car, labelEs: "Autos", labelEn: "Cars" },
+  { query: "viajes", icon: Plane, labelEs: "Viajes", labelEn: "Travel" },
+  { query: "mascotas", icon: PawPrint, labelEs: "Mascotas", labelEn: "Pets" },
+  { query: "emprendimiento", icon: Briefcase, labelEs: "Negocios", labelEn: "Business" },
+  {
+    query: "bienes raíces",
+    icon: Building2,
+    labelEs: "Bienes raíces",
+    labelEn: "Real estate",
+  },
 ];
 
 type CategoryStatus = "idle" | "loading" | "ok" | "empty" | "error";
@@ -2526,7 +2558,7 @@ function WizardShell({
   children,
   onBack,
   onNext,
-  nextLabel = "Siguiente",
+  nextLabel,
   nextDisabled = false,
   hideNext = false,
 }: {
@@ -2545,11 +2577,12 @@ function WizardShell({
   nextDisabled?: boolean;
   hideNext?: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="flex h-full flex-col">
       <div className="mb-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-          Pregunta {qIndex + 1} de {total}
+          {t("Pregunta", "Question")} {qIndex + 1} {t("de", "of")} {total}
         </p>
         <h2 className="mt-1 flex items-center gap-2 text-lg font-bold text-wit-ink">
           <Icon className="h-6 w-6 text-wit-blue" strokeWidth={1.75} /> {question}
@@ -2564,7 +2597,7 @@ function WizardShell({
             onClick={onBack}
             className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
           >
-            ← Atrás
+            ← {t("Atrás", "Back")}
           </button>
         ) : null}
         {!hideNext ? (
@@ -2574,7 +2607,7 @@ function WizardShell({
             onClick={onNext}
             className="ml-auto rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-40"
           >
-            {nextLabel}
+            {nextLabel ?? t("Siguiente", "Next")}
           </button>
         ) : null}
       </div>
@@ -2758,6 +2791,7 @@ function PautaBuilder({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const { t, lang } = useLanguage();
   const [objective, setObjective] = useState<CampaignObjectiveUI>("interaccion");
   const [dailyBudget, setDailyBudget] = useState("100");
   const [durationDays, setDurationDays] = useState("7");
@@ -2774,7 +2808,7 @@ function PautaBuilder({
     () =>
       new Set(
         PAUTA_AGE_CHIPS.filter((c) => c.min === defaultAge.min && c.max === defaultAge.max).map(
-          (c) => c.label,
+          (c) => c.labelEs,
         ),
       ),
   );
@@ -2842,15 +2876,15 @@ function PautaBuilder({
     setAgeCustomOpen(false);
     setSelectedAgeChips((prev) => {
       const next = new Set(prev);
-      if (next.has(chip.label)) next.delete(chip.label);
-      else next.add(chip.label);
+      if (next.has(chip.labelEs)) next.delete(chip.labelEs);
+      else next.add(chip.labelEs);
       return next;
     });
   }
 
   useEffect(() => {
     if (selectedAgeChips.size === 0) return;
-    const chosen = PAUTA_AGE_CHIPS.filter((c) => selectedAgeChips.has(c.label));
+    const chosen = PAUTA_AGE_CHIPS.filter((c) => selectedAgeChips.has(c.labelEs));
     setAgeMin(String(Math.min(...chosen.map((c) => c.min))));
     setAgeMax(String(Math.max(...chosen.map((c) => c.max))));
   }, [selectedAgeChips]);
@@ -3084,31 +3118,48 @@ function PautaBuilder({
   async function submit() {
     const budgetMxn = Number(dailyBudget);
     if (!Number.isFinite(budgetMxn) || budgetMxn < 20) {
-      setError("El presupuesto diario debe ser de al menos $20 MXN.");
+      setError(
+        t(
+          "El presupuesto diario debe ser de al menos $20 MXN.",
+          "The daily budget must be at least $20 MXN.",
+        ),
+      );
       return;
     }
     const days = Number(durationDays);
     if (!Number.isInteger(days) || days < 1) {
-      setError("La duración debe ser de al menos 1 día.");
+      setError(
+        t("La duración debe ser de al menos 1 día.", "The duration must be at least 1 day."),
+      );
       return;
     }
     const min = Number(ageMin);
     const max = Number(ageMax);
     if (!Number.isInteger(min) || !Number.isInteger(max) || min < 13 || max > 65 || min > max) {
-      setError("Revisa el rango de edad (13 a 65).");
+      setError(t("Revisa el rango de edad (13 a 65).", "Check the age range (13 to 65)."));
       return;
     }
     if (objective === "ventas" && !whatsappNumber.trim()) {
-      setError("Escribe el número de WhatsApp para anuncios de Ventas.");
+      setError(
+        t(
+          "Escribe el número de WhatsApp para anuncios de Ventas.",
+          "Enter the WhatsApp number for Sales ads.",
+        ),
+      );
       return;
     }
     if (objective === "trafico" && trafficDestination === "web" && !websiteUrl.trim()) {
-      setError("Escribe la URL de tu página web, o elige llevar el tráfico a tus redes.");
+      setError(
+        t(
+          "Escribe la URL de tu página web, o elige llevar el tráfico a tus redes.",
+          "Enter your website URL, or choose to send traffic to your social media instead.",
+        ),
+      );
       return;
     }
     const messages = adMessages.map((m) => m.trim()).filter(Boolean);
     if (messages.length === 0) {
-      setError("Escribe al menos un mensaje para el anuncio.");
+      setError(t("Escribe al menos un mensaje para el anuncio.", "Write at least one ad message."));
       return;
     }
 
@@ -3155,17 +3206,29 @@ function PautaBuilder({
       if (!data.ok) {
         setError(
           data.error === "sin_pieza_final"
-            ? "Aún no hay una pieza final para esta solicitud."
+            ? t(
+                "Aún no hay una pieza final para esta solicitud.",
+                "There isn't a final piece for this request yet.",
+              )
             : data.error === "solicitud_no_terminada"
-              ? "Esta solicitud todavía no está terminada."
+              ? t("Esta solicitud todavía no está terminada.", "This request isn't finished yet.")
               : data.error === "pagina_no_conectada"
-                ? "Tu Página de Facebook aún no está conectada. Contáctanos para activarla."
+                ? t(
+                    "Tu Página de Facebook aún no está conectada. Contáctanos para activarla.",
+                    "Your Facebook Page isn't connected yet. Contact us to activate it.",
+                  )
                 : data.error === "datos_invalidos" && data.message
-                  ? `No pudimos crear la campaña (${data.message}).`
+                  ? t(
+                      `No pudimos crear la campaña (${data.message}).`,
+                      `We couldn't create the campaign (${data.message}).`,
+                    )
                   : // Anything else is a real Meta/config error — show the raw
                     // code so it's diagnosable from a screenshot instead of
                     // swallowed into a generic "try again."
-                    `No pudimos crear la campaña${data.error ? ` (${data.error})` : ""}. Intenta de nuevo.`,
+                    t(
+                      `No pudimos crear la campaña${data.error ? ` (${data.error})` : ""}. Intenta de nuevo.`,
+                      `We couldn't create the campaign${data.error ? ` (${data.error})` : ""}. Try again.`,
+                    ),
         );
         setPhase("wizard");
         return;
@@ -3174,7 +3237,12 @@ function PautaBuilder({
       setCampaignComplete(data.complete ?? true);
       setPhase("done");
     } catch {
-      setError("No pudimos crear la campaña. Intenta de nuevo.");
+      setError(
+        t(
+          "No pudimos crear la campaña. Intenta de nuevo.",
+          "We couldn't create the campaign. Try again.",
+        ),
+      );
       setPhase("wizard");
     }
   }
@@ -3185,7 +3253,7 @@ function PautaBuilder({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Cerrar"
+          aria-label={t("Cerrar", "Close")}
           className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
         >
           ×
@@ -3193,7 +3261,9 @@ function PautaBuilder({
         <div className="wit-float">
           <WMark size={26} />
         </div>
-        <p className="text-sm font-medium text-wit-ink">Pauta interactiva</p>
+        <p className="text-sm font-medium text-wit-ink">
+          {t("Pauta interactiva", "Interactive ad")}
+        </p>
       </div>
 
       <div className="flex-1 overflow-y-auto py-4">
@@ -3202,7 +3272,7 @@ function PautaBuilder({
             <div className="sticky top-0 overflow-hidden rounded-2xl border border-wit-ink/10">
               <img
                 src={request.imageHref}
-                alt={`Resultado de ${request.title}`}
+                alt={t(`Resultado de ${request.title}`, `Result for ${request.title}`)}
                 className="w-full object-cover"
               />
             </div>
@@ -3221,19 +3291,21 @@ function PautaBuilder({
               <div className="rounded-2xl border-2 border-amber-400 bg-amber-50 p-6 text-sm text-wit-ink">
                 <p className="flex items-center gap-2 font-bold text-amber-800">
                   <AlertTriangle className="h-5 w-5 shrink-0" strokeWidth={1.75} />
-                  Tu campaña quedó incompleta
+                  {t("Tu campaña quedó incompleta", "Your campaign was left incomplete")}
                 </p>
                 <p className="mt-1 text-xs text-amber-900">{warning}</p>
                 <p className="mt-2 text-xs text-amber-900">
-                  Revísala en Meta Ads Manager antes de darla por lista — probablemente falte el
-                  conjunto de anuncios, la imagen o el anuncio.
+                  {t(
+                    "Revísala en Meta Ads Manager antes de darla por lista — probablemente falte el conjunto de anuncios, la imagen o el anuncio.",
+                    "Review it in Meta Ads Manager before considering it ready — the ad set, the image, or the ad itself is likely missing.",
+                  )}
                 </p>
                 <button
                   type="button"
                   onClick={onCreated}
                   className="mt-4 rounded-full bg-amber-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-amber-700"
                 >
-                  Ver en Campañas
+                  {t("Ver en Campañas", "View in Campaigns")}
                 </button>
               </div>
             ) : warning ? (
@@ -3242,43 +3314,57 @@ function PautaBuilder({
               // got dropped automatically instead of blocking the whole
               // campaign. Informational, not alarming: blue, not amber.
               <div className="rounded-2xl border-2 border-wit-blue/30 bg-wit-blue/5 p-6 text-sm text-wit-ink">
-                <p className="font-bold">✓ Tu campaña se creó en pausa.</p>
+                <p className="font-bold">
+                  {t("✓ Tu campaña se creó en pausa.", "✓ Your campaign was created, paused.")}
+                </p>
                 <p className="mt-1 text-xs text-wit-ink/80">{warning}</p>
                 <button
                   type="button"
                   onClick={onCreated}
                   className="mt-4 rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep"
                 >
-                  Ver en Campañas
+                  {t("Ver en Campañas", "View in Campaigns")}
                 </button>
               </div>
             ) : (
               <div className="rounded-2xl bg-wit-ice p-6 text-sm text-wit-ink">
-                <p className="font-bold">✓ Tu campaña se creó en pausa.</p>
+                <p className="font-bold">
+                  {t("✓ Tu campaña se creó en pausa.", "✓ Your campaign was created, paused.")}
+                </p>
                 <p className="mt-1 text-xs text-wit-gray">
-                  Actívala desde Meta Ads Manager cuando quieras que empiece a correr.
+                  {t(
+                    "Actívala desde Meta Ads Manager cuando quieras que empiece a correr.",
+                    "Activate it from Meta Ads Manager whenever you want it to start running.",
+                  )}
                 </p>
                 <button
                   type="button"
                   onClick={onCreated}
                   className="mt-4 rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep"
                 >
-                  Ver en Campañas
+                  {t("Ver en Campañas", "View in Campaigns")}
                 </button>
               </div>
             )
           ) : phase === "sending" ? (
             <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 text-center">
               <Rocket className="wit-float h-10 w-10 text-wit-blue" strokeWidth={1.75} />
-              <p className="text-sm font-bold text-wit-ink">Creando tu campaña...</p>
-              <p className="text-xs text-wit-gray">Esto toma unos segundos.</p>
+              <p className="text-sm font-bold text-wit-ink">
+                {t("Creando tu campaña...", "Creating your campaign...")}
+              </p>
+              <p className="text-xs text-wit-gray">
+                {t("Esto toma unos segundos.", "This takes a few seconds.")}
+              </p>
             </div>
           ) : currentStepId === "objetivo" ? (
             <WizardShell
               qIndex={qIndex}
               total={steps.length}
               icon={Target}
-              question="¿Qué quieres lograr con esta campaña?"
+              question={t(
+                "¿Qué quieres lograr con esta campaña?",
+                "What do you want to achieve with this campaign?",
+              )}
               onBack={goBack}
               onNext={goNext}
             >
@@ -3287,8 +3373,8 @@ function PautaBuilder({
                   <IconChoice
                     key={opt.value}
                     icon={opt.icon}
-                    label={opt.label}
-                    sublabel={opt.hint}
+                    label={t(opt.labelEs, opt.labelEn)}
+                    sublabel={t(opt.hintEs, opt.hintEn)}
                     selected={objective === opt.value}
                     delay={i * 120}
                     onClick={() => {
@@ -3304,7 +3390,7 @@ function PautaBuilder({
               qIndex={qIndex}
               total={steps.length}
               icon={RouteIcon}
-              question="¿A dónde llevamos el tráfico?"
+              question={t("¿A dónde llevamos el tráfico?", "Where should we send the traffic?")}
               onBack={goBack}
               onNext={goNext}
               nextDisabled={trafficDestination === "web" && !websiteUrl.trim()}
@@ -3313,8 +3399,8 @@ function PautaBuilder({
                 <div className="grid grid-cols-2 gap-3">
                   <IconChoice
                     icon={Smartphone}
-                    label="Mis redes sociales"
-                    sublabel="A tu Página / Instagram"
+                    label={t("Mis redes sociales", "My social media")}
+                    sublabel={t("A tu Página / Instagram", "To your Page / Instagram")}
                     selected={trafficDestination === "redes"}
                     onClick={() => {
                       setTrafficDestination("redes");
@@ -3323,7 +3409,7 @@ function PautaBuilder({
                   />
                   <IconChoice
                     icon={Globe}
-                    label="Mi página web"
+                    label={t("Mi página web", "My website")}
                     delay={120}
                     selected={trafficDestination === "web"}
                     onClick={() => setTrafficDestination("web")}
@@ -3346,7 +3432,10 @@ function PautaBuilder({
               qIndex={qIndex}
               total={steps.length}
               icon={MessageCircle}
-              question="¿A qué WhatsApp llegan tus clientes?"
+              question={t(
+                "¿A qué WhatsApp llegan tus clientes?",
+                "Which WhatsApp do your customers reach?",
+              )}
               onBack={goBack}
               onNext={goNext}
               // A number too short to be real still let the client past
@@ -3360,7 +3449,7 @@ function PautaBuilder({
                   <select
                     value={whatsappCountryCode}
                     onChange={(e) => setWhatsappCountryCode(e.target.value)}
-                    aria-label="Código de país"
+                    aria-label={t("Código de país", "Country code")}
                     className="shrink-0 rounded-lg border border-wit-ink/15 bg-white px-2 py-2 text-base outline-none focus:border-wit-blue"
                   >
                     {COUNTRY_CODES.map((c) => (
@@ -3374,26 +3463,43 @@ function PautaBuilder({
                     autoFocus
                     value={whatsappNumber}
                     onChange={(e) => setWhatsappNumber(e.target.value)}
-                    placeholder="Ej. 5512345678"
+                    placeholder={t("Ej. 5512345678", "E.g. 5512345678")}
                     className="w-full min-w-0 flex-1 rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
                   />
                 </div>
                 {whatsappNumber.trim() && whatsappNumber.replace(/\D/g, "").length < 8 ? (
                   <p className="mt-2 text-[11px] text-amber-600">
-                    Ese número se ve incompleto — escríbelo completo, sin el código de país (ej.
-                    5512345678).
+                    {t(
+                      "Ese número se ve incompleto — escríbelo completo, sin el código de país (ej. 5512345678).",
+                      "That number looks incomplete — write it in full, without the country code (e.g. 5512345678).",
+                    )}
                   </p>
                 ) : whatsappNumber.replace(/\D/g, "").length >= 8 ? (
                   <p className="mt-2 text-[11px] text-wit-gray">
-                    Al darle clic al anuncio, se abrirá este chat:{" "}
-                    <span className="font-mono font-semibold text-wit-ink">
-                      wa.me/{`${whatsappCountryCode}${whatsappNumber}`.replace(/\D/g, "")}
-                    </span>{" "}
-                    — revísalo, es el número exacto que va a usar Facebook.
+                    {lang === "en" ? (
+                      <>
+                        Clicking the ad will open this chat:{" "}
+                        <span className="font-mono font-semibold text-wit-ink">
+                          wa.me/{`${whatsappCountryCode}${whatsappNumber}`.replace(/\D/g, "")}
+                        </span>{" "}
+                        — double-check it, it's the exact number Facebook will use.
+                      </>
+                    ) : (
+                      <>
+                        Al darle clic al anuncio, se abrirá este chat:{" "}
+                        <span className="font-mono font-semibold text-wit-ink">
+                          wa.me/{`${whatsappCountryCode}${whatsappNumber}`.replace(/\D/g, "")}
+                        </span>{" "}
+                        — revísalo, es el número exacto que va a usar Facebook.
+                      </>
+                    )}
                   </p>
                 ) : (
                   <p className="mt-2 text-[11px] text-wit-gray">
-                    Al darle clic al anuncio, la gente abrirá un chat directo contigo en WhatsApp.
+                    {t(
+                      "Al darle clic al anuncio, la gente abrirá un chat directo contigo en WhatsApp.",
+                      "Clicking the ad will open a direct WhatsApp chat with you.",
+                    )}
                   </p>
                 )}
               </div>
@@ -3403,7 +3509,10 @@ function PautaBuilder({
               qIndex={qIndex}
               total={steps.length}
               icon={Wallet}
-              question="¿Cuánto quieres invertir al día?"
+              question={t(
+                "¿Cuánto quieres invertir al día?",
+                "How much do you want to invest per day?",
+              )}
               onBack={goBack}
               onNext={goNext}
               nextDisabled={!Number.isFinite(Number(dailyBudget)) || Number(dailyBudget) < 20}
@@ -3414,7 +3523,7 @@ function PautaBuilder({
                     <IconChoice
                       key={chip.value}
                       icon={chip.icon}
-                      label={chip.label}
+                      label={t(chip.labelEs, chip.labelEn)}
                       selected={!budgetCustomOpen && dailyBudget === chip.value}
                       delay={i * 100}
                       onClick={() => {
@@ -3426,7 +3535,7 @@ function PautaBuilder({
                   ))}
                   <IconChoice
                     icon={Pencil}
-                    label="Otro monto"
+                    label={t("Otro monto", "Another amount")}
                     selected={budgetCustomOpen}
                     delay={BUDGET_CHIPS.length * 100}
                     onClick={() => setBudgetCustomOpen(true)}
@@ -3435,7 +3544,7 @@ function PautaBuilder({
                 {budgetCustomOpen ? (
                   <div>
                     <label className="mb-1 block text-xs font-bold text-wit-gray">
-                      Presupuesto diario (MXN)
+                      {t("Presupuesto diario (MXN)", "Daily budget (MXN)")}
                     </label>
                     <input
                       type="number"
@@ -3445,7 +3554,9 @@ function PautaBuilder({
                       onChange={(e) => setDailyBudget(e.target.value)}
                       className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
                     />
-                    <p className="mt-1 text-[11px] text-wit-gray">Mínimo $20 MXN al día.</p>
+                    <p className="mt-1 text-[11px] text-wit-gray">
+                      {t("Mínimo $20 MXN al día.", "Minimum $20 MXN per day.")}
+                    </p>
                   </div>
                 ) : null}
               </div>
@@ -3455,7 +3566,10 @@ function PautaBuilder({
               qIndex={qIndex}
               total={steps.length}
               icon={Calendar}
-              question="¿Cuánto tiempo debe correr la campaña?"
+              question={t(
+                "¿Cuánto tiempo debe correr la campaña?",
+                "How long should the campaign run?",
+              )}
               onBack={goBack}
               onNext={goNext}
               nextDisabled={!Number.isInteger(Number(durationDays)) || Number(durationDays) < 1}
@@ -3466,7 +3580,7 @@ function PautaBuilder({
                     <IconChoice
                       key={chip.value}
                       icon={chip.icon}
-                      label={chip.label}
+                      label={t(chip.labelEs, chip.labelEn)}
                       selected={!durationCustomOpen && durationDays === chip.value}
                       delay={i * 100}
                       onClick={() => {
@@ -3478,7 +3592,7 @@ function PautaBuilder({
                   ))}
                   <IconChoice
                     icon={Pencil}
-                    label="Otra duración"
+                    label={t("Otra duración", "Another duration")}
                     selected={durationCustomOpen}
                     delay={DURATION_CHIPS.length * 100}
                     onClick={() => setDurationCustomOpen(true)}
@@ -3487,7 +3601,7 @@ function PautaBuilder({
                 {durationCustomOpen ? (
                   <div>
                     <label className="mb-1 block text-xs font-bold text-wit-gray">
-                      Duración (días)
+                      {t("Duración (días)", "Duration (days)")}
                     </label>
                     <input
                       type="number"
@@ -3507,7 +3621,10 @@ function PautaBuilder({
               qIndex={qIndex}
               total={steps.length}
               icon={MapPin}
-              question="¿A quién le mostramos el anuncio, por ubicación?"
+              question={t(
+                "¿A quién le mostramos el anuncio, por ubicación?",
+                "Who should see the ad, by location?",
+              )}
               onBack={goBack}
               onNext={goNext}
             >
@@ -3515,8 +3632,8 @@ function PautaBuilder({
                 <div className="grid grid-cols-3 gap-3">
                   <IconChoice
                     icon={Globe}
-                    label="Todo México"
-                    sublabel="Recomendado"
+                    label={t("Todo México", "All of Mexico")}
+                    sublabel={t("Recomendado", "Recommended")}
                     selected={!selectedLocation && !customLocationOpen}
                     onClick={() => {
                       setSelectedLocation(null);
@@ -3528,8 +3645,16 @@ function PautaBuilder({
                   />
                   <IconChoice
                     icon={MapPin}
-                    label={selectedLocation ? selectedLocation.name : "Elegir una ciudad"}
-                    sublabel={selectedLocation ? "Toca para cambiar" : "Busca por ciudad o CP"}
+                    label={
+                      selectedLocation
+                        ? selectedLocation.name
+                        : t("Elegir una ciudad", "Choose a city")
+                    }
+                    sublabel={
+                      selectedLocation
+                        ? t("Toca para cambiar", "Tap to change")
+                        : t("Busca por ciudad o CP", "Search by city or zip code")
+                    }
                     delay={120}
                     selected={Boolean(selectedLocation)}
                     onClick={() => {
@@ -3539,8 +3664,8 @@ function PautaBuilder({
                   />
                   <IconChoice
                     icon={Crosshair}
-                    label="Marcar en el mapa"
-                    sublabel="Con tu dedo"
+                    label={t("Marcar en el mapa", "Pin on the map")}
+                    sublabel={t("Con tu dedo", "With your finger")}
                     delay={240}
                     selected={customLocationOpen}
                     onClick={() => {
@@ -3560,10 +3685,15 @@ function PautaBuilder({
                       onCenterChange={setCustomLocation}
                     />
                     <p className="text-[11px] text-wit-gray">
-                      Arrastra el mapa para mover el punto — el radio se mide desde el centro.
+                      {t(
+                        "Arrastra el mapa para mover el punto — el radio se mide desde el centro.",
+                        "Drag the map to move the point — the radius is measured from the center.",
+                      )}
                     </p>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-wit-gray">Radio: {radiusKm} km</span>
+                      <span className="text-xs text-wit-gray">
+                        {t("Radio", "Radius")}: {radiusKm} km
+                      </span>
                       <input
                         type="range"
                         min={5}
@@ -3579,7 +3709,7 @@ function PautaBuilder({
                 {locationAdvancedOpen ? (
                   <div>
                     <label className="mb-1 block text-[11px] font-bold text-wit-gray">
-                      País donde buscar
+                      {t("País donde buscar", "Country to search in")}
                     </label>
                     <select
                       value={locationCountry}
@@ -3587,12 +3717,12 @@ function PautaBuilder({
                         setLocationCountry(e.target.value);
                         setSelectedLocation(null);
                       }}
-                      aria-label="País de la ubicación"
+                      aria-label={t("País de la ubicación", "Location country")}
                       className="mb-2 w-full rounded-lg border border-wit-ink/15 bg-white px-2 py-2 text-base outline-none focus:border-wit-blue"
                     >
                       {LOCATION_COUNTRIES.map((c) => (
                         <option key={c.code} value={c.code}>
-                          {c.flag} {c.name}
+                          {c.flag} {t(c.nameEs, c.nameEn)}
                         </option>
                       ))}
                     </select>
@@ -3605,7 +3735,7 @@ function PautaBuilder({
                           setLocationQuery(e.target.value);
                           setSelectedLocation(null);
                         }}
-                        placeholder="Ciudad o código postal"
+                        placeholder={t("Ciudad o código postal", "City or zip code")}
                         className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
                       />
                       {locationResults.length > 0 && !selectedLocation ? (
@@ -3640,11 +3770,13 @@ function PautaBuilder({
                           />
                         ) : mapLoading ? (
                           <div className="flex h-56 items-center justify-center rounded-xl border border-wit-ink/10 bg-wit-mist/30 text-xs text-wit-gray">
-                            Cargando mapa...
+                            {t("Cargando mapa...", "Loading map...")}
                           </div>
                         ) : null}
                         <div className="flex items-center gap-3">
-                          <span className="text-xs text-wit-gray">Radio: {radiusKm} km</span>
+                          <span className="text-xs text-wit-gray">
+                            {t("Radio", "Radius")}: {radiusKm} km
+                          </span>
                           <input
                             type="range"
                             min={5}
@@ -3659,12 +3791,21 @@ function PautaBuilder({
                     ) : locationQuery.trim() && locationResults.length === 0 ? (
                       <p className="mt-2 text-[11px] text-amber-600">
                         {locationSearchError
-                          ? `Facebook no respondió a la búsqueda (${locationSearchError}). Puedes intentar de nuevo o seguir con "Todo México".`
-                          : 'No encontramos esa ubicación en Facebook. Puedes intentar de nuevo o seguir con "Todo México".'}
+                          ? t(
+                              `Facebook no respondió a la búsqueda (${locationSearchError}). Puedes intentar de nuevo o seguir con "Todo México".`,
+                              `Facebook didn't respond to the search (${locationSearchError}). You can try again or continue with "All of Mexico".`,
+                            )
+                          : t(
+                              'No encontramos esa ubicación en Facebook. Puedes intentar de nuevo o seguir con "Todo México".',
+                              'We couldn\'t find that location on Facebook. You can try again or continue with "All of Mexico".',
+                            )}
                       </p>
                     ) : (
                       <p className="mt-2 text-[11px] text-wit-gray">
-                        Escribe el nombre de una ciudad o un código postal.
+                        {t(
+                          "Escribe el nombre de una ciudad o un código postal.",
+                          "Type the name of a city or a zip code.",
+                        )}
                       </p>
                     )}
                   </div>
@@ -3676,7 +3817,7 @@ function PautaBuilder({
               qIndex={qIndex}
               total={steps.length}
               icon={Cake}
-              question="¿A qué edades le hablamos?"
+              question={t("¿A qué edades le hablamos?", "What ages should we target?")}
               onBack={goBack}
               onNext={goNext}
               nextDisabled={
@@ -3690,22 +3831,25 @@ function PautaBuilder({
             >
               <div className="space-y-4">
                 <p className="text-[11px] text-wit-gray">
-                  Puedes elegir más de un rango — se combinan en uno solo.
+                  {t(
+                    "Puedes elegir más de un rango — se combinan en uno solo.",
+                    "You can pick more than one range — they'll combine into a single one.",
+                  )}
                 </p>
                 <div className="grid grid-cols-3 gap-3">
                   {PAUTA_AGE_CHIPS.map((chip, i) => (
                     <IconChoice
-                      key={chip.label}
+                      key={chip.labelEs}
                       icon={chip.icon}
-                      label={chip.label}
-                      selected={!ageCustomOpen && selectedAgeChips.has(chip.label)}
+                      label={t(chip.labelEs, chip.labelEn)}
+                      selected={!ageCustomOpen && selectedAgeChips.has(chip.labelEs)}
                       delay={i * 100}
                       onClick={() => toggleAgeChip(chip)}
                     />
                   ))}
                   <IconChoice
                     icon={Pencil}
-                    label="Personalizar"
+                    label={t("Personalizar", "Customize")}
                     selected={ageCustomOpen}
                     delay={PAUTA_AGE_CHIPS.length * 100}
                     onClick={() => {
@@ -3725,7 +3869,7 @@ function PautaBuilder({
                       onChange={(e) => setAgeMin(e.target.value)}
                       className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
                     />
-                    <span className="text-sm text-wit-gray">a</span>
+                    <span className="text-sm text-wit-gray">{t("a", "to")}</span>
                     <input
                       type="number"
                       min={13}
@@ -3737,7 +3881,8 @@ function PautaBuilder({
                   </div>
                 ) : selectedAgeChips.size > 0 ? (
                   <p className="text-xs font-semibold text-wit-ink">
-                    Tu rango: {ageMin} a {ageMax} años
+                    {t("Tu rango", "Your range")}: {ageMin} {t("a", "to")} {ageMax}{" "}
+                    {t("años", "years")}
                   </p>
                 ) : null}
               </div>
@@ -3747,8 +3892,11 @@ function PautaBuilder({
               qIndex={qIndex}
               total={steps.length}
               icon={Magnet}
-              question="¿Qué le interesa a tu cliente?"
-              subtitle="💡 Piensa: ¿qué crees que tu cliente ideal está viendo en su teléfono justo ahora?"
+              question={t("¿Qué le interesa a tu cliente?", "What is your customer interested in?")}
+              subtitle={t(
+                "💡 Piensa: ¿qué crees que tu cliente ideal está viendo en su teléfono justo ahora?",
+                "💡 Think about it: what do you think your ideal customer is looking at on their phone right now?",
+              )}
               onBack={goBack}
               onNext={goNext}
             >
@@ -3757,7 +3905,7 @@ function PautaBuilder({
                   <IconChoice
                     compact
                     icon={Globe}
-                    label="Todas las personas"
+                    label={t("Todas las personas", "Everyone")}
                     selected={selectedInterests.length === 0}
                     onClick={() => {
                       setSelectedInterests([]);
@@ -3773,7 +3921,7 @@ function PautaBuilder({
                         key={cat.query}
                         icon={st === "loading" ? Loader2 : cat.icon}
                         spin={st === "loading"}
-                        label={cat.label}
+                        label={t(cat.labelEs, cat.labelEn)}
                         selected={st === "ok"}
                         delay={(i + 1) * 90}
                         onClick={() => toggleInterestCategory(cat)}
@@ -3795,14 +3943,19 @@ function PautaBuilder({
                   );
                   return codes.length > 0 ? (
                     <p className="text-[11px] text-amber-600">
-                      Facebook no respondió a la búsqueda ({codes.join(", ")}). Puedes seguir con
-                      "Todas las personas" mientras lo revisamos.
+                      {t(
+                        `Facebook no respondió a la búsqueda (${codes.join(", ")}). Puedes seguir con "Todas las personas" mientras lo revisamos.`,
+                        `Facebook didn't respond to the search (${codes.join(", ")}). You can continue with "Everyone" while we look into it.`,
+                      )}
                     </p>
                   ) : null;
                 })()}
                 {selectedInterests.length >= 10 ? (
                   <p className="text-[11px] text-amber-600">
-                    Llegaste al máximo de 10 intereses — quita alguno para agregar otro.
+                    {t(
+                      "Llegaste al máximo de 10 intereses — quita alguno para agregar otro.",
+                      "You've reached the maximum of 10 interests — remove one to add another.",
+                    )}
                   </p>
                 ) : null}
                 {selectedInterests.length > 0 ? (
@@ -3822,11 +3975,13 @@ function PautaBuilder({
                   </div>
                 ) : null}
                 {suggestionsLoading ? (
-                  <p className="text-[11px] text-wit-gray">Buscando sugerencias relacionadas...</p>
+                  <p className="text-[11px] text-wit-gray">
+                    {t("Buscando sugerencias relacionadas...", "Searching for related suggestions...")}
+                  </p>
                 ) : suggestedInterests.length > 0 ? (
                   <div>
                     <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-                      Sugerencias de Facebook
+                      {t("Sugerencias de Facebook", "Facebook suggestions")}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {suggestedInterests.map((hit) => (
@@ -3853,9 +4008,11 @@ function PautaBuilder({
                   }`}
                 >
                   <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-                  {interestAdvancedOpen ? "Ocultar búsqueda" : "Buscar algo más específico"}
+                  {interestAdvancedOpen
+                    ? t("Ocultar búsqueda", "Hide search")
+                    : t("Buscar algo más específico", "Search for something more specific")}
                   <span className="ml-auto text-[11px] font-normal text-wit-gray">
-                    Lista real de Facebook
+                    {t("Lista real de Facebook", "Real Facebook list")}
                   </span>
                 </button>
                 {interestAdvancedOpen ? (
@@ -3865,11 +4022,14 @@ function PautaBuilder({
                       autoFocus
                       value={interestQuery}
                       onChange={(e) => setInterestQuery(e.target.value)}
-                      placeholder="Ej. yoga, mariscos, bodas..."
+                      placeholder={t("Ej. yoga, mariscos, bodas...", "E.g. yoga, seafood, weddings...")}
                       className="w-full rounded-lg border border-wit-ink/15 bg-white px-3 py-2 text-base outline-none focus:border-wit-blue"
                     />
                     <p className="mt-1.5 text-[11px] text-wit-gray">
-                      Aquí puedes buscar intereses más específicos de tu público.
+                      {t(
+                        "Aquí puedes buscar intereses más específicos de tu público.",
+                        "Here you can search for more specific interests of your audience.",
+                      )}
                     </p>
                     {interestResults.length > 0 ? (
                       <div className="mt-1 overflow-hidden rounded-lg border border-wit-ink/10 bg-white shadow-lg">
@@ -4307,9 +4467,17 @@ function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null })
 // Stand-in for a missing/empty title from the model's final answer —
 // short enough to read as a title, not a re-statement of the whole brief.
 // not a re-statement of the whole brief.
-function deriveTitle(pieceBrief: string | undefined, companyName: string | undefined): string {
+function deriveTitle(
+  pieceBrief: string | undefined,
+  companyName: string | undefined,
+  lang: "es" | "en" = "es",
+): string {
   const brief = (pieceBrief ?? "").trim();
-  if (!brief) return `Pieza para ${companyName ?? "tu marca"}`;
+  if (!brief) {
+    return lang === "en"
+      ? `Piece for ${companyName ?? "your brand"}`
+      : `Pieza para ${companyName ?? "tu marca"}`;
+  }
   return brief.length > 60 ? `${brief.slice(0, 57).trimEnd()}...` : brief;
 }
 
@@ -4334,28 +4502,46 @@ function ChatReviewBox({
   sending: boolean;
   onConfirm: () => void;
 }) {
+  const { t } = useLanguage();
   const disabled = Boolean(disabledReason);
   const colorList = (answers.colors ?? "")
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean);
+  const aspectRatioLabel = RATIO_LABEL[answers.aspectRatio ?? ""];
   return (
     <div className="wit-glass w-full rounded-2xl p-5 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <dl className="space-y-3.5">
-        <PreviewRow label="Título" value={answers.title ?? ""} />
-        <PreviewRow label="Nombre comercial / empresa" value={answers.companyName ?? ""} />
-        <PreviewRow label="Qué quieres que salga en esta pieza" value={answers.pieceBrief ?? ""} />
-        {answers.audience ? <PreviewRow label="Público objetivo" value={answers.audience} /> : null}
-        {answers.ageRanges ? <PreviewRow label="Rango de edad" value={answers.ageRanges} /> : null}
+        <PreviewRow label={t("Título", "Title")} value={answers.title ?? ""} />
+        <PreviewRow
+          label={t("Nombre comercial / empresa", "Business / company name")}
+          value={answers.companyName ?? ""}
+        />
+        <PreviewRow
+          label={t("Qué quieres que salga en esta pieza", "What you want in this piece")}
+          value={answers.pieceBrief ?? ""}
+        />
+        {answers.audience ? (
+          <PreviewRow label={t("Público objetivo", "Target audience")} value={answers.audience} />
+        ) : null}
+        {answers.ageRanges ? (
+          <PreviewRow label={t("Rango de edad", "Age range")} value={answers.ageRanges} />
+        ) : null}
         {answers.promoPrice ? (
-          <PreviewRow label="Precio o descuento" value={answers.promoPrice} />
+          <PreviewRow
+            label={t("Precio o descuento", "Price or discount")}
+            value={answers.promoPrice}
+          />
         ) : null}
         {answers.requiredText ? (
-          <PreviewRow label="Mensaje o dato extra" value={answers.requiredText} />
+          <PreviewRow
+            label={t("Mensaje o dato extra", "Message or extra detail")}
+            value={answers.requiredText}
+          />
         ) : null}
         <div>
           <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-            Colores de marca
+            {t("Colores de marca", "Brand colors")}
           </dt>
           <dd className="mt-1.5 flex gap-2">
             {colorList.map((c) => (
@@ -4368,18 +4554,25 @@ function ChatReviewBox({
             ))}
           </dd>
         </div>
-        {answers.style ? <PreviewRow label="Estilo" value={answers.style} /> : null}
+        {answers.style ? <PreviewRow label={t("Estilo", "Style")} value={answers.style} /> : null}
         <PreviewRow
-          label="Formato"
-          value={RATIO_LABEL[answers.aspectRatio ?? ""] ?? answers.aspectRatio ?? "Cuadrado"}
+          label={t("Formato", "Format")}
+          value={
+            aspectRatioLabel
+              ? t(aspectRatioLabel.es, aspectRatioLabel.en)
+              : (answers.aspectRatio ?? t("Cuadrado", "Square"))
+          }
         />
         {answers.logoKey && answers.logoKey !== "Sin logotipo" ? (
-          <PreviewImageRow label="Logotipo" fileKey={answers.logoKey} />
+          <PreviewImageRow label={t("Logotipo", "Logo")} fileKey={answers.logoKey} />
         ) : (
-          <PreviewRow label="Logotipo" value="No tiene logotipo" />
+          <PreviewRow label={t("Logotipo", "Logo")} value={t("No tiene logotipo", "No logo")} />
         )}
         {answers.productPhotoKey ? (
-          <PreviewImageRow label="Foto del producto" fileKey={answers.productPhotoKey} />
+          <PreviewImageRow
+            label={t("Foto del producto", "Product photo")}
+            fileKey={answers.productPhotoKey}
+          />
         ) : null}
       </dl>
 
@@ -4398,7 +4591,7 @@ function ChatReviewBox({
         disabled={disabled || sending}
         className="mt-5 w-full rounded-2xl bg-wit-blue px-6 py-3.5 text-sm font-bold text-white transition-all duration-200 hover:bg-wit-blue-deep active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {sending ? "Enviando..." : "Confirmar y enviar"}
+        {sending ? t("Enviando...", "Sending...") : t("Confirmar y enviar", "Confirm and send")}
       </button>
     </div>
   );
@@ -4422,7 +4615,10 @@ type WitPieceFields = {
 
 type WitMessage = { role: "user" | "assistant"; content: string; widget?: "aspectRatio" };
 
-const ASPECT_RATIO_PROMPT = "¿Qué forma te imaginas para tu pieza?";
+const ASPECT_RATIO_PROMPT = {
+  es: "¿Qué forma te imaginas para tu pieza?",
+  en: "What shape do you picture for your piece?",
+};
 
 // Anything handed off from the homepage teaser (see teaser-handoff.ts), plus
 // a short list of this client's past pieces, becomes a hidden context
@@ -4480,9 +4676,16 @@ function WitConversation({
   initialAnswers?: Record<string, string>;
   recentRequestTitles?: string[];
 }) {
+  const { t, lang } = useLanguage();
   const [contextPrimer] = useState(() => buildContextPrimer(initialAnswers, recentRequestTitles));
   const [messages, setMessages] = useState<WitMessage[]>([
-    { role: "assistant", content: "¡Hola! Cuéntame, ¿qué pieza quieres crear hoy?" },
+    {
+      role: "assistant",
+      content: t(
+        "¡Hola! Cuéntame, ¿qué pieza quieres crear hoy?",
+        "Hi! Tell me, what piece do you want to create today?",
+      ),
+    },
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -4539,7 +4742,12 @@ function WitConversation({
         | { ok: true; kind: "done"; fields: WitPieceFields }
         | { ok: false; error: string };
       if (!data.ok) {
-        setChatError("Wit no está disponible en este momento. Intenta de nuevo en un momento.");
+        setChatError(
+          t(
+            "Wit no está disponible en este momento. Intenta de nuevo en un momento.",
+            "Wit is not available right now. Try again in a moment.",
+          ),
+        );
         return;
       }
       if (data.kind === "message") {
@@ -4547,14 +4755,23 @@ function WitConversation({
       } else if (data.kind === "ask_aspect_ratio") {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: ASPECT_RATIO_PROMPT, widget: "aspectRatio" },
+          {
+            role: "assistant",
+            content: t(ASPECT_RATIO_PROMPT.es, ASPECT_RATIO_PROMPT.en),
+            widget: "aspectRatio",
+          },
         ]);
         setAwaitingAspectRatio(true);
       } else {
         setPieceFields(data.fields);
       }
     } catch {
-      setChatError("No pudimos hablar con Wit. Revisa tu conexión e intenta de nuevo.");
+      setChatError(
+        t(
+          "No pudimos hablar con Wit. Revisa tu conexión e intenta de nuevo.",
+          "We could not reach Wit. Check your connection and try again.",
+        ),
+      );
     } finally {
       setTyping(false);
     }
@@ -4577,10 +4794,11 @@ function WitConversation({
   function pickAspectRatio(value: string) {
     setAwaitingAspectRatio(false);
     setPickedAspectRatio(value);
-    const label = RATIO_LABEL[value] ?? value;
+    const ratioLabel = RATIO_LABEL[value];
+    const label = ratioLabel ? t(ratioLabel.es, ratioLabel.en) : value;
     const next: WitMessage[] = [
       ...messages,
-      { role: "user", content: `Elijo el formato: ${label}.` },
+      { role: "user", content: t(`Elijo el formato: ${label}.`, `I choose the format: ${label}.`) },
     ];
     setMessages(next);
     void askWit(next);
@@ -4597,7 +4815,8 @@ function WitConversation({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           title:
-            pieceFields.title || deriveTitle(pieceFields.pieceBrief, brandProfile?.company_name),
+            pieceFields.title ||
+            deriveTitle(pieceFields.pieceBrief, brandProfile?.company_name, lang),
           companyName: brandProfile?.company_name,
           pieceBrief: pieceFields.pieceBrief,
           style: pieceFields.style || undefined,
@@ -4617,16 +4836,31 @@ function WitConversation({
       if (!data.ok) {
         setSendError(
           data.error === "sin_saldo"
-            ? "Ya usaste todas tus solicitudes disponibles."
+            ? t(
+                "Ya usaste todas tus solicitudes disponibles.",
+                "You have already used all your available requests.",
+              )
             : data.error === "sin_membresia"
-              ? "Necesitas una membresía activa para enviar solicitudes."
-              : (data.message ?? "Revisa tus respuestas e intenta de nuevo."),
+              ? t(
+                  "Necesitas una membresía activa para enviar solicitudes.",
+                  "You need an active membership to send requests.",
+                )
+              : (data.message ??
+                t(
+                  "Revisa tus respuestas e intenta de nuevo.",
+                  "Check your answers and try again.",
+                )),
         );
         return;
       }
       onCreated();
     } catch {
-      setSendError("No pudimos enviar tu solicitud. Intenta de nuevo.");
+      setSendError(
+        t(
+          "No pudimos enviar tu solicitud. Intenta de nuevo.",
+          "We could not send your request. Try again.",
+        ),
+      );
     } finally {
       setSending(false);
     }
@@ -4634,7 +4868,9 @@ function WitConversation({
 
   const reviewAnswers: Record<string, string> | null = pieceFields
     ? {
-        title: pieceFields.title || deriveTitle(pieceFields.pieceBrief, brandProfile?.company_name),
+        title:
+          pieceFields.title ||
+          deriveTitle(pieceFields.pieceBrief, brandProfile?.company_name, lang),
         companyName: brandProfile?.company_name ?? "",
         pieceBrief: pieceFields.pieceBrief,
         audience: pieceFields.audience,
@@ -4656,7 +4892,7 @@ function WitConversation({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar chat"
+            aria-label={t("Cerrar chat", "Close chat")}
             className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
           >
             ×
@@ -4665,7 +4901,9 @@ function WitConversation({
         <div className="wit-float">
           <WMark size={26} />
         </div>
-        <p className="text-sm font-medium text-wit-ink">Hablando con Wit</p>
+        <p className="text-sm font-medium text-wit-ink">
+          {t("Hablando con Wit", "Talking with Wit")}
+        </p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -4686,7 +4924,13 @@ function WitConversation({
           ) : null}
           {pieceFields ? (
             <>
-              <ChatBubble role="assistant" text="¡Listo! Revisa tu solicitud antes de enviarla:" />
+              <ChatBubble
+                role="assistant"
+                text={t(
+                  "¡Listo! Revisa tu solicitud antes de enviarla:",
+                  "Done! Review your request before sending it:",
+                )}
+              />
               {reviewAnswers ? (
                 <ChatReviewBox
                   answers={reviewAnswers}
@@ -4712,7 +4956,13 @@ function WitConversation({
                   setShowPhotoPicker(false);
                   setMessages((prev) => [
                     ...prev,
-                    { role: "user", content: "Adjunté una foto de referencia del producto." },
+                    {
+                      role: "user",
+                      content: t(
+                        "Adjunté una foto de referencia del producto.",
+                        "I attached a reference photo of the product.",
+                      ),
+                    },
                   ]);
                 }}
               />
@@ -4721,7 +4971,7 @@ function WitConversation({
                 onClick={() => setShowPhotoPicker(false)}
                 className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
               >
-                Cancelar
+                {t("Cancelar", "Cancel")}
               </button>
             </div>
           ) : awaitingAspectRatio ? null : (
@@ -4737,7 +4987,7 @@ function WitConversation({
                   ref={composerRef}
                   rows={1}
                   maxLength={2000}
-                  aria-label="Tu mensaje"
+                  aria-label={t("Tu mensaje", "Your message")}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -4747,7 +4997,7 @@ function WitConversation({
                     }
                   }}
                   disabled={typing}
-                  placeholder="Escribe tu mensaje..."
+                  placeholder={t("Escribe tu mensaje...", "Type your message...")}
                   // text-base (16px), not text-sm — iOS Safari auto-zooms
                   // the ENTIRE page on focus for any input under 16px, which
                   // is what was actually forcing a manual pinch-to-zoom-out
@@ -4758,7 +5008,7 @@ function WitConversation({
                 <button
                   type="submit"
                   disabled={!input.trim() || typing}
-                  aria-label="Enviar mensaje"
+                  aria-label={t("Enviar mensaje", "Send message")}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wit-blue text-white transition-all hover:bg-wit-blue-deep disabled:opacity-40"
                 >
                   <svg
@@ -4781,7 +5031,9 @@ function WitConversation({
                 onClick={() => setShowPhotoPicker(true)}
                 className="mt-2 block w-full text-center text-xs font-semibold text-wit-gray hover:text-wit-ink"
               >
-                📎 Adjuntar foto de producto{productPhotoKey ? " (agregada)" : ""}
+                {"📎 "}
+                {t("Adjuntar foto de producto", "Attach product photo")}
+                {productPhotoKey ? t(" (agregada)", " (added)") : ""}
               </button>
             </>
           )}
@@ -4801,12 +5053,12 @@ const STYLE_CHIPS = [
   "Divertido / Bold",
 ];
 const AGE_CHIPS = ["18-24", "25-34", "35-44", "45-54", "55+"];
-const RATIO_LABEL: Record<string, string> = {
-  "1:1": "Cuadrado",
-  "4:3": "Horizontal 4:3",
-  "16:9": "Horizontal 16:9 (banner)",
-  "3:4": "Feed 3:4",
-  "9:16": "Vertical 9:16 (stories)",
+const RATIO_LABEL: Record<string, { es: string; en: string }> = {
+  "1:1": { es: "Cuadrado", en: "Square" },
+  "4:3": { es: "Horizontal 4:3", en: "Landscape 4:3" },
+  "16:9": { es: "Horizontal 16:9 (banner)", en: "Landscape 16:9 (banner)" },
+  "3:4": { es: "Feed 3:4", en: "Feed 3:4" },
+  "9:16": { es: "Vertical 9:16 (stories)", en: "Vertical 9:16 (stories)" },
 };
 const RATIO_OPTIONS = [
   { value: "1:1", w: 1, h: 1, label: "Cuadrado" },
@@ -5089,7 +5341,10 @@ function NewRequestForm({
             </dd>
           </div>
           {form.style ? <PreviewRow label="Estilo" value={form.style} /> : null}
-          <PreviewRow label="Formato" value={RATIO_LABEL[form.aspectRatio] ?? form.aspectRatio} />
+          <PreviewRow
+            label="Formato"
+            value={RATIO_LABEL[form.aspectRatio]?.es ?? form.aspectRatio}
+          />
           <PreviewRow
             label="Logotipo"
             value={
@@ -5627,6 +5882,7 @@ function RequestList({
   pageId: string | null;
   onPautar: (info: PautaRequestInfo) => void;
 }) {
+  const { t } = useLanguage();
   return (
     <section>
       {loading ? (
@@ -5637,16 +5893,21 @@ function RequestList({
         </div>
       ) : rows.length === 0 ? (
         <div className="wit-glass rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
-          <p className="text-base font-semibold text-wit-ink">Aún no tienes solicitudes.</p>
+          <p className="text-base font-semibold text-wit-ink">
+            {t("Aún no tienes solicitudes.", "You don't have any requests yet.")}
+          </p>
           <p className="mt-1 text-sm text-wit-gray">
-            Envía tu primera solicitud y aparecerá aquí con su estado.
+            {t(
+              "Envía tu primera solicitud y aparecerá aquí con su estado.",
+              "Send your first request and it will show up here with its status.",
+            )}
           </p>
           <button
             type="button"
             onClick={onNew}
             className="mt-5 rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
           >
-            Enviar mi primera solicitud
+            {t("Enviar mi primera solicitud", "Send my first request")}
           </button>
         </div>
       ) : (
@@ -5674,6 +5935,7 @@ function RequestEntry({
   pageId: string | null;
   onPautar: (info: PautaRequestInfo) => void;
 }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   // Owned here, not inside HistoryCard: closing the request flips its
@@ -5717,7 +5979,7 @@ function RequestEntry({
           onClick={() => setExpanded(false)}
           className="mb-2 text-xs font-semibold text-wit-gray hover:text-wit-ink"
         >
-          ← Ocultar detalle
+          {t("← Ocultar detalle", "← Hide detail")}
         </button>
         <HistoryCard row={r} pageId={pageId} onPautar={onPautar} />
       </div>
@@ -5746,7 +6008,7 @@ function RequestEntry({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-wit-ink">{r.title}</p>
         <p className="mt-0.5 text-xs text-wit-gray">
-          Formato {r.aspect_ratio} ·{" "}
+          {t("Formato", "Format")} {r.aspect_ratio} ·{" "}
           {new Date(r.created_at + "Z").toLocaleDateString("es-MX", {
             day: "numeric",
             month: "short",
@@ -5760,7 +6022,7 @@ function RequestEntry({
         {r.status === "en_proceso" || r.status === "cambio_solicitado" ? (
           <Spinner cls="border-amber-600" />
         ) : null}
-        {st.label}
+        {t(st.es, st.en)}
       </span>
     </button>
   );
@@ -5796,12 +6058,16 @@ function PautarEntryPoint({
   pageConnected: boolean;
   onClick: () => void;
 }) {
+  const { t } = useLanguage();
   if (!pageConnected) {
     return (
       <div className="mt-3 rounded-xl bg-wit-mist/50 px-4 py-3 text-xs text-wit-gray">
-        <p className="font-bold text-wit-ink">📣 Pautar en Meta</p>
+        <p className="font-bold text-wit-ink">📣 {t("Pautar en Meta", "Run ads on Meta")}</p>
         <p className="mt-1">
-          Aún no tienes una Página de Facebook conectada para pautar. Contáctanos para activarla.
+          {t(
+            "Aún no tienes una Página de Facebook conectada para pautar. Contáctanos para activarla.",
+            "You don't have a Facebook Page connected for running ads yet. Contact us to activate it.",
+          )}
         </p>
       </div>
     );
@@ -5813,7 +6079,7 @@ function PautarEntryPoint({
       onClick={onClick}
       className="mt-3 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
     >
-      📣 Quiero pautar
+      📣 {t("Quiero pautar", "I want to run ads")}
     </button>
   );
 }
@@ -5829,6 +6095,7 @@ function HistoryCard({
   onDownloadFinalized?: () => void;
   onPautar: (info: PautaRequestInfo) => void;
 }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const st = STATUS_LABEL[r.status] ?? STATUS_LABEL.en_proceso;
   // The API only ever returns the single most recent delivered file, and
@@ -5850,11 +6117,11 @@ function HistoryCard({
 
   // Compact timeline: the original request plus each requested change. Only
   // the last step carries the live status — earlier ones are done by definition.
-  const steps: { label: string; detail: string | null }[] = [
-    { label: "Solicitud enviada", detail: null },
+  const steps: { es: string; en: string; detail: string | null }[] = [
+    { es: "Solicitud enviada", en: "Request sent", detail: null },
   ];
-  if (r.revision_note_1) steps.push({ label: "Cambio 1", detail: r.revision_note_1 });
-  if (r.revision_note_2) steps.push({ label: "Cambio 2", detail: r.revision_note_2 });
+  if (r.revision_note_1) steps.push({ es: "Cambio 1", en: "Change 1", detail: r.revision_note_1 });
+  if (r.revision_note_2) steps.push({ es: "Cambio 2", en: "Change 2", detail: r.revision_note_2 });
 
   async function finalize() {
     setClosing(true);
@@ -5875,10 +6142,20 @@ function HistoryCard({
         // at all, only the download path triggered it.
         if (!alreadyRated) onDownloadFinalized?.();
       } else {
-        setMsg("No pudimos finalizar la solicitud. Intenta de nuevo.");
+        setMsg(
+          t(
+            "No pudimos finalizar la solicitud. Intenta de nuevo.",
+            "We couldn't finalize the request. Please try again.",
+          ),
+        );
       }
     } catch {
-      setMsg("No pudimos finalizar la solicitud. Intenta de nuevo.");
+      setMsg(
+        t(
+          "No pudimos finalizar la solicitud. Intenta de nuevo.",
+          "We couldn't finalize the request. Please try again.",
+        ),
+      );
     } finally {
       setClosing(false);
     }
@@ -5913,7 +6190,12 @@ function HistoryCard({
 
   async function sendRevision() {
     if (revisionText.trim().length < 5) {
-      setMsg("Cuéntanos con un poco más de detalle qué quieres ajustar.");
+      setMsg(
+        t(
+          "Cuéntanos con un poco más de detalle qué quieres ajustar.",
+          "Tell us in a bit more detail what you'd like adjusted.",
+        ),
+      );
       return;
     }
     setBusy(true);
@@ -5928,13 +6210,28 @@ function HistoryCard({
       if (data.ok) {
         setRevisionText("");
         setShowRevisionForm(false);
-        setSentMsg("Tu solicitud de cambio ha sido enviada. El equipo ya está trabajando en ella.");
+        setSentMsg(
+          t(
+            "Tu solicitud de cambio ha sido enviada. El equipo ya está trabajando en ella.",
+            "Your change request has been sent. The team is already working on it.",
+          ),
+        );
         await qc.invalidateQueries({ queryKey: ["requests"] });
       } else {
-        setMsg("No pudimos enviar tu solicitud de cambio. Intenta de nuevo.");
+        setMsg(
+          t(
+            "No pudimos enviar tu solicitud de cambio. Intenta de nuevo.",
+            "We couldn't send your change request. Please try again.",
+          ),
+        );
       }
     } catch {
-      setMsg("No pudimos enviar tu solicitud de cambio. Intenta de nuevo.");
+      setMsg(
+        t(
+          "No pudimos enviar tu solicitud de cambio. Intenta de nuevo.",
+          "We couldn't send your change request. Please try again.",
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -5942,7 +6239,12 @@ function HistoryCard({
 
   async function reportChange() {
     if (changeText.trim().length < 5) {
-      setMsg("Cuéntanos con un poco más de detalle cuál es el error.");
+      setMsg(
+        t(
+          "Cuéntanos con un poco más de detalle cuál es el error.",
+          "Tell us in a bit more detail what the error is.",
+        ),
+      );
       return;
     }
     setBusy(true);
@@ -5957,13 +6259,28 @@ function HistoryCard({
       if (data.ok) {
         setChangeText("");
         setShowChangeForm(false);
-        setSentMsg("Recibimos tu reporte. El equipo lo va a revisar antes de retomar la pieza.");
+        setSentMsg(
+          t(
+            "Recibimos tu reporte. El equipo lo va a revisar antes de retomar la pieza.",
+            "We received your report. The team will review it before resuming the piece.",
+          ),
+        );
         await qc.invalidateQueries({ queryKey: ["requests"] });
       } else {
-        setMsg("No pudimos enviar tu reporte. Intenta de nuevo.");
+        setMsg(
+          t(
+            "No pudimos enviar tu reporte. Intenta de nuevo.",
+            "We couldn't send your report. Please try again.",
+          ),
+        );
       }
     } catch {
-      setMsg("No pudimos enviar tu reporte. Intenta de nuevo.");
+      setMsg(
+        t(
+          "No pudimos enviar tu reporte. Intenta de nuevo.",
+          "We couldn't send your report. Please try again.",
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -5977,11 +6294,11 @@ function HistoryCard({
           className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}
         >
           {r.status === "en_proceso" ? <Spinner cls="border-amber-600" /> : null}
-          {st.label}
+          {t(st.es, st.en)}
         </span>
       </div>
       <p className="mt-1.5 text-xs text-wit-gray">
-        Formato {r.aspect_ratio} ·{" "}
+        {t("Formato", "Format")} {r.aspect_ratio} ·{" "}
         {new Date(r.created_at + "Z").toLocaleDateString("es-MX", {
           day: "numeric",
           month: "short",
@@ -5994,7 +6311,7 @@ function HistoryCard({
           const isLast = i === steps.length - 1;
           return (
             <div
-              key={s.label}
+              key={s.es}
               className="flex items-center gap-3 rounded-xl bg-wit-ice/60 px-4 py-2.5"
             >
               {isLast && (r.status === "en_proceso" || r.status === "cambio_solicitado") ? (
@@ -6012,7 +6329,7 @@ function HistoryCard({
                   ✓
                 </span>
               )}
-              <span className="flex-1 text-sm font-semibold text-wit-ink">{s.label}</span>
+              <span className="flex-1 text-sm font-semibold text-wit-ink">{t(s.es, s.en)}</span>
               <span
                 className={`text-xs font-bold ${
                   isLast
@@ -6026,7 +6343,7 @@ function HistoryCard({
                     : "text-emerald-600"
                 }`}
               >
-                {isLast ? st.label : "Listo"}
+                {isLast ? t(st.es, st.en) : t("Listo", "Done")}
               </span>
             </div>
           );
@@ -6038,23 +6355,25 @@ function HistoryCard({
         onClick={() => setShowDetail(!showDetail)}
         className="mt-3 text-xs font-semibold text-wit-gray underline-offset-2 hover:text-wit-blue hover:underline"
       >
-        {showDetail ? "Ocultar detalle" : "Ver detalle"}
+        {showDetail ? t("Ocultar detalle", "Hide detail") : t("Ver detalle", "View detail")}
       </button>
       {showDetail ? (
         <div className="mt-2 space-y-2 rounded-xl bg-wit-mist/30 p-4 text-sm text-wit-gray">
           <p>
-            <strong className="text-wit-ink">Lo que pediste:</strong> {r.brief}
+            <strong className="text-wit-ink">{t("Lo que pediste:", "What you asked for:")}</strong>{" "}
+            {r.brief}
           </p>
           {r.piece_brief ? (
             <p>
-              <strong className="text-wit-ink">Para esta pieza:</strong> {r.piece_brief}
+              <strong className="text-wit-ink">{t("Para esta pieza:", "For this piece:")}</strong>{" "}
+              {r.piece_brief}
             </p>
           ) : null}
           {steps
             .filter((s) => s.detail)
             .map((s) => (
-              <p key={s.label}>
-                <strong className="text-wit-ink">{s.label}:</strong> {s.detail}
+              <p key={s.es}>
+                <strong className="text-wit-ink">{t(s.es, s.en)}:</strong> {s.detail}
               </p>
             ))}
         </div>
@@ -6062,7 +6381,7 @@ function HistoryCard({
 
       {r.admin_note ? (
         <p className="mt-3 rounded-xl bg-wit-mist/40 px-4 py-2.5 text-sm text-wit-ink">
-          <strong>Nota del equipo:</strong> {r.admin_note}
+          <strong>{t("Nota del equipo:", "Team note:")}</strong> {r.admin_note}
         </p>
       ) : null}
       {latestResult ? (
@@ -6076,7 +6395,7 @@ function HistoryCard({
             const img = (
               <img
                 src={href}
-                alt={`Resultado de ${r.title}`}
+                alt={t(`Resultado de ${r.title}`, `Result for ${r.title}`)}
                 className="aspect-square w-full object-cover"
                 loading="lazy"
               />
@@ -6094,7 +6413,9 @@ function HistoryCard({
                   {img}
                 </span>
                 <span className="absolute inset-x-0 bottom-0 bg-wit-navy/80 px-2 py-1.5 text-center text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  {r.status === "completada" ? "Ver y descargar" : "Ver imagen"}
+                  {r.status === "completada"
+                    ? t("Ver y descargar", "View and download")
+                    : t("Ver imagen", "View image")}
                 </span>
                 {r.status !== "completada" ? (
                   <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-wit-blue text-[10px] font-bold text-white">
@@ -6138,8 +6459,11 @@ function HistoryCard({
         showRevisionForm ? (
           <div className="mt-4 rounded-xl bg-wit-ice p-4">
             <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-              Qué quieres que ajustemos ({revisionsLeft}{" "}
-              {revisionsLeft === 1 ? "cambio disponible" : "cambios disponibles"})
+              {t("Qué quieres que ajustemos", "What you'd like us to adjust")} ({revisionsLeft}{" "}
+              {revisionsLeft === 1
+                ? t("cambio disponible", "change available")
+                : t("cambios disponibles", "changes available")}
+              )
             </label>
             <div className="relative">
               <textarea
@@ -6148,7 +6472,10 @@ function HistoryCard({
                 value={revisionText}
                 onChange={(e) => setRevisionText(e.target.value)}
                 className="w-full resize-y rounded-lg border border-wit-ink/15 bg-white px-3 py-2 pr-12 text-sm outline-none focus:border-wit-blue"
-                placeholder="Ej. cambiar el color de fondo a azul, agrandar el texto..."
+                placeholder={t(
+                  "Ej. cambiar el color de fondo a azul, agrandar el texto...",
+                  "E.g. change the background color to blue, make the text bigger...",
+                )}
               />
               <MicButton
                 value={revisionText}
@@ -6163,7 +6490,9 @@ function HistoryCard({
                 onClick={sendRevision}
                 className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
               >
-                {busy ? "Enviando..." : "Enviar solicitud de cambio"}
+                {busy
+                  ? t("Enviando...", "Sending...")
+                  : t("Enviar solicitud de cambio", "Send change request")}
               </button>
               <button
                 type="button"
@@ -6171,7 +6500,7 @@ function HistoryCard({
                 onClick={() => setShowRevisionForm(false)}
                 className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
               >
-                Cancelar
+                {t("Cancelar", "Cancel")}
               </button>
             </div>
             {msg ? <p className="mt-2 text-sm text-red-600">{msg}</p> : null}
@@ -6184,7 +6513,9 @@ function HistoryCard({
               onClick={finalize}
               className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
             >
-              {closing ? "Finalizando..." : "✓ Correcto, finalizar solicitud"}
+              {closing
+                ? t("Finalizando...", "Finalizing...")
+                : t("✓ Correcto, finalizar solicitud", "✓ Correct, finalize request")}
             </button>
             {revisionsLeft > 0 ? (
               <button
@@ -6195,8 +6526,9 @@ function HistoryCard({
                 }}
                 className="rounded-full border border-wit-ink/15 px-4 py-2 text-sm font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
               >
-                Solicitar cambio ({revisionsLeft}{" "}
-                {revisionsLeft === 1 ? "disponible" : "disponibles"})
+                {t("Solicitar cambio", "Request change")} ({revisionsLeft}{" "}
+                {revisionsLeft === 1 ? t("disponible", "available") : t("disponibles", "available")}
+                )
               </button>
             ) : null}
             {msg ? <p className="w-full text-sm text-red-600">{msg}</p> : null}
@@ -6208,7 +6540,7 @@ function HistoryCard({
         showChangeForm ? (
           <div className="mt-4 rounded-xl bg-wit-ice p-4">
             <label className="mb-1.5 block text-xs font-bold uppercase tracking-[0.14em] text-wit-gray">
-              Qué error notaste en la pieza
+              {t("Qué error notaste en la pieza", "What error did you notice in the piece")}
             </label>
             <div className="relative">
               <textarea
@@ -6217,7 +6549,10 @@ function HistoryCard({
                 value={changeText}
                 onChange={(e) => setChangeText(e.target.value)}
                 className="w-full resize-y rounded-lg border border-wit-ink/15 bg-white px-3 py-2 pr-12 text-sm outline-none focus:border-wit-blue"
-                placeholder="Ej. el nombre de la empresa está mal escrito, el color no es el correcto..."
+                placeholder={t(
+                  "Ej. el nombre de la empresa está mal escrito, el color no es el correcto...",
+                  "E.g. the company name is misspelled, the color isn't right...",
+                )}
               />
               <MicButton
                 value={changeText}
@@ -6232,7 +6567,7 @@ function HistoryCard({
                 onClick={reportChange}
                 className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
               >
-                {busy ? "Enviando..." : "Enviar reporte"}
+                {busy ? t("Enviando...", "Sending...") : t("Enviar reporte", "Send report")}
               </button>
               <button
                 type="button"
@@ -6240,7 +6575,7 @@ function HistoryCard({
                 onClick={() => setShowChangeForm(false)}
                 className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
               >
-                Cancelar
+                {t("Cancelar", "Cancel")}
               </button>
             </div>
             {msg ? <p className="mt-2 text-sm text-red-600">{msg}</p> : null}
@@ -6255,7 +6590,7 @@ function HistoryCard({
               }}
               className="rounded-full border border-wit-ink/15 px-4 py-2 text-sm font-semibold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
             >
-              Solicitar cambio por error en la pieza
+              {t("Solicitar cambio por error en la pieza", "Report an error in the piece")}
             </button>
           </div>
         )
@@ -6263,8 +6598,10 @@ function HistoryCard({
 
       {r.status === "cambio_solicitado" ? (
         <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-          Tu reporte está en revisión por el equipo de WITERS. En cuanto lo aprobemos, el equipo de
-          diseño retoma la pieza.
+          {t(
+            "Tu reporte está en revisión por el equipo de WITERS. En cuanto lo aprobemos, el equipo de diseño retoma la pieza.",
+            "Your report is under review by the WITERS team. As soon as we approve it, the design team will resume the piece.",
+          )}
         </p>
       ) : null}
 
@@ -6300,6 +6637,7 @@ function ImageLightbox({
   onDownload: () => void;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-wit-navy/90 p-5"
@@ -6321,20 +6659,24 @@ function ImageLightbox({
             onClick={onDownload}
             className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
           >
-            {downloading ? "Descargando..." : "Descargar imagen"}
+            {downloading
+              ? t("Descargando...", "Downloading...")
+              : t("Descargar imagen", "Download image")}
           </button>
           <button
             type="button"
             onClick={onClose}
             className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white hover:bg-white/10"
           >
-            Cerrar
+            {t("Cerrar", "Close")}
           </button>
         </div>
         {willFinalize ? (
           <p className="mt-3 max-w-xs text-center text-xs text-white/70">
-            Si descargas la imagen, tu solicitud se dará por finalizada. Solo puedes descargar una
-            versión.
+            {t(
+              "Si descargas la imagen, tu solicitud se dará por finalizada. Solo puedes descargar una versión.",
+              "If you download the image, your request will be marked as finalized. You can only download one version.",
+            )}
           </p>
         ) : null}
       </div>
@@ -6405,6 +6747,7 @@ const STAR_CLIP =
   "polygon(50% 0%, 55.5% 17.5%, 61% 35%, 79.5% 35%, 98% 35%, 83% 46%, 68% 57%, 73.5% 74%, 79% 91%, 64.5% 80.5%, 50% 70%, 35.5% 80.5%, 21% 91%, 26.5% 74%, 32% 57%, 17% 46%, 2% 35%, 20.5% 35%, 39% 35%, 44.5% 17.5%)";
 
 function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: () => void }) {
+  const { t } = useLanguage();
   const [step, setStep] = useState<"rate" | "feedback" | "done">("rate");
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState<number | null>(null);
@@ -6455,7 +6798,10 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
         {step === "rate" ? (
           <>
             <h3 className="text-lg font-bold text-wit-ink">
-              ¿Qué tan satisfecho quedaste con esta pieza?
+              {t(
+                "¿Qué tan satisfecho quedaste con esta pieza?",
+                "How satisfied were you with this piece?",
+              )}
             </h3>
             <div className="mt-6 flex justify-center gap-2.5">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -6474,18 +6820,23 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
               onClick={onDone}
               className="mt-7 text-sm font-semibold text-wit-gray hover:text-wit-ink"
             >
-              Ahora no
+              {t("Ahora no", "Not now")}
             </button>
           </>
         ) : step === "feedback" ? (
           <>
             <h3 className="text-lg font-bold text-wit-ink">
-              {rating === 5 ? "¿Qué fue lo que más te gustó?" : "¿Cómo podemos mejorar?"}
+              {rating === 5
+                ? t("¿Qué fue lo que más te gustó?", "What did you like the most?")
+                : t("¿Cómo podemos mejorar?", "How can we improve?")}
             </h3>
             <p className="mt-1 text-sm text-wit-gray">
               {rating === 5
-                ? "Nos encantaría saber qué te encantó de tu pieza."
-                : "Cuéntanos qué fue lo que no te gustó."}
+                ? t(
+                    "Nos encantaría saber qué te encantó de tu pieza.",
+                    "We'd love to know what you loved about your piece.",
+                  )
+                : t("Cuéntanos qué fue lo que no te gustó.", "Tell us what you didn't like.")}
             </p>
             <textarea
               rows={4}
@@ -6494,8 +6845,14 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
               onChange={(e) => setFeedback(e.target.value)}
               placeholder={
                 rating === 5
-                  ? "Tu comentario nos ayuda a seguir así (opcional)"
-                  : "Tu comentario nos ayuda a mejorar (opcional)"
+                  ? t(
+                      "Tu comentario nos ayuda a seguir así (opcional)",
+                      "Your comment helps us keep it up (optional)",
+                    )
+                  : t(
+                      "Tu comentario nos ayuda a mejorar (opcional)",
+                      "Your comment helps us improve (optional)",
+                    )
               }
               className="mt-4 w-full resize-y rounded-xl border border-wit-ink/15 px-4 py-3 text-sm outline-none focus:border-wit-blue"
             />
@@ -6505,7 +6862,7 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
               onClick={sendFeedback}
               className="mt-4 w-full rounded-2xl bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
             >
-              {submitting ? "Enviando..." : "Enviar comentario"}
+              {submitting ? t("Enviando...", "Sending...") : t("Enviar comentario", "Send comment")}
             </button>
           </>
         ) : (
@@ -6513,17 +6870,24 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
             {rating === 5 ? (
               <>
                 <p className="text-4xl">✨</p>
-                <h3 className="mt-3 text-lg font-bold text-wit-ink">Gracias</h3>
+                <h3 className="mt-3 text-lg font-bold text-wit-ink">{t("Gracias", "Thank you")}</h3>
                 <p className="mt-2 text-sm text-wit-gray">
-                  Nos encanta que tu pieza haya quedado tal como la imaginabas. Gracias por confiar
-                  en WITERS.
+                  {t(
+                    "Nos encanta que tu pieza haya quedado tal como la imaginabas. Gracias por confiar en WITERS.",
+                    "We're glad your piece turned out just as you imagined. Thank you for trusting WITERS.",
+                  )}
                 </p>
               </>
             ) : (
               <>
-                <h3 className="text-lg font-bold text-wit-ink">Gracias por tu comentario</h3>
+                <h3 className="text-lg font-bold text-wit-ink">
+                  {t("Gracias por tu comentario", "Thank you for your comment")}
+                </h3>
                 <p className="mt-2 text-sm text-wit-gray">
-                  Lo vamos a tomar en cuenta para que tus próximas piezas queden mejor.
+                  {t(
+                    "Lo vamos a tomar en cuenta para que tus próximas piezas queden mejor.",
+                    "We'll take it into account so your next pieces come out even better.",
+                  )}
                 </p>
               </>
             )}
@@ -6532,7 +6896,7 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
               onClick={onDone}
               className="mt-6 rounded-full bg-wit-blue px-8 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep"
             >
-              Listo
+              {t("Listo", "Done")}
             </button>
           </>
         )}
