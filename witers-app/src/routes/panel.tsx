@@ -815,34 +815,42 @@ function Panel() {
 
             {section === "creatividad" ? (
               <>
-                {/* Quick-start entry points — one tap lands straight in the
-                    creation flow for that type (picks the pill below AND
-                    opens "Hacer solicitud"), instead of making someone pick
-                    the pill first and then find the button. */}
-                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {/* Quick-start entry points, now also the only selector for
+                    Imágenes/Videos/Carruseles — the old separate pill row
+                    became redundant once tapping a card already switches
+                    creativeMode, so it's gone. Always 3-across (no stacking
+                    on mobile) since they're compact now; tapping one both
+                    selects it and opens "Hacer solicitud", and the panel
+                    below re-plays a rise-in (key={creativeMode}) so
+                    switching reads as that card unfolding, not a random
+                    content swap. */}
+                <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
                   <button
                     type="button"
                     onClick={() => {
                       setCreativeMode("imagenes");
                       setTab("nueva");
                     }}
-                    className="flex items-center gap-3 rounded-3xl bg-white p-4 text-left shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+                    className={`flex flex-col items-center gap-2 rounded-2xl border-2 bg-white px-2 py-4 text-center transition-all active:scale-[0.98] sm:rounded-3xl ${
+                      creativeMode === "imagenes"
+                        ? "border-wit-blue shadow-[0_10px_30px_rgba(37,99,255,0.12)]"
+                        : "border-transparent shadow-[0_10px_30px_rgba(5,13,40,0.06)] hover:-translate-y-0.5"
+                    }`}
                   >
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-wit-blue/10">
                       <ImageIcon className="h-5 w-5 text-wit-blue" strokeWidth={2} />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-bold text-wit-ink">
-                        {t("Crear imagen", "Create image")}
-                      </span>
-                      <span className="block text-xs text-wit-gray">
-                        {t(
-                          "Imágenes para redes, banners y anuncios",
-                          "Images for social, banners and ads",
-                        )}
-                      </span>
+                    <span className="text-xs font-bold text-wit-ink sm:text-sm">
+                      {t("Crear imagen", "Create image")}
                     </span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-wit-gray" strokeWidth={2.4} />
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform ${
+                        creativeMode === "imagenes"
+                          ? "rotate-0 text-wit-blue"
+                          : "-rotate-90 text-wit-gray"
+                      }`}
+                      strokeWidth={2.6}
+                    />
                   </button>
 
                   <button
@@ -851,20 +859,26 @@ function Panel() {
                       setCreativeMode("videos");
                       setVideoTab("nueva");
                     }}
-                    className="flex items-center gap-3 rounded-3xl bg-white p-4 text-left shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+                    className={`flex flex-col items-center gap-2 rounded-2xl border-2 bg-white px-2 py-4 text-center transition-all active:scale-[0.98] sm:rounded-3xl ${
+                      creativeMode === "videos"
+                        ? "border-wit-pink shadow-[0_10px_30px_rgba(255,63,176,0.12)]"
+                        : "border-transparent shadow-[0_10px_30px_rgba(5,13,40,0.06)] hover:-translate-y-0.5"
+                    }`}
                   >
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-wit-pink/10">
                       <VideoIcon className="h-5 w-5 text-wit-pink" strokeWidth={2} />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-bold text-wit-ink">
-                        {t("Crear video", "Create video")}
-                      </span>
-                      <span className="block text-xs text-wit-gray">
-                        {t("Videos para reels y anuncios", "Videos for reels and ads")}
-                      </span>
+                    <span className="text-xs font-bold text-wit-ink sm:text-sm">
+                      {t("Crear video", "Create video")}
                     </span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-wit-gray" strokeWidth={2.4} />
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform ${
+                        creativeMode === "videos"
+                          ? "rotate-0 text-wit-pink"
+                          : "-rotate-90 text-wit-gray"
+                      }`}
+                      strokeWidth={2.6}
+                    />
                   </button>
 
                   <button
@@ -873,164 +887,129 @@ function Panel() {
                       setCreativeMode("carruseles");
                       setCarouselTab("nueva");
                     }}
-                    className="flex items-center gap-3 rounded-3xl bg-white p-4 text-left shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+                    className={`flex flex-col items-center gap-2 rounded-2xl border-2 bg-white px-2 py-4 text-center transition-all active:scale-[0.98] sm:rounded-3xl ${
+                      creativeMode === "carruseles"
+                        ? "border-emerald-500 shadow-[0_10px_30px_rgba(16,185,129,0.12)]"
+                        : "border-transparent shadow-[0_10px_30px_rgba(5,13,40,0.06)] hover:-translate-y-0.5"
+                    }`}
                   >
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50">
                       <GalleryHorizontal className="h-5 w-5 text-emerald-600" strokeWidth={2} />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-bold text-wit-ink">
-                        {t("Crear carrusel", "Create carousel")}
-                      </span>
-                      <span className="block text-xs text-wit-gray">
-                        {t(
-                          "Carruseles de hasta 4 láminas para Instagram",
-                          "Up to 4-slide carousels for Instagram",
-                        )}
-                      </span>
+                    <span className="text-xs font-bold text-wit-ink sm:text-sm">
+                      {t("Crear carrusel", "Create carousel")}
                     </span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-wit-gray" strokeWidth={2.4} />
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform ${
+                        creativeMode === "carruseles"
+                          ? "rotate-0 text-emerald-600"
+                          : "-rotate-90 text-wit-gray"
+                      }`}
+                      strokeWidth={2.6}
+                    />
                   </button>
                 </div>
 
-                {/* Imágenes and video are two sibling request types inside
-                    Creatividad, not separate top-level areas — same
-                    "hacer solicitud / mis solicitudes" shape either way,
-                    just swapping which one's showing. */}
-                <div className="mt-6 inline-flex gap-1 rounded-full bg-wit-mist/60 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setCreativeMode("imagenes")}
-                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
-                      creativeMode === "imagenes"
-                        ? "bg-white text-wit-ink shadow-sm"
-                        : "text-wit-gray hover:text-wit-ink"
-                    }`}
-                  >
-                    {t("Imágenes", "Images")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCreativeMode("videos")}
-                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
-                      creativeMode === "videos"
-                        ? "bg-white text-wit-ink shadow-sm"
-                        : "text-wit-gray hover:text-wit-ink"
-                    }`}
-                  >
-                    {t("Videos", "Videos")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCreativeMode("carruseles")}
-                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
-                      creativeMode === "carruseles"
-                        ? "bg-white text-wit-ink shadow-sm"
-                        : "text-wit-gray hover:text-wit-ink"
-                    }`}
-                  >
-                    {t("Carruseles", "Carousels")}
-                  </button>
+                <div key={creativeMode} className="wit-rise">
+                  {creativeMode === "imagenes" ? (
+                    <>
+                      <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+                        <button
+                          type="button"
+                          onClick={() => setTab("nueva")}
+                          className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+                        >
+                          ✨ {t("Hacer solicitud", "Make a request")}
+                        </button>
+                        <PanelTab
+                          active={tab === "solicitudes"}
+                          onClick={() => setTab("solicitudes")}
+                          label={t("Mis solicitudes", "My requests")}
+                          count={rows.length}
+                        />
+                      </div>
+
+                      <div className="mt-8">
+                        {tab === "nueva" ? (
+                          <HablaConWitScreen onStart={openChat} />
+                        ) : (
+                          <RequestList
+                            rows={rows}
+                            loading={requests.isLoading}
+                            onNew={() => setTab("nueva")}
+                            pageId={brandProfile?.meta_page_id ?? null}
+                            onPautar={openPauta}
+                          />
+                        )}
+                      </div>
+                    </>
+                  ) : creativeMode === "videos" ? (
+                    <>
+                      <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+                        <button
+                          type="button"
+                          onClick={() => setVideoTab("nueva")}
+                          className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+                        >
+                          🎬 {t("Nueva solicitud", "New request")}
+                        </button>
+                        <PanelTab
+                          active={videoTab === "solicitudes"}
+                          onClick={() => setVideoTab("solicitudes")}
+                          label={t("Mis solicitudes", "My requests")}
+                          count={videoRows.length}
+                        />
+                      </div>
+
+                      <div className="mt-8">
+                        {videoTab === "nueva" ? (
+                          <VideoLandingScreen
+                            active={active}
+                            quotaUsed={membership?.video_requests_used ?? 0}
+                            quotaTotal={membership?.video_requests_quota ?? 0}
+                            onStart={() => setVideoWizardOpen(true)}
+                          />
+                        ) : (
+                          <VideoRequestList rows={videoRows} loading={videoRequests.isLoading} />
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+                        <button
+                          type="button"
+                          onClick={() => setCarouselTab("nueva")}
+                          className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+                        >
+                          🖼️ {t("Nuevo carrusel", "New carousel")}
+                        </button>
+                        <PanelTab
+                          active={carouselTab === "solicitudes"}
+                          onClick={() => setCarouselTab("solicitudes")}
+                          label={t("Mis solicitudes", "My requests")}
+                          count={carouselRows.length}
+                        />
+                      </div>
+
+                      <div className="mt-8">
+                        {carouselTab === "nueva" ? (
+                          <CarouselLandingScreen
+                            active={active}
+                            quotaUsed={membership?.carousel_requests_used ?? 0}
+                            quotaTotal={membership?.carousel_requests_quota ?? 0}
+                            onStart={() => setCarouselWizardOpen(true)}
+                          />
+                        ) : (
+                          <CarouselRequestList
+                            rows={carouselRows}
+                            loading={carouselRequests.isLoading}
+                          />
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
-
-                {creativeMode === "imagenes" ? (
-                  <>
-                    <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
-                      <button
-                        type="button"
-                        onClick={() => setTab("nueva")}
-                        className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-                      >
-                        ✨ {t("Hacer solicitud", "Make a request")}
-                      </button>
-                      <PanelTab
-                        active={tab === "solicitudes"}
-                        onClick={() => setTab("solicitudes")}
-                        label={t("Mis solicitudes", "My requests")}
-                        count={rows.length}
-                      />
-                    </div>
-
-                    <div className="mt-8">
-                      {tab === "nueva" ? (
-                        <HablaConWitScreen onStart={openChat} />
-                      ) : (
-                        <RequestList
-                          rows={rows}
-                          loading={requests.isLoading}
-                          onNew={() => setTab("nueva")}
-                          pageId={brandProfile?.meta_page_id ?? null}
-                          onPautar={openPauta}
-                        />
-                      )}
-                    </div>
-                  </>
-                ) : creativeMode === "videos" ? (
-                  <>
-                    <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
-                      <button
-                        type="button"
-                        onClick={() => setVideoTab("nueva")}
-                        className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-                      >
-                        🎬 {t("Nueva solicitud", "New request")}
-                      </button>
-                      <PanelTab
-                        active={videoTab === "solicitudes"}
-                        onClick={() => setVideoTab("solicitudes")}
-                        label={t("Mis solicitudes", "My requests")}
-                        count={videoRows.length}
-                      />
-                    </div>
-
-                    <div className="mt-8">
-                      {videoTab === "nueva" ? (
-                        <VideoLandingScreen
-                          active={active}
-                          quotaUsed={membership?.video_requests_used ?? 0}
-                          quotaTotal={membership?.video_requests_quota ?? 0}
-                          onStart={() => setVideoWizardOpen(true)}
-                        />
-                      ) : (
-                        <VideoRequestList rows={videoRows} loading={videoRequests.isLoading} />
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
-                      <button
-                        type="button"
-                        onClick={() => setCarouselTab("nueva")}
-                        className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-                      >
-                        🖼️ {t("Nuevo carrusel", "New carousel")}
-                      </button>
-                      <PanelTab
-                        active={carouselTab === "solicitudes"}
-                        onClick={() => setCarouselTab("solicitudes")}
-                        label={t("Mis solicitudes", "My requests")}
-                        count={carouselRows.length}
-                      />
-                    </div>
-
-                    <div className="mt-8">
-                      {carouselTab === "nueva" ? (
-                        <CarouselLandingScreen
-                          active={active}
-                          quotaUsed={membership?.carousel_requests_used ?? 0}
-                          quotaTotal={membership?.carousel_requests_quota ?? 0}
-                          onStart={() => setCarouselWizardOpen(true)}
-                        />
-                      ) : (
-                        <CarouselRequestList
-                          rows={carouselRows}
-                          loading={carouselRequests.isLoading}
-                        />
-                      )}
-                    </div>
-                  </>
-                )}
               </>
             ) : section === "activos" ? (
               <div className="mt-8">
