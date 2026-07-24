@@ -543,15 +543,6 @@ function Panel() {
             <WitersLogo compact />
           </Link>
           <div className="flex items-center gap-1.5 sm:gap-3">
-            {active && membership?.plan !== "scale" ? (
-              <Link
-                to="/upgrade"
-                className="flex items-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-2.5 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10 sm:px-4"
-              >
-                <ArrowUpCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />
-                <span className="hidden sm:inline">{t("Upgrade", "Upgrade")}</span>
-              </Link>
-            ) : null}
             <LanguageToggle />
             <UserMenu
               name={me.data.user?.name ?? ""}
@@ -633,6 +624,15 @@ function Panel() {
                     </span>
                   </div>
                 </div>
+                {active && membership?.plan !== "scale" ? (
+                  <Link
+                    to="/upgrade"
+                    className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10"
+                  >
+                    <ArrowUpCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
+                    {t("Upgrade", "Upgrade")}
+                  </Link>
+                ) : null}
                 {active ? (
                   <button
                     type="button"
@@ -1767,6 +1767,16 @@ function MembershipSummaryCard({
               </div>
             ) : null}
           </div>
+
+          {active && membership.plan !== "scale" ? (
+            <Link
+              to="/upgrade"
+              className="flex w-full items-center justify-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-4 py-2.5 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10"
+            >
+              <ArrowUpCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
+              {t("Upgrade", "Upgrade")}
+            </Link>
+          ) : null}
 
           {active ? (
             <button
