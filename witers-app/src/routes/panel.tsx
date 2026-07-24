@@ -571,7 +571,7 @@ function Panel() {
         userInitial={(me.data.user?.name?.trim()[0] ?? "?").toUpperCase()}
       />
 
-      <main className="mx-auto max-w-6xl px-5 py-10 pb-32 sm:pb-10">
+      <main className="mx-auto max-w-6xl px-5 py-10 pb-24 sm:pb-10">
         {view === "perfil" ? (
           <PerfilView me={me.data} onBack={() => setView("panel")} onLogout={logout} />
         ) : needsOnboarding ? (
@@ -2181,9 +2181,9 @@ function PanelBottomNav({
 }) {
   const { t } = useLanguage();
 
-  // Icon + label share one pill: active gets a soft translucent highlight
+  // Icon + label share one pill: active gets a soft wit-blue highlight
   // behind the icon (the "selected" look from the Instagram reference),
-  // inactive stays bare on the dark glass.
+  // inactive stays bare on the white glass.
   function NavTab({
     active,
     onClick,
@@ -2199,16 +2199,16 @@ function PanelBottomNav({
       <button
         type="button"
         onClick={onClick}
-        className="flex flex-1 flex-col items-center gap-1 py-2.5"
+        className="flex flex-1 flex-col items-center gap-0.5 py-1.5"
       >
         <span
-          className={`flex h-9 w-9 items-center justify-center rounded-2xl transition-colors ${
-            active ? "bg-white/20" : ""
+          className={`flex h-7 w-7 items-center justify-center rounded-xl transition-colors ${
+            active ? "bg-wit-blue/10" : ""
           }`}
         >
           {icon}
         </span>
-        <span className={`text-[10px] font-semibold ${active ? "text-white" : "text-white/55"}`}>
+        <span className={`text-[10px] font-semibold ${active ? "text-wit-blue" : "text-wit-gray"}`}>
           {label}
         </span>
       </button>
@@ -2221,94 +2221,86 @@ function PanelBottomNav({
   const perfilActive = view === "perfil";
 
   return (
-    // Positioning lives on this outer <nav> and the glass background on
-    // the inner <div> — .wit-nav-glass sets its own `position: relative`,
-    // which (same specificity, later in the compiled stylesheet) would
-    // silently beat the `fixed` utility if both landed on one element.
     <nav
       className="fixed inset-x-4 z-40 sm:hidden"
       style={{ bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))" }}
     >
-      <div className="wit-nav-glass rounded-full">
-        <div className="relative mx-auto flex max-w-6xl items-center px-2">
-          <div className="flex flex-1 items-center">
-            <NavTab
-              active={homeActive}
-              onClick={() => onSection("creatividad")}
-              icon={
-                <Home
-                  size={20}
-                  strokeWidth={2}
-                  className={homeActive ? "text-white" : "text-white/60"}
-                />
-              }
-              label={t("Inicio", "Home")}
-            />
-            <NavTab
-              active={activosActive}
-              onClick={() => onSection("activos")}
-              icon={
-                <BookOpen
-                  size={20}
-                  strokeWidth={2}
-                  className={activosActive ? "text-white" : "text-white/60"}
-                />
-              }
-              label={t("Biblioteca", "Library")}
-            />
-          </div>
+      {/* Two separate glass pills with a gap between them, not one solid
+        bar — the gap is the "cuenca": the orb floats centered in it, level
+        with the icons, without either pill's glass ever touching it. */}
+      <div className="mx-auto flex max-w-6xl items-center gap-2.5">
+        <div className="wit-glass flex flex-1 items-center rounded-full px-1">
+          <NavTab
+            active={homeActive}
+            onClick={() => onSection("creatividad")}
+            icon={
+              <Home
+                size={18}
+                strokeWidth={2}
+                className={homeActive ? "text-wit-blue" : "text-wit-gray"}
+              />
+            }
+            label={t("Inicio", "Home")}
+          />
+          <NavTab
+            active={activosActive}
+            onClick={() => onSection("activos")}
+            icon={
+              <BookOpen
+                size={18}
+                strokeWidth={2}
+                className={activosActive ? "text-wit-blue" : "text-wit-gray"}
+              />
+            }
+            label={t("Biblioteca", "Library")}
+          />
+        </div>
 
-          {/* Spacer so the two side groups don't crowd the floating center
-            button, which overlaps the bar's top edge rather than sitting
-            in the row. */}
-          <div className="w-16 shrink-0" aria-hidden="true" />
-
-          <button
-            type="button"
-            onClick={onOpenChat}
-            aria-label={t("Hablar con Wit", "Talk to Wit")}
-            className="wit-orb absolute left-1/2 top-0 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full active:scale-95"
+        <button
+          type="button"
+          onClick={onOpenChat}
+          aria-label={t("Hablar con Wit", "Talk to Wit")}
+          className="wit-orb flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full active:scale-95"
+        >
+          {/* overflow-hidden on the button above is a hard guarantee the
+            mark can never visually escape the circle, however far the
+            float animation drifts. WMark is a solid wit-blue PNG — invert
+            it to white so it reads against the orb's gradient. */}
+          <span
+            className="wit-float-soft flex items-center justify-center"
+            style={{ filter: "brightness(0) invert(1)" }}
           >
-            {/* overflow-hidden on the button above is a hard guarantee the
-              mark can never visually escape the circle, however far the
-              float animation drifts. WMark is a solid wit-blue PNG —
-              invert it to white so it reads against the orb's gradient. */}
-            <span
-              className="wit-float-soft flex items-center justify-center"
-              style={{ filter: "brightness(0) invert(1)" }}
-            >
-              <WMark size={22} />
-            </span>
-          </button>
+            <WMark size={22} />
+          </span>
+        </button>
 
-          <div className="flex flex-1 items-center">
-            <NavTab
-              active={campanasActive}
-              onClick={() => onSection("campanas")}
-              icon={
-                <Megaphone
-                  size={20}
-                  strokeWidth={2}
-                  className={campanasActive ? "text-white" : "text-white/60"}
-                />
-              }
-              label={t("Campañas", "Campaigns")}
-            />
-            <NavTab
-              active={perfilActive}
-              onClick={onOpenProfile}
-              icon={
-                <span
-                  className={`flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold text-white ${
-                    perfilActive ? "bg-wit-blue" : "bg-white/25"
-                  }`}
-                >
-                  {userInitial}
-                </span>
-              }
-              label={t("Perfil", "Profile")}
-            />
-          </div>
+        <div className="wit-glass flex flex-1 items-center rounded-full px-1">
+          <NavTab
+            active={campanasActive}
+            onClick={() => onSection("campanas")}
+            icon={
+              <Megaphone
+                size={18}
+                strokeWidth={2}
+                className={campanasActive ? "text-wit-blue" : "text-wit-gray"}
+              />
+            }
+            label={t("Campañas", "Campaigns")}
+          />
+          <NavTab
+            active={perfilActive}
+            onClick={onOpenProfile}
+            icon={
+              <span
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold ${
+                  perfilActive ? "bg-wit-blue text-white" : "bg-wit-mist text-wit-gray"
+                }`}
+              >
+                {userInitial}
+              </span>
+            }
+            label={t("Perfil", "Profile")}
+          />
         </div>
       </div>
     </nav>
