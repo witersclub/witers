@@ -9,7 +9,14 @@
 // Wit (never a manual form) and always produces exactly 4 ordered slides.
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Download, GalleryHorizontal, Loader2, Pencil } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  GalleryHorizontal,
+  Loader2,
+  Pencil,
+} from "lucide-react";
 
 import { WMark } from "./brand";
 import { ChatBubble } from "./chat-intake";
@@ -161,6 +168,126 @@ export function CarouselRequestList({
   );
 }
 
+// Instagram-style single-frame viewer, not a 4-up grid — one lámina fills
+// the frame at a time, native touch-swipe via CSS scroll-snap (so it feels
+// exactly like swiping a real Instagram carousel post, no custom gesture
+// JS needed), dots below to jump directly to a lámina, and chevrons for
+// mouse/keyboard users where there's no touchscreen to swipe with.
+function SlideCarouselViewer({
+  slides,
+  onRequestChange,
+}: {
+  slides: CarouselSlideInfo[];
+  onRequestChange: (slideIndex: number) => void;
+}) {
+  const { t } = useLanguage();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  function scrollToIndex(i: number) {
+    const track = trackRef.current;
+    const child = track?.children[i] as HTMLElement | undefined;
+    if (track && child) track.scrollTo({ left: child.offsetLeft, behavior: "smooth" });
+  }
+
+  function handleScroll() {
+    const track = trackRef.current;
+    if (!track || track.clientWidth === 0) return;
+    const idx = Math.round(track.scrollLeft / track.clientWidth);
+    setActiveIndex(Math.min(slides.length - 1, Math.max(0, idx)));
+  }
+
+  const active = slides[activeIndex];
+
+  return (
+    <div className="mt-4">
+      <div className="relative overflow-hidden rounded-xl border border-wit-ink/10 bg-wit-ice">
+        <div
+          ref={trackRef}
+          onScroll={handleScroll}
+          className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {slides.map((s) => (
+            <div key={s.id} className="relative w-full shrink-0 snap-center">
+              {s.delivered_key ? (
+                <img
+                  src={`/api/file?key=${encodeURIComponent(s.delivered_key)}`}
+                  alt={s.title || `Lámina ${s.slide_index}`}
+                  className="aspect-square w-full object-cover"
+                />
+              ) : (
+                <div className="flex aspect-square w-full items-center justify-center px-2 text-center text-sm font-semibold text-wit-gray">
+                  {t("Pendiente", "Pending")}
+                </div>
+              )}
+              {s.delivered_key ? (
+                <button
+                  type="button"
+                  onClick={() => onRequestChange(s.slide_index)}
+                  aria-label={t(
+                    `Pedir cambio en lámina ${s.slide_index}`,
+                    `Request a change to slide ${s.slide_index}`,
+                  )}
+                  title={t("Pedir cambio en esta lámina", "Request a change to this slide")}
+                  className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-wit-gray shadow hover:text-wit-blue"
+                >
+                  <Pencil className="h-3.5 w-3.5" strokeWidth={2.3} />
+                </button>
+              ) : null}
+              {s.change_request_note ? (
+                <span className="absolute bottom-2 left-2 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                  {t("Cambio pedido", "Change requested")}
+                </span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+
+        {activeIndex > 0 ? (
+          <button
+            type="button"
+            onClick={() => scrollToIndex(activeIndex - 1)}
+            aria-label={t("Lámina anterior", "Previous slide")}
+            className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-wit-ink shadow hover:bg-white"
+          >
+            <ChevronLeft className="h-4 w-4" strokeWidth={2.4} />
+          </button>
+        ) : null}
+        {activeIndex < slides.length - 1 ? (
+          <button
+            type="button"
+            onClick={() => scrollToIndex(activeIndex + 1)}
+            aria-label={t("Lámina siguiente", "Next slide")}
+            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-wit-ink shadow hover:bg-white"
+          >
+            <ChevronRight className="h-4 w-4" strokeWidth={2.4} />
+          </button>
+        ) : null}
+      </div>
+
+      <div className="mt-3 flex items-center justify-center gap-1.5">
+        {slides.map((s, i) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => scrollToIndex(i)}
+            aria-label={t(`Ir a la lámina ${s.slide_index}`, `Go to slide ${s.slide_index}`)}
+            className={`h-1.5 rounded-full transition-all ${
+              i === activeIndex ? "w-5 bg-wit-blue" : "w-1.5 bg-wit-ink/20"
+            }`}
+          />
+        ))}
+      </div>
+      <p className="mt-1 text-center text-[11px] font-semibold text-wit-gray">
+        {t(
+          `Lámina ${active?.slide_index ?? 1} de ${slides.length}`,
+          `Slide ${active?.slide_index ?? 1} of ${slides.length}`,
+        )}
+      </p>
+    </div>
+  );
+}
+
 function CarouselEntry({ row }: { row: CarouselRequestRow }) {
   const qc = useQueryClient();
   const { t } = useLanguage();
@@ -233,47 +360,13 @@ function CarouselEntry({ row }: { row: CarouselRequestRow }) {
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {slides.map((s) => (
-          <div key={s.id} className="flex flex-col gap-1.5">
-            <div className="relative overflow-hidden rounded-xl border border-wit-ink/10 bg-wit-ice">
-              {s.delivered_key ? (
-                <img
-                  src={`/api/file?key=${encodeURIComponent(s.delivered_key)}`}
-                  alt={s.title || `Lámina ${s.slide_index}`}
-                  className="aspect-square w-full object-cover"
-                />
-              ) : (
-                <div className="flex aspect-square w-full items-center justify-center px-2 text-center text-[11px] font-semibold text-wit-gray">
-                  Pendiente
-                </div>
-              )}
-              {s.delivered_key ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSentMsg(null);
-                    setChangeTarget(s.slide_index);
-                  }}
-                  aria-label={`Pedir cambio en lámina ${s.slide_index}`}
-                  title="Pedir cambio en esta lámina"
-                  className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-wit-gray shadow hover:text-wit-blue"
-                >
-                  <Pencil className="h-3 w-3" strokeWidth={2.3} />
-                </button>
-              ) : null}
-              {s.change_request_note ? (
-                <span className="absolute bottom-1.5 left-1.5 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-bold text-white">
-                  Cambio pedido
-                </span>
-              ) : null}
-            </div>
-            <p className="line-clamp-1 text-center text-[11px] font-semibold text-wit-gray">
-              Lámina {s.slide_index}
-            </p>
-          </div>
-        ))}
-      </div>
+      <SlideCarouselViewer
+        slides={slides}
+        onRequestChange={(slideIndex) => {
+          setSentMsg(null);
+          setChangeTarget(slideIndex);
+        }}
+      />
 
       {row.status === "completada" ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">
