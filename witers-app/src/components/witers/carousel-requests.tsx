@@ -176,13 +176,22 @@ export function CarouselRequestList({
 function SlideCarouselViewer({
   slides,
   onRequestChange,
+  onActiveChange,
 }: {
   slides: CarouselSlideInfo[];
   onRequestChange: (slideIndex: number) => void;
+  onActiveChange?: (slide: CarouselSlideInfo) => void;
 }) {
   const { t } = useLanguage();
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  function setIndex(i: number) {
+    const clamped = Math.min(slides.length - 1, Math.max(0, i));
+    setActiveIndex(clamped);
+    const slide = slides[clamped];
+    if (slide) onActiveChange?.(slide);
+  }
 
   function scrollToIndex(i: number) {
     const track = trackRef.current;
@@ -193,9 +202,18 @@ function SlideCarouselViewer({
   function handleScroll() {
     const track = trackRef.current;
     if (!track || track.clientWidth === 0) return;
-    const idx = Math.round(track.scrollLeft / track.clientWidth);
-    setActiveIndex(Math.min(slides.length - 1, Math.max(0, idx)));
+    setIndex(Math.round(track.scrollLeft / track.clientWidth));
   }
+
+  // Fire once on mount so the parent knows which slide is active before
+  // the client ever touches the viewer (defaults to lámina 1).
+  useEffect(() => {
+    if (slides[0]) onActiveChange?.(slides[0]);
+    // Only ever needs to run once per mount — re-firing on every slides
+    // array identity change (e.g. a query refetch) would fight with
+    // whatever slide the client has since swiped to.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const active = slides[activeIndex];
 
@@ -299,6 +317,10 @@ function CarouselEntry({ row }: { row: CarouselRequestRow }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [sentMsg, setSentMsg] = useState<string | null>(null);
+  // Tracks whichever lámina is currently on screen in the swipeable
+  // viewer, so "Descargar" always offers the one the client is actually
+  // looking at instead of being permanently stuck on lámina 1.
+  const [activeSlide, setActiveSlide] = useState<CarouselSlideInfo | null>(slides[0] ?? null);
 
   async function sendChange() {
     if (message.trim().length < 5) {
@@ -366,16 +388,20 @@ function CarouselEntry({ row }: { row: CarouselRequestRow }) {
           setSentMsg(null);
           setChangeTarget(slideIndex);
         }}
+        onActiveChange={setActiveSlide}
       />
 
-      {row.status === "completada" ? (
+      {row.status === "completada" && activeSlide?.delivered_key ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <a
-            href={`/api/file?key=${encodeURIComponent(slides[0]?.delivered_key ?? "")}&download=1`}
+            href={`/api/file?key=${encodeURIComponent(activeSlide.delivered_key)}&download=1`}
             className="inline-flex items-center gap-1.5 rounded-full border border-wit-ink/15 px-4 py-2 text-xs font-bold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
           >
             <Download className="h-3.5 w-3.5" strokeWidth={2.3} />
-            Descargar lámina 1
+            {t(
+              `Descargar lámina ${activeSlide.slide_index}`,
+              `Download slide ${activeSlide.slide_index}`,
+            )}
           </a>
           <button
             type="button"
