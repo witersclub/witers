@@ -14,13 +14,16 @@ import {
   Calendar,
   Car,
   ChevronDown,
+  ChevronRight,
   Crosshair,
   Dumbbell,
   Eye,
   FileText,
   Flame,
+  GalleryHorizontal,
   Globe,
   Home,
+  Image as ImageIcon,
   Images,
   Laptop,
   Link2,
@@ -47,6 +50,7 @@ import {
   User,
   Users,
   UtensilsCrossed,
+  Video as VideoIcon,
   Wallet,
   X,
   type LucideIcon,
@@ -811,6 +815,84 @@ function Panel() {
 
             {section === "creatividad" ? (
               <>
+                {/* Quick-start entry points — one tap lands straight in the
+                    creation flow for that type (picks the pill below AND
+                    opens "Hacer solicitud"), instead of making someone pick
+                    the pill first and then find the button. */}
+                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreativeMode("imagenes");
+                      setTab("nueva");
+                    }}
+                    className="flex items-center gap-3 rounded-3xl bg-white p-4 text-left shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+                  >
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-wit-blue/10">
+                      <ImageIcon className="h-5 w-5 text-wit-blue" strokeWidth={2} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold text-wit-ink">
+                        {t("Crear imagen", "Create image")}
+                      </span>
+                      <span className="block text-xs text-wit-gray">
+                        {t(
+                          "Imágenes para redes, banners y anuncios",
+                          "Images for social, banners and ads",
+                        )}
+                      </span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-wit-gray" strokeWidth={2.4} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreativeMode("videos");
+                      setVideoTab("nueva");
+                    }}
+                    className="flex items-center gap-3 rounded-3xl bg-white p-4 text-left shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+                  >
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-wit-pink/10">
+                      <VideoIcon className="h-5 w-5 text-wit-pink" strokeWidth={2} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold text-wit-ink">
+                        {t("Crear video", "Create video")}
+                      </span>
+                      <span className="block text-xs text-wit-gray">
+                        {t("Videos para reels y anuncios", "Videos for reels and ads")}
+                      </span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-wit-gray" strokeWidth={2.4} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreativeMode("carruseles");
+                      setCarouselTab("nueva");
+                    }}
+                    className="flex items-center gap-3 rounded-3xl bg-white p-4 text-left shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+                  >
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50">
+                      <GalleryHorizontal className="h-5 w-5 text-emerald-600" strokeWidth={2} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold text-wit-ink">
+                        {t("Crear carrusel", "Create carousel")}
+                      </span>
+                      <span className="block text-xs text-wit-gray">
+                        {t(
+                          "Carruseles de hasta 4 láminas para Instagram",
+                          "Up to 4-slide carousels for Instagram",
+                        )}
+                      </span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-wit-gray" strokeWidth={2.4} />
+                  </button>
+                </div>
+
                 {/* Imágenes and video are two sibling request types inside
                     Creatividad, not separate top-level areas — same
                     "hacer solicitud / mis solicitudes" shape either way,
