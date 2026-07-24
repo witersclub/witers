@@ -205,3 +205,36 @@ export async function getCampaignInsight(
     },
   };
 }
+
+export type DailyPoint = { date: string; spend: number; reach: number };
+
+// Day-by-day spend/reach for one campaign over the last 30 days — feeds the
+// trend chart on the client's Campañas tab. A shorter, fixed window than
+// getCampaignInsight's lifetime totals on purpose: a client cares about
+// "how is it trending lately," and 30 days of daily points is already a lot
+// to plot legibly. /api/campaigns sums this across all of a client's linked
+// campaigns into one combined trend.
+export async function getCampaignDailySeries(
+  campaignId: string,
+): Promise<{ ok: true; data: DailyPoint[] } | { ok: false; error: string }> {
+  const config = getMetaConfig();
+  if ("error" in config) return { ok: false, error: config.error };
+
+  const res = await graphRequest<{
+    data: Array<{ date_start: string; spend?: string; reach?: string }>;
+  }>(
+    `/${campaignId}/insights`,
+    config.accessToken,
+    { fields: "spend,reach", date_preset: "last_30d", time_increment: 1 },
+    "GET",
+  );
+  if (!res.ok) return { ok: false, error: res.error };
+  return {
+    ok: true,
+    data: res.data.data.map((r) => ({
+      date: r.date_start,
+      spend: Number(r.spend ?? 0),
+      reach: Number(r.reach ?? 0),
+    })),
+  };
+}

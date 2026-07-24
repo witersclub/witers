@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { getCampaignInsight } from "../../lib/meta-ads.server";
+import { getCampaignDailySeries, getCampaignInsight } from "../../lib/meta-ads.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
 type CampaignRow = {
@@ -16,7 +16,8 @@ type CampaignRow = {
 // not a live push. Name and budget always come from Meta, never a local
 // column: campaigns are staff-linked from the client's own ad account now
 // (see /api/admin/link-campaign), so there's nothing locally cached to
-// fall back to.
+// fall back to. Also returns a combined 30-day trend (see "series" below)
+// summed across every campaign the client has, for the chart above the cards.
 export const Route = createFileRoute("/api/campaigns")({
   server: {
     handlers: {
@@ -56,7 +57,28 @@ export const Route = createFileRoute("/api/campaigns")({
           }),
         );
 
-        return json({ ok: true, campaigns });
+        // Sum each campaign's daily points onto one combined timeline —
+        // Meta only reports per-campaign, and the client wants "how are my
+        // campaigns doing together," not one chart per campaign.
+        const byDate = new Map<string, { spend: number; reach: number }>();
+        const dailySeriesResults = await Promise.all(
+          (rows.results ?? []).map((row) => getCampaignDailySeries(row.meta_campaign_id)),
+        );
+        for (const result of dailySeriesResults) {
+          if (!result.ok) continue;
+          for (const point of result.data) {
+            const existing = byDate.get(point.date) ?? { spend: 0, reach: 0 };
+            byDate.set(point.date, {
+              spend: existing.spend + point.spend,
+              reach: existing.reach + point.reach,
+            });
+          }
+        }
+        const series = [...byDate.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([date, v]) => ({ date, spend: v.spend, reach: v.reach }));
+
+        return json({ ok: true, campaigns, series });
       },
     },
   },
