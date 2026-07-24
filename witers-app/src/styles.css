@@ -311,6 +311,20 @@
   }
 }
 
+/* Turns each pill's inner end cap from a full rounded semicircle into a
+   thin crescent curving toward the orb: the mask circle is almost the
+   same size as the cap's own curve but centered a bit further out past
+   the edge, so subtracting it leaves only a sliver of the original cap
+   standing — a classic two-circles "moon" cut, not a deep bite. */
+.wit-nav-notch-left {
+  -webkit-mask-image: radial-gradient(circle at calc(100% + 15px) 50%, transparent 28px, black 30px);
+  mask-image: radial-gradient(circle at calc(100% + 15px) 50%, transparent 28px, black 30px);
+}
+.wit-nav-notch-right {
+  -webkit-mask-image: radial-gradient(circle at calc(0% - 15px) 50%, transparent 28px, black 30px);
+  mask-image: radial-gradient(circle at calc(0% - 15px) 50%, transparent 28px, black 30px);
+}
+
 /* Small logo mark hovering above the AI chat, like a quiet mascot. */
 .wit-float {
   animation: wit-float 3.4s ease-in-out infinite;
