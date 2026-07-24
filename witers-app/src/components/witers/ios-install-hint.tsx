@@ -46,7 +46,9 @@ export function IosInstallHint() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-4 bottom-4 z-50 flex items-center gap-3 rounded-2xl bg-wit-ink px-4 py-3.5 text-white shadow-[0_20px_50px_rgba(5,13,40,0.35)] sm:inset-x-auto sm:right-4 sm:w-96">
+    // bottom-24 (not bottom-4) on mobile — the panel's bottom tab bar sits
+    // fixed at the very bottom there and would otherwise overlap this.
+    <div className="fixed inset-x-4 bottom-24 z-50 flex items-center gap-3 rounded-2xl bg-wit-ink px-4 py-3.5 text-white shadow-[0_20px_50px_rgba(5,13,40,0.35)] sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-96">
       <Share className="h-5 w-5 shrink-0 text-white/80" strokeWidth={2} />
       <p className="flex-1 text-sm leading-snug">
         {t("Toca", "Tap")} <span className="font-bold">{t("compartir", "share")}</span>{" "}

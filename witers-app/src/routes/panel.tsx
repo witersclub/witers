@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowUpCircle,
+  BookOpen,
   Briefcase,
   Building2,
   Cake,
@@ -27,6 +28,7 @@ import {
   LogOut,
   Magnet,
   MapPin,
+  Megaphone,
   MessageCircle,
   PackagePlus,
   PawPrint,
@@ -544,18 +546,34 @@ function Panel() {
           </Link>
           <div className="flex items-center gap-1.5 sm:gap-3">
             <LanguageToggle />
-            <UserMenu
-              name={me.data.user?.name ?? ""}
-              onOpenProfile={() => setView("perfil")}
-              onLogout={logout}
-            />
+            {/* Hidden on mobile — the bottom tab bar's avatar button covers
+                this same job there (direct to Mi perfil, no dropdown). */}
+            <div className="hidden sm:block">
+              <UserMenu
+                name={me.data.user?.name ?? ""}
+                onOpenProfile={() => setView("perfil")}
+                onLogout={logout}
+              />
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 py-10">
+      <PanelBottomNav
+        section={section}
+        onSection={(s) => {
+          setSection(s);
+          setView("panel");
+        }}
+        view={view}
+        onOpenChat={openChat}
+        onOpenProfile={() => setView("perfil")}
+        userInitial={(me.data.user?.name?.trim()[0] ?? "?").toUpperCase()}
+      />
+
+      <main className="mx-auto max-w-6xl px-5 py-10 pb-28 sm:pb-10">
         {view === "perfil" ? (
-          <PerfilView me={me.data} onBack={() => setView("panel")} />
+          <PerfilView me={me.data} onBack={() => setView("panel")} onLogout={logout} />
         ) : needsOnboarding ? (
           <OnboardingGate
             onDone={() => void qc.invalidateQueries({ queryKey: ["brand-profile"] })}
@@ -1393,7 +1411,15 @@ function UserMenu({
 
 /* ---------------- MI PERFIL ---------------- */
 
-function PerfilView({ me, onBack }: { me: Me; onBack: () => void }) {
+function PerfilView({
+  me,
+  onBack,
+  onLogout,
+}: {
+  me: Me;
+  onBack: () => void;
+  onLogout: () => void;
+}) {
   const { t } = useLanguage();
   const plan = me.membership ? getPlan(me.membership.plan) : null;
   return (
@@ -1421,6 +1447,15 @@ function PerfilView({ me, onBack }: { me: Me; onBack: () => void }) {
         <AccountCard user={me.user} />
         <PasswordCard />
         <MembershipSummaryCard membership={me.membership} plan={plan} />
+
+        <button
+          type="button"
+          onClick={onLogout}
+          className="flex items-center gap-2 text-sm font-semibold text-red-600 hover:text-red-700"
+        >
+          <LogOut size={16} strokeWidth={2.25} />
+          {t("Cerrar sesión", "Log out")}
+        </button>
       </div>
     </div>
   );
@@ -2100,7 +2135,9 @@ function SectionNav({
 }) {
   const { t } = useLanguage();
   return (
-    <div className="wit-glass mt-8 inline-flex gap-1 rounded-2xl p-1 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+    // Hidden on mobile — the bottom tab bar (PanelBottomNav) covers this
+    // same job there, and showing both would be two navs doing one thing.
+    <div className="wit-glass mt-8 hidden gap-1 rounded-2xl p-1 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:inline-flex">
       {SECTIONS.map((s) => (
         <button
           key={s.id}
@@ -2116,6 +2153,115 @@ function SectionNav({
         </button>
       ))}
     </div>
+  );
+}
+
+// Mobile-only bottom tab bar. Home/Biblioteca/Campañas mirror SectionNav's
+// three areas (hidden here, this replaces it on small screens); Perfil
+// mirrors the header avatar (also hidden on mobile — see UserMenu). The
+// center button is new: Wit as an always-on presence, not just a button
+// you notice when its idle text says "chat with us" — same drifting
+// gradient as "Hablar con Wit", but the halo breathes continuously so it
+// reads as alive at rest, and the W mark bobs like the mascot mark used
+// elsewhere (.wit-float).
+function PanelBottomNav({
+  section,
+  onSection,
+  view,
+  onOpenChat,
+  onOpenProfile,
+  userInitial,
+}: {
+  section: "creatividad" | "activos" | "campanas";
+  onSection: (section: "creatividad" | "activos" | "campanas") => void;
+  view: "panel" | "perfil";
+  onOpenChat: () => void;
+  onOpenProfile: () => void;
+  userInitial: string;
+}) {
+  const { t } = useLanguage();
+
+  function tabClass(active: boolean) {
+    return `flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-semibold transition-colors ${
+      active ? "text-wit-blue" : "text-wit-gray"
+    }`;
+  }
+
+  return (
+    // Positioning lives on this outer <nav> and the glass background on
+    // the inner <div> — .wit-glass sets its own `position: relative`,
+    // which (same specificity, later in the compiled stylesheet) would
+    // silently beat the `fixed` utility if both landed on one element.
+    <nav className="fixed inset-x-0 bottom-0 z-40 sm:hidden">
+      <div
+        className="wit-glass border-t border-wit-ink/10"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="relative mx-auto flex max-w-6xl items-center px-2">
+          <div className="flex flex-1 items-center">
+            <button
+              type="button"
+              onClick={() => onSection("creatividad")}
+              className={tabClass(view === "panel" && section === "creatividad")}
+            >
+              <Home size={22} strokeWidth={2} />
+              {t("Inicio", "Home")}
+            </button>
+            <button
+              type="button"
+              onClick={() => onSection("activos")}
+              className={tabClass(view === "panel" && section === "activos")}
+            >
+              <BookOpen size={22} strokeWidth={2} />
+              {t("Biblioteca", "Library")}
+            </button>
+          </div>
+
+          {/* Spacer so the two side groups don't crowd the floating center
+            button, which overlaps the bar's top edge rather than sitting
+            in the row. */}
+          <div className="w-16 shrink-0" aria-hidden="true" />
+
+          <button
+            type="button"
+            onClick={onOpenChat}
+            aria-label={t("Hablar con Wit", "Talk to Wit")}
+            className="wit-orb absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full shadow-[0_10px_30px_rgba(255,63,176,0.35)] active:scale-95"
+          >
+            {/* WMark is a solid wit-blue PNG — invert it to white so it
+              reads against the orb's blue/pink gradient instead of
+              disappearing into the blue half of it. */}
+            <span
+              className="wit-float flex items-center justify-center"
+              style={{ filter: "brightness(0) invert(1)" }}
+            >
+              <WMark size={26} />
+            </span>
+          </button>
+
+          <div className="flex flex-1 items-center">
+            <button
+              type="button"
+              onClick={() => onSection("campanas")}
+              className={tabClass(view === "panel" && section === "campanas")}
+            >
+              <Megaphone size={22} strokeWidth={2} />
+              {t("Campañas", "Campaigns")}
+            </button>
+            <button type="button" onClick={onOpenProfile} className={tabClass(view === "perfil")}>
+              <span
+                className={`flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold text-white ${
+                  view === "perfil" ? "bg-wit-blue" : "bg-wit-gray"
+                }`}
+              >
+                {userInitial}
+              </span>
+              {t("Perfil", "Profile")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 }
 

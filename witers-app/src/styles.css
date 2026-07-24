@@ -264,6 +264,48 @@
   }
 }
 
+/* Mobile bottom-nav center button — Wit as a small always-on presence
+   ("Siri, but Wit") rather than a button you only notice when idle text
+   says "chat with us". Same drifting gradient as .wit-glow-button, plus a
+   halo that breathes continuously (not just on hover/press) so it reads as
+   alive even at rest. */
+.wit-orb {
+  /* No `position` here on purpose — the button already carries Tailwind's
+     `absolute` utility for placement in the nav, which is itself a valid
+     containing block for ::before below. Setting `position: relative` in
+     this class too would fight that utility on specificity/source-order
+     (same trap .wit-glass hit with `fixed`) and silently drop it back into
+     normal flow. */
+  isolation: isolate;
+  background: linear-gradient(120deg, var(--color-wit-blue), var(--color-wit-pink), var(--color-wit-blue));
+  background-size: 200% 200%;
+  animation: wit-glow-shift 4.5s ease-in-out infinite;
+}
+.wit-orb::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  z-index: -1;
+  border-radius: 9999px;
+  background: linear-gradient(120deg, var(--color-wit-blue), var(--color-wit-pink), var(--color-wit-blue));
+  background-size: 200% 200%;
+  filter: blur(16px);
+  animation:
+    wit-glow-shift 4.5s ease-in-out infinite,
+    wit-orb-breathe 2.6s ease-in-out infinite;
+}
+@keyframes wit-orb-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.15);
+  }
+}
+
 /* Small logo mark hovering above the AI chat, like a quiet mascot. */
 .wit-float {
   animation: wit-float 3.4s ease-in-out infinite;
