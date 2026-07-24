@@ -147,9 +147,20 @@ export async function getCampaignInsight(
   );
   if (!campaignRes.ok) return { ok: false, error: campaignRes.error };
 
+  // Both fields and date_preset must be explicit — Meta's insights edge, if
+  // called with neither, silently falls back to its own default field set
+  // (which includes spend but not reach/clicks) over its own default date
+  // window, not "the campaign's lifetime." Without this, reach/clicks read
+  // as 0 for every campaign (never actually missing, just never requested),
+  // and spend reads as a partial recent window instead of the true total.
   const insightsRes = await graphRequest<{
     data: Array<{ spend?: string; impressions?: string; clicks?: string; reach?: string }>;
-  }>(`/${campaignId}/insights`, config.accessToken, {}, "GET");
+  }>(
+    `/${campaignId}/insights`,
+    config.accessToken,
+    { fields: "spend,impressions,clicks,reach", date_preset: "maximum" },
+    "GET",
+  );
 
   const row = insightsRes.ok ? insightsRes.data.data[0] : undefined;
   return {
