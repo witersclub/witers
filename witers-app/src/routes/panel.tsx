@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type * as LeafletNS from "leaflet";
 import {
@@ -571,7 +571,7 @@ function Panel() {
         userInitial={(me.data.user?.name?.trim()[0] ?? "?").toUpperCase()}
       />
 
-      <main className="mx-auto max-w-6xl px-5 py-10 pb-28 sm:pb-10">
+      <main className="mx-auto max-w-6xl px-5 py-10 pb-32 sm:pb-10">
         {view === "perfil" ? (
           <PerfilView me={me.data} onBack={() => setView("panel")} onLogout={logout} />
         ) : needsOnboarding ? (
@@ -2181,40 +2181,81 @@ function PanelBottomNav({
 }) {
   const { t } = useLanguage();
 
-  function tabClass(active: boolean) {
-    return `flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-semibold transition-colors ${
-      active ? "text-wit-blue" : "text-wit-gray"
-    }`;
+  // Icon + label share one pill: active gets a soft translucent highlight
+  // behind the icon (the "selected" look from the Instagram reference),
+  // inactive stays bare on the dark glass.
+  function NavTab({
+    active,
+    onClick,
+    icon,
+    label,
+  }: {
+    active: boolean;
+    onClick: () => void;
+    icon: ReactNode;
+    label: string;
+  }) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex flex-1 flex-col items-center gap-1 py-2.5"
+      >
+        <span
+          className={`flex h-9 w-9 items-center justify-center rounded-2xl transition-colors ${
+            active ? "bg-white/20" : ""
+          }`}
+        >
+          {icon}
+        </span>
+        <span className={`text-[10px] font-semibold ${active ? "text-white" : "text-white/55"}`}>
+          {label}
+        </span>
+      </button>
+    );
   }
+
+  const homeActive = view === "panel" && section === "creatividad";
+  const activosActive = view === "panel" && section === "activos";
+  const campanasActive = view === "panel" && section === "campanas";
+  const perfilActive = view === "perfil";
 
   return (
     // Positioning lives on this outer <nav> and the glass background on
-    // the inner <div> — .wit-glass sets its own `position: relative`,
+    // the inner <div> — .wit-nav-glass sets its own `position: relative`,
     // which (same specificity, later in the compiled stylesheet) would
     // silently beat the `fixed` utility if both landed on one element.
-    <nav className="fixed inset-x-0 bottom-0 z-40 sm:hidden">
-      <div
-        className="wit-glass border-t border-wit-ink/10"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      >
+    <nav
+      className="fixed inset-x-4 z-40 sm:hidden"
+      style={{ bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))" }}
+    >
+      <div className="wit-nav-glass rounded-full">
         <div className="relative mx-auto flex max-w-6xl items-center px-2">
           <div className="flex flex-1 items-center">
-            <button
-              type="button"
+            <NavTab
+              active={homeActive}
               onClick={() => onSection("creatividad")}
-              className={tabClass(view === "panel" && section === "creatividad")}
-            >
-              <Home size={22} strokeWidth={2} />
-              {t("Inicio", "Home")}
-            </button>
-            <button
-              type="button"
+              icon={
+                <Home
+                  size={20}
+                  strokeWidth={2}
+                  className={homeActive ? "text-white" : "text-white/60"}
+                />
+              }
+              label={t("Inicio", "Home")}
+            />
+            <NavTab
+              active={activosActive}
               onClick={() => onSection("activos")}
-              className={tabClass(view === "panel" && section === "activos")}
-            >
-              <BookOpen size={22} strokeWidth={2} />
-              {t("Biblioteca", "Library")}
-            </button>
+              icon={
+                <BookOpen
+                  size={20}
+                  strokeWidth={2}
+                  className={activosActive ? "text-white" : "text-white/60"}
+                />
+              }
+              label={t("Biblioteca", "Library")}
+            />
           </div>
 
           {/* Spacer so the two side groups don't crowd the floating center
@@ -2226,38 +2267,47 @@ function PanelBottomNav({
             type="button"
             onClick={onOpenChat}
             aria-label={t("Hablar con Wit", "Talk to Wit")}
-            className="wit-orb absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full shadow-[0_10px_30px_rgba(255,63,176,0.35)] active:scale-95"
+            className="wit-orb absolute left-1/2 top-0 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full active:scale-95"
           >
-            {/* WMark is a solid wit-blue PNG — invert it to white so it
-              reads against the orb's blue/pink gradient instead of
-              disappearing into the blue half of it. */}
+            {/* overflow-hidden on the button above is a hard guarantee the
+              mark can never visually escape the circle, however far the
+              float animation drifts. WMark is a solid wit-blue PNG —
+              invert it to white so it reads against the orb's gradient. */}
             <span
-              className="wit-float flex items-center justify-center"
+              className="wit-float-soft flex items-center justify-center"
               style={{ filter: "brightness(0) invert(1)" }}
             >
-              <WMark size={26} />
+              <WMark size={22} />
             </span>
           </button>
 
           <div className="flex flex-1 items-center">
-            <button
-              type="button"
+            <NavTab
+              active={campanasActive}
               onClick={() => onSection("campanas")}
-              className={tabClass(view === "panel" && section === "campanas")}
-            >
-              <Megaphone size={22} strokeWidth={2} />
-              {t("Campañas", "Campaigns")}
-            </button>
-            <button type="button" onClick={onOpenProfile} className={tabClass(view === "perfil")}>
-              <span
-                className={`flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold text-white ${
-                  view === "perfil" ? "bg-wit-blue" : "bg-wit-gray"
-                }`}
-              >
-                {userInitial}
-              </span>
-              {t("Perfil", "Profile")}
-            </button>
+              icon={
+                <Megaphone
+                  size={20}
+                  strokeWidth={2}
+                  className={campanasActive ? "text-white" : "text-white/60"}
+                />
+              }
+              label={t("Campañas", "Campaigns")}
+            />
+            <NavTab
+              active={perfilActive}
+              onClick={onOpenProfile}
+              icon={
+                <span
+                  className={`flex h-[22px] w-[22px] items-center justify-center rounded-full text-[10px] font-bold text-white ${
+                    perfilActive ? "bg-wit-blue" : "bg-white/25"
+                  }`}
+                >
+                  {userInitial}
+                </span>
+              }
+              label={t("Perfil", "Profile")}
+            />
           </div>
         </div>
       </div>
