@@ -14,8 +14,12 @@ const schema = z.object({
   brandColors: z.string().max(60).optional(),
   businessType: z.string().max(100).optional(),
   // The Facebook Page this client pautas from — null/omitted means they
-  // can't create Meta campaigns yet (see /api/campaigns-create).
+  // can't create Meta campaigns yet.
   metaPageId: z.string().max(60).nullable().optional(),
+  // The client's own Meta ad account id (WITERS is a partner on it, set up
+  // manually outside the app) — null/omitted means staff can't pull live
+  // campaigns for their Campañas dashboard yet (see /api/admin/meta-campaigns).
+  metaAdAccountId: z.string().max(60).nullable().optional(),
   // undefined = leave the current logo alone, null = clear it (reopens the
   // logo question for that member), a string = set/replace it.
   logoKey: z.string().max(300).nullable().optional(),
@@ -39,10 +43,10 @@ export const Route = createFileRoute("/api/admin/update-brand-profile")({
 
         await db()
           .prepare(
-            `INSERT INTO brand_profiles (user_id, company_name, brand_colors, business_type, logo_key, meta_page_id)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            `INSERT INTO brand_profiles (user_id, company_name, brand_colors, business_type, logo_key, meta_page_id, meta_ad_account_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
              ON CONFLICT(user_id) DO UPDATE SET
-               company_name = ?2, brand_colors = ?3, business_type = ?4, logo_key = ?5, meta_page_id = ?6, updated_at = datetime('now')`,
+               company_name = ?2, brand_colors = ?3, business_type = ?4, logo_key = ?5, meta_page_id = ?6, meta_ad_account_id = ?7, updated_at = datetime('now')`,
           )
           .bind(
             parsed.data.userId,
@@ -51,6 +55,7 @@ export const Route = createFileRoute("/api/admin/update-brand-profile")({
             parsed.data.businessType?.trim() || null,
             nextLogoKey,
             parsed.data.metaPageId?.trim() || null,
+            parsed.data.metaAdAccountId?.trim() || null,
           )
           .run();
 

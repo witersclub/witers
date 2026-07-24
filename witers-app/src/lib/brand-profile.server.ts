@@ -18,6 +18,11 @@ export type BrandProfile = {
   // (see /api/admin/update-brand-profile), never by the client. Null blocks
   // "Quiero pautar" for them; there's no shared/default Page fallback.
   meta_page_id: string | null;
+  // The client's OWN Meta ad account id (numeric, no "act_" prefix) — set
+  // only by an admin once the client has added WITERS's Business Portfolio
+  // as a partner on it. Null means staff can't pull live campaigns for the
+  // Campañas dashboard yet (see /api/admin/meta-campaigns).
+  meta_ad_account_id: string | null;
 };
 
 export async function getBrandProfile(userId: string): Promise<BrandProfile | null> {
@@ -67,6 +72,7 @@ export async function resolveBrandProfile(
       logo_key: submitted.logoKey,
       brand_manual_key: null,
       meta_page_id: null,
+      meta_ad_account_id: null,
     };
   }
   if (!existing.logo_key && submitted.logoKey) {
@@ -149,6 +155,7 @@ export async function completeOnboarding(
     logo_key: data.logoKey,
     brand_manual_key: null,
     meta_page_id: null,
+    meta_ad_account_id: null,
   };
 }
 

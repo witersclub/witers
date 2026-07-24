@@ -34,9 +34,6 @@ import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
 import { Route as ApiRequestChangeRouteImport } from './routes/api/request-change'
 import { Route as ApiPurchasePackRouteImport } from './routes/api/purchase-pack'
-import { Route as ApiMetaLocationSearchRouteImport } from './routes/api/meta-location-search'
-import { Route as ApiMetaInterestSuggestionsRouteImport } from './routes/api/meta-interest-suggestions'
-import { Route as ApiMetaInterestSearchRouteImport } from './routes/api/meta-interest-search'
 import { Route as ApiGeocodeRouteImport } from './routes/api/geocode'
 import { Route as ApiGeoPriceRouteImport } from './routes/api/geo-price'
 import { Route as ApiGenerateAdCopyRouteImport } from './routes/api/generate-ad-copy'
@@ -45,7 +42,6 @@ import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as ApiCarouselRequestsRouteImport } from './routes/api/carousel-requests'
 import { Route as ApiCarouselRequestChangeRouteImport } from './routes/api/carousel-request-change'
-import { Route as ApiCampaignsCreateRouteImport } from './routes/api/campaigns-create'
 import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
 import { Route as ApiBrandProfileColorsRouteImport } from './routes/api/brand-profile-colors'
@@ -75,8 +71,11 @@ import { Route as ApiAdminUpdateRequestRouteImport } from './routes/api/admin/up
 import { Route as ApiAdminUpdateDiscountCodeRouteImport } from './routes/api/admin/update-discount-code'
 import { Route as ApiAdminUpdateDesignerRouteImport } from './routes/api/admin/update-designer'
 import { Route as ApiAdminUpdateBrandProfileRouteImport } from './routes/api/admin/update-brand-profile'
+import { Route as ApiAdminUnlinkCampaignRouteImport } from './routes/api/admin/unlink-campaign'
 import { Route as ApiAdminToggleLogoVisibilityRouteImport } from './routes/api/admin/toggle-logo-visibility'
 import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overview'
+import { Route as ApiAdminMetaCampaignsRouteImport } from './routes/api/admin/meta-campaigns'
+import { Route as ApiAdminLinkCampaignRouteImport } from './routes/api/admin/link-campaign'
 import { Route as ApiAdminGrantRequestsRouteImport } from './routes/api/admin/grant-requests'
 import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
 import { Route as ApiAdminDeliverVideoRouteImport } from './routes/api/admin/deliver-video'
@@ -220,22 +219,6 @@ const ApiPurchasePackRoute = ApiPurchasePackRouteImport.update({
   path: '/api/purchase-pack',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiMetaLocationSearchRoute = ApiMetaLocationSearchRouteImport.update({
-  id: '/api/meta-location-search',
-  path: '/api/meta-location-search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiMetaInterestSuggestionsRoute =
-  ApiMetaInterestSuggestionsRouteImport.update({
-    id: '/api/meta-interest-suggestions',
-    path: '/api/meta-interest-suggestions',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiMetaInterestSearchRoute = ApiMetaInterestSearchRouteImport.update({
-  id: '/api/meta-interest-search',
-  path: '/api/meta-interest-search',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiGeocodeRoute = ApiGeocodeRouteImport.update({
   id: '/api/geocode',
   path: '/api/geocode',
@@ -277,11 +260,6 @@ const ApiCarouselRequestChangeRoute =
     path: '/api/carousel-request-change',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiCampaignsCreateRoute = ApiCampaignsCreateRouteImport.update({
-  id: '/api/campaigns-create',
-  path: '/api/campaigns-create',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiCampaignsRoute = ApiCampaignsRouteImport.update({
   id: '/api/campaigns',
   path: '/api/campaigns',
@@ -433,6 +411,11 @@ const ApiAdminUpdateBrandProfileRoute =
     path: '/api/admin/update-brand-profile',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAdminUnlinkCampaignRoute = ApiAdminUnlinkCampaignRouteImport.update({
+  id: '/api/admin/unlink-campaign',
+  path: '/api/admin/unlink-campaign',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminToggleLogoVisibilityRoute =
   ApiAdminToggleLogoVisibilityRouteImport.update({
     id: '/api/admin/toggle-logo-visibility',
@@ -442,6 +425,16 @@ const ApiAdminToggleLogoVisibilityRoute =
 const ApiAdminOverviewRoute = ApiAdminOverviewRouteImport.update({
   id: '/api/admin/overview',
   path: '/api/admin/overview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminMetaCampaignsRoute = ApiAdminMetaCampaignsRouteImport.update({
+  id: '/api/admin/meta-campaigns',
+  path: '/api/admin/meta-campaigns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminLinkCampaignRoute = ApiAdminLinkCampaignRouteImport.update({
+  id: '/api/admin/link-campaign',
+  path: '/api/admin/link-campaign',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAdminGrantRequestsRoute = ApiAdminGrantRequestsRouteImport.update({
@@ -557,7 +550,6 @@ export interface FileRoutesByFullPath {
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/campaigns': typeof ApiCampaignsRoute
-  '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
   '/api/checkout': typeof ApiCheckoutRoute
@@ -566,9 +558,6 @@ export interface FileRoutesByFullPath {
   '/api/generate-ad-copy': typeof ApiGenerateAdCopyRoute
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
-  '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
-  '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
-  '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -596,8 +585,11 @@ export interface FileRoutesByFullPath {
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
+  '/api/admin/link-campaign': typeof ApiAdminLinkCampaignRoute
+  '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
+  '/api/admin/unlink-campaign': typeof ApiAdminUnlinkCampaignRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
@@ -644,7 +636,6 @@ export interface FileRoutesByTo {
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/campaigns': typeof ApiCampaignsRoute
-  '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
   '/api/checkout': typeof ApiCheckoutRoute
@@ -653,9 +644,6 @@ export interface FileRoutesByTo {
   '/api/generate-ad-copy': typeof ApiGenerateAdCopyRoute
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
-  '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
-  '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
-  '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -683,8 +671,11 @@ export interface FileRoutesByTo {
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
+  '/api/admin/link-campaign': typeof ApiAdminLinkCampaignRoute
+  '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
+  '/api/admin/unlink-campaign': typeof ApiAdminUnlinkCampaignRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
@@ -732,7 +723,6 @@ export interface FileRoutesById {
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/campaigns': typeof ApiCampaignsRoute
-  '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
   '/api/checkout': typeof ApiCheckoutRoute
@@ -741,9 +731,6 @@ export interface FileRoutesById {
   '/api/generate-ad-copy': typeof ApiGenerateAdCopyRoute
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
-  '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
-  '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
-  '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -771,8 +758,11 @@ export interface FileRoutesById {
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
+  '/api/admin/link-campaign': typeof ApiAdminLinkCampaignRoute
+  '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
+  '/api/admin/unlink-campaign': typeof ApiAdminUnlinkCampaignRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
@@ -821,7 +811,6 @@ export interface FileRouteTypes {
     | '/api/brand-profile-colors'
     | '/api/brand-profile-manual'
     | '/api/campaigns'
-    | '/api/campaigns-create'
     | '/api/carousel-request-change'
     | '/api/carousel-requests'
     | '/api/checkout'
@@ -830,9 +819,6 @@ export interface FileRouteTypes {
     | '/api/generate-ad-copy'
     | '/api/geo-price'
     | '/api/geocode'
-    | '/api/meta-interest-search'
-    | '/api/meta-interest-suggestions'
-    | '/api/meta-location-search'
     | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
@@ -860,8 +846,11 @@ export interface FileRouteTypes {
     | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
+    | '/api/admin/link-campaign'
+    | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
+    | '/api/admin/unlink-campaign'
     | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
     | '/api/admin/update-discount-code'
@@ -908,7 +897,6 @@ export interface FileRouteTypes {
     | '/api/brand-profile-colors'
     | '/api/brand-profile-manual'
     | '/api/campaigns'
-    | '/api/campaigns-create'
     | '/api/carousel-request-change'
     | '/api/carousel-requests'
     | '/api/checkout'
@@ -917,9 +905,6 @@ export interface FileRouteTypes {
     | '/api/generate-ad-copy'
     | '/api/geo-price'
     | '/api/geocode'
-    | '/api/meta-interest-search'
-    | '/api/meta-interest-suggestions'
-    | '/api/meta-location-search'
     | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
@@ -947,8 +932,11 @@ export interface FileRouteTypes {
     | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
+    | '/api/admin/link-campaign'
+    | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
+    | '/api/admin/unlink-campaign'
     | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
     | '/api/admin/update-discount-code'
@@ -995,7 +983,6 @@ export interface FileRouteTypes {
     | '/api/brand-profile-colors'
     | '/api/brand-profile-manual'
     | '/api/campaigns'
-    | '/api/campaigns-create'
     | '/api/carousel-request-change'
     | '/api/carousel-requests'
     | '/api/checkout'
@@ -1004,9 +991,6 @@ export interface FileRouteTypes {
     | '/api/generate-ad-copy'
     | '/api/geo-price'
     | '/api/geocode'
-    | '/api/meta-interest-search'
-    | '/api/meta-interest-suggestions'
-    | '/api/meta-location-search'
     | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
@@ -1034,8 +1018,11 @@ export interface FileRouteTypes {
     | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
+    | '/api/admin/link-campaign'
+    | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
+    | '/api/admin/unlink-campaign'
     | '/api/admin/update-brand-profile'
     | '/api/admin/update-designer'
     | '/api/admin/update-discount-code'
@@ -1083,7 +1070,6 @@ export interface RootRouteChildren {
   ApiBrandProfileColorsRoute: typeof ApiBrandProfileColorsRoute
   ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
   ApiCampaignsRoute: typeof ApiCampaignsRoute
-  ApiCampaignsCreateRoute: typeof ApiCampaignsCreateRoute
   ApiCarouselRequestChangeRoute: typeof ApiCarouselRequestChangeRoute
   ApiCarouselRequestsRoute: typeof ApiCarouselRequestsRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
@@ -1092,9 +1078,6 @@ export interface RootRouteChildren {
   ApiGenerateAdCopyRoute: typeof ApiGenerateAdCopyRoute
   ApiGeoPriceRoute: typeof ApiGeoPriceRoute
   ApiGeocodeRoute: typeof ApiGeocodeRoute
-  ApiMetaInterestSearchRoute: typeof ApiMetaInterestSearchRoute
-  ApiMetaInterestSuggestionsRoute: typeof ApiMetaInterestSuggestionsRoute
-  ApiMetaLocationSearchRoute: typeof ApiMetaLocationSearchRoute
   ApiPurchasePackRoute: typeof ApiPurchasePackRoute
   ApiRequestChangeRoute: typeof ApiRequestChangeRoute
   ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
@@ -1122,8 +1105,11 @@ export interface RootRouteChildren {
   ApiAdminDeliverVideoRoute: typeof ApiAdminDeliverVideoRoute
   ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
   ApiAdminGrantRequestsRoute: typeof ApiAdminGrantRequestsRoute
+  ApiAdminLinkCampaignRoute: typeof ApiAdminLinkCampaignRoute
+  ApiAdminMetaCampaignsRoute: typeof ApiAdminMetaCampaignsRoute
   ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
   ApiAdminToggleLogoVisibilityRoute: typeof ApiAdminToggleLogoVisibilityRoute
+  ApiAdminUnlinkCampaignRoute: typeof ApiAdminUnlinkCampaignRoute
   ApiAdminUpdateBrandProfileRoute: typeof ApiAdminUpdateBrandProfileRoute
   ApiAdminUpdateDesignerRoute: typeof ApiAdminUpdateDesignerRoute
   ApiAdminUpdateDiscountCodeRoute: typeof ApiAdminUpdateDiscountCodeRoute
@@ -1328,27 +1314,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPurchasePackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/meta-location-search': {
-      id: '/api/meta-location-search'
-      path: '/api/meta-location-search'
-      fullPath: '/api/meta-location-search'
-      preLoaderRoute: typeof ApiMetaLocationSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/meta-interest-suggestions': {
-      id: '/api/meta-interest-suggestions'
-      path: '/api/meta-interest-suggestions'
-      fullPath: '/api/meta-interest-suggestions'
-      preLoaderRoute: typeof ApiMetaInterestSuggestionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/meta-interest-search': {
-      id: '/api/meta-interest-search'
-      path: '/api/meta-interest-search'
-      fullPath: '/api/meta-interest-search'
-      preLoaderRoute: typeof ApiMetaInterestSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/geocode': {
       id: '/api/geocode'
       path: '/api/geocode'
@@ -1403,13 +1368,6 @@ declare module '@tanstack/react-router' {
       path: '/api/carousel-request-change'
       fullPath: '/api/carousel-request-change'
       preLoaderRoute: typeof ApiCarouselRequestChangeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/campaigns-create': {
-      id: '/api/campaigns-create'
-      path: '/api/campaigns-create'
-      fullPath: '/api/campaigns-create'
-      preLoaderRoute: typeof ApiCampaignsCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/campaigns': {
@@ -1615,6 +1573,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminUpdateBrandProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/unlink-campaign': {
+      id: '/api/admin/unlink-campaign'
+      path: '/api/admin/unlink-campaign'
+      fullPath: '/api/admin/unlink-campaign'
+      preLoaderRoute: typeof ApiAdminUnlinkCampaignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/toggle-logo-visibility': {
       id: '/api/admin/toggle-logo-visibility'
       path: '/api/admin/toggle-logo-visibility'
@@ -1627,6 +1592,20 @@ declare module '@tanstack/react-router' {
       path: '/api/admin/overview'
       fullPath: '/api/admin/overview'
       preLoaderRoute: typeof ApiAdminOverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/meta-campaigns': {
+      id: '/api/admin/meta-campaigns'
+      path: '/api/admin/meta-campaigns'
+      fullPath: '/api/admin/meta-campaigns'
+      preLoaderRoute: typeof ApiAdminMetaCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/link-campaign': {
+      id: '/api/admin/link-campaign'
+      path: '/api/admin/link-campaign'
+      fullPath: '/api/admin/link-campaign'
+      preLoaderRoute: typeof ApiAdminLinkCampaignRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/grant-requests': {
@@ -1771,7 +1750,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBrandProfileColorsRoute: ApiBrandProfileColorsRoute,
   ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
   ApiCampaignsRoute: ApiCampaignsRoute,
-  ApiCampaignsCreateRoute: ApiCampaignsCreateRoute,
   ApiCarouselRequestChangeRoute: ApiCarouselRequestChangeRoute,
   ApiCarouselRequestsRoute: ApiCarouselRequestsRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
@@ -1780,9 +1758,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGenerateAdCopyRoute: ApiGenerateAdCopyRoute,
   ApiGeoPriceRoute: ApiGeoPriceRoute,
   ApiGeocodeRoute: ApiGeocodeRoute,
-  ApiMetaInterestSearchRoute: ApiMetaInterestSearchRoute,
-  ApiMetaInterestSuggestionsRoute: ApiMetaInterestSuggestionsRoute,
-  ApiMetaLocationSearchRoute: ApiMetaLocationSearchRoute,
   ApiPurchasePackRoute: ApiPurchasePackRoute,
   ApiRequestChangeRoute: ApiRequestChangeRoute,
   ApiRequestRevisionRoute: ApiRequestRevisionRoute,
@@ -1810,8 +1785,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminDeliverVideoRoute: ApiAdminDeliverVideoRoute,
   ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
   ApiAdminGrantRequestsRoute: ApiAdminGrantRequestsRoute,
+  ApiAdminLinkCampaignRoute: ApiAdminLinkCampaignRoute,
+  ApiAdminMetaCampaignsRoute: ApiAdminMetaCampaignsRoute,
   ApiAdminOverviewRoute: ApiAdminOverviewRoute,
   ApiAdminToggleLogoVisibilityRoute: ApiAdminToggleLogoVisibilityRoute,
+  ApiAdminUnlinkCampaignRoute: ApiAdminUnlinkCampaignRoute,
   ApiAdminUpdateBrandProfileRoute: ApiAdminUpdateBrandProfileRoute,
   ApiAdminUpdateDesignerRoute: ApiAdminUpdateDesignerRoute,
   ApiAdminUpdateDiscountCodeRoute: ApiAdminUpdateDiscountCodeRoute,

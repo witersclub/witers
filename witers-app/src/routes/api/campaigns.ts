@@ -5,18 +5,18 @@ import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
 type CampaignRow = {
   id: string;
-  request_id: string;
   meta_campaign_id: string;
-  daily_budget_cents: number;
   status: string;
   created_at: string;
-  request_title: string;
 };
 
 // Lists the current member's campaigns for the panel's Campañas tab, each
-// refreshed with Meta's current status + spend/reach/clicks at request
-// time — see meta-ads.server.ts for why this is "refresh on open," not a
-// live push.
+// refreshed with Meta's current name/status/budget/spend/reach/clicks at
+// request time — see meta-ads.server.ts for why this is "refresh on open,"
+// not a live push. Name and budget always come from Meta, never a local
+// column: campaigns are staff-linked from the client's own ad account now
+// (see /api/admin/link-campaign), so there's nothing locally cached to
+// fall back to.
 export const Route = createFileRoute("/api/campaigns")({
   server: {
     handlers: {
@@ -26,12 +26,10 @@ export const Route = createFileRoute("/api/campaigns")({
 
         const rows = await db()
           .prepare(
-            `SELECT c.id, c.request_id, c.meta_campaign_id, c.daily_budget_cents, c.status, c.created_at,
-                    r.title AS request_title
-             FROM ad_campaigns c
-             JOIN design_requests r ON r.id = c.request_id
-             WHERE c.user_id = ?1
-             ORDER BY c.created_at DESC`,
+            `SELECT id, meta_campaign_id, status, created_at
+             FROM ad_campaigns
+             WHERE user_id = ?1
+             ORDER BY created_at DESC`,
           )
           .bind(user.id)
           .all<CampaignRow>();
@@ -41,9 +39,8 @@ export const Route = createFileRoute("/api/campaigns")({
             const insight = await getCampaignInsight(row.meta_campaign_id);
             return {
               id: row.id,
-              requestId: row.request_id,
-              requestTitle: row.request_title,
-              dailyBudgetCents: row.daily_budget_cents,
+              name: insight.ok ? insight.data.name : null,
+              dailyBudgetCents: insight.ok ? insight.data.dailyBudgetCents : null,
               createdAt: row.created_at,
               // Meta's own statuses are uppercase (ACTIVE/PAUSED/...); the
               // local fallback stores lowercase, so normalize it to match

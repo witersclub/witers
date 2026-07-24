@@ -6,8 +6,11 @@ import {
   ClipboardList,
   CreditCard,
   LayoutDashboard,
+  Link2Off,
   LogOut,
+  Megaphone,
   Palette,
+  Plus,
   Star,
   Users,
   Wallet,
@@ -70,6 +73,9 @@ type AdminUser = {
   // Facebook Page this client pautas from — null blocks "Quiero pautar"
   // for them (see panel.tsx's PautarButton), no shared/default fallback.
   brand_meta_page_id: string | null;
+  // The client's own Meta ad account id — null means the Campañas admin tab
+  // can't pull their live campaigns yet (see /api/admin/meta-campaigns).
+  brand_meta_ad_account_id: string | null;
 };
 
 type AdminRequest = {
@@ -551,13 +557,14 @@ function DashboardView({
   );
 }
 
-type AdminTab = "dashboard" | "solicitudes" | "diseñadores" | "usuarios" | "pagos";
+type AdminTab = "dashboard" | "solicitudes" | "diseñadores" | "usuarios" | "campanas" | "pagos";
 
 const NAV_ITEMS: { key: AdminTab; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "solicitudes", label: "Solicitudes", icon: ClipboardList },
   { key: "diseñadores", label: "Diseñadores", icon: Palette },
   { key: "usuarios", label: "Usuarios", icon: Users },
+  { key: "campanas", label: "Campañas", icon: Megaphone },
   { key: "pagos", label: "Pagos", icon: CreditCard },
 ];
 
@@ -632,6 +639,7 @@ function Admin() {
     solicitudes: "Solicitudes",
     diseñadores: "Diseñadores",
     usuarios: "Usuarios",
+    campanas: "Campañas",
     pagos: "Pagos",
   };
 
@@ -762,6 +770,8 @@ function Admin() {
             <DesignersPanel rows={data.designers} requests={data.requests} />
           ) : tab === "usuarios" ? (
             <UsersTable rows={data.users} />
+          ) : tab === "campanas" ? (
+            <CampaignsAdmin users={data.users} />
           ) : (
             <PagosPanel payments={data.payments} discountCodes={data.discountCodes} />
           )}
@@ -1933,6 +1943,7 @@ function EditUserModal({
   const [brandColors, setBrandColors] = useState(user.brand_colors ?? "");
   const [businessType, setBusinessType] = useState(user.brand_business_type ?? "");
   const [metaPageId, setMetaPageId] = useState(user.brand_meta_page_id ?? "");
+  const [metaAdAccountId, setMetaAdAccountId] = useState(user.brand_meta_ad_account_id ?? "");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [clearLogo, setClearLogo] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -2002,6 +2013,7 @@ function EditUserModal({
           brandColors: brandColors || undefined,
           businessType: businessType || undefined,
           metaPageId: metaPageId.trim() || null,
+          metaAdAccountId: metaAdAccountId.trim() || null,
           logoKey,
         }),
       });
@@ -2141,6 +2153,23 @@ function EditUserModal({
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold text-wit-gray">
+              ID de cuenta publicitaria de Meta{" "}
+              <span className="font-normal">(su propia cuenta, sin "act_")</span>
+            </label>
+            <input
+              type="text"
+              value={metaAdAccountId}
+              onChange={(e) => setMetaAdAccountId(e.target.value)}
+              placeholder="Vacío = no se pueden mostrar sus campañas todavía"
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+            />
+            <p className="mt-1 text-[11px] text-wit-gray">
+              Requiere que el cliente haya agregado a WITERS como socio en esa cuenta desde su
+              Business Manager.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-wit-gray">
               Logotipo{" "}
               {user.brand_logo_key && !clearLogo ? (
                 <span className="font-normal">(ya tiene uno registrado)</span>
@@ -2209,6 +2238,205 @@ function EditUserModal({
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+type MetaCampaign = {
+  id: string;
+  name: string;
+  status: string;
+  dailyBudgetCents: number | null;
+  linked: boolean;
+};
+
+// Staff picks a client, sees every campaign that really exists right now
+// in THEIR OWN Meta ad account (fetched live — WITERS never stores this
+// list), and chooses which ones show up in that client's panel. Nothing
+// here creates or edits campaigns in Meta; that still happens by hand in
+// Ads Manager. See /api/admin/meta-campaigns and /api/admin/link-campaign.
+function CampaignsAdmin({ users }: { users: AdminUser[] }) {
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<AdminUser | null>(null);
+
+  const filtered = users.filter((u) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.brand_company_name ?? "").toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div className="mt-6 grid gap-6 lg:grid-cols-[300px_1fr]">
+      <div className="wit-glass rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar cliente..."
+          className="w-full rounded-xl border border-wit-ink/15 px-3.5 py-2.5 text-sm outline-none focus:border-wit-blue"
+        />
+        <div className="mt-3 max-h-[60vh] space-y-1 overflow-y-auto">
+          {filtered.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              onClick={() => setSelected(u)}
+              className={`flex w-full flex-col items-start rounded-xl px-3.5 py-2.5 text-left transition-colors ${
+                selected?.id === u.id
+                  ? "bg-wit-blue text-white"
+                  : "text-wit-ink hover:bg-wit-mist/50"
+              }`}
+            >
+              <span className="text-sm font-semibold">{u.brand_company_name ?? u.name}</span>
+              <span
+                className={`text-[11px] ${selected?.id === u.id ? "text-white/70" : "text-wit-gray"}`}
+              >
+                {u.email}
+                {!u.brand_meta_ad_account_id ? " · sin cuenta conectada" : ""}
+              </span>
+            </button>
+          ))}
+          {filtered.length === 0 ? (
+            <p className="px-3.5 py-4 text-sm text-wit-gray">Sin resultados.</p>
+          ) : null}
+        </div>
+      </div>
+
+      {selected ? (
+        <ClientCampaignsPanel key={selected.id} user={selected} />
+      ) : (
+        <div className="wit-glass flex items-center justify-center rounded-2xl p-14 text-center text-sm text-wit-gray shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+          Elige un cliente de la lista para ver y elegir sus campañas.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientCampaignsPanel({ user }: { user: AdminUser }) {
+  const qc = useQueryClient();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const campaigns = useQuery({
+    queryKey: ["admin-meta-campaigns", user.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/meta-campaigns?userId=${user.id}`, {
+        credentials: "include",
+      });
+      return (await res.json()) as
+        { ok: true; campaigns: MetaCampaign[] } | { ok: false; error: string };
+    },
+    enabled: Boolean(user.brand_meta_ad_account_id),
+  });
+
+  async function toggleLink(c: MetaCampaign) {
+    setBusyId(c.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/${c.linked ? "unlink-campaign" : "link-campaign"}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: user.id, metaCampaignId: c.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) {
+        setError("No pudimos actualizar esa campaña. Intenta de nuevo.");
+        return;
+      }
+      await qc.invalidateQueries({ queryKey: ["admin-meta-campaigns", user.id] });
+    } catch {
+      setError("No pudimos actualizar esa campaña. Intenta de nuevo.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (!user.brand_meta_ad_account_id) {
+    return (
+      <div className="wit-glass rounded-2xl p-8 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+        <p className="text-sm font-bold text-wit-ink">
+          {user.brand_company_name ?? user.name} aún no tiene cuenta publicitaria conectada
+        </p>
+        <p className="mt-1.5 max-w-md text-xs text-wit-gray">
+          Pide al cliente que agregue a WITERS como socio en su cuenta de Meta Ads y guarda el ID de
+          esa cuenta en "Usuarios" → editar → ID de cuenta publicitaria de Meta.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <h3 className="text-sm font-bold text-wit-ink">
+        Campañas en la cuenta de {user.brand_company_name ?? user.name}
+      </h3>
+      <p className="mt-1 text-xs text-wit-gray">
+        act_{user.brand_meta_ad_account_id} — elige cuáles ve el cliente en su panel.
+      </p>
+
+      {campaigns.isLoading ? (
+        <div className="mt-4 space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-14 animate-pulse rounded-xl bg-wit-mist/40" />
+          ))}
+        </div>
+      ) : !campaigns.data?.ok ? (
+        <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-xs text-red-600">
+          No pudimos leer esa cuenta publicitaria ({campaigns.data?.error ?? "error desconocido"}).
+          Confirma que el cliente ya aprobó a WITERS como socio y que el ID de cuenta es correcto.
+        </p>
+      ) : campaigns.data.campaigns.length === 0 ? (
+        <p className="mt-4 text-sm text-wit-gray">
+          Esa cuenta publicitaria todavía no tiene ninguna campaña.
+        </p>
+      ) : (
+        <div className="mt-4 space-y-2">
+          {error ? <p className="text-xs text-red-600">{error}</p> : null}
+          {campaigns.data.campaigns.map((c) => (
+            <div
+              key={c.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-wit-ink/10 px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-wit-ink">{c.name}</p>
+                <p className="text-[11px] text-wit-gray">
+                  {c.status}
+                  {c.dailyBudgetCents != null
+                    ? ` · $${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/día`
+                    : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={busyId === c.id}
+                onClick={() => toggleLink(c)}
+                className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-colors disabled:opacity-50 ${
+                  c.linked
+                    ? "border border-red-200 text-red-600 hover:bg-red-50"
+                    : "bg-wit-blue text-white hover:bg-wit-blue-deep"
+                }`}
+              >
+                {c.linked ? (
+                  <>
+                    <Link2Off size={13} strokeWidth={2.4} />
+                    Quitar del panel
+                  </>
+                ) : (
+                  <>
+                    <Plus size={13} strokeWidth={2.4} />
+                    Agregar al panel
+                  </>
+                )}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
