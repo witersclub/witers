@@ -2225,13 +2225,11 @@ function PanelBottomNav({
       className="fixed inset-x-4 z-40 sm:hidden"
       style={{ bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))" }}
     >
-      {/* Two glass pills whose inner cap is masked from a full rounded end
-        into a thin crescent curving toward the orb (.wit-nav-notch-left/
-        right in styles.css) instead of ending fully rounded next to open
-        space — the crescent itself recedes from the pill's own edge, so
-        the gap to the orb reads as part of the shape, not just spacing. */}
+      {/* Two glass pills with a gap between them, not one solid bar — the
+        orb floats centered in that gap, level with the icons, without
+        either pill's glass ever touching it. */}
       <div className="mx-auto flex max-w-6xl items-center gap-1.5">
-        <div className="wit-glass wit-nav-notch-left flex flex-1 items-center rounded-full px-1">
+        <div className="wit-glass flex flex-1 items-center rounded-full px-1">
           <NavTab
             active={homeActive}
             onClick={() => onSection("creatividad")}
@@ -2276,7 +2274,7 @@ function PanelBottomNav({
           </span>
         </button>
 
-        <div className="wit-glass wit-nav-notch-right flex flex-1 items-center rounded-full px-1">
+        <div className="wit-glass flex flex-1 items-center rounded-full px-1">
           <NavTab
             active={campanasActive}
             onClick={() => onSection("campanas")}
@@ -2287,7 +2285,7 @@ function PanelBottomNav({
                 className={campanasActive ? "text-wit-blue" : "text-wit-gray"}
               />
             }
-            label={t("Campañas", "Campaigns")}
+            label={t("Anuncios", "Ads")}
           />
           <NavTab
             active={perfilActive}
