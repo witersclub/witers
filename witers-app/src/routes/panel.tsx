@@ -213,12 +213,13 @@ function Panel() {
   // existed before this section was introduced (solicitudes + hacer
   // solicitud); Activos de marca and Campañas are new.
   const [section, setSection] = useState<"creatividad" | "activos" | "campanas">("creatividad");
-  // Within Creatividad: images and video are two sibling request types with
-  // the same "hacer solicitud / mis solicitudes" shape, not two separate
-  // top-level areas — a client thinks of both as "creatividad", just a
-  // different medium.
-  const [creativeMode, setCreativeMode] = useState<"imagenes" | "videos" | "carruseles">(
-    "imagenes",
+  // Within Creatividad: images, video and carousel are sibling request
+  // types with the same "hacer solicitud / mis solicitudes" shape, picked
+  // via the 3 accordion cards below — null means none of them is open yet,
+  // which is also the initial state: nothing expands until a client taps
+  // one, instead of "imagenes" opening itself on every visit.
+  const [creativeMode, setCreativeMode] = useState<"imagenes" | "videos" | "carruseles" | null>(
+    null,
   );
   // A separate top-level view, not a 4th SectionNav pill — account settings
   // aren't a "work area" like Creatividad/Activos/Campañas, they live behind
@@ -660,15 +661,21 @@ function Panel() {
                     Imágenes/Videos/Carruseles — the old separate pill row
                     became redundant once tapping a card already switches
                     creativeMode, so it's gone. Always 3-across (no stacking
-                    on mobile) since they're compact now; tapping one both
-                    selects it and opens "Hacer solicitud", and the panel
-                    below re-plays a rise-in (key={creativeMode}) so
-                    switching reads as that card unfolding, not a random
-                    content swap. */}
+                    on mobile) since they're compact now. None is open by
+                    default; tapping a card opens it (selects it AND jumps
+                    to "Hacer solicitud"), tapping the already-open one
+                    closes it back — true accordion, not just a switch
+                    between three permanently-open states. The panel below
+                    re-plays a rise-in (key={creativeMode}) so opening reads
+                    as that card unfolding, not a random content swap. */}
                 <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
                   <button
                     type="button"
                     onClick={() => {
+                      if (creativeMode === "imagenes") {
+                        setCreativeMode(null);
+                        return;
+                      }
                       setCreativeMode("imagenes");
                       setTab("nueva");
                     }}
@@ -697,6 +704,10 @@ function Panel() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (creativeMode === "videos") {
+                        setCreativeMode(null);
+                        return;
+                      }
                       setCreativeMode("videos");
                       setVideoTab("nueva");
                     }}
@@ -725,6 +736,10 @@ function Panel() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (creativeMode === "carruseles") {
+                        setCreativeMode(null);
+                        return;
+                      }
                       setCreativeMode("carruseles");
                       setCarouselTab("nueva");
                     }}
@@ -751,106 +766,108 @@ function Panel() {
                   </button>
                 </div>
 
-                <div key={creativeMode} className="wit-rise">
-                  {creativeMode === "imagenes" ? (
-                    <>
-                      <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
-                        <button
-                          type="button"
-                          onClick={() => setTab("nueva")}
-                          className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-                        >
-                          ✨ {t("Hacer solicitud", "Make a request")}
-                        </button>
-                        <PanelTab
-                          active={tab === "solicitudes"}
-                          onClick={() => setTab("solicitudes")}
-                          label={t("Mis solicitudes", "My requests")}
-                          count={rows.length}
-                        />
-                      </div>
+                {creativeMode ? (
+                  <div key={creativeMode} className="wit-rise">
+                    {creativeMode === "imagenes" ? (
+                      <>
+                        <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+                          <button
+                            type="button"
+                            onClick={() => setTab("nueva")}
+                            className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+                          >
+                            ✨ {t("Hacer solicitud", "Make a request")}
+                          </button>
+                          <PanelTab
+                            active={tab === "solicitudes"}
+                            onClick={() => setTab("solicitudes")}
+                            label={t("Mis solicitudes", "My requests")}
+                            count={rows.length}
+                          />
+                        </div>
 
-                      <div className="mt-8">
-                        {tab === "nueva" ? (
-                          <HablaConWitScreen onStart={openChat} />
-                        ) : (
-                          <RequestList
-                            rows={rows}
-                            loading={requests.isLoading}
-                            onNew={() => setTab("nueva")}
-                            pageId={brandProfile?.meta_page_id ?? null}
-                            onPautar={openPauta}
+                        <div className="mt-8">
+                          {tab === "nueva" ? (
+                            <HablaConWitScreen onStart={openChat} />
+                          ) : (
+                            <RequestList
+                              rows={rows}
+                              loading={requests.isLoading}
+                              onNew={() => setTab("nueva")}
+                              pageId={brandProfile?.meta_page_id ?? null}
+                              onPautar={openPauta}
+                            />
+                          )}
+                        </div>
+                      </>
+                    ) : creativeMode === "videos" ? (
+                      <>
+                        <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+                          <button
+                            type="button"
+                            onClick={() => setVideoTab("nueva")}
+                            className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+                          >
+                            🎬 {t("Nueva solicitud", "New request")}
+                          </button>
+                          <PanelTab
+                            active={videoTab === "solicitudes"}
+                            onClick={() => setVideoTab("solicitudes")}
+                            label={t("Mis solicitudes", "My requests")}
+                            count={videoRows.length}
                           />
-                        )}
-                      </div>
-                    </>
-                  ) : creativeMode === "videos" ? (
-                    <>
-                      <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
-                        <button
-                          type="button"
-                          onClick={() => setVideoTab("nueva")}
-                          className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-                        >
-                          🎬 {t("Nueva solicitud", "New request")}
-                        </button>
-                        <PanelTab
-                          active={videoTab === "solicitudes"}
-                          onClick={() => setVideoTab("solicitudes")}
-                          label={t("Mis solicitudes", "My requests")}
-                          count={videoRows.length}
-                        />
-                      </div>
+                        </div>
 
-                      <div className="mt-8">
-                        {videoTab === "nueva" ? (
-                          <VideoLandingScreen
-                            active={active}
-                            quotaUsed={membership?.video_requests_used ?? 0}
-                            quotaTotal={membership?.video_requests_quota ?? 0}
-                            onStart={() => setVideoWizardOpen(true)}
+                        <div className="mt-8">
+                          {videoTab === "nueva" ? (
+                            <VideoLandingScreen
+                              active={active}
+                              quotaUsed={membership?.video_requests_used ?? 0}
+                              quotaTotal={membership?.video_requests_quota ?? 0}
+                              onStart={() => setVideoWizardOpen(true)}
+                            />
+                          ) : (
+                            <VideoRequestList rows={videoRows} loading={videoRequests.isLoading} />
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
+                          <button
+                            type="button"
+                            onClick={() => setCarouselTab("nueva")}
+                            className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
+                          >
+                            🖼️ {t("Nuevo carrusel", "New carousel")}
+                          </button>
+                          <PanelTab
+                            active={carouselTab === "solicitudes"}
+                            onClick={() => setCarouselTab("solicitudes")}
+                            label={t("Mis solicitudes", "My requests")}
+                            count={carouselRows.length}
                           />
-                        ) : (
-                          <VideoRequestList rows={videoRows} loading={videoRequests.isLoading} />
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
-                        <button
-                          type="button"
-                          onClick={() => setCarouselTab("nueva")}
-                          className="-mb-px flex shrink-0 items-center gap-1.5 rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-                        >
-                          🖼️ {t("Nuevo carrusel", "New carousel")}
-                        </button>
-                        <PanelTab
-                          active={carouselTab === "solicitudes"}
-                          onClick={() => setCarouselTab("solicitudes")}
-                          label={t("Mis solicitudes", "My requests")}
-                          count={carouselRows.length}
-                        />
-                      </div>
+                        </div>
 
-                      <div className="mt-8">
-                        {carouselTab === "nueva" ? (
-                          <CarouselLandingScreen
-                            active={active}
-                            quotaUsed={membership?.carousel_requests_used ?? 0}
-                            quotaTotal={membership?.carousel_requests_quota ?? 0}
-                            onStart={() => setCarouselWizardOpen(true)}
-                          />
-                        ) : (
-                          <CarouselRequestList
-                            rows={carouselRows}
-                            loading={carouselRequests.isLoading}
-                          />
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
+                        <div className="mt-8">
+                          {carouselTab === "nueva" ? (
+                            <CarouselLandingScreen
+                              active={active}
+                              quotaUsed={membership?.carousel_requests_used ?? 0}
+                              quotaTotal={membership?.carousel_requests_quota ?? 0}
+                              onStart={() => setCarouselWizardOpen(true)}
+                            />
+                          ) : (
+                            <CarouselRequestList
+                              rows={carouselRows}
+                              loading={carouselRequests.isLoading}
+                            />
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : null}
               </>
             ) : section === "activos" ? (
               <div className="mt-8">
