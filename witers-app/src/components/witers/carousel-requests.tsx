@@ -44,7 +44,7 @@ export type CarouselRequestRow = {
   slides_json: string | null;
 };
 
-function parseSlides(row: CarouselRequestRow): CarouselSlideInfo[] {
+export function parseSlides(row: CarouselRequestRow): CarouselSlideInfo[] {
   if (!row.slides_json) return [];
   try {
     return (JSON.parse(row.slides_json) as CarouselSlideInfo[])

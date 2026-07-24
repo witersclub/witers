@@ -77,6 +77,7 @@ import {
   CarouselLandingScreen,
   CarouselRequestList,
   CarouselWizard,
+  parseSlides,
   type CarouselRequestRow,
 } from "../components/witers/carousel-requests";
 import { IMAGE_PACKS } from "../lib/image-packs";
@@ -251,6 +252,10 @@ function Panel() {
   // expiration. A modal (not a page) since it's a quick add-on purchase,
   // not a whole new flow like activating a membership.
   const [packsOpen, setPacksOpen] = useState(false);
+  // "Creatividades recientes" horizontal strip — scrolled with this ref
+  // (arrow button + native touch swipe both use it) instead of paging
+  // through state, since it's just a filmstrip, not a stepped carousel.
+  const recentScrollRef = useRef<HTMLDivElement>(null);
   // Read (and clear) once per mount — only the very first chat (chatKey
   // still at its initial value) should inherit these, not a later
   // conversation opened via the button.
@@ -404,6 +409,43 @@ function Panel() {
   const activatedCampaigns = impactCampaigns.filter((c) => Number(c.impressions ?? 0) > 0);
   const campaignsLaunched = activatedCampaigns.length;
   const totalReach = activatedCampaigns.reduce((sum, c) => sum + Number(c.reach ?? 0), 0);
+
+  // "Creatividades recientes" — imágenes and carruseles only, not video:
+  // a delivered video has no stored still frame, and rendering a <video>
+  // tag just to fake a thumbnail (or building real poster generation) is
+  // more machinery than this strip is worth right now. Sorted by
+  // created_at across both types (not per-type), same as the reference.
+  const recentImageCreatives = rows
+    .filter((r) => r.status === "completada" || r.status === "cerrada")
+    .map((r) => {
+      const latest = parseResults(r).at(-1);
+      const thumbHref = latest
+        ? (latest.image_url ?? `/api/file?key=${encodeURIComponent(latest.r2_key ?? "")}`)
+        : null;
+      return thumbHref
+        ? { kind: "imagen" as const, id: r.id, title: r.title, thumbHref, createdAt: r.created_at }
+        : null;
+    })
+    .filter((c) => c !== null);
+  const recentCarouselCreatives = carouselRows
+    .filter((r) => r.status === "completada")
+    .map((r) => {
+      const cover = parseSlides(r)[0]?.delivered_key;
+      return cover
+        ? {
+            kind: "carrusel" as const,
+            id: r.id,
+            title: r.title,
+            thumbHref: `/api/file?key=${encodeURIComponent(cover)}`,
+            createdAt: r.created_at,
+          }
+        : null;
+    })
+    .filter((c) => c !== null);
+  const RECENT_CREATIVES_MAX = 10;
+  const recentCreatives = [...recentImageCreatives, ...recentCarouselCreatives]
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .slice(0, RECENT_CREATIVES_MAX);
 
   // Rows come back newest-first, so the first one with a logo is the most
   // recent request that had one — offered as a shortcut on the new form.
@@ -765,6 +807,46 @@ function Panel() {
                     />
                   </button>
                 </div>
+
+                {recentCreatives.length > 0 ? (
+                  <div className="mt-8">
+                    <h2 className="text-lg font-bold text-wit-ink">
+                      {t("Creatividades recientes", "Recent creatives")}
+                    </h2>
+                    <div className="relative mt-3">
+                      <div
+                        ref={recentScrollRef}
+                        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                      >
+                        {recentCreatives.map((c) => (
+                          <div
+                            key={c.id}
+                            title={c.title}
+                            className="aspect-square w-28 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 sm:w-36"
+                          >
+                            <img
+                              src={c.thumbHref}
+                              alt={c.title}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      {recentCreatives.length > 3 ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            recentScrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })
+                          }
+                          aria-label={t("Ver más creatividades", "See more creatives")}
+                          className="absolute -right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-wit-ink/10 bg-white shadow-[0_10px_30px_rgba(5,13,40,0.15)]"
+                        >
+                          <ChevronRight className="h-4 w-4 text-wit-ink" strokeWidth={2.4} />
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
 
                 {creativeMode ? (
                   <div key={creativeMode} className="wit-rise">
