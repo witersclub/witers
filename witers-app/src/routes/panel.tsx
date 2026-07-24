@@ -222,6 +222,15 @@ function Panel() {
   const [creativeMode, setCreativeMode] = useState<"imagenes" | "videos" | "carruseles" | null>(
     null,
   );
+  // Opening a card now expands its panel right below the cards row, which on
+  // mobile can land the "Hacer solicitud / Mis solicitudes" tabs behind the
+  // fixed bottom nav — scroll them into view so they're never hidden there.
+  const creativePanelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (creativeMode) {
+      creativePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [creativeMode]);
   // A separate top-level view, not a 4th SectionNav pill — account settings
   // aren't a "work area" like Creatividad/Activos/Campañas, they live behind
   // the avatar menu instead, same as most account dashboards.
@@ -808,48 +817,8 @@ function Panel() {
                   </button>
                 </div>
 
-                {recentCreatives.length > 0 ? (
-                  <div className="mt-8">
-                    <h2 className="text-lg font-bold text-wit-ink">
-                      {t("Creatividades recientes", "Recent creatives")}
-                    </h2>
-                    <div className="relative mt-3">
-                      <div
-                        ref={recentScrollRef}
-                        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                      >
-                        {recentCreatives.map((c) => (
-                          <div
-                            key={c.id}
-                            title={c.title}
-                            className="aspect-square w-28 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 sm:w-36"
-                          >
-                            <img
-                              src={c.thumbHref}
-                              alt={c.title}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      {recentCreatives.length > 3 ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            recentScrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })
-                          }
-                          aria-label={t("Ver más creatividades", "See more creatives")}
-                          className="absolute -right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-wit-ink/10 bg-white shadow-[0_10px_30px_rgba(5,13,40,0.15)]"
-                        >
-                          <ChevronRight className="h-4 w-4 text-wit-ink" strokeWidth={2.4} />
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
-
                 {creativeMode ? (
-                  <div key={creativeMode} className="wit-rise">
+                  <div key={creativeMode} ref={creativePanelRef} className="wit-rise scroll-mt-24">
                     {creativeMode === "imagenes" ? (
                       <>
                         <div className="mt-4 flex flex-wrap items-baseline gap-3 border-b border-wit-ink/10 pb-0">
@@ -948,6 +917,46 @@ function Panel() {
                         </div>
                       </>
                     )}
+                  </div>
+                ) : null}
+
+                {recentCreatives.length > 0 ? (
+                  <div className="mt-8">
+                    <h2 className="text-lg font-bold text-wit-ink">
+                      {t("Creatividades recientes", "Recent creatives")}
+                    </h2>
+                    <div className="relative mt-3">
+                      <div
+                        ref={recentScrollRef}
+                        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                      >
+                        {recentCreatives.map((c) => (
+                          <div
+                            key={c.id}
+                            title={c.title}
+                            className="aspect-square w-28 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 sm:w-36"
+                          >
+                            <img
+                              src={c.thumbHref}
+                              alt={c.title}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      {recentCreatives.length > 3 ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            recentScrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })
+                          }
+                          aria-label={t("Ver más creatividades", "See more creatives")}
+                          className="absolute -right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-wit-ink/10 bg-white shadow-[0_10px_30px_rgba(5,13,40,0.15)]"
+                        >
+                          <ChevronRight className="h-4 w-4 text-wit-ink" strokeWidth={2.4} />
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
               </>
