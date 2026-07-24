@@ -8,7 +8,8 @@
 // renders "es" first (no localStorage on the server) and may flip to "en"
 // once the client reads the stored preference, same tradeoff any
 // client-only preference toggle (e.g. dark mode) makes.
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { Check, Globe } from "lucide-react";
 
 export type Lang = "es" | "en";
 
@@ -52,32 +53,57 @@ export function useLanguage(): LanguageContextValue {
   return ctx;
 }
 
+const LANGUAGE_OPTIONS: { value: Lang; label: string }[] = [
+  { value: "es", label: "Español" },
+  { value: "en", label: "English" },
+];
+
 export function LanguageToggle({ className = "" }: { className?: string }) {
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
   return (
-    <div
-      className={`inline-flex items-center rounded-full border border-wit-ink/15 p-0.5 text-[11px] font-bold ${className}`}
-      role="group"
-      aria-label="Idioma / Language"
-    >
+    <div ref={rootRef} className={`relative ${className}`}>
       <button
         type="button"
-        onClick={() => setLang("es")}
-        className={`rounded-full px-2.5 py-1 transition-colors ${
-          lang === "es" ? "bg-wit-blue text-white" : "text-wit-gray hover:text-wit-ink"
-        }`}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label={t("Cambiar idioma", "Change language")}
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-wit-ink/15 text-wit-gray transition-colors hover:border-wit-blue/40 hover:text-wit-blue"
       >
-        ES
+        <Globe size={18} strokeWidth={2} />
       </button>
-      <button
-        type="button"
-        onClick={() => setLang("en")}
-        className={`rounded-full px-2.5 py-1 transition-colors ${
-          lang === "en" ? "bg-wit-blue text-white" : "text-wit-gray hover:text-wit-ink"
-        }`}
-      >
-        EN
-      </button>
+
+      {open ? (
+        <div className="absolute right-0 top-full z-20 mt-2 w-40 overflow-hidden rounded-2xl border border-wit-ink/10 bg-white py-1.5 shadow-[0_20px_50px_rgba(5,13,40,0.15)]">
+          {LANGUAGE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                setLang(opt.value);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+                lang === opt.value ? "text-wit-blue" : "text-wit-ink hover:bg-wit-mist/50"
+              }`}
+            >
+              {opt.label}
+              {lang === opt.value ? <Check size={16} strokeWidth={2.5} /> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
