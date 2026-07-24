@@ -250,16 +250,6 @@ function Panel() {
   // expiration. A modal (not a page) since it's a quick add-on purchase,
   // not a whole new flow like activating a membership.
   const [packsOpen, setPacksOpen] = useState(false);
-  // "Piezas creadas" burst pop-up — mouse click opens instantly, touch
-  // needs a real hold (not just a tap) so it doesn't fire by accident
-  // while scrolling. Hooks must live above every early return below, so
-  // this can't sit next to the stats it's paired with (further down).
-  const piecesTileRef = useRef<HTMLDivElement>(null);
-  const piecesPressTimer = useRef<number | null>(null);
-  const piecesPointerTypeRef = useRef<string | null>(null);
-  const [piecesPopupOpen, setPiecesPopupOpen] = useState(false);
-  const [burstOrigin, setBurstOrigin] = useState<{ x: number; y: number } | null>(null);
-  const [burstRadius, setBurstRadius] = useState(110);
   // Read (and clear) once per mount — only the very first chat (chatKey
   // still at its initial value) should inherit these, not a later
   // conversation opened via the button.
@@ -402,8 +392,6 @@ function Panel() {
   // resultado, and doubles as the client's own history read back as an
   // achievement instead of a task list. All computed from data already
   // fetched for other tabs (requests, campaigns), nothing new to fetch.
-  const finishedRows = rows.filter((r) => r.status === "completada" || r.status === "cerrada");
-  const piecesCreated = finishedRows.length;
   const streakWeeks = computeStreakWeeks(rows.map((r) => r.created_at));
   const impactCampaigns = campaignsForImpact.data?.campaigns ?? [];
   // "Lanzada" means it actually ran and reached someone — a campaign that
@@ -416,70 +404,6 @@ function Panel() {
   const campaignsLaunched = activatedCampaigns.length;
   const totalReach = activatedCampaigns.reduce((sum, c) => sum + Number(c.reach ?? 0), 0);
 
-  // finishedRows comes back newest-first (same order as `rows`), so the
-  // first 8 are the 8 most recent — capped so the circle stays readable
-  // instead of trying to fit a whole quarter's worth of pieces in it.
-  const BURST_MAX = 8;
-  const recentPieces = finishedRows
-    .slice(0, BURST_MAX)
-    .map((r) => {
-      const latest = parseResults(r).at(-1);
-      const thumbHref = latest
-        ? (latest.image_url ?? `/api/file?key=${encodeURIComponent(latest.r2_key ?? "")}`)
-        : null;
-      return thumbHref ? { kind: "piece" as const, id: r.id, title: r.title, thumbHref } : null;
-    })
-    .filter(
-      (p): p is { kind: "piece"; id: string; title: string; thumbHref: string } => p !== null,
-    );
-  const extraPiecesCount = Math.max(0, piecesCreated - recentPieces.length);
-  const burstItems: (
-    | { kind: "piece"; id: string; title: string; thumbHref: string }
-    | { kind: "more"; count: number }
-  )[] =
-    extraPiecesCount > 0
-      ? [...recentPieces, { kind: "more", count: extraPiecesCount }]
-      : recentPieces;
-
-  function openPiecesBurst() {
-    const rect = piecesTileRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setBurstOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
-    // Phone gets a much bigger, screen-filling version of this — desktop
-    // keeps the original compact size, there's no "lift your finger" on
-    // a mouse to justify going big there too.
-    // Half-moon (not a full circle) spreads fewer items over the same
-    // angular budget, so it needs a bigger radius to still read as
-    // "filling the screen" instead of a tight little fan.
-    setBurstRadius(window.innerWidth < 640 ? 195 : 92);
-    setPiecesPopupOpen(true);
-  }
-  function closePiecesBurst() {
-    setPiecesPopupOpen(false);
-  }
-  function handlePiecesPointerDown(e: React.PointerEvent) {
-    piecesPointerTypeRef.current = e.pointerType;
-    if (e.pointerType === "mouse") {
-      openPiecesBurst();
-      return;
-    }
-    // Touch: real hold, not a tap — a quick scroll-adjacent touch
-    // shouldn't pop this open by accident.
-    piecesPressTimer.current = window.setTimeout(() => {
-      openPiecesBurst();
-      piecesPressTimer.current = null;
-    }, 380);
-  }
-  function endPiecesPress() {
-    if (piecesPressTimer.current != null) {
-      window.clearTimeout(piecesPressTimer.current);
-      piecesPressTimer.current = null;
-    }
-    // Touch is "peek while held" — lifting the finger closes it right
-    // away. Mouse stays click-to-open/click-outside-to-close since there's
-    // no hold gesture to tie a release to.
-    if (piecesPointerTypeRef.current !== "mouse") setPiecesPopupOpen(false);
-  }
   // Rows come back newest-first, so the first one with a logo is the most
   // recent request that had one — offered as a shortcut on the new form.
   const previousLogoKey = rows.find((row) => row.logo_key)?.logo_key ?? null;
@@ -668,7 +592,7 @@ function Panel() {
               </div>
             </div>
 
-            {piecesCreated > 0 ? (
+            {campaignsLaunched > 0 || totalReach > 0 ? (
               // Their own history read back as an achievement, and the
               // loop closed all the way to real results — not just a
               // request counter. Reach only shows once there's a real
@@ -677,32 +601,6 @@ function Panel() {
               // or plain rectangle) so they read as little badges, not
               // wide bars — same size on every breakpoint.
               <div className="mt-6 flex flex-wrap gap-2.5">
-                <div
-                  ref={piecesTileRef}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={t("Ver piezas creadas", "View created pieces")}
-                  onPointerDown={handlePiecesPointerDown}
-                  onPointerUp={endPiecesPress}
-                  onPointerLeave={endPiecesPress}
-                  onPointerCancel={endPiecesPress}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      openPiecesBurst();
-                    }
-                  }}
-                  className="flex aspect-square w-24 select-none flex-col justify-center rounded-xl bg-wit-navy p-3 text-white transition-transform active:scale-95"
-                >
-                  <Images className="h-4 w-4 text-white/70" strokeWidth={1.75} />
-                  <p className="mt-1.5 text-lg font-extrabold">{piecesCreated}</p>
-                  <p className="text-[10px] leading-tight text-white/70">
-                    {t(
-                      piecesCreated === 1 ? "pieza creada" : "piezas creadas",
-                      piecesCreated === 1 ? "piece created" : "pieces created",
-                    )}
-                  </p>
-                </div>
                 {campaignsLaunched > 0 ? (
                   <div className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-navy p-3 text-white">
                     <Rocket className="h-4 w-4 text-white/70" strokeWidth={1.75} />
@@ -726,63 +624,6 @@ function Panel() {
                     </p>
                   </div>
                 ) : null}
-              </div>
-            ) : null}
-
-            {piecesPopupOpen && burstOrigin ? (
-              <div className="fixed inset-0 z-50" onClick={closePiecesBurst} role="presentation">
-                <div className="absolute inset-0 bg-wit-navy/25 backdrop-blur-[1px]" />
-                {burstItems.map((item, i) => {
-                  // Half-moon, not a full circle — top (-90°) through
-                  // right (0°) to bottom (+90°), so cos(angle) never goes
-                  // negative and nothing ever lands left of the tile
-                  // (which sits close to the screen's left edge).
-                  const angle =
-                    burstItems.length > 1
-                      ? -Math.PI / 2 + (i / (burstItems.length - 1)) * Math.PI
-                      : 0;
-                  const tx = Math.round(Math.cos(angle) * burstRadius);
-                  const ty = Math.round(Math.sin(angle) * burstRadius);
-                  const style = {
-                    left: burstOrigin.x,
-                    top: burstOrigin.y,
-                    "--tx": `${tx}px`,
-                    "--ty": `${ty}px`,
-                    animationDelay: `${i * 45}ms`,
-                  } as React.CSSProperties;
-                  if (item.kind === "more") {
-                    return (
-                      <button
-                        key="more"
-                        type="button"
-                        style={style}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSection("creatividad");
-                          setTab("solicitudes");
-                          closePiecesBurst();
-                        }}
-                        className="wit-burst absolute flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-wit-blue text-sm font-bold text-white shadow-xl sm:h-12 sm:w-12 sm:rounded-xl sm:border-2 sm:text-xs"
-                      >
-                        +{item.count}
-                      </button>
-                    );
-                  }
-                  return (
-                    <div
-                      key={item.id}
-                      style={style}
-                      title={item.title}
-                      className="wit-burst absolute h-24 w-24 overflow-hidden rounded-2xl border-4 border-white shadow-xl sm:h-12 sm:w-12 sm:rounded-xl sm:border-2"
-                    >
-                      <img
-                        src={item.thumbHref}
-                        alt={item.title}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  );
-                })}
               </div>
             ) : null}
 
