@@ -124,45 +124,69 @@ export type CampaignInsight = {
   impressions: string;
   clicks: string;
   reach: string;
+  // The actual creative image running under this campaign, straight from
+  // Meta — not a local WITERS file, since a manually linked campaign has no
+  // local record of which delivered piece (if any) it corresponds to. Null
+  // when the campaign has no ads yet, or its creative isn't a plain image
+  // (video/carousel/dynamic creative aren't previewed here).
+  previewImageUrl: string | null;
 };
 
-// Pulls current name/status/budget/performance for one campaign — called
-// each time the client opens the Campañas tab (or on an auto-refresh
-// timer), never pushed. Meta's own reporting has a small inherent delay;
-// see the "tiempo real" conversation this is built to match. Name and
-// budget come live from Meta rather than a local cache so a manually
-// linked campaign (no local record of either) and a client-facing display
-// both work the same way.
+type AdCreativeField = { creative?: { image_url?: string; thumbnail_url?: string } };
+
+// Pulls current name/status/budget/performance/creative-preview for one
+// campaign — called each time the client opens the Campañas tab (or on an
+// auto-refresh timer), never pushed. Meta's own reporting has a small
+// inherent delay; see the "tiempo real" conversation this is built to
+// match. Name, budget, and the preview image come live from Meta rather
+// than a local cache so a manually linked campaign (no local record of any
+// of them) and a client-facing display both work the same way.
 export async function getCampaignInsight(
   campaignId: string,
 ): Promise<{ ok: true; data: CampaignInsight } | { ok: false; error: string }> {
   const config = getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
 
-  const campaignRes = await graphRequest<{ name: string; status: string; daily_budget?: string }>(
-    `/${campaignId}`,
-    config.accessToken,
-    { fields: "name,status,daily_budget" },
-    "GET",
-  );
+  const [campaignRes, insightsRes, adsRes] = await Promise.all([
+    graphRequest<{ name: string; status: string; daily_budget?: string }>(
+      `/${campaignId}`,
+      config.accessToken,
+      { fields: "name,status,daily_budget" },
+      "GET",
+    ),
+    // Both fields and date_preset must be explicit — Meta's insights edge,
+    // if called with neither, silently falls back to its own default field
+    // set (which includes spend but not reach/clicks) over its own default
+    // date window, not "the campaign's lifetime." Without this, reach/
+    // clicks read as 0 for every campaign (never actually missing, just
+    // never requested), and spend reads as a partial recent window instead
+    // of the true total.
+    graphRequest<{
+      data: Array<{ spend?: string; impressions?: string; clicks?: string; reach?: string }>;
+    }>(
+      `/${campaignId}/insights`,
+      config.accessToken,
+      { fields: "spend,impressions,clicks,reach", date_preset: "maximum" },
+      "GET",
+    ),
+    // The campaign node's own /ads edge lists every ad in it regardless of
+    // which ad set it's under — no need to enumerate ad sets separately.
+    // image_url/thumbnail_url on the creative are pre-signed by Meta, so
+    // they can go straight into an <img src> with no extra proxying.
+    graphRequest<{ data: AdCreativeField[] }>(
+      `/${campaignId}/ads`,
+      config.accessToken,
+      { fields: "creative{image_url,thumbnail_url}", limit: 5 },
+      "GET",
+    ),
+  ]);
   if (!campaignRes.ok) return { ok: false, error: campaignRes.error };
 
-  // Both fields and date_preset must be explicit — Meta's insights edge, if
-  // called with neither, silently falls back to its own default field set
-  // (which includes spend but not reach/clicks) over its own default date
-  // window, not "the campaign's lifetime." Without this, reach/clicks read
-  // as 0 for every campaign (never actually missing, just never requested),
-  // and spend reads as a partial recent window instead of the true total.
-  const insightsRes = await graphRequest<{
-    data: Array<{ spend?: string; impressions?: string; clicks?: string; reach?: string }>;
-  }>(
-    `/${campaignId}/insights`,
-    config.accessToken,
-    { fields: "spend,impressions,clicks,reach", date_preset: "maximum" },
-    "GET",
-  );
-
   const row = insightsRes.ok ? insightsRes.data.data[0] : undefined;
+  const adWithImage = adsRes.ok
+    ? adsRes.data.data.find((a) => a.creative?.image_url || a.creative?.thumbnail_url)
+    : undefined;
+
   return {
     ok: true,
     data: {
@@ -176,6 +200,8 @@ export async function getCampaignInsight(
       impressions: row?.impressions ?? "0",
       clicks: row?.clicks ?? "0",
       reach: row?.reach ?? "0",
+      previewImageUrl:
+        adWithImage?.creative?.image_url ?? adWithImage?.creative?.thumbnail_url ?? null,
     },
   };
 }

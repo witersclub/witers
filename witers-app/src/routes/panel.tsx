@@ -2253,7 +2253,7 @@ function PanelBottomNav({
                 className={campanasActive ? "text-wit-blue" : "text-wit-gray"}
               />
             }
-            label={t("Anuncios", "Ads")}
+            label={t("Campañas", "Campaigns")}
           />
           <NavTab
             active={perfilActive}
@@ -2308,6 +2308,7 @@ type Campaign = {
   impressions: string | null;
   clicks: string | null;
   reach: string | null;
+  previewImageUrl: string | null;
   insightError: string | null;
 };
 
@@ -2332,47 +2333,61 @@ function CampaignCard({ c }: { c: Campaign }) {
   };
   return (
     <div className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-base font-bold text-wit-ink">{c.name ?? t("Campaña", "Campaign")}</h3>
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
-          {t(st.es, st.en)}
-        </span>
-      </div>
-      {c.dailyBudgetCents != null ? (
-        <p className="mt-1.5 text-xs text-wit-gray">
-          {t(
-            `Presupuesto: $${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/día`,
-            `Budget: $${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/day`,
+      <div className="flex gap-4">
+        {c.previewImageUrl ? (
+          <img
+            src={c.previewImageUrl}
+            alt=""
+            loading="lazy"
+            className="h-20 w-20 shrink-0 rounded-xl border border-wit-ink/10 object-cover sm:h-24 sm:w-24"
+          />
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-base font-bold text-wit-ink">
+              {c.name ?? t("Campaña", "Campaign")}
+            </h3>
+            <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
+              {t(st.es, st.en)}
+            </span>
+          </div>
+          {c.dailyBudgetCents != null ? (
+            <p className="mt-1.5 text-xs text-wit-gray">
+              {t(
+                `Presupuesto: $${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/día`,
+                `Budget: $${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/day`,
+              )}
+            </p>
+          ) : null}
+          {c.insightError ? (
+            <p className="mt-3 text-xs text-red-600">
+              {t(
+                `No pudimos leer sus métricas: ${c.insightError}`,
+                `We couldn't read its metrics: ${c.insightError}`,
+              )}
+            </p>
+          ) : (
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <CampaignStat
+                label={t("Gastado", "Spent")}
+                value={`$${Number(c.spend ?? 0).toLocaleString("es-MX")}`}
+              />
+              <CampaignStat
+                label={t("Alcance", "Reach")}
+                value={Number(c.reach ?? 0).toLocaleString("es-MX")}
+              />
+              <CampaignStat
+                label={t("Impresiones", "Impressions")}
+                value={Number(c.impressions ?? 0).toLocaleString("es-MX")}
+              />
+              <CampaignStat
+                label={t("Clics", "Clicks")}
+                value={Number(c.clicks ?? 0).toLocaleString("es-MX")}
+              />
+            </div>
           )}
-        </p>
-      ) : null}
-      {c.insightError ? (
-        <p className="mt-3 text-xs text-red-600">
-          {t(
-            `No pudimos leer sus métricas: ${c.insightError}`,
-            `We couldn't read its metrics: ${c.insightError}`,
-          )}
-        </p>
-      ) : (
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <CampaignStat
-            label={t("Gastado", "Spent")}
-            value={`$${Number(c.spend ?? 0).toLocaleString("es-MX")}`}
-          />
-          <CampaignStat
-            label={t("Alcance", "Reach")}
-            value={Number(c.reach ?? 0).toLocaleString("es-MX")}
-          />
-          <CampaignStat
-            label={t("Impresiones", "Impressions")}
-            value={Number(c.impressions ?? 0).toLocaleString("es-MX")}
-          />
-          <CampaignStat
-            label={t("Clics", "Clicks")}
-            value={Number(c.clicks ?? 0).toLocaleString("es-MX")}
-          />
         </div>
-      )}
+      </div>
     </div>
   );
 }
