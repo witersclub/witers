@@ -2457,7 +2457,7 @@ function CampaignAdDetailModal({ campaign, onClose }: { campaign: Campaign; onCl
                       value={Number(ad.results).toLocaleString("es-MX")}
                     />
                     <CampaignStat
-                      label={t("Costo/resultado", "Cost/result")}
+                      label={t("Costo/res.", "Cost/result")}
                       value={`$${Number(ad.costPerResult).toLocaleString("es-MX")}`}
                     />
                   </div>
@@ -2540,15 +2540,11 @@ function CampaignCard({ c, onOpenDetail }: { c: Campaign; onOpenDetail: () => vo
             value={Number(c.reach ?? 0).toLocaleString("es-MX")}
           />
           <CampaignStat
-            label={t("Impresiones", "Impressions")}
-            value={Number(c.impressions ?? 0).toLocaleString("es-MX")}
-          />
-          <CampaignStat
             label={t("Resultados", "Results")}
             value={Number(c.results ?? 0).toLocaleString("es-MX")}
           />
           <CampaignStat
-            label={t("Costo/resultado", "Cost/result")}
+            label={t("Costo/res.", "Cost/result")}
             value={`$${Number(c.costPerResult ?? 0).toLocaleString("es-MX")}`}
           />
         </div>
