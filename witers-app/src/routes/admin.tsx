@@ -2343,9 +2343,22 @@ function ClientCampaignsPanel({ user }: { user: AdminUser }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ userId: user.id, metaCampaignId: c.id }),
       });
-      const data = (await res.json()) as { ok: boolean };
+      const data = (await res.json()) as { ok: boolean; error?: string };
       if (!data.ok) {
-        setError("No pudimos actualizar esa campaña. Intenta de nuevo.");
+        // Surface the real reason — "no pudimos, intenta de nuevo" alone
+        // hides exactly the cases staff needs to see: the campaign is
+        // already linked to a different client (shared test ad accounts
+        // make this easy to hit), or the target user's id isn't a UUID
+        // (old seed/staff accounts predate that convention).
+        const reason =
+          data.error === "ya_vinculada"
+            ? "esa campaña ya está vinculada a otro cliente."
+            : data.error === "datos_invalidos"
+              ? "datos inválidos (el id de este usuario podría no ser un UUID válido)."
+              : data.error
+                ? `(${data.error})`
+                : "";
+        setError(`No pudimos actualizar esa campaña. ${reason}`.trim());
         return;
       }
       await qc.invalidateQueries({ queryKey: ["admin-meta-campaigns", user.id] });
