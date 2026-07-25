@@ -1,11 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { z } from "zod";
 
 import { WitersLogo } from "../components/witers/brand";
+import { GoogleSignInButton } from "../components/witers/google-signin-button";
 import { useLanguage } from "../lib/i18n";
 
 export const Route = createFileRoute("/ingresar")({
+  validateSearch: z.object({ error: z.string().optional() }),
   head: () => ({
     meta: [
       { title: "Ingresar. WITERS" },
@@ -19,8 +22,21 @@ function Ingresar() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { t } = useLanguage();
+  const { error: googleError } = Route.useSearch();
   const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    googleError === "cuenta_dada_de_baja"
+      ? t(
+          "Esta cuenta fue dada de baja. Contacta a WITERS si crees que es un error.",
+          "This account has been deactivated. Contact WITERS if you think this is a mistake.",
+        )
+      : googleError
+        ? t(
+            "No pudimos completar el acceso con Google. Intenta de nuevo.",
+            "We couldn't complete Google sign-in. Please try again.",
+          )
+        : null,
+  );
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -131,6 +147,13 @@ function Ingresar() {
           >
             {loading ? t("Ingresando...", "Logging in...") : t("Ingresar", "Log in")}
           </button>
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-wit-ink/10" />
+            <span className="text-xs font-semibold text-wit-gray">{t("o", "or")}</span>
+            <div className="h-px flex-1 bg-wit-ink/10" />
+          </div>
+          <GoogleSignInButton />
         </form>
       </main>
     </div>

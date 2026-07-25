@@ -4,6 +4,7 @@ import { useState } from "react";
 import { z } from "zod";
 
 import { WitersLogo } from "../components/witers/brand";
+import { GoogleSignInButton } from "../components/witers/google-signin-button";
 import { useLanguage } from "../lib/i18n";
 import { isPlanId } from "../lib/membership-plans";
 
@@ -178,12 +179,13 @@ function Registro() {
               ? t("Creando cuenta...", "Creating account...")
               : t("Crear cuenta", "Create account")}
           </button>
-          <p className="text-center text-xs text-wit-gray">
-            {t(
-              "El acceso con Google estará disponible próximamente.",
-              "Sign in with Google will be available soon.",
-            )}
-          </p>
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-wit-ink/10" />
+            <span className="text-xs font-semibold text-wit-gray">{t("o", "or")}</span>
+            <div className="h-px flex-1 bg-wit-ink/10" />
+          </div>
+          <GoogleSignInButton plan={plan} />
         </form>
       </main>
     </div>

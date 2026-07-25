@@ -94,6 +94,8 @@ import { Route as ApiAdminActivateMembershipRouteImport } from './routes/api/adm
 import { Route as ApiAdminActivateChangeRouteImport } from './routes/api/admin/activate-change'
 import { Route as ApiAccountUpdateNameRouteImport } from './routes/api/account/update-name'
 import { Route as ApiAccountChangePasswordRouteImport } from './routes/api/account/change-password'
+import { Route as ApiAuthGoogleStartRouteImport } from './routes/api/auth/google/start'
+import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
 
 const WiterRoute = WiterRouteImport.update({
   id: '/witer',
@@ -535,6 +537,16 @@ const ApiAccountChangePasswordRoute =
     path: '/api/account/change-password',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAuthGoogleStartRoute = ApiAuthGoogleStartRouteImport.update({
+  id: '/api/auth/google/start',
+  path: '/api/auth/google/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
+  id: '/api/auth/google/callback',
+  path: '/api/auth/google/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -622,6 +634,8 @@ export interface FileRoutesByFullPath {
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -709,6 +723,8 @@ export interface FileRoutesByTo {
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -797,6 +813,8 @@ export interface FileRoutesById {
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -886,6 +904,8 @@ export interface FileRouteTypes {
     | '/api/stripe/create-payment-intent'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/start'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -973,6 +993,8 @@ export interface FileRouteTypes {
     | '/api/stripe/create-payment-intent'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/start'
   id:
     | '__root__'
     | '/'
@@ -1060,6 +1082,8 @@ export interface FileRouteTypes {
     | '/api/stripe/create-payment-intent'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/start'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1148,6 +1172,8 @@ export interface RootRouteChildren {
   ApiStripeCreatePaymentIntentRoute: typeof ApiStripeCreatePaymentIntentRoute
   ApiWitCarouselChatRoute: typeof ApiWitCarouselChatRoute
   ApiWitChatRoute: typeof ApiWitChatRoute
+  ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
+  ApiAuthGoogleStartRoute: typeof ApiAuthGoogleStartRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1747,6 +1773,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAccountChangePasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/google/start': {
+      id: '/api/auth/google/start'
+      path: '/api/auth/google/start'
+      fullPath: '/api/auth/google/start'
+      preLoaderRoute: typeof ApiAuthGoogleStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/google/callback': {
+      id: '/api/auth/google/callback'
+      path: '/api/auth/google/callback'
+      fullPath: '/api/auth/google/callback'
+      preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1836,6 +1876,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStripeCreatePaymentIntentRoute: ApiStripeCreatePaymentIntentRoute,
   ApiWitCarouselChatRoute: ApiWitCarouselChatRoute,
   ApiWitChatRoute: ApiWitChatRoute,
+  ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
+  ApiAuthGoogleStartRoute: ApiAuthGoogleStartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
