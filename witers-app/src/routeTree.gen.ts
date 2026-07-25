@@ -43,6 +43,7 @@ import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as ApiCarouselRequestsRouteImport } from './routes/api/carousel-requests'
 import { Route as ApiCarouselRequestChangeRouteImport } from './routes/api/carousel-request-change'
 import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
+import { Route as ApiCampaignAdsRouteImport } from './routes/api/campaign-ads'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
 import { Route as ApiBrandProfileColorsRouteImport } from './routes/api/brand-profile-colors'
 import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
@@ -263,6 +264,11 @@ const ApiCarouselRequestChangeRoute =
 const ApiCampaignsRoute = ApiCampaignsRouteImport.update({
   id: '/api/campaigns',
   path: '/api/campaigns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCampaignAdsRoute = ApiCampaignAdsRouteImport.update({
+  id: '/api/campaign-ads',
+  path: '/api/campaign-ads',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBrandProfileManualRoute = ApiBrandProfileManualRouteImport.update({
@@ -549,6 +555,7 @@ export interface FileRoutesByFullPath {
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
+  '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
@@ -635,6 +642,7 @@ export interface FileRoutesByTo {
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
+  '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
@@ -722,6 +730,7 @@ export interface FileRoutesById {
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
+  '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
@@ -810,6 +819,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
     | '/api/brand-profile-manual'
+    | '/api/campaign-ads'
     | '/api/campaigns'
     | '/api/carousel-request-change'
     | '/api/carousel-requests'
@@ -896,6 +906,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
     | '/api/brand-profile-manual'
+    | '/api/campaign-ads'
     | '/api/campaigns'
     | '/api/carousel-request-change'
     | '/api/carousel-requests'
@@ -982,6 +993,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
     | '/api/brand-profile-manual'
+    | '/api/campaign-ads'
     | '/api/campaigns'
     | '/api/carousel-request-change'
     | '/api/carousel-requests'
@@ -1069,6 +1081,7 @@ export interface RootRouteChildren {
   ApiBrandProfileRoute: typeof ApiBrandProfileRoute
   ApiBrandProfileColorsRoute: typeof ApiBrandProfileColorsRoute
   ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
+  ApiCampaignAdsRoute: typeof ApiCampaignAdsRoute
   ApiCampaignsRoute: typeof ApiCampaignsRoute
   ApiCarouselRequestChangeRoute: typeof ApiCarouselRequestChangeRoute
   ApiCarouselRequestsRoute: typeof ApiCarouselRequestsRoute
@@ -1375,6 +1388,13 @@ declare module '@tanstack/react-router' {
       path: '/api/campaigns'
       fullPath: '/api/campaigns'
       preLoaderRoute: typeof ApiCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/campaign-ads': {
+      id: '/api/campaign-ads'
+      path: '/api/campaign-ads'
+      fullPath: '/api/campaign-ads'
+      preLoaderRoute: typeof ApiCampaignAdsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/brand-profile-manual': {
@@ -1749,6 +1769,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBrandProfileRoute: ApiBrandProfileRoute,
   ApiBrandProfileColorsRoute: ApiBrandProfileColorsRoute,
   ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
+  ApiCampaignAdsRoute: ApiCampaignAdsRoute,
   ApiCampaignsRoute: ApiCampaignsRoute,
   ApiCarouselRequestChangeRoute: ApiCarouselRequestChangeRoute,
   ApiCarouselRequestsRoute: ApiCarouselRequestsRoute,

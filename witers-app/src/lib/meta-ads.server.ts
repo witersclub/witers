@@ -206,3 +206,79 @@ export async function getCampaignInsight(
     },
   };
 }
+
+export type AdDetail = {
+  id: string;
+  name: string;
+  status: string;
+  previewImageUrl: string | null;
+  spend: string;
+  impressions: string;
+  clicks: string;
+  reach: string;
+};
+
+// Per-ad breakdown for one campaign — the drill-down a client reaches by
+// opening a campaign card, showing which specific ad(s) got the clicks/spend
+// instead of just the campaign's total. `level: "ad"` on the insights edge
+// is what makes Meta return one row per ad (keyed by ad_id) instead of one
+// aggregated row for the whole campaign; matched up with /ads (name/status/
+// creative) by id.
+export async function getCampaignAdDetails(
+  campaignId: string,
+): Promise<{ ok: true; data: AdDetail[] } | { ok: false; error: string }> {
+  const config = getMetaConfig();
+  if ("error" in config) return { ok: false, error: config.error };
+
+  const [adsRes, insightsRes] = await Promise.all([
+    graphRequest<{
+      data: Array<{
+        id: string;
+        name: string;
+        status: string;
+        creative?: { image_url?: string; thumbnail_url?: string };
+      }>;
+    }>(
+      `/${campaignId}/ads`,
+      config.accessToken,
+      { fields: "id,name,status,creative{image_url,thumbnail_url}", limit: 50 },
+      "GET",
+    ),
+    graphRequest<{
+      data: Array<{
+        ad_id?: string;
+        spend?: string;
+        impressions?: string;
+        clicks?: string;
+        reach?: string;
+      }>;
+    }>(
+      `/${campaignId}/insights`,
+      config.accessToken,
+      { level: "ad", fields: "ad_id,spend,impressions,clicks,reach", date_preset: "maximum" },
+      "GET",
+    ),
+  ]);
+  if (!adsRes.ok) return { ok: false, error: adsRes.error };
+
+  const insightByAdId = new Map(
+    insightsRes.ok ? insightsRes.data.data.map((row) => [row.ad_id, row]) : [],
+  );
+
+  return {
+    ok: true,
+    data: adsRes.data.data.map((ad) => {
+      const row = insightByAdId.get(ad.id);
+      return {
+        id: ad.id,
+        name: ad.name,
+        status: ad.status,
+        previewImageUrl: ad.creative?.image_url ?? ad.creative?.thumbnail_url ?? null,
+        spend: row?.spend ?? "0",
+        impressions: row?.impressions ?? "0",
+        clicks: row?.clicks ?? "0",
+        reach: row?.reach ?? "0",
+      };
+    }),
+  };
+}

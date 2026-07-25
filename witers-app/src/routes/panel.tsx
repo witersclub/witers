@@ -2333,6 +2333,132 @@ function CampaignStat({ label, value }: { label: string; value: string }) {
   );
 }
 
+type AdDetail = {
+  id: string;
+  name: string;
+  status: string;
+  previewImageUrl: string | null;
+  spend: string;
+  impressions: string;
+  clicks: string;
+  reach: string;
+};
+
+// The per-ad drill-down behind a campaign card — same centered-modal pattern
+// as ImagePacksModal. Fetched on open rather than upfront with the campaign
+// list: it's a Meta call per ad, only worth paying for once someone actually
+// wants the breakdown.
+function CampaignAdDetailModal({ campaign, onClose }: { campaign: Campaign; onClose: () => void }) {
+  const { t } = useLanguage();
+  const ads = useQuery({
+    queryKey: ["campaign-ads", campaign.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/campaign-ads?id=${encodeURIComponent(campaign.id)}`, {
+        credentials: "include",
+      });
+      return (await res.json()) as { ok: boolean; ads?: AdDetail[]; error?: string };
+    },
+  });
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-wit-ink/50 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-7 shadow-[0_30px_80px_rgba(5,13,40,0.25)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-lg font-bold text-wit-ink">
+              {t("Anuncios de la campaña", "Campaign ads")}
+            </p>
+            <p className="mt-1 truncate text-sm text-wit-gray">
+              {campaign.name ?? t("Campaña", "Campaign")}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-full p-1.5 text-wit-gray hover:bg-wit-mist/50 hover:text-wit-ink"
+            aria-label={t("Cerrar", "Close")}
+          >
+            <X className="h-5 w-5" strokeWidth={2.25} />
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {ads.isLoading ? (
+            [0, 1, 2].map((i) => (
+              <div key={i} className="h-20 animate-pulse rounded-2xl bg-wit-ice/60" />
+            ))
+          ) : !ads.data?.ok ? (
+            <p className="text-sm text-red-600">
+              {t(
+                `No pudimos leer los anuncios: ${ads.data?.error ?? "error"}`,
+                `We couldn't read the ads: ${ads.data?.error ?? "error"}`,
+              )}
+            </p>
+          ) : ads.data.ads && ads.data.ads.length > 0 ? (
+            ads.data.ads.map((ad) => {
+              const st = CAMPAIGN_STATUS_LABEL[ad.status] ?? {
+                es: ad.status,
+                en: ad.status,
+                cls: "bg-wit-mist/60 text-wit-gray",
+              };
+              return (
+                <div key={ad.id} className="rounded-2xl border border-wit-ink/10 p-4">
+                  <div className="flex items-center gap-3">
+                    {ad.previewImageUrl ? (
+                      <img
+                        src={ad.previewImageUrl}
+                        alt=""
+                        loading="lazy"
+                        className="h-12 w-12 shrink-0 rounded-xl border border-wit-ink/10 object-cover"
+                      />
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-wit-ink">{ad.name}</p>
+                      <span
+                        className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${st.cls}`}
+                      >
+                        {t(st.es, st.en)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-4 gap-2">
+                    <CampaignStat
+                      label={t("Gastado", "Spent")}
+                      value={`$${Number(ad.spend).toLocaleString("es-MX")}`}
+                    />
+                    <CampaignStat
+                      label={t("Alcance", "Reach")}
+                      value={Number(ad.reach).toLocaleString("es-MX")}
+                    />
+                    <CampaignStat
+                      label={t("Impr.", "Impr.")}
+                      value={Number(ad.impressions).toLocaleString("es-MX")}
+                    />
+                    <CampaignStat
+                      label={t("Clics", "Clicks")}
+                      value={Number(ad.clicks).toLocaleString("es-MX")}
+                    />
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-sm text-wit-gray">
+              {t("Esta campaña aún no tiene anuncios.", "This campaign has no ads yet.")}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Real campaign list now — refreshes every time this mounts, and every 60s
 // while it's open, matching the "se actualiza sola, no empujado al
 // instante" explanation given for how Meta itself reports ad performance.
@@ -2340,7 +2466,7 @@ function CampaignStat({ label, value }: { label: string; value: string }) {
 // a banner) — a campaign can run several different pieces at once, and a
 // single large image both looked blurry (Meta's own thumbnails aren't shot
 // for that size) and hid the rest of what's actually running.
-function CampaignCard({ c }: { c: Campaign }) {
+function CampaignCard({ c, onOpenDetail }: { c: Campaign; onOpenDetail: () => void }) {
   const { t } = useLanguage();
   const st = CAMPAIGN_STATUS_LABEL[c.metaStatus] ?? {
     es: c.metaStatus,
@@ -2348,7 +2474,11 @@ function CampaignCard({ c }: { c: Campaign }) {
     cls: "bg-wit-mist/60 text-wit-gray",
   };
   return (
-    <div className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+    <button
+      type="button"
+      onClick={onOpenDetail}
+      className="wit-glass block w-full rounded-2xl p-6 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)] transition-colors hover:border-wit-blue/40"
+    >
       {c.previewImageUrls.length > 0 ? (
         <div className="mb-4 flex flex-wrap gap-2">
           {c.previewImageUrls.map((url, i) => (
@@ -2403,7 +2533,10 @@ function CampaignCard({ c }: { c: Campaign }) {
           />
         </div>
       )}
-    </div>
+      <p className="mt-4 text-xs font-semibold text-wit-blue">
+        {t("Ver detalle por anuncio →", "See per-ad detail →")}
+      </p>
+    </button>
   );
 }
 
@@ -2413,6 +2546,7 @@ function CampaignCard({ c }: { c: Campaign }) {
 function CampanasPanel() {
   const { t } = useLanguage();
   const [showArchived, setShowArchived] = useState(false);
+  const [openCampaign, setOpenCampaign] = useState<Campaign | null>(null);
   const campaigns = useQuery({
     queryKey: ["campaigns"],
     queryFn: async () => {
@@ -2480,7 +2614,9 @@ function CampanasPanel() {
           </p>
         </div>
       ) : (
-        liveRows.map((c) => <CampaignCard key={c.id} c={c} />)
+        liveRows.map((c) => (
+          <CampaignCard key={c.id} c={c} onOpenDetail={() => setOpenCampaign(c)} />
+        ))
       )}
       {archivedRows.length > 0 ? (
         <div>
@@ -2497,12 +2633,18 @@ function CampanasPanel() {
           {showArchived ? (
             <div className="mt-4 space-y-4">
               {archivedRows.map((c) => (
-                <CampaignCard key={c.id} c={c} />
+                <CampaignCard key={c.id} c={c} onOpenDetail={() => setOpenCampaign(c)} />
               ))}
             </div>
           ) : null}
         </div>
       ) : null}
+      {openCampaign
+        ? createPortal(
+            <CampaignAdDetailModal campaign={openCampaign} onClose={() => setOpenCampaign(null)} />,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
