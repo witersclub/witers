@@ -78,61 +78,47 @@ async function graphRequest<T>(
 
 type ActionRow = { action_type?: string; value?: string };
 
-// What Ads Manager's "Resultados" column actually counts isn't "clicks" —
-// it's the specific action tied to whatever the campaign's ad sets are
-// optimizing for (a WhatsApp conversation started, a lead form submit, a
-// purchase...), since plenty of clicks never turn into that. Meta's own UI
-// picks the action_type(s) below based on the ad set's optimization_goal;
-// this mirrors that mapping for the goals WITERS clients actually run.
-// Candidates are tried in order — first one present in `actions` wins.
-const RESULT_ACTION_TYPES: Record<string, string[]> = {
-  CONVERSATIONS: ["onsite_conversion.messaging_conversation_started_7d"],
-  REPLIES: [
-    "onsite_conversion.total_messaging_connection",
-    "onsite_conversion.messaging_conversation_started_7d",
-  ],
-  LEAD_GENERATION: ["lead", "onsite_conversion.lead_grouped"],
-  QUALITY_LEAD: ["lead", "onsite_conversion.lead_grouped"],
-  OFFSITE_CONVERSIONS: ["offsite_conversion.fb_pixel_purchase", "omni_purchase", "purchase"],
-  LINK_CLICKS: ["link_click"],
-  LANDING_PAGE_VIEWS: ["landing_page_view"],
-  POST_ENGAGEMENT: ["post_engagement"],
-  PAGE_LIKES: ["like"],
-  APP_INSTALLS: ["mobile_app_install", "app_install"],
-};
+// WITERS clients run click-to-WhatsApp/Messenger campaigns almost
+// exclusively, so "Resultados" means one thing: conversations started —
+// not clicks (plenty never turn into a chat), and not a generic per-goal
+// mapping. Multiple action_type variants exist depending on the attribution
+// window Meta picked for the account; tried in order, first match wins.
+const CONVERSATION_STARTED_ACTION_TYPES = [
+  "onsite_conversion.messaging_conversation_started_7d",
+  "onsite_conversion.total_messaging_connection",
+  "onsite_conversion.messaging_conversation_started_28d",
+  "onsite_conversion.messaging_conversation_started_1d",
+];
 
-// Best-effort — an ad set optimizing for something not in the table above
-// (or with no matching action recorded yet) falls back to raw clicks rather
-// than showing a confident-looking zero.
-function countResults(
-  actions: ActionRow[] | undefined,
-  optimizationGoal: string | null,
-  fallbackClicks: string,
-): string {
-  const candidates = optimizationGoal ? RESULT_ACTION_TYPES[optimizationGoal] : undefined;
-  if (!candidates || !actions) return fallbackClicks;
-  for (const type of candidates) {
+// A real "0 resultados" is far more honest here than quietly substituting
+// clicks again — that substitution was the exact confusion this replaced.
+function countConversationsStarted(actions: ActionRow[] | undefined): string {
+  if (!actions) return "0";
+  for (const type of CONVERSATION_STARTED_ACTION_TYPES) {
     const match = actions.find((a) => a.action_type === type);
     if (match?.value) return match.value;
   }
-  return fallbackClicks;
+  return "0";
 }
 
-// Ad sets under one campaign normally share the same optimization goal (one
-// WhatsApp/leads/traffic campaign per phone call with the client) — reading
-// just the first one keeps this to a single extra call instead of one per
-// ad set.
-async function getCampaignOptimizationGoal(
-  campaignId: string,
-  accessToken: string,
-): Promise<string | null> {
-  const res = await graphRequest<{ data: Array<{ optimization_goal?: string }> }>(
-    `/${campaignId}/adsets`,
-    accessToken,
-    { fields: "optimization_goal", limit: 1 },
-    "GET",
-  );
-  return res.ok ? (res.data.data[0]?.optimization_goal ?? null) : null;
+// Meta reports cost-per-result per action_type directly (cost_per_action_type)
+// rather than making callers divide spend/results themselves — using it
+// keeps this in sync with whatever rounding/currency Ads Manager itself
+// applies. Falls back to a manual spend/results divide only if Meta didn't
+// return it (e.g. zero results, nothing to divide by).
+function costPerConversation(
+  costPerActionType: ActionRow[] | undefined,
+  spend: string,
+  results: string,
+): string {
+  if (costPerActionType) {
+    for (const type of CONVERSATION_STARTED_ACTION_TYPES) {
+      const match = costPerActionType.find((a) => a.action_type === type);
+      if (match?.value) return match.value;
+    }
+  }
+  const resultsNum = Number(results);
+  return resultsNum > 0 ? (Number(spend) / resultsNum).toFixed(2) : "0";
 }
 
 export type AdAccountCampaign = {
@@ -183,10 +169,12 @@ export type CampaignInsight = {
   impressions: string;
   clicks: string;
   reach: string;
-  // What actually converted, per the ad set's own optimization goal — not
-  // every click does. See RESULT_ACTION_TYPES; falls back to `clicks` when
-  // the goal isn't one we recognize.
+  // Conversations started — see CONVERSATION_STARTED_ACTION_TYPES. A real
+  // click count that never converted isn't the same as a click that did.
   results: string;
+  // What each conversation cost, in the account's currency — Meta's own
+  // cost_per_action_type when available, spend/results otherwise.
+  costPerResult: string;
   // Every ad's creative image running under this campaign, straight from
   // Meta — not local WITERS files, since a manually linked campaign has no
   // local record of which delivered piece(s) it corresponds to. Empty when
@@ -210,7 +198,7 @@ export async function getCampaignInsight(
   const config = getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
 
-  const [campaignRes, insightsRes, adsRes, optimizationGoal] = await Promise.all([
+  const [campaignRes, insightsRes, adsRes] = await Promise.all([
     graphRequest<{ name: string; status: string; daily_budget?: string }>(
       `/${campaignId}`,
       config.accessToken,
@@ -231,11 +219,15 @@ export async function getCampaignInsight(
         clicks?: string;
         reach?: string;
         actions?: ActionRow[];
+        cost_per_action_type?: ActionRow[];
       }>;
     }>(
       `/${campaignId}/insights`,
       config.accessToken,
-      { fields: "spend,impressions,clicks,reach,actions", date_preset: "maximum" },
+      {
+        fields: "spend,impressions,clicks,reach,actions,cost_per_action_type",
+        date_preset: "maximum",
+      },
       "GET",
     ),
     // The campaign node's own /ads edge lists every ad in it regardless of
@@ -248,7 +240,6 @@ export async function getCampaignInsight(
       { fields: "creative{image_url,thumbnail_url}", limit: 25 },
       "GET",
     ),
-    getCampaignOptimizationGoal(campaignId, config.accessToken),
   ]);
   if (!campaignRes.ok) return { ok: false, error: campaignRes.error };
 
@@ -258,6 +249,7 @@ export async function getCampaignInsight(
         .map((a) => a.creative?.image_url ?? a.creative?.thumbnail_url ?? null)
         .filter((url): url is string => url !== null)
     : [];
+  const results = countConversationsStarted(row?.actions);
 
   return {
     ok: true,
@@ -272,7 +264,8 @@ export async function getCampaignInsight(
       impressions: row?.impressions ?? "0",
       clicks: row?.clicks ?? "0",
       reach: row?.reach ?? "0",
-      results: countResults(row?.actions, optimizationGoal, row?.clicks ?? "0"),
+      results,
+      costPerResult: costPerConversation(row?.cost_per_action_type, row?.spend ?? "0", results),
       previewImageUrls,
     },
   };
@@ -288,6 +281,7 @@ export type AdDetail = {
   clicks: string;
   reach: string;
   results: string;
+  costPerResult: string;
 };
 
 // Per-ad breakdown for one campaign — the drill-down a client reaches by
@@ -302,7 +296,7 @@ export async function getCampaignAdDetails(
   const config = getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
 
-  const [adsRes, insightsRes, optimizationGoal] = await Promise.all([
+  const [adsRes, insightsRes] = await Promise.all([
     graphRequest<{
       data: Array<{
         id: string;
@@ -324,18 +318,18 @@ export async function getCampaignAdDetails(
         clicks?: string;
         reach?: string;
         actions?: ActionRow[];
+        cost_per_action_type?: ActionRow[];
       }>;
     }>(
       `/${campaignId}/insights`,
       config.accessToken,
       {
         level: "ad",
-        fields: "ad_id,spend,impressions,clicks,reach,actions",
+        fields: "ad_id,spend,impressions,clicks,reach,actions,cost_per_action_type",
         date_preset: "maximum",
       },
       "GET",
     ),
-    getCampaignOptimizationGoal(campaignId, config.accessToken),
   ]);
   if (!adsRes.ok) return { ok: false, error: adsRes.error };
 
@@ -347,6 +341,7 @@ export async function getCampaignAdDetails(
     ok: true,
     data: adsRes.data.data.map((ad) => {
       const row = insightByAdId.get(ad.id);
+      const results = countConversationsStarted(row?.actions);
       return {
         id: ad.id,
         name: ad.name,
@@ -356,7 +351,8 @@ export async function getCampaignAdDetails(
         impressions: row?.impressions ?? "0",
         clicks: row?.clicks ?? "0",
         reach: row?.reach ?? "0",
-        results: countResults(row?.actions, optimizationGoal, row?.clicks ?? "0"),
+        results,
+        costPerResult: costPerConversation(row?.cost_per_action_type, row?.spend ?? "0", results),
       };
     }),
   };

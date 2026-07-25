@@ -2324,14 +2324,20 @@ type Campaign = {
   clicks: string | null;
   reach: string | null;
   results: string | null;
+  costPerResult: string | null;
   previewImageUrls: string[];
   insightError: string | null;
 };
 
+// Always laid out in one scrollable horizontal row (see the 5-stat rows
+// below) rather than a wrapping grid — min-w keeps a stat from getting
+// squeezed unreadably narrow on a small screen instead of just wrapping.
 function CampaignStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-wit-ice/60 px-3 py-2.5">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-wit-gray">{label}</p>
+    <div className="min-w-[74px] shrink-0 rounded-xl bg-wit-ice/60 px-2.5 py-2">
+      <p className="text-[9px] font-bold uppercase leading-tight tracking-wide text-wit-gray">
+        {label}
+      </p>
       <p className="mt-0.5 text-sm font-bold text-wit-ink">{value}</p>
     </div>
   );
@@ -2347,6 +2353,7 @@ type AdDetail = {
   clicks: string;
   reach: string;
   results: string;
+  costPerResult: string;
 };
 
 // The per-ad drill-down behind a campaign card — same centered-modal pattern
@@ -2432,7 +2439,7 @@ function CampaignAdDetailModal({ campaign, onClose }: { campaign: Campaign; onCl
                       </span>
                     </div>
                   </div>
-                  <div className="mt-3 grid grid-cols-4 gap-2">
+                  <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
                     <CampaignStat
                       label={t("Gastado", "Spent")}
                       value={`$${Number(ad.spend).toLocaleString("es-MX")}`}
@@ -2448,6 +2455,10 @@ function CampaignAdDetailModal({ campaign, onClose }: { campaign: Campaign; onCl
                     <CampaignStat
                       label={t("Resultados", "Results")}
                       value={Number(ad.results).toLocaleString("es-MX")}
+                    />
+                    <CampaignStat
+                      label={t("Costo/resultado", "Cost/result")}
+                      value={`$${Number(ad.costPerResult).toLocaleString("es-MX")}`}
                     />
                   </div>
                 </div>
@@ -2519,7 +2530,7 @@ function CampaignCard({ c, onOpenDetail }: { c: Campaign; onOpenDetail: () => vo
           )}
         </p>
       ) : (
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
           <CampaignStat
             label={t("Gastado", "Spent")}
             value={`$${Number(c.spend ?? 0).toLocaleString("es-MX")}`}
@@ -2535,6 +2546,10 @@ function CampaignCard({ c, onOpenDetail }: { c: Campaign; onOpenDetail: () => vo
           <CampaignStat
             label={t("Resultados", "Results")}
             value={Number(c.results ?? 0).toLocaleString("es-MX")}
+          />
+          <CampaignStat
+            label={t("Costo/resultado", "Cost/result")}
+            value={`$${Number(c.costPerResult ?? 0).toLocaleString("es-MX")}`}
           />
         </div>
       )}

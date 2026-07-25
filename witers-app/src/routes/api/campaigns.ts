@@ -51,6 +51,7 @@ export const Route = createFileRoute("/api/campaigns")({
               clicks: insight.ok ? insight.data.clicks : null,
               reach: insight.ok ? insight.data.reach : null,
               results: insight.ok ? insight.data.results : null,
+              costPerResult: insight.ok ? insight.data.costPerResult : null,
               previewImageUrls: insight.ok ? insight.data.previewImageUrls : [],
               insightError: insight.ok ? null : insight.error,
             };
