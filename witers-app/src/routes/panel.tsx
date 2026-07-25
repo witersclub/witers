@@ -394,7 +394,10 @@ function Panel() {
   const activatedCampaigns = impactCampaigns.filter((c) => Number(c.impressions ?? 0) > 0);
   const campaignsLaunched = activatedCampaigns.length;
   const totalReach = activatedCampaigns.reduce((sum, c) => sum + Number(c.reach ?? 0), 0);
-  const totalClicksImpact = activatedCampaigns.reduce((sum, c) => sum + Number(c.clicks ?? 0), 0);
+  // Results, not raw clicks — a click that never converts (never became a
+  // WhatsApp chat, a lead, a sale...) isn't the win this badge is meant to
+  // celebrate. See countResults in meta-ads.server.ts for what "counts."
+  const totalResultsImpact = activatedCampaigns.reduce((sum, c) => sum + Number(c.results ?? 0), 0);
 
   // "Creatividades recientes" — imágenes and carruseles only, not video:
   // a delivered video has no stored still frame, and rendering a <video>
@@ -621,7 +624,7 @@ function Panel() {
               </div>
             </div>
 
-            {campaignsLaunched > 0 || totalReach > 0 || totalClicksImpact > 0 ? (
+            {campaignsLaunched > 0 || totalReach > 0 || totalResultsImpact > 0 ? (
               // Their own history read back as an achievement, and the
               // loop closed all the way to real results — not just a
               // request counter. Each stat only shows once there's a real
@@ -653,14 +656,14 @@ function Panel() {
                     </p>
                   </div>
                 ) : null}
-                {totalClicksImpact > 0 ? (
+                {totalResultsImpact > 0 ? (
                   <div className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-pink p-3 text-white">
                     <Target className="h-4 w-4 text-white/70" strokeWidth={1.75} />
                     <p className="mt-1.5 text-lg font-extrabold">
-                      {totalClicksImpact.toLocaleString("es-MX")}
+                      {totalResultsImpact.toLocaleString("es-MX")}
                     </p>
                     <p className="text-[10px] text-white/70">
-                      {t("clics totales", "total clicks")}
+                      {t("resultados totales", "total results")}
                     </p>
                   </div>
                 ) : null}
@@ -2320,6 +2323,7 @@ type Campaign = {
   impressions: string | null;
   clicks: string | null;
   reach: string | null;
+  results: string | null;
   previewImageUrls: string[];
   insightError: string | null;
 };
@@ -2342,6 +2346,7 @@ type AdDetail = {
   impressions: string;
   clicks: string;
   reach: string;
+  results: string;
 };
 
 // The per-ad drill-down behind a campaign card — same centered-modal pattern
@@ -2441,8 +2446,8 @@ function CampaignAdDetailModal({ campaign, onClose }: { campaign: Campaign; onCl
                       value={Number(ad.impressions).toLocaleString("es-MX")}
                     />
                     <CampaignStat
-                      label={t("Clics", "Clicks")}
-                      value={Number(ad.clicks).toLocaleString("es-MX")}
+                      label={t("Resultados", "Results")}
+                      value={Number(ad.results).toLocaleString("es-MX")}
                     />
                   </div>
                 </div>
@@ -2528,8 +2533,8 @@ function CampaignCard({ c, onOpenDetail }: { c: Campaign; onOpenDetail: () => vo
             value={Number(c.impressions ?? 0).toLocaleString("es-MX")}
           />
           <CampaignStat
-            label={t("Clics", "Clicks")}
-            value={Number(c.clicks ?? 0).toLocaleString("es-MX")}
+            label={t("Resultados", "Results")}
+            value={Number(c.results ?? 0).toLocaleString("es-MX")}
           />
         </div>
       )}
