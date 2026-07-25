@@ -2346,13 +2346,12 @@ function ClientCampaignsPanel({ user }: { user: AdminUser }) {
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (!data.ok) {
         // Surface the real reason — "no pudimos, intenta de nuevo" alone
-        // hides exactly the cases staff needs to see: the campaign is
-        // already linked to a different client (shared test ad accounts
-        // make this easy to hit), or the target user's id isn't a UUID
-        // (old seed/staff accounts predate that convention).
+        // hides exactly the cases staff needs to see: this client already
+        // has that campaign in their panel, or the target user's id isn't
+        // a UUID (old seed/staff accounts predate that convention).
         const reason =
           data.error === "ya_vinculada"
-            ? "esa campaña ya está vinculada a otro cliente."
+            ? "esa campaña ya está en el panel de este cliente."
             : data.error === "datos_invalidos"
               ? "datos inválidos (el id de este usuario podría no ser un UUID válido)."
               : data.error
