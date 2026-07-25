@@ -4,15 +4,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type * as LeafletNS from "leaflet";
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
   AlertTriangle,
   ArrowLeft,
   ArrowUpCircle,
@@ -403,6 +394,7 @@ function Panel() {
   const activatedCampaigns = impactCampaigns.filter((c) => Number(c.impressions ?? 0) > 0);
   const campaignsLaunched = activatedCampaigns.length;
   const totalReach = activatedCampaigns.reduce((sum, c) => sum + Number(c.reach ?? 0), 0);
+  const totalClicksImpact = activatedCampaigns.reduce((sum, c) => sum + Number(c.clicks ?? 0), 0);
 
   // "Creatividades recientes" — imágenes and carruseles only, not video:
   // a delivered video has no stored still frame, and rendering a <video>
@@ -629,14 +621,14 @@ function Panel() {
               </div>
             </div>
 
-            {campaignsLaunched > 0 || totalReach > 0 ? (
+            {campaignsLaunched > 0 || totalReach > 0 || totalClicksImpact > 0 ? (
               // Their own history read back as an achievement, and the
               // loop closed all the way to real results — not just a
-              // request counter. Reach only shows once there's a real
-              // number to show; 0 campañas/0 alcance would read as failure,
-              // not motivation. Fixed-size squares (not a stretching grid
-              // or plain rectangle) so they read as little badges, not
-              // wide bars — same size on every breakpoint.
+              // request counter. Each stat only shows once there's a real
+              // number to show; 0 campañas/0 alcance/0 clics would read as
+              // failure, not motivation. Fixed-size squares (not a
+              // stretching grid or plain rectangle) so they read as little
+              // badges, not wide bars — same size on every breakpoint.
               <div className="mt-6 flex flex-wrap gap-2.5">
                 {campaignsLaunched > 0 ? (
                   <div className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-navy p-3 text-white">
@@ -658,6 +650,17 @@ function Panel() {
                     </p>
                     <p className="text-[10px] text-white/70">
                       {t("personas alcanzadas", "people reached")}
+                    </p>
+                  </div>
+                ) : null}
+                {totalClicksImpact > 0 ? (
+                  <div className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-pink p-3 text-white">
+                    <Target className="h-4 w-4 text-white/70" strokeWidth={1.75} />
+                    <p className="mt-1.5 text-lg font-extrabold">
+                      {totalClicksImpact.toLocaleString("es-MX")}
+                    </p>
+                    <p className="text-[10px] text-white/70">
+                      {t("clics totales", "total clicks")}
                     </p>
                   </div>
                 ) : null}
@@ -2317,7 +2320,7 @@ type Campaign = {
   impressions: string | null;
   clicks: string | null;
   reach: string | null;
-  previewImageUrl: string | null;
+  previewImageUrls: string[];
   insightError: string | null;
 };
 
@@ -2333,6 +2336,10 @@ function CampaignStat({ label, value }: { label: string; value: string }) {
 // Real campaign list now — refreshes every time this mounts, and every 60s
 // while it's open, matching the "se actualiza sola, no empujado al
 // instante" explanation given for how Meta itself reports ad performance.
+// Every ad's creative shows here, small and complete (not one blown up to
+// a banner) — a campaign can run several different pieces at once, and a
+// single large image both looked blurry (Meta's own thumbnails aren't shot
+// for that size) and hid the rest of what's actually running.
 function CampaignCard({ c }: { c: Campaign }) {
   const { t } = useLanguage();
   const st = CAMPAIGN_STATUS_LABEL[c.metaStatus] ?? {
@@ -2341,193 +2348,61 @@ function CampaignCard({ c }: { c: Campaign }) {
     cls: "bg-wit-mist/60 text-wit-gray",
   };
   return (
-    <div className="wit-glass overflow-hidden rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-      {c.previewImageUrl ? (
-        <div className="relative aspect-[16/9] w-full bg-wit-mist/40">
-          <img
-            src={c.previewImageUrl}
-            alt=""
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover"
+    <div className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      {c.previewImageUrls.length > 0 ? (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {c.previewImageUrls.map((url, i) => (
+            <img
+              key={i}
+              src={url}
+              alt=""
+              loading="lazy"
+              className="h-16 w-16 shrink-0 rounded-xl border border-wit-ink/10 object-cover sm:h-20 sm:w-20"
+            />
+          ))}
+        </div>
+      ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-base font-bold text-wit-ink">{c.name ?? t("Campaña", "Campaign")}</h3>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
+          {t(st.es, st.en)}
+        </span>
+      </div>
+      {c.dailyBudgetCents != null ? (
+        <p className="mt-1.5 text-xs text-wit-gray">
+          {t(
+            `Presupuesto: $${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/día`,
+            `Budget: $${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/day`,
+          )}
+        </p>
+      ) : null}
+      {c.insightError ? (
+        <p className="mt-3 text-xs text-red-600">
+          {t(
+            `No pudimos leer sus métricas: ${c.insightError}`,
+            `We couldn't read its metrics: ${c.insightError}`,
+          )}
+        </p>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <CampaignStat
+            label={t("Gastado", "Spent")}
+            value={`$${Number(c.spend ?? 0).toLocaleString("es-MX")}`}
           />
-          <span
-            className={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-bold shadow-sm ${st.cls}`}
-          >
-            {t(st.es, st.en)}
-          </span>
+          <CampaignStat
+            label={t("Alcance", "Reach")}
+            value={Number(c.reach ?? 0).toLocaleString("es-MX")}
+          />
+          <CampaignStat
+            label={t("Impresiones", "Impressions")}
+            value={Number(c.impressions ?? 0).toLocaleString("es-MX")}
+          />
+          <CampaignStat
+            label={t("Clics", "Clicks")}
+            value={Number(c.clicks ?? 0).toLocaleString("es-MX")}
+          />
         </div>
-      ) : null}
-      <div className="p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-base font-bold text-wit-ink">{c.name ?? t("Campaña", "Campaign")}</h3>
-          {!c.previewImageUrl ? (
-            <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
-              {t(st.es, st.en)}
-            </span>
-          ) : null}
-        </div>
-        {c.dailyBudgetCents != null ? (
-          <p className="mt-1.5 text-xs text-wit-gray">
-            {t(
-              `Presupuesto: $${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/día`,
-              `Budget: $${(c.dailyBudgetCents / 100).toLocaleString("es-MX")} MXN/day`,
-            )}
-          </p>
-        ) : null}
-        {c.insightError ? (
-          <p className="mt-3 text-xs text-red-600">
-            {t(
-              `No pudimos leer sus métricas: ${c.insightError}`,
-              `We couldn't read its metrics: ${c.insightError}`,
-            )}
-          </p>
-        ) : (
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <CampaignStat
-              label={t("Gastado", "Spent")}
-              value={`$${Number(c.spend ?? 0).toLocaleString("es-MX")}`}
-            />
-            <CampaignStat
-              label={t("Alcance", "Reach")}
-              value={Number(c.reach ?? 0).toLocaleString("es-MX")}
-            />
-            <CampaignStat
-              label={t("Impresiones", "Impressions")}
-              value={Number(c.impressions ?? 0).toLocaleString("es-MX")}
-            />
-            <CampaignStat
-              label={t("Clics", "Clicks")}
-              value={Number(c.clicks ?? 0).toLocaleString("es-MX")}
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-type DailyPoint = { date: string; spend: number; reach: number };
-
-function CampaignsKpiTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="wit-glass rounded-2xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">{label}</p>
-      <p className="mt-1.5 font-wit-mono text-2xl font-semibold text-wit-ink">{value}</p>
-    </div>
-  );
-}
-
-// The client asked for "algo más relleno" than plain numbers — this sits
-// above the cards and summarizes ALL of the client's live campaigns
-// together (total spend/reach/clicks + a 30-day trend), the same KPI-tiles-
-// plus-area-chart language the admin dashboard already uses elsewhere.
-function CampaignsSummary({ liveRows, series }: { liveRows: Campaign[]; series: DailyPoint[] }) {
-  const { t } = useLanguage();
-  const totalSpend = liveRows.reduce((sum, c) => sum + Number(c.spend ?? 0), 0);
-  const totalReach = liveRows.reduce((sum, c) => sum + Number(c.reach ?? 0), 0);
-  const totalClicks = liveRows.reduce((sum, c) => sum + Number(c.clicks ?? 0), 0);
-  const activeCount = liveRows.filter((c) => c.metaStatus === "ACTIVE").length;
-  const chartData = series.map((p) => ({
-    ...p,
-    label: new Date(p.date + "T00:00:00").toLocaleDateString("es-MX", {
-      day: "numeric",
-      month: "short",
-    }),
-  }));
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <CampaignsKpiTile
-          label={t("Gasto total", "Total spend")}
-          value={`$${totalSpend.toLocaleString("es-MX")}`}
-        />
-        <CampaignsKpiTile
-          label={t("Alcance total", "Total reach")}
-          value={totalReach.toLocaleString("es-MX")}
-        />
-        <CampaignsKpiTile
-          label={t("Clics totales", "Total clicks")}
-          value={totalClicks.toLocaleString("es-MX")}
-        />
-        <CampaignsKpiTile
-          label={t("Campañas activas", "Active campaigns")}
-          value={String(activeCount)}
-        />
-      </div>
-      {chartData.length > 1 ? (
-        <div className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-          <p className="text-sm font-bold text-wit-ink">
-            {t("Tendencia — últimos 30 días", "Trend — last 30 days")}
-          </p>
-          <p className="mt-0.5 text-xs text-wit-gray">
-            {t(
-              "Gasto y alcance combinados de todas tus campañas activas.",
-              "Combined spend and reach across all your active campaigns.",
-            )}
-          </p>
-          <div className="mt-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ left: -20, top: 5, right: 10 }}>
-                <defs>
-                  <linearGradient id="spendFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0047ff" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#0047ff" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="reachFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ff3fb0" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#ff3fb0" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} stroke="#eef0f5" />
-                <XAxis
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 11, fill: "#5a6478" }}
-                  minTickGap={24}
-                />
-                <YAxis
-                  yAxisId="spend"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 11, fill: "#5a6478" }}
-                />
-                <YAxis
-                  yAxisId="reach"
-                  orientation="right"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 11, fill: "#5a6478" }}
-                />
-                <Tooltip
-                  formatter={(value: number, name: string) =>
-                    name === "spend"
-                      ? [`$${value.toLocaleString("es-MX")}`, t("Gasto", "Spend")]
-                      : [value.toLocaleString("es-MX"), t("Alcance", "Reach")]
-                  }
-                />
-                <Area
-                  yAxisId="spend"
-                  type="monotone"
-                  dataKey="spend"
-                  stroke="#0047ff"
-                  strokeWidth={2.5}
-                  fill="url(#spendFill)"
-                />
-                <Area
-                  yAxisId="reach"
-                  type="monotone"
-                  dataKey="reach"
-                  stroke="#ff3fb0"
-                  strokeWidth={2.5}
-                  fill="url(#reachFill)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -2542,17 +2417,12 @@ function CampanasPanel() {
     queryKey: ["campaigns"],
     queryFn: async () => {
       const res = await fetch("/api/campaigns", { credentials: "include" });
-      if (!res.ok) return { ok: false, campaigns: [] as Campaign[], series: [] as DailyPoint[] };
-      return (await res.json()) as {
-        ok: boolean;
-        campaigns: Campaign[];
-        series: DailyPoint[];
-      };
+      if (!res.ok) return { ok: false, campaigns: [] as Campaign[] };
+      return (await res.json()) as { ok: boolean; campaigns: Campaign[] };
     },
     refetchInterval: 60_000,
   });
   const rows = campaigns.data?.campaigns ?? [];
-  const series = campaigns.data?.series ?? [];
   // Meta never really deletes a campaign either — "eliminar" in Ads
   // Manager just flips its status to ARCHIVED/DELETED, same data kept for
   // reporting. Mirroring that here: nothing gets dropped from our own
@@ -2594,7 +2464,6 @@ function CampanasPanel() {
 
   return (
     <div className="space-y-4">
-      {liveRows.length > 0 ? <CampaignsSummary liveRows={liveRows} series={series} /> : null}
       {liveRows.length === 0 ? (
         <div className="wit-glass flex flex-col items-center gap-4 rounded-3xl px-6 py-14 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">

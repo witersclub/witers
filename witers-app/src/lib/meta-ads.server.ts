@@ -124,12 +124,12 @@ export type CampaignInsight = {
   impressions: string;
   clicks: string;
   reach: string;
-  // The actual creative image running under this campaign, straight from
-  // Meta — not a local WITERS file, since a manually linked campaign has no
-  // local record of which delivered piece (if any) it corresponds to. Null
-  // when the campaign has no ads yet, or its creative isn't a plain image
+  // Every ad's creative image running under this campaign, straight from
+  // Meta — not local WITERS files, since a manually linked campaign has no
+  // local record of which delivered piece(s) it corresponds to. Empty when
+  // the campaign has no ads yet, or none of its creatives are plain images
   // (video/carousel/dynamic creative aren't previewed here).
-  previewImageUrl: string | null;
+  previewImageUrls: string[];
 };
 
 type AdCreativeField = { creative?: { image_url?: string; thumbnail_url?: string } };
@@ -176,16 +176,18 @@ export async function getCampaignInsight(
     graphRequest<{ data: AdCreativeField[] }>(
       `/${campaignId}/ads`,
       config.accessToken,
-      { fields: "creative{image_url,thumbnail_url}", limit: 5 },
+      { fields: "creative{image_url,thumbnail_url}", limit: 25 },
       "GET",
     ),
   ]);
   if (!campaignRes.ok) return { ok: false, error: campaignRes.error };
 
   const row = insightsRes.ok ? insightsRes.data.data[0] : undefined;
-  const adWithImage = adsRes.ok
-    ? adsRes.data.data.find((a) => a.creative?.image_url || a.creative?.thumbnail_url)
-    : undefined;
+  const previewImageUrls = adsRes.ok
+    ? adsRes.data.data
+        .map((a) => a.creative?.image_url ?? a.creative?.thumbnail_url ?? null)
+        .filter((url): url is string => url !== null)
+    : [];
 
   return {
     ok: true,
@@ -200,41 +202,7 @@ export async function getCampaignInsight(
       impressions: row?.impressions ?? "0",
       clicks: row?.clicks ?? "0",
       reach: row?.reach ?? "0",
-      previewImageUrl:
-        adWithImage?.creative?.image_url ?? adWithImage?.creative?.thumbnail_url ?? null,
+      previewImageUrls,
     },
-  };
-}
-
-export type DailyPoint = { date: string; spend: number; reach: number };
-
-// Day-by-day spend/reach for one campaign over the last 30 days — feeds the
-// trend chart on the client's Campañas tab. A shorter, fixed window than
-// getCampaignInsight's lifetime totals on purpose: a client cares about
-// "how is it trending lately," and 30 days of daily points is already a lot
-// to plot legibly. /api/campaigns sums this across all of a client's linked
-// campaigns into one combined trend.
-export async function getCampaignDailySeries(
-  campaignId: string,
-): Promise<{ ok: true; data: DailyPoint[] } | { ok: false; error: string }> {
-  const config = getMetaConfig();
-  if ("error" in config) return { ok: false, error: config.error };
-
-  const res = await graphRequest<{
-    data: Array<{ date_start: string; spend?: string; reach?: string }>;
-  }>(
-    `/${campaignId}/insights`,
-    config.accessToken,
-    { fields: "spend,reach", date_preset: "last_30d", time_increment: 1 },
-    "GET",
-  );
-  if (!res.ok) return { ok: false, error: res.error };
-  return {
-    ok: true,
-    data: res.data.data.map((r) => ({
-      date: r.date_start,
-      spend: Number(r.spend ?? 0),
-      reach: Number(r.reach ?? 0),
-    })),
   };
 }
