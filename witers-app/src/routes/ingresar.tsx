@@ -134,6 +134,12 @@ function Ingresar() {
               className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
               placeholder={t("Tu contraseña", "Your password")}
             />
+            <Link
+              to="/olvide-contrasena"
+              className="mt-1.5 inline-block text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
+            >
+              {t("¿Olvidaste tu contraseña?", "Forgot your password?")}
+            </Link>
           </div>
 
           {error ? (

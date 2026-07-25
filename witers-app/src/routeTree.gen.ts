@@ -14,9 +14,11 @@ import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as RestablecerContrasenaRouteImport } from './routes/restablecer-contrasena'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as PautaRouteImport } from './routes/pauta'
 import { Route as PanelRouteImport } from './routes/panel'
+import { Route as OlvideContrasenaRouteImport } from './routes/olvide-contrasena'
 import { Route as NuestraHistoriaRouteImport } from './routes/nuestra-historia'
 import { Route as MarcaRouteImport } from './routes/marca'
 import { Route as IngresarRouteImport } from './routes/ingresar'
@@ -63,10 +65,12 @@ import { Route as ApiDesignerClaimVideoRouteImport } from './routes/api/designer
 import { Route as ApiDesignerClaimCarouselRouteImport } from './routes/api/designer/claim-carousel'
 import { Route as ApiDesignerClaimRouteImport } from './routes/api/designer/claim'
 import { Route as ApiDesignerCarouselRequestsRouteImport } from './routes/api/designer/carousel-requests'
+import { Route as ApiAuthResetPasswordRouteImport } from './routes/api/auth/reset-password'
 import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAuthForgotPasswordRouteImport } from './routes/api/auth/forgot-password'
 import { Route as ApiAdminVerifyPinRouteImport } from './routes/api/admin/verify-pin'
 import { Route as ApiAdminUpdateRequestRouteImport } from './routes/api/admin/update-request'
 import { Route as ApiAdminUpdateDiscountCodeRouteImport } from './routes/api/admin/update-discount-code'
@@ -122,6 +126,11 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RestablecerContrasenaRoute = RestablecerContrasenaRouteImport.update({
+  id: '/restablecer-contrasena',
+  path: '/restablecer-contrasena',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegistroRoute = RegistroRouteImport.update({
   id: '/registro',
   path: '/registro',
@@ -135,6 +144,11 @@ const PautaRoute = PautaRouteImport.update({
 const PanelRoute = PanelRouteImport.update({
   id: '/panel',
   path: '/panel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OlvideContrasenaRoute = OlvideContrasenaRouteImport.update({
+  id: '/olvide-contrasena',
+  path: '/olvide-contrasena',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NuestraHistoriaRoute = NuestraHistoriaRouteImport.update({
@@ -372,6 +386,11 @@ const ApiDesignerCarouselRequestsRoute =
     path: '/api/designer/carousel-requests',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAuthResetPasswordRoute = ApiAuthResetPasswordRouteImport.update({
+  id: '/api/auth/reset-password',
+  path: '/api/auth/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthRegisterRoute = ApiAuthRegisterRouteImport.update({
   id: '/api/auth/register',
   path: '/api/auth/register',
@@ -390,6 +409,11 @@ const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
 const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
   id: '/api/auth/login',
   path: '/api/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthForgotPasswordRoute = ApiAuthForgotPasswordRouteImport.update({
+  id: '/api/auth/forgot-password',
+  path: '/api/auth/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAdminVerifyPinRoute = ApiAdminVerifyPinRouteImport.update({
@@ -556,9 +580,11 @@ export interface FileRoutesByFullPath {
   '/ingresar': typeof IngresarRoute
   '/marca': typeof MarcaRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
+  '/olvide-contrasena': typeof OlvideContrasenaRoute
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
   '/registro': typeof RegistroRoute
+  '/restablecer-contrasena': typeof RestablecerContrasenaRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminos': typeof TerminosRoute
@@ -614,10 +640,12 @@ export interface FileRoutesByFullPath {
   '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
+  '/api/auth/forgot-password': typeof ApiAuthForgotPasswordRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/auth/reset-password': typeof ApiAuthResetPasswordRoute
   '/api/designer/carousel-requests': typeof ApiDesignerCarouselRequestsRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
@@ -645,9 +673,11 @@ export interface FileRoutesByTo {
   '/ingresar': typeof IngresarRoute
   '/marca': typeof MarcaRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
+  '/olvide-contrasena': typeof OlvideContrasenaRoute
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
   '/registro': typeof RegistroRoute
+  '/restablecer-contrasena': typeof RestablecerContrasenaRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminos': typeof TerminosRoute
@@ -703,10 +733,12 @@ export interface FileRoutesByTo {
   '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
+  '/api/auth/forgot-password': typeof ApiAuthForgotPasswordRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/auth/reset-password': typeof ApiAuthResetPasswordRoute
   '/api/designer/carousel-requests': typeof ApiDesignerCarouselRequestsRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
@@ -735,9 +767,11 @@ export interface FileRoutesById {
   '/ingresar': typeof IngresarRoute
   '/marca': typeof MarcaRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
+  '/olvide-contrasena': typeof OlvideContrasenaRoute
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
   '/registro': typeof RegistroRoute
+  '/restablecer-contrasena': typeof RestablecerContrasenaRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminos': typeof TerminosRoute
@@ -793,10 +827,12 @@ export interface FileRoutesById {
   '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
   '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
+  '/api/auth/forgot-password': typeof ApiAuthForgotPasswordRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/auth/reset-password': typeof ApiAuthResetPasswordRoute
   '/api/designer/carousel-requests': typeof ApiDesignerCarouselRequestsRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
@@ -826,9 +862,11 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/marca'
     | '/nuestra-historia'
+    | '/olvide-contrasena'
     | '/panel'
     | '/pauta'
     | '/registro'
+    | '/restablecer-contrasena'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/terminos'
@@ -884,10 +922,12 @@ export interface FileRouteTypes {
     | '/api/admin/update-discount-code'
     | '/api/admin/update-request'
     | '/api/admin/verify-pin'
+    | '/api/auth/forgot-password'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/auth/reset-password'
     | '/api/designer/carousel-requests'
     | '/api/designer/claim'
     | '/api/designer/claim-carousel'
@@ -915,9 +955,11 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/marca'
     | '/nuestra-historia'
+    | '/olvide-contrasena'
     | '/panel'
     | '/pauta'
     | '/registro'
+    | '/restablecer-contrasena'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/terminos'
@@ -973,10 +1015,12 @@ export interface FileRouteTypes {
     | '/api/admin/update-discount-code'
     | '/api/admin/update-request'
     | '/api/admin/verify-pin'
+    | '/api/auth/forgot-password'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/auth/reset-password'
     | '/api/designer/carousel-requests'
     | '/api/designer/claim'
     | '/api/designer/claim-carousel'
@@ -1004,9 +1048,11 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/marca'
     | '/nuestra-historia'
+    | '/olvide-contrasena'
     | '/panel'
     | '/pauta'
     | '/registro'
+    | '/restablecer-contrasena'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/terminos'
@@ -1062,10 +1108,12 @@ export interface FileRouteTypes {
     | '/api/admin/update-discount-code'
     | '/api/admin/update-request'
     | '/api/admin/verify-pin'
+    | '/api/auth/forgot-password'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/auth/reset-password'
     | '/api/designer/carousel-requests'
     | '/api/designer/claim'
     | '/api/designer/claim-carousel'
@@ -1094,9 +1142,11 @@ export interface RootRouteChildren {
   IngresarRoute: typeof IngresarRoute
   MarcaRoute: typeof MarcaRoute
   NuestraHistoriaRoute: typeof NuestraHistoriaRoute
+  OlvideContrasenaRoute: typeof OlvideContrasenaRoute
   PanelRoute: typeof PanelRoute
   PautaRoute: typeof PautaRoute
   RegistroRoute: typeof RegistroRoute
+  RestablecerContrasenaRoute: typeof RestablecerContrasenaRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TerminosRoute: typeof TerminosRoute
@@ -1152,10 +1202,12 @@ export interface RootRouteChildren {
   ApiAdminUpdateDiscountCodeRoute: typeof ApiAdminUpdateDiscountCodeRoute
   ApiAdminUpdateRequestRoute: typeof ApiAdminUpdateRequestRoute
   ApiAdminVerifyPinRoute: typeof ApiAdminVerifyPinRoute
+  ApiAuthForgotPasswordRoute: typeof ApiAuthForgotPasswordRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
   ApiAuthRegisterRoute: typeof ApiAuthRegisterRoute
+  ApiAuthResetPasswordRoute: typeof ApiAuthResetPasswordRoute
   ApiDesignerCarouselRequestsRoute: typeof ApiDesignerCarouselRequestsRoute
   ApiDesignerClaimRoute: typeof ApiDesignerClaimRoute
   ApiDesignerClaimCarouselRoute: typeof ApiDesignerClaimCarouselRoute
@@ -1213,6 +1265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/restablecer-contrasena': {
+      id: '/restablecer-contrasena'
+      path: '/restablecer-contrasena'
+      fullPath: '/restablecer-contrasena'
+      preLoaderRoute: typeof RestablecerContrasenaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/registro': {
       id: '/registro'
       path: '/registro'
@@ -1232,6 +1291,13 @@ declare module '@tanstack/react-router' {
       path: '/panel'
       fullPath: '/panel'
       preLoaderRoute: typeof PanelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/olvide-contrasena': {
+      id: '/olvide-contrasena'
+      path: '/olvide-contrasena'
+      fullPath: '/olvide-contrasena'
+      preLoaderRoute: typeof OlvideContrasenaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nuestra-historia': {
@@ -1556,6 +1622,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDesignerCarouselRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/reset-password': {
+      id: '/api/auth/reset-password'
+      path: '/api/auth/reset-password'
+      fullPath: '/api/auth/reset-password'
+      preLoaderRoute: typeof ApiAuthResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/register': {
       id: '/api/auth/register'
       path: '/api/auth/register'
@@ -1582,6 +1655,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/login'
       fullPath: '/api/auth/login'
       preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/forgot-password': {
+      id: '/api/auth/forgot-password'
+      path: '/api/auth/forgot-password'
+      fullPath: '/api/auth/forgot-password'
+      preLoaderRoute: typeof ApiAuthForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admin/verify-pin': {
@@ -1798,9 +1878,11 @@ const rootRouteChildren: RootRouteChildren = {
   IngresarRoute: IngresarRoute,
   MarcaRoute: MarcaRoute,
   NuestraHistoriaRoute: NuestraHistoriaRoute,
+  OlvideContrasenaRoute: OlvideContrasenaRoute,
   PanelRoute: PanelRoute,
   PautaRoute: PautaRoute,
   RegistroRoute: RegistroRoute,
+  RestablecerContrasenaRoute: RestablecerContrasenaRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TerminosRoute: TerminosRoute,
@@ -1856,10 +1938,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminUpdateDiscountCodeRoute: ApiAdminUpdateDiscountCodeRoute,
   ApiAdminUpdateRequestRoute: ApiAdminUpdateRequestRoute,
   ApiAdminVerifyPinRoute: ApiAdminVerifyPinRoute,
+  ApiAuthForgotPasswordRoute: ApiAuthForgotPasswordRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
   ApiAuthRegisterRoute: ApiAuthRegisterRoute,
+  ApiAuthResetPasswordRoute: ApiAuthResetPasswordRoute,
   ApiDesignerCarouselRequestsRoute: ApiDesignerCarouselRequestsRoute,
   ApiDesignerClaimRoute: ApiDesignerClaimRoute,
   ApiDesignerClaimCarouselRoute: ApiDesignerClaimCarouselRoute,

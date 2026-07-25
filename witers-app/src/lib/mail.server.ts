@@ -283,6 +283,29 @@ export async function notifyStaffCarouselChangeRequested(opts: {
   });
 }
 
+export function passwordResetEmail(opts: { resetUrl: string }): {
+  subject: string;
+  html: string;
+} {
+  return {
+    subject: "Restablece tu contraseña de WITERS",
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="color: #1450ff;">Restablece tu contraseña</h2>
+        <p>Hola,</p>
+        <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta WITERS. Si fuiste tú, da clic abajo para elegir una nueva:</p>
+        <p style="margin: 24px 0;">
+          <a href="${opts.resetUrl}" style="background:#1450ff;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+            Elegir nueva contraseña
+          </a>
+        </p>
+        <p style="color:#666;font-size:13px;">Este enlace expira en 1 hora. Si tú no lo pediste, puedes ignorar este correo — tu contraseña sigue siendo la misma.</p>
+        <p style="color:#666;font-size:13px;">— El equipo de WITERS</p>
+      </div>
+    `,
+  };
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
