@@ -6,6 +6,7 @@ import { z } from "zod";
 import { WitersLogo } from "../components/witers/brand";
 import { FacebookSignInButton } from "../components/witers/facebook-signin-button";
 import { GoogleSignInButton } from "../components/witers/google-signin-button";
+import { PasswordInput } from "../components/witers/password-input";
 import { useLanguage } from "../lib/i18n";
 import { isPlanId } from "../lib/membership-plans";
 
@@ -133,14 +134,12 @@ function Registro() {
             <label htmlFor="password" className="mb-1.5 block text-sm font-semibold text-wit-ink">
               {t("Contraseña", "Password")}
             </label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
               required
               minLength={8}
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
               placeholder={t("Mínimo 8 caracteres", "Minimum 8 characters")}
             />
           </div>

@@ -72,6 +72,7 @@ import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthForgotPasswordRouteImport } from './routes/api/auth/forgot-password'
 import { Route as ApiAdminVerifyPinRouteImport } from './routes/api/admin/verify-pin'
+import { Route as ApiAdminUpdateUserEmailRouteImport } from './routes/api/admin/update-user-email'
 import { Route as ApiAdminUpdateRequestRouteImport } from './routes/api/admin/update-request'
 import { Route as ApiAdminUpdateDiscountCodeRouteImport } from './routes/api/admin/update-discount-code'
 import { Route as ApiAdminUpdateDesignerRouteImport } from './routes/api/admin/update-designer'
@@ -423,6 +424,11 @@ const ApiAdminVerifyPinRoute = ApiAdminVerifyPinRouteImport.update({
   path: '/api/admin/verify-pin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminUpdateUserEmailRoute = ApiAdminUpdateUserEmailRouteImport.update({
+  id: '/api/admin/update-user-email',
+  path: '/api/admin/update-user-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminUpdateRequestRoute = ApiAdminUpdateRequestRouteImport.update({
   id: '/api/admin/update-request',
   path: '/api/admin/update-request',
@@ -651,6 +657,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
+  '/api/admin/update-user-email': typeof ApiAdminUpdateUserEmailRoute
   '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
   '/api/auth/forgot-password': typeof ApiAuthForgotPasswordRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -746,6 +753,7 @@ export interface FileRoutesByTo {
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
+  '/api/admin/update-user-email': typeof ApiAdminUpdateUserEmailRoute
   '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
   '/api/auth/forgot-password': typeof ApiAuthForgotPasswordRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -842,6 +850,7 @@ export interface FileRoutesById {
   '/api/admin/update-designer': typeof ApiAdminUpdateDesignerRoute
   '/api/admin/update-discount-code': typeof ApiAdminUpdateDiscountCodeRoute
   '/api/admin/update-request': typeof ApiAdminUpdateRequestRoute
+  '/api/admin/update-user-email': typeof ApiAdminUpdateUserEmailRoute
   '/api/admin/verify-pin': typeof ApiAdminVerifyPinRoute
   '/api/auth/forgot-password': typeof ApiAuthForgotPasswordRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -939,6 +948,7 @@ export interface FileRouteTypes {
     | '/api/admin/update-designer'
     | '/api/admin/update-discount-code'
     | '/api/admin/update-request'
+    | '/api/admin/update-user-email'
     | '/api/admin/verify-pin'
     | '/api/auth/forgot-password'
     | '/api/auth/login'
@@ -1034,6 +1044,7 @@ export interface FileRouteTypes {
     | '/api/admin/update-designer'
     | '/api/admin/update-discount-code'
     | '/api/admin/update-request'
+    | '/api/admin/update-user-email'
     | '/api/admin/verify-pin'
     | '/api/auth/forgot-password'
     | '/api/auth/login'
@@ -1129,6 +1140,7 @@ export interface FileRouteTypes {
     | '/api/admin/update-designer'
     | '/api/admin/update-discount-code'
     | '/api/admin/update-request'
+    | '/api/admin/update-user-email'
     | '/api/admin/verify-pin'
     | '/api/auth/forgot-password'
     | '/api/auth/login'
@@ -1225,6 +1237,7 @@ export interface RootRouteChildren {
   ApiAdminUpdateDesignerRoute: typeof ApiAdminUpdateDesignerRoute
   ApiAdminUpdateDiscountCodeRoute: typeof ApiAdminUpdateDiscountCodeRoute
   ApiAdminUpdateRequestRoute: typeof ApiAdminUpdateRequestRoute
+  ApiAdminUpdateUserEmailRoute: typeof ApiAdminUpdateUserEmailRoute
   ApiAdminVerifyPinRoute: typeof ApiAdminVerifyPinRoute
   ApiAuthForgotPasswordRoute: typeof ApiAuthForgotPasswordRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
@@ -1697,6 +1710,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminVerifyPinRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/update-user-email': {
+      id: '/api/admin/update-user-email'
+      path: '/api/admin/update-user-email'
+      fullPath: '/api/admin/update-user-email'
+      preLoaderRoute: typeof ApiAdminUpdateUserEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/update-request': {
       id: '/api/admin/update-request'
       path: '/api/admin/update-request'
@@ -1977,6 +1997,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminUpdateDesignerRoute: ApiAdminUpdateDesignerRoute,
   ApiAdminUpdateDiscountCodeRoute: ApiAdminUpdateDiscountCodeRoute,
   ApiAdminUpdateRequestRoute: ApiAdminUpdateRequestRoute,
+  ApiAdminUpdateUserEmailRoute: ApiAdminUpdateUserEmailRoute,
   ApiAdminVerifyPinRoute: ApiAdminVerifyPinRoute,
   ApiAuthForgotPasswordRoute: ApiAuthForgotPasswordRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,

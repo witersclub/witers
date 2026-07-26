@@ -2022,6 +2022,40 @@ function EditUserModal({
   const [activatePlan, setActivatePlan] = useState<PlanId>(
     isPlanId(user.membership_plan) ? user.membership_plan : "essential",
   );
+  const [email, setEmail] = useState(user.email);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailMsg, setEmailMsg] = useState<string | null>(null);
+
+  // Clients can't change their own email (see update-name.ts — it needs
+  // re-verification we don't have yet), so this is the only way it ever
+  // changes: an admin editing it by hand, e.g. after a typo at signup or a
+  // client asking to switch inboxes.
+  async function saveEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setEmailBusy(true);
+    setEmailMsg(null);
+    try {
+      const res = await fetch("/api/admin/update-user-email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: user.id, email }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setEmailMsg(
+          data.error === "correo_en_uso"
+            ? "Ese correo ya lo usa otra cuenta."
+            : "Revisa el correo e intenta de nuevo.",
+        );
+        return;
+      }
+      onSaved();
+    } catch {
+      setEmailMsg("No pudimos guardar el correo. Intenta de nuevo.");
+    } finally {
+      setEmailBusy(false);
+    }
+  }
 
   // For a client who paid outside the app (transferencia, en persona) —
   // mirrors what the sandbox checkout does, just triggered by an admin
@@ -2109,6 +2143,29 @@ function EditUserModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-base font-bold text-wit-ink">Editar a {user.name}</h2>
+
+        <form onSubmit={saveEmail} className="mt-4">
+          <label className="mb-1 block text-xs font-semibold text-wit-gray">
+            Correo electrónico
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-xl border border-wit-ink/15 px-4 py-2.5 text-sm outline-none focus:border-wit-blue"
+            />
+            <button
+              type="submit"
+              disabled={emailBusy || email.trim().toLowerCase() === user.email}
+              className="shrink-0 rounded-xl bg-wit-blue px-4 py-2.5 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+            >
+              {emailBusy ? "Guardando..." : "Guardar correo"}
+            </button>
+          </div>
+          {emailMsg ? <p className="mt-1.5 text-xs text-red-600">{emailMsg}</p> : null}
+        </form>
 
         <div className="mt-4 rounded-xl bg-wit-mist/40 px-4 py-3">
           <div className="flex items-center justify-between gap-3">

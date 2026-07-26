@@ -60,6 +60,7 @@ import {
 import { WitersLogo, WMark } from "../components/witers/brand";
 import { ChatBubble, ChatIntakeFlow } from "../components/witers/chat-intake";
 import { MicButton } from "../components/witers/mic-button";
+import { PasswordInput } from "../components/witers/password-input";
 import {
   AspectRatioPicker,
   BusinessTypeWheel,
@@ -1838,14 +1839,12 @@ function PasswordCard() {
           <label htmlFor="pw-current" className="mb-1.5 block text-sm font-semibold text-wit-ink">
             {t("Contraseña actual", "Current password")}
           </label>
-          <input
+          <PasswordInput
             id="pw-current"
-            type="password"
             required
             autoComplete="current-password"
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
-            className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -1853,30 +1852,26 @@ function PasswordCard() {
             <label htmlFor="pw-new" className="mb-1.5 block text-sm font-semibold text-wit-ink">
               {t("Nueva contraseña", "New password")}
             </label>
-            <input
+            <PasswordInput
               id="pw-new"
-              type="password"
               required
               minLength={8}
               autoComplete="new-password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
               placeholder={t("Mínimo 8 caracteres", "At least 8 characters")}
-              className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
             />
           </div>
           <div>
             <label htmlFor="pw-confirm" className="mb-1.5 block text-sm font-semibold text-wit-ink">
               {t("Confirmar nueva contraseña", "Confirm new password")}
             </label>
-            <input
+            <PasswordInput
               id="pw-confirm"
-              type="password"
               required
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="w-full rounded-xl border border-wit-ink/15 bg-white px-4 py-3 text-base text-wit-ink outline-none transition-colors focus:border-wit-blue"
             />
             {confirm && next !== confirm ? (
               <p className="mt-1 text-xs text-red-600">
