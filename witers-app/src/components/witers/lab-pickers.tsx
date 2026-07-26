@@ -10,9 +10,9 @@ import { useLanguage } from "../../lib/i18n";
 
 export const ASPECT_OPTIONS: { value: string; label: string; en: string }[] = [
   { value: "1:1", label: "Cuadrado", en: "Square" },
-  { value: "4:3", label: "Feed", en: "Feed" },
+  { value: "4:3", label: "Clásico", en: "Classic" },
   { value: "16:9", label: "Horizontal", en: "Landscape" },
-  { value: "3:4", label: "Vertical", en: "Portrait" },
+  { value: "3:4", label: "Feed", en: "Feed" },
   { value: "9:16", label: "Historia", en: "Story" },
 ];
 

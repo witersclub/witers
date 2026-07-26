@@ -380,6 +380,19 @@ export async function runWitChat(
   const message = body.choices?.[0]?.message;
   if (!message) return { ok: false, error: "sin_resultado" };
 
+  // The client's confirmation message ("Elijo el formato: 3:4.") is what
+  // proves the visual picker was actually used — recorded verbatim by
+  // panel.tsx's/CarouselWizard's pickAspectRatio. Computed once up front
+  // because both the tool-call branch below and the plain-text fallback
+  // need it: once the picker has already been used, a later reply that
+  // merely *mentions* the chosen format (e.g. "Perfecto, será vertical...")
+  // must never be treated as a fresh request to show the picker again, or
+  // every such confirmation reopens the picker and the client is stuck
+  // re-answering the same question forever.
+  const pickerWasUsed = history.some(
+    (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
+  );
+
   const toolCall = message.tool_calls?.[0];
   if (toolCall?.function.name === "show_aspect_ratio_picker") {
     return { ok: true, kind: "ask_aspect_ratio" };
@@ -398,9 +411,6 @@ export async function runWitChat(
       // panel.tsx's pickAspectRatio) — never a value the model typed itself,
       // valid-looking or not, and regardless of what the client wrote in the
       // piece's own description.
-      const pickerWasUsed = history.some(
-        (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
-      );
       if (
         !pickerWasUsed ||
         !args.aspectRatio ||
@@ -430,7 +440,7 @@ export async function runWitChat(
 
   const text = message.content?.trim();
   if (!text) return { ok: false, error: "sin_resultado" };
-  if (looksLikeAspectRatioAnnouncement(text)) {
+  if (!pickerWasUsed && looksLikeAspectRatioAnnouncement(text)) {
     return { ok: true, kind: "ask_aspect_ratio" };
   }
   return { ok: true, kind: "message", text };
@@ -478,6 +488,14 @@ export async function runWitCarouselChat(
   const message = body.choices?.[0]?.message;
   if (!message) return { ok: false, error: "sin_resultado" };
 
+  // See runWitChat's comment above the equivalent line — same reasoning
+  // applies here: without this gate, any later confirmation that mentions
+  // the chosen format gets misread as a fresh ask_aspect_ratio request and
+  // the picker keeps reopening after every answer.
+  const pickerWasUsed = history.some(
+    (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
+  );
+
   const toolCall = message.tool_calls?.[0];
   if (toolCall?.function.name === "show_aspect_ratio_picker") {
     return { ok: true, kind: "ask_aspect_ratio" };
@@ -487,9 +505,6 @@ export async function runWitCarouselChat(
       const args = JSON.parse(toolCall.function.arguments) as Partial<CarouselDetails>;
       // Same guardrail as the image flow: only trust a format the client
       // actually clicked in the visual picker, never one the model typed.
-      const pickerWasUsed = history.some(
-        (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
-      );
       if (
         !pickerWasUsed ||
         !args.aspectRatio ||
@@ -519,7 +534,7 @@ export async function runWitCarouselChat(
 
   const text = message.content?.trim();
   if (!text) return { ok: false, error: "sin_resultado" };
-  if (looksLikeAspectRatioAnnouncement(text)) {
+  if (!pickerWasUsed && looksLikeAspectRatioAnnouncement(text)) {
     return { ok: true, kind: "ask_aspect_ratio" };
   }
   return { ok: true, kind: "message", text };
