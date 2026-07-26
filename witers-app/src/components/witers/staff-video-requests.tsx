@@ -79,7 +79,18 @@ function VideoTab({
   );
 }
 
-export function StaffVideoRequestsPanel({ me }: { me: string }) {
+// adminView swaps the middle tab from "Mías" (claimed by the viewer only)
+// to "En proceso" (every claimed-but-not-done request, whoever has it) —
+// an admin is monitoring the whole team's queue, not just their own
+// personal claims, so filtering to "mine" would hide everything the actual
+// designers are working on.
+export function StaffVideoRequestsPanel({
+  me,
+  adminView = false,
+}: {
+  me: string;
+  adminView?: boolean;
+}) {
   const [tab, setTab] = useState<"pendientes" | "mias" | "finalizadas">("pendientes");
 
   const query = useQuery({
@@ -94,7 +105,9 @@ export function StaffVideoRequestsPanel({ me }: { me: string }) {
 
   const rows = query.data?.videoRequests ?? [];
   const pendientes = rows.filter((r) => !r.claimed_by);
-  const mias = rows.filter((r) => r.claimed_by === me && r.status !== "completada");
+  const mias = rows.filter(
+    (r) => r.status !== "completada" && (adminView ? Boolean(r.claimed_by) : r.claimed_by === me),
+  );
   const finalizadas = rows.filter((r) => r.status === "completada");
   const shown = tab === "pendientes" ? pendientes : tab === "mias" ? mias : finalizadas;
 
@@ -118,7 +131,7 @@ export function StaffVideoRequestsPanel({ me }: { me: string }) {
             <VideoTab
               active={tab === "mias"}
               onClick={() => setTab("mias")}
-              label="Mías"
+              label={adminView ? "En proceso" : "Mías"}
               count={mias.length}
             />
             <VideoTab
@@ -135,7 +148,9 @@ export function StaffVideoRequestsPanel({ me }: { me: string }) {
                 {tab === "pendientes"
                   ? "No hay solicitudes de video sin tomar."
                   : tab === "mias"
-                    ? "No tienes solicitudes de video en proceso."
+                    ? adminView
+                      ? "No hay videos en proceso."
+                      : "No tienes solicitudes de video en proceso."
                     : "Aún no hay videos finalizados."}
               </p>
             </div>

@@ -77,7 +77,18 @@ function CarouselTab({
   );
 }
 
-export function StaffCarouselRequestsPanel({ me }: { me: string }) {
+// adminView swaps the middle tab from "Mías" (claimed by the viewer only)
+// to "En proceso" (every claimed-but-not-done carousel, whoever has it) —
+// an admin is monitoring the whole team's queue, not just their own
+// personal claims, so filtering to "mine" would hide everything the actual
+// designers are working on.
+export function StaffCarouselRequestsPanel({
+  me,
+  adminView = false,
+}: {
+  me: string;
+  adminView?: boolean;
+}) {
   const [tab, setTab] = useState<"pendientes" | "mias" | "finalizadas">("pendientes");
 
   const query = useQuery({
@@ -92,7 +103,9 @@ export function StaffCarouselRequestsPanel({ me }: { me: string }) {
 
   const rows = query.data?.carouselRequests ?? [];
   const pendientes = rows.filter((r) => !r.claimed_by);
-  const mias = rows.filter((r) => r.claimed_by === me && r.status !== "completada");
+  const mias = rows.filter(
+    (r) => r.status !== "completada" && (adminView ? Boolean(r.claimed_by) : r.claimed_by === me),
+  );
   const finalizadas = rows.filter((r) => r.status === "completada");
   // Even once "completada", a carousel with a pending change note on any
   // lámina still needs the claimed designer's attention — surfaced inside
@@ -119,7 +132,7 @@ export function StaffCarouselRequestsPanel({ me }: { me: string }) {
             <CarouselTab
               active={tab === "mias"}
               onClick={() => setTab("mias")}
-              label="Mías"
+              label={adminView ? "En proceso" : "Mías"}
               count={mias.length}
             />
             <CarouselTab
@@ -136,7 +149,9 @@ export function StaffCarouselRequestsPanel({ me }: { me: string }) {
                 {tab === "pendientes"
                   ? "No hay carruseles sin tomar."
                   : tab === "mias"
-                    ? "No tienes carruseles en proceso."
+                    ? adminView
+                      ? "No hay carruseles en proceso."
+                      : "No tienes carruseles en proceso."
                     : "Aún no hay carruseles finalizados."}
               </p>
             </div>

@@ -5,6 +5,8 @@ import {
   ArrowRight,
   ClipboardList,
   CreditCard,
+  GalleryHorizontal,
+  Image,
   LayoutDashboard,
   Link2Off,
   LogOut,
@@ -13,6 +15,7 @@ import {
   Plus,
   Star,
   Users,
+  Video,
   Wallet,
 } from "lucide-react";
 import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
@@ -33,12 +36,14 @@ import {
 } from "recharts";
 
 import { WitersLogo, WMark } from "../components/witers/brand";
+import { StaffCarouselRequestsPanel } from "../components/witers/staff-carousel-requests";
 import {
   CompactRequestCard,
   FilePreview,
   PendingCompactCard,
   StaffRequestCard,
 } from "../components/witers/staff-request-card";
+import { StaffVideoRequestsPanel } from "../components/witers/staff-video-requests";
 import { isPlanId, MEMBERSHIP_PLANS, type PlanId } from "../lib/membership-plans";
 
 // Same query key /api/admin/overview's useQuery uses — the shared staff
@@ -765,7 +770,11 @@ function Admin() {
           ) : tab === "dashboard" ? (
             <DashboardView data={data} onNavigateToAttention={() => setTab("solicitudes")} />
           ) : tab === "solicitudes" ? (
-            <RequestsAdmin rows={data.requests} me={String(platform.data.id)} onSent={showToast} />
+            <SolicitudesAdmin
+              rows={data.requests}
+              me={String(platform.data.id)}
+              onSent={showToast}
+            />
           ) : tab === "diseñadores" ? (
             <DesignersPanel rows={data.designers} requests={data.requests} />
           ) : tab === "usuarios" ? (
@@ -790,6 +799,66 @@ function Admin() {
 }
 
 /* ---------- requests management ---------- */
+
+type RequestsKind = "imagenes" | "videos" | "carruseles";
+
+const REQUESTS_KIND_META: Record<RequestsKind, { label: string; icon: typeof Image }> = {
+  imagenes: { label: "Imágenes", icon: Image },
+  videos: { label: "Videos", icon: Video },
+  carruseles: { label: "Carruseles", icon: GalleryHorizontal },
+};
+
+// The type-of-request switcher that sits above "Solicitudes" — images keep
+// their existing 5-bucket RequestsAdmin below unchanged; video and carousel
+// reuse the exact same claim/deliver panels the designer panel (witer.tsx)
+// already has, just in adminView mode so the middle bucket shows every
+// claimed-but-not-done request across the whole team instead of only the
+// viewer's own claims.
+function SolicitudesAdmin({
+  rows,
+  me,
+  onSent,
+}: {
+  rows: AdminRequest[];
+  me: string;
+  onSent: (text: string) => void;
+}) {
+  const [kind, setKind] = useState<RequestsKind>("imagenes");
+
+  return (
+    <div>
+      <div className="mt-6 wit-glass inline-flex gap-1 rounded-2xl p-1 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+        {(Object.keys(REQUESTS_KIND_META) as RequestsKind[]).map((k) => {
+          const meta = REQUESTS_KIND_META[k];
+          const Icon = meta.icon;
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setKind(k)}
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+                kind === k
+                  ? "bg-wit-blue text-white"
+                  : "text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
+              }`}
+            >
+              <Icon size={15} />
+              {meta.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {kind === "imagenes" ? (
+        <RequestsAdmin rows={rows} me={me} onSent={onSent} />
+      ) : kind === "videos" ? (
+        <StaffVideoRequestsPanel me={me} adminView />
+      ) : (
+        <StaffCarouselRequestsPanel me={me} adminView />
+      )}
+    </div>
+  );
+}
 
 type RequestsTab = "atencion" | "en_proceso" | "completadas" | "finalizadas" | "rechazadas";
 
