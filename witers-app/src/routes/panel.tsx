@@ -191,6 +191,57 @@ function computeStreakWeeks(createdAtDates: string[]): number {
   return streak;
 }
 
+// A ring "drains" as the month's requests get used — full circle at the
+// start of the cycle, empty once nothing's left — instead of a plain
+// used/total line. Each content type gets its own brand color so all three
+// read as distinct at a glance (matches the Imágenes/Video/Carrusel colors
+// already used on the "Crear ___" cards below).
+function QuotaRing({
+  icon: Icon,
+  remaining,
+  quota,
+  colorHex,
+  label,
+}: {
+  icon: LucideIcon;
+  remaining: number;
+  quota: number;
+  colorHex: string;
+  label: string;
+}) {
+  const radius = 26;
+  const circumference = 2 * Math.PI * radius;
+  const pct = quota > 0 ? Math.max(0, Math.min(1, remaining / quota)) : 0;
+  const offset = circumference * (1 - pct);
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
+        <svg viewBox="0 0 64 64" className="absolute inset-0 -rotate-90">
+          <circle cx="32" cy="32" r={radius} fill="none" stroke="#E4E9F7" strokeWidth="6" />
+          <circle
+            cx="32"
+            cy="32"
+            r={radius}
+            fill="none"
+            stroke={colorHex}
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            style={{ transition: "stroke-dashoffset 400ms ease" }}
+          />
+        </svg>
+        <Icon className="h-5 w-5" style={{ color: colorHex }} strokeWidth={2} />
+      </div>
+      <p className="font-wit-mono text-sm font-bold text-wit-ink">
+        {Math.max(0, remaining)}
+        <span className="text-wit-gray">/{quota}</span>
+      </p>
+      <p className="text-[10px] font-semibold text-wit-gray">{label}</p>
+    </div>
+  );
+}
+
 function Panel() {
   const me = useMe();
   const { t } = useLanguage();
@@ -375,6 +426,12 @@ function Panel() {
   const active = membership?.status === "active";
   const remaining = membership
     ? membership.requests_quota + membership.bonus_requests_quota - membership.requests_used
+    : 0;
+  const videoRemaining = membership
+    ? membership.video_requests_quota - membership.video_requests_used
+    : 0;
+  const carouselRemaining = membership
+    ? membership.carousel_requests_quota - membership.carousel_requests_used
     : 0;
   const rows = requests.data?.requests ?? [];
   const videoRows = videoRequests.data?.videoRequests ?? [];
@@ -567,31 +624,13 @@ function Panel() {
               </div>
 
               <div className="flex flex-col items-stretch gap-2">
-                <div className="wit-glass flex items-center gap-4 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
-                  <div>
+                <div className="wit-glass flex flex-col gap-3 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
+                  <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
-                      {t("Solicitudes disponibles", "Requests available")}
+                      {t("Tu cupo este mes", "Your quota this month")}
                     </p>
-                    <p className="font-wit-mono text-3xl font-semibold text-wit-ink">
-                      {active ? remaining : 0}
-                      <span className="text-base text-wit-gray">
-                        /
-                        {(membership?.requests_quota ?? 20) +
-                          (membership?.bonus_requests_quota ?? 0)}
-                      </span>
-                    </p>
-                    {membership && membership.bonus_requests_quota > 0 ? (
-                      <p className="mt-0.5 text-[11px] font-semibold text-wit-blue">
-                        {t(
-                          `+${membership.bonus_requests_quota} de paquetes comprados`,
-                          `+${membership.bonus_requests_quota} from purchased packs`,
-                        )}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
                     >
                       {active
                         ? t(
@@ -601,6 +640,43 @@ function Panel() {
                         : t("Sin membresía", "No membership")}
                     </span>
                   </div>
+                  <div className="flex items-start justify-center gap-6">
+                    <QuotaRing
+                      icon={ImageIcon}
+                      remaining={active ? remaining : 0}
+                      quota={
+                        (membership?.requests_quota ?? 20) + (membership?.bonus_requests_quota ?? 0)
+                      }
+                      colorHex="#0047ff"
+                      label={t("Imágenes", "Images")}
+                    />
+                    {membership && membership.video_requests_quota > 0 ? (
+                      <QuotaRing
+                        icon={VideoIcon}
+                        remaining={active ? videoRemaining : 0}
+                        quota={membership.video_requests_quota}
+                        colorHex="#ff3fb0"
+                        label={t("Video", "Video")}
+                      />
+                    ) : null}
+                    {membership && membership.carousel_requests_quota > 0 ? (
+                      <QuotaRing
+                        icon={GalleryHorizontal}
+                        remaining={active ? carouselRemaining : 0}
+                        quota={membership.carousel_requests_quota}
+                        colorHex="#10b981"
+                        label={t("Carrusel", "Carousel")}
+                      />
+                    ) : null}
+                  </div>
+                  {membership && membership.bonus_requests_quota > 0 ? (
+                    <p className="text-center text-[11px] font-semibold text-wit-blue">
+                      {t(
+                        `+${membership.bonus_requests_quota} de paquetes comprados`,
+                        `+${membership.bonus_requests_quota} from purchased packs`,
+                      )}
+                    </p>
+                  ) : null}
                 </div>
                 {active && membership?.plan !== "scale" ? (
                   <Link
@@ -632,9 +708,16 @@ function Panel() {
               // failure, not motivation. Fixed-size squares (not a
               // stretching grid or plain rectangle) so they read as little
               // badges, not wide bars — same size on every breakpoint.
+              // All three jump straight to Campañas when tapped — they're
+              // campaign stats, so "tell me more" should mean "show me the
+              // campaigns," not just sit there as a static number.
               <div className="mt-6 flex flex-wrap gap-2.5">
                 {campaignsLaunched > 0 ? (
-                  <div className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-navy p-3 text-white">
+                  <button
+                    type="button"
+                    onClick={() => setSection("campanas")}
+                    className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-navy p-3 text-left text-white transition-transform active:scale-95"
+                  >
                     <Rocket className="h-4 w-4 text-white/70" strokeWidth={1.75} />
                     <p className="mt-1.5 text-lg font-extrabold">{campaignsLaunched}</p>
                     <p className="text-[10px] leading-tight text-white/70">
@@ -643,10 +726,14 @@ function Panel() {
                         campaignsLaunched === 1 ? "campaign launched" : "campaigns launched",
                       )}
                     </p>
-                  </div>
+                  </button>
                 ) : null}
                 {totalReach > 0 ? (
-                  <div className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-blue p-3 text-white">
+                  <button
+                    type="button"
+                    onClick={() => setSection("campanas")}
+                    className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-blue p-3 text-left text-white transition-transform active:scale-95"
+                  >
                     <Eye className="h-4 w-4 text-white/70" strokeWidth={1.75} />
                     <p className="mt-1.5 text-lg font-extrabold">
                       {totalReach.toLocaleString("es-MX")}
@@ -654,10 +741,14 @@ function Panel() {
                     <p className="text-[10px] text-white/70">
                       {t("personas alcanzadas", "people reached")}
                     </p>
-                  </div>
+                  </button>
                 ) : null}
                 {totalResultsImpact > 0 ? (
-                  <div className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-pink p-3 text-white">
+                  <button
+                    type="button"
+                    onClick={() => setSection("campanas")}
+                    className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-pink p-3 text-left text-white transition-transform active:scale-95"
+                  >
                     <Target className="h-4 w-4 text-white/70" strokeWidth={1.75} />
                     <p className="mt-1.5 text-lg font-extrabold">
                       {totalResultsImpact.toLocaleString("es-MX")}
@@ -665,7 +756,7 @@ function Panel() {
                     <p className="text-[10px] text-white/70">
                       {t("resultados totales", "total results")}
                     </p>
-                  </div>
+                  </button>
                 ) : null}
               </div>
             ) : null}
