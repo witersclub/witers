@@ -345,6 +345,23 @@ export async function runWitChat(
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false, error: "falta_openai_api_key" };
 
+  // The client's confirmation message ("Elijo el formato: 3:4.") is what
+  // proves the visual picker was actually used — recorded verbatim by
+  // panel.tsx's pickAspectRatio. Computed up front, before the request even
+  // goes out: once the picker has already been used, show_aspect_ratio_picker
+  // is dropped from the tools the model is offered, so it's not merely
+  // discouraged from calling it again — it physically can't. Relying only on
+  // post-hoc filtering of the model's response (the previous approach) still
+  // left a gap: the model could call the real tool again on a later turn
+  // (not just describe it in text), which reopened the picker after every
+  // answer and left the client stuck re-answering the same question forever.
+  const pickerWasUsed = history.some(
+    (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
+  );
+  const tools = pickerWasUsed
+    ? TOOLS.filter((tool) => tool.function.name !== "show_aspect_ratio_picker")
+    : TOOLS;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 60_000);
   let response: Response;
@@ -360,7 +377,7 @@ export async function runWitChat(
         model: OPENAI_TEXT_MODEL,
         temperature: 0.6,
         messages: [{ role: "system", content: buildSystemPrompt(brand) }, ...history],
-        tools: TOOLS,
+        tools,
         tool_choice: "auto",
       }),
     });
@@ -379,19 +396,6 @@ export async function runWitChat(
   const body = (await response.json()) as OpenAiChatResponse;
   const message = body.choices?.[0]?.message;
   if (!message) return { ok: false, error: "sin_resultado" };
-
-  // The client's confirmation message ("Elijo el formato: 3:4.") is what
-  // proves the visual picker was actually used — recorded verbatim by
-  // panel.tsx's/CarouselWizard's pickAspectRatio. Computed once up front
-  // because both the tool-call branch below and the plain-text fallback
-  // need it: once the picker has already been used, a later reply that
-  // merely *mentions* the chosen format (e.g. "Perfecto, será vertical...")
-  // must never be treated as a fresh request to show the picker again, or
-  // every such confirmation reopens the picker and the client is stuck
-  // re-answering the same question forever.
-  const pickerWasUsed = history.some(
-    (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
-  );
 
   const toolCall = message.tool_calls?.[0];
   if (toolCall?.function.name === "show_aspect_ratio_picker") {
@@ -453,6 +457,17 @@ export async function runWitCarouselChat(
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false, error: "falta_openai_api_key" };
 
+  // See runWitChat's comment above the equivalent line — same reasoning
+  // applies here: dropping the tool once it's already been used (rather
+  // than only filtering the response after the fact) is what actually
+  // stops the model from calling it a second time.
+  const pickerWasUsed = history.some(
+    (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
+  );
+  const tools = pickerWasUsed
+    ? CAROUSEL_TOOLS.filter((tool) => tool.function.name !== "show_aspect_ratio_picker")
+    : CAROUSEL_TOOLS;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 60_000);
   let response: Response;
@@ -468,7 +483,7 @@ export async function runWitCarouselChat(
         model: OPENAI_TEXT_MODEL,
         temperature: 0.6,
         messages: [{ role: "system", content: buildCarouselSystemPrompt(brand) }, ...history],
-        tools: CAROUSEL_TOOLS,
+        tools,
         tool_choice: "auto",
       }),
     });
@@ -487,14 +502,6 @@ export async function runWitCarouselChat(
   const body = (await response.json()) as OpenAiChatResponse;
   const message = body.choices?.[0]?.message;
   if (!message) return { ok: false, error: "sin_resultado" };
-
-  // See runWitChat's comment above the equivalent line — same reasoning
-  // applies here: without this gate, any later confirmation that mentions
-  // the chosen format gets misread as a fresh ask_aspect_ratio request and
-  // the picker keeps reopening after every answer.
-  const pickerWasUsed = history.some(
-    (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
-  );
 
   const toolCall = message.tool_calls?.[0];
   if (toolCall?.function.name === "show_aspect_ratio_picker") {
