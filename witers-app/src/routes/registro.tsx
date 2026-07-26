@@ -4,6 +4,7 @@ import { useState } from "react";
 import { z } from "zod";
 
 import { WitersLogo } from "../components/witers/brand";
+import { FacebookSignInButton } from "../components/witers/facebook-signin-button";
 import { GoogleSignInButton } from "../components/witers/google-signin-button";
 import { useLanguage } from "../lib/i18n";
 import { isPlanId } from "../lib/membership-plans";
@@ -185,7 +186,10 @@ function Registro() {
             <span className="text-xs font-semibold text-wit-gray">{t("o", "or")}</span>
             <div className="h-px flex-1 bg-wit-ink/10" />
           </div>
-          <GoogleSignInButton plan={plan} />
+          <div className="space-y-3">
+            <GoogleSignInButton plan={plan} />
+            <FacebookSignInButton plan={plan} />
+          </div>
         </form>
       </main>
     </div>

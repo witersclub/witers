@@ -4,6 +4,7 @@ import { useState } from "react";
 import { z } from "zod";
 
 import { WitersLogo } from "../components/witers/brand";
+import { FacebookSignInButton } from "../components/witers/facebook-signin-button";
 import { GoogleSignInButton } from "../components/witers/google-signin-button";
 import { useLanguage } from "../lib/i18n";
 
@@ -22,20 +23,30 @@ function Ingresar() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { t } = useLanguage();
-  const { error: googleError } = Route.useSearch();
+  const { error: oauthError } = Route.useSearch();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState<string | null>(
-    googleError === "cuenta_dada_de_baja"
+    oauthError === "cuenta_dada_de_baja"
       ? t(
           "Esta cuenta fue dada de baja. Contacta a WITERS si crees que es un error.",
           "This account has been deactivated. Contact WITERS if you think this is a mistake.",
         )
-      : googleError
+      : oauthError === "facebook_sin_correo"
         ? t(
-            "No pudimos completar el acceso con Google. Intenta de nuevo.",
-            "We couldn't complete Google sign-in. Please try again.",
+            "Tu cuenta de Facebook no compartió un correo. Autoriza el permiso de correo o ingresa con Google o tu contraseña.",
+            "Your Facebook account didn't share an email. Allow the email permission, or sign in with Google or your password instead.",
           )
-        : null,
+        : oauthError === "facebook"
+          ? t(
+              "No pudimos completar el acceso con Facebook. Intenta de nuevo.",
+              "We couldn't complete Facebook sign-in. Please try again.",
+            )
+          : oauthError
+            ? t(
+                "No pudimos completar el acceso con Google. Intenta de nuevo.",
+                "We couldn't complete Google sign-in. Please try again.",
+              )
+            : null,
   );
   const [loading, setLoading] = useState(false);
 
@@ -159,7 +170,10 @@ function Ingresar() {
             <span className="text-xs font-semibold text-wit-gray">{t("o", "or")}</span>
             <div className="h-px flex-1 bg-wit-ink/10" />
           </div>
-          <GoogleSignInButton />
+          <div className="space-y-3">
+            <GoogleSignInButton />
+            <FacebookSignInButton />
+          </div>
         </form>
       </main>
     </div>

@@ -100,6 +100,8 @@ import { Route as ApiAccountUpdateNameRouteImport } from './routes/api/account/u
 import { Route as ApiAccountChangePasswordRouteImport } from './routes/api/account/change-password'
 import { Route as ApiAuthGoogleStartRouteImport } from './routes/api/auth/google/start'
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
+import { Route as ApiAuthFacebookStartRouteImport } from './routes/api/auth/facebook/start'
+import { Route as ApiAuthFacebookCallbackRouteImport } from './routes/api/auth/facebook/callback'
 
 const WiterRoute = WiterRouteImport.update({
   id: '/witer',
@@ -571,6 +573,16 @@ const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
   path: '/api/auth/google/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthFacebookStartRoute = ApiAuthFacebookStartRouteImport.update({
+  id: '/api/auth/facebook/start',
+  path: '/api/auth/facebook/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthFacebookCallbackRoute = ApiAuthFacebookCallbackRouteImport.update({
+  id: '/api/auth/facebook/callback',
+  path: '/api/auth/facebook/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -662,6 +674,8 @@ export interface FileRoutesByFullPath {
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
+  '/api/auth/facebook/callback': typeof ApiAuthFacebookCallbackRoute
+  '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
 }
@@ -755,6 +769,8 @@ export interface FileRoutesByTo {
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
+  '/api/auth/facebook/callback': typeof ApiAuthFacebookCallbackRoute
+  '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
 }
@@ -849,6 +865,8 @@ export interface FileRoutesById {
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
+  '/api/auth/facebook/callback': typeof ApiAuthFacebookCallbackRoute
+  '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
 }
@@ -944,6 +962,8 @@ export interface FileRouteTypes {
     | '/api/stripe/create-payment-intent'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
+    | '/api/auth/facebook/callback'
+    | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
     | '/api/auth/google/start'
   fileRoutesByTo: FileRoutesByTo
@@ -1037,6 +1057,8 @@ export interface FileRouteTypes {
     | '/api/stripe/create-payment-intent'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
+    | '/api/auth/facebook/callback'
+    | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
     | '/api/auth/google/start'
   id:
@@ -1130,6 +1152,8 @@ export interface FileRouteTypes {
     | '/api/stripe/create-payment-intent'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
+    | '/api/auth/facebook/callback'
+    | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
     | '/api/auth/google/start'
   fileRoutesById: FileRoutesById
@@ -1224,6 +1248,8 @@ export interface RootRouteChildren {
   ApiStripeCreatePaymentIntentRoute: typeof ApiStripeCreatePaymentIntentRoute
   ApiWitCarouselChatRoute: typeof ApiWitCarouselChatRoute
   ApiWitChatRoute: typeof ApiWitChatRoute
+  ApiAuthFacebookCallbackRoute: typeof ApiAuthFacebookCallbackRoute
+  ApiAuthFacebookStartRoute: typeof ApiAuthFacebookStartRoute
   ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
   ApiAuthGoogleStartRoute: typeof ApiAuthGoogleStartRoute
 }
@@ -1867,6 +1893,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/facebook/start': {
+      id: '/api/auth/facebook/start'
+      path: '/api/auth/facebook/start'
+      fullPath: '/api/auth/facebook/start'
+      preLoaderRoute: typeof ApiAuthFacebookStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/facebook/callback': {
+      id: '/api/auth/facebook/callback'
+      path: '/api/auth/facebook/callback'
+      fullPath: '/api/auth/facebook/callback'
+      preLoaderRoute: typeof ApiAuthFacebookCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1960,6 +2000,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStripeCreatePaymentIntentRoute: ApiStripeCreatePaymentIntentRoute,
   ApiWitCarouselChatRoute: ApiWitCarouselChatRoute,
   ApiWitChatRoute: ApiWitChatRoute,
+  ApiAuthFacebookCallbackRoute: ApiAuthFacebookCallbackRoute,
+  ApiAuthFacebookStartRoute: ApiAuthFacebookStartRoute,
   ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
   ApiAuthGoogleStartRoute: ApiAuthGoogleStartRoute,
 }
