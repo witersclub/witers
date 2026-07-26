@@ -63,9 +63,12 @@ export const Route = createFileRoute("/api/auth/google/callback")({
           }
           // Keep google_id current even for an account that originally
           // signed up with a password — the same account works either way
-          // from now on.
+          // from now on. Also marks the email verified: Google itself just
+          // proved they own this inbox, so an account still blocked from
+          // the password path (see migration 0030) is unblocked right here
+          // instead of making them go dig up the confirmation email too.
           await db()
-            .prepare("UPDATE users SET google_id = ?1 WHERE id = ?2")
+            .prepare("UPDATE users SET google_id = ?1, email_verified = 1 WHERE id = ?2")
             .bind(sub, existing.id)
             .run();
           const session = await createSession(existing.id);

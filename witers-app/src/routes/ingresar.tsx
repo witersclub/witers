@@ -50,10 +50,18 @@ function Ingresar() {
             : null,
   );
   const [loading, setLoading] = useState(false);
+  // Set when login fails specifically because the account is still waiting
+  // on email confirmation (see migration 0030/verify-email.ts) — shows a
+  // resend button instead of just the generic wrong-credentials message,
+  // since retyping the same password won't ever fix that one.
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setNeedsVerification(false);
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -63,6 +71,16 @@ function Ingresar() {
       });
       const data = (await res.json()) as { ok: boolean; error?: string; user?: { role?: string } };
       if (!data.ok) {
+        if (data.error === "correo_sin_verificar") {
+          setNeedsVerification(true);
+          setError(
+            t(
+              "Todavía no confirmas tu correo. Revisa tu bandeja de entrada (y spam) para el enlace de confirmación.",
+              "You haven't confirmed your email yet. Check your inbox (and spam) for the confirmation link.",
+            ),
+          );
+          return;
+        }
         setError(
           data.error === "cuenta_dada_de_baja"
             ? t(
@@ -92,6 +110,21 @@ function Ingresar() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function resendVerification() {
+    if (!form.email) return;
+    setResending(true);
+    try {
+      await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: form.email }),
+      });
+      setResent(true);
+    } finally {
+      setResending(false);
     }
   }
 
@@ -153,7 +186,23 @@ function Ingresar() {
           </div>
 
           {error ? (
-            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
+            <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+              <p>{error}</p>
+              {needsVerification ? (
+                <button
+                  type="button"
+                  disabled={resending}
+                  onClick={resendVerification}
+                  className="mt-2 text-xs font-bold text-red-700 underline hover:text-red-800 disabled:opacity-60"
+                >
+                  {resending
+                    ? t("Enviando...", "Sending...")
+                    : resent
+                      ? t("Correo reenviado ✓", "Email resent ✓")
+                      : t("Reenviar correo de confirmación", "Resend confirmation email")}
+                </button>
+              ) : null}
+            </div>
           ) : null}
 
           <button

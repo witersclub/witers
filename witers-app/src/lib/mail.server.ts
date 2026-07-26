@@ -306,6 +306,29 @@ export function passwordResetEmail(opts: { resetUrl: string }): {
   };
 }
 
+export function verifyEmailEmail(opts: { verifyUrl: string }): {
+  subject: string;
+  html: string;
+} {
+  return {
+    subject: "Confirma tu correo en WITERS",
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="color: #1450ff;">Confirma tu correo</h2>
+        <p>Hola,</p>
+        <p>Ya casi terminas de crear tu cuenta en WITERS. Da clic abajo para confirmar que este es tu correo:</p>
+        <p style="margin: 24px 0;">
+          <a href="${opts.verifyUrl}" style="background:#1450ff;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+            Confirmar mi correo
+          </a>
+        </p>
+        <p style="color:#666;font-size:13px;">Este enlace expira en 24 horas. Si tú no creaste esta cuenta, puedes ignorar este correo.</p>
+        <p style="color:#666;font-size:13px;">— El equipo de WITERS</p>
+      </div>
+    `,
+  };
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

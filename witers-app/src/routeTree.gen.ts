@@ -65,7 +65,9 @@ import { Route as ApiDesignerClaimVideoRouteImport } from './routes/api/designer
 import { Route as ApiDesignerClaimCarouselRouteImport } from './routes/api/designer/claim-carousel'
 import { Route as ApiDesignerClaimRouteImport } from './routes/api/designer/claim'
 import { Route as ApiDesignerCarouselRequestsRouteImport } from './routes/api/designer/carousel-requests'
+import { Route as ApiAuthVerifyEmailRouteImport } from './routes/api/auth/verify-email'
 import { Route as ApiAuthResetPasswordRouteImport } from './routes/api/auth/reset-password'
+import { Route as ApiAuthResendVerificationRouteImport } from './routes/api/auth/resend-verification'
 import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
@@ -389,11 +391,22 @@ const ApiDesignerCarouselRequestsRoute =
     path: '/api/designer/carousel-requests',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAuthVerifyEmailRoute = ApiAuthVerifyEmailRouteImport.update({
+  id: '/api/auth/verify-email',
+  path: '/api/auth/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthResetPasswordRoute = ApiAuthResetPasswordRouteImport.update({
   id: '/api/auth/reset-password',
   path: '/api/auth/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthResendVerificationRoute =
+  ApiAuthResendVerificationRouteImport.update({
+    id: '/api/auth/resend-verification',
+    path: '/api/auth/resend-verification',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAuthRegisterRoute = ApiAuthRegisterRouteImport.update({
   id: '/api/auth/register',
   path: '/api/auth/register',
@@ -664,7 +677,9 @@ export interface FileRoutesByFullPath {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/auth/resend-verification': typeof ApiAuthResendVerificationRoute
   '/api/auth/reset-password': typeof ApiAuthResetPasswordRoute
+  '/api/auth/verify-email': typeof ApiAuthVerifyEmailRoute
   '/api/designer/carousel-requests': typeof ApiDesignerCarouselRequestsRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
@@ -760,7 +775,9 @@ export interface FileRoutesByTo {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/auth/resend-verification': typeof ApiAuthResendVerificationRoute
   '/api/auth/reset-password': typeof ApiAuthResetPasswordRoute
+  '/api/auth/verify-email': typeof ApiAuthVerifyEmailRoute
   '/api/designer/carousel-requests': typeof ApiDesignerCarouselRequestsRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
@@ -857,7 +874,9 @@ export interface FileRoutesById {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/auth/resend-verification': typeof ApiAuthResendVerificationRoute
   '/api/auth/reset-password': typeof ApiAuthResetPasswordRoute
+  '/api/auth/verify-email': typeof ApiAuthVerifyEmailRoute
   '/api/designer/carousel-requests': typeof ApiDesignerCarouselRequestsRoute
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
@@ -955,7 +974,9 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/auth/resend-verification'
     | '/api/auth/reset-password'
+    | '/api/auth/verify-email'
     | '/api/designer/carousel-requests'
     | '/api/designer/claim'
     | '/api/designer/claim-carousel'
@@ -1051,7 +1072,9 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/auth/resend-verification'
     | '/api/auth/reset-password'
+    | '/api/auth/verify-email'
     | '/api/designer/carousel-requests'
     | '/api/designer/claim'
     | '/api/designer/claim-carousel'
@@ -1147,7 +1170,9 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/auth/register'
+    | '/api/auth/resend-verification'
     | '/api/auth/reset-password'
+    | '/api/auth/verify-email'
     | '/api/designer/carousel-requests'
     | '/api/designer/claim'
     | '/api/designer/claim-carousel'
@@ -1244,7 +1269,9 @@ export interface RootRouteChildren {
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
   ApiAuthRegisterRoute: typeof ApiAuthRegisterRoute
+  ApiAuthResendVerificationRoute: typeof ApiAuthResendVerificationRoute
   ApiAuthResetPasswordRoute: typeof ApiAuthResetPasswordRoute
+  ApiAuthVerifyEmailRoute: typeof ApiAuthVerifyEmailRoute
   ApiDesignerCarouselRequestsRoute: typeof ApiDesignerCarouselRequestsRoute
   ApiDesignerClaimRoute: typeof ApiDesignerClaimRoute
   ApiDesignerClaimCarouselRoute: typeof ApiDesignerClaimCarouselRoute
@@ -1661,11 +1688,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDesignerCarouselRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/verify-email': {
+      id: '/api/auth/verify-email'
+      path: '/api/auth/verify-email'
+      fullPath: '/api/auth/verify-email'
+      preLoaderRoute: typeof ApiAuthVerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/reset-password': {
       id: '/api/auth/reset-password'
       path: '/api/auth/reset-password'
       fullPath: '/api/auth/reset-password'
       preLoaderRoute: typeof ApiAuthResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/resend-verification': {
+      id: '/api/auth/resend-verification'
+      path: '/api/auth/resend-verification'
+      fullPath: '/api/auth/resend-verification'
+      preLoaderRoute: typeof ApiAuthResendVerificationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/register': {
@@ -2004,7 +2045,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
   ApiAuthRegisterRoute: ApiAuthRegisterRoute,
+  ApiAuthResendVerificationRoute: ApiAuthResendVerificationRoute,
   ApiAuthResetPasswordRoute: ApiAuthResetPasswordRoute,
+  ApiAuthVerifyEmailRoute: ApiAuthVerifyEmailRoute,
   ApiDesignerCarouselRequestsRoute: ApiDesignerCarouselRequestsRoute,
   ApiDesignerClaimRoute: ApiDesignerClaimRoute,
   ApiDesignerClaimCarouselRoute: ApiDesignerClaimCarouselRoute,
