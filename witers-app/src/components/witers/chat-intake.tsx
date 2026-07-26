@@ -176,6 +176,15 @@ export function ChatIntakeFlow({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const answerRef = useRef("");
   const manualStopRef = useRef(false);
+  // Our own forward-only pointer into the *current* recognition session's
+  // results array — never trusts event.resultIndex. Some Android speech
+  // engines don't advance resultIndex correctly and instead re-fire
+  // onresult with the whole results array replayed from 0, re-marking
+  // already-finalized entries as final again; trusting resultIndex there
+  // re-appends the same finalized chunk into answerRef every time,
+  // producing runaway duplicated text ("Crea Crea una Crea una imagen...").
+  // Reset to 0 whenever a fresh recognition session starts.
+  const finalizedCountRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pressTimerRef = useRef<number | null>(null);
@@ -349,19 +358,22 @@ export function ChatIntakeFlow({
       );
       return;
     }
+    finalizedCountRef.current = 0;
     const recognition = new Ctor();
     recognition.lang = "es-MX";
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.onresult = (event) => {
       let interim = "";
-      let finalChunk = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = finalizedCountRef.current; i < event.results.length; i++) {
         const r = event.results[i];
-        if (r.isFinal) finalChunk += r[0].transcript + " ";
-        else interim += r[0].transcript;
+        if (r.isFinal) {
+          answerRef.current = (answerRef.current + " " + r[0].transcript).trim();
+          finalizedCountRef.current = i + 1;
+        } else {
+          interim += r[0].transcript;
+        }
       }
-      if (finalChunk) answerRef.current = (answerRef.current + " " + finalChunk).trim();
       setCurrentAnswer((answerRef.current + " " + interim).trim());
     };
     recognition.onerror = (event) => {

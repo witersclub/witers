@@ -45,6 +45,17 @@ export function MicButton({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const baseRef = useRef("");
   const manualStopRef = useRef(false);
+  // How many entries of the *current* recognition session's own results
+  // array have already been folded into baseRef — our own forward-only
+  // pointer, never trusting event.resultIndex. Some Android speech engines
+  // don't advance resultIndex correctly and instead keep re-firing onresult
+  // with the results array replayed from 0, re-marking already-finalized
+  // entries as final again; trusting resultIndex there re-appends the same
+  // finalized chunk into baseRef every time, producing runaway duplicated
+  // text ("Crea Crea una Crea una imagen..."). Reset to 0 whenever a fresh
+  // recognition session starts, since a new instance starts its own results
+  // array over at index 0.
+  const finalizedCountRef = useRef(0);
   // Tracks the last value *we* pushed via onChange, so the effect below can
   // tell "the parent changed value out from under us" (manual typing while
   // idle, or clearing the field after sending) apart from just seeing back
@@ -102,19 +113,22 @@ export function MicButton({
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!Ctor) return;
     manualStopRef.current = false;
+    finalizedCountRef.current = 0;
     const recognition = new Ctor();
     recognition.lang = "es-MX";
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.onresult = (event) => {
       let interim = "";
-      let finalChunk = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = finalizedCountRef.current; i < event.results.length; i++) {
         const r = event.results[i];
-        if (r.isFinal) finalChunk += r[0].transcript + " ";
-        else interim += r[0].transcript;
+        if (r.isFinal) {
+          baseRef.current = (baseRef.current + " " + r[0].transcript).trim();
+          finalizedCountRef.current = i + 1;
+        } else {
+          interim += r[0].transcript;
+        }
       }
-      if (finalChunk) baseRef.current = (baseRef.current + " " + finalChunk).trim();
       const next = (baseRef.current + " " + interim).trim();
       lastEmittedRef.current = next;
       onChange(next);
