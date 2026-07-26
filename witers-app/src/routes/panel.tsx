@@ -28,6 +28,7 @@ import {
   Laptop,
   Link2,
   Loader2,
+  Lock,
   LogOut,
   Magnet,
   MapPin,
@@ -196,25 +197,36 @@ function computeStreakWeeks(createdAtDates: string[]): number {
 // used/total line. Each content type gets its own brand color so all three
 // read as distinct at a glance (matches the Imágenes/Video/Carrusel colors
 // already used on the "Crear ___" cards below).
+//
+// A plan that doesn't include this content type still shows its ring —
+// hiding it entirely reads as "this doesn't exist," not "you don't have
+// it yet." Locked keeps the same brand color (just dimmed) rather than a
+// neutral gray, and swaps the content icon for a lock; tapping it opens
+// the upgrade teaser instead of showing a fraction that's always "0/0."
 function QuotaRing({
   icon: Icon,
   remaining,
   quota,
   colorHex,
   label,
+  locked,
+  onLockedClick,
 }: {
   icon: LucideIcon;
   remaining: number;
   quota: number;
   colorHex: string;
   label: string;
+  locked?: boolean;
+  onLockedClick?: () => void;
 }) {
   const radius = 26;
   const circumference = 2 * Math.PI * radius;
-  const pct = quota > 0 ? Math.max(0, Math.min(1, remaining / quota)) : 0;
+  const pct = locked ? 1 : quota > 0 ? Math.max(0, Math.min(1, remaining / quota)) : 0;
   const offset = circumference * (1 - pct);
-  return (
-    <div className="flex flex-col items-center gap-1.5">
+
+  const content = (
+    <>
       <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
         <svg viewBox="0 0 64 64" className="absolute inset-0 -rotate-90">
           <circle cx="32" cy="32" r={radius} fill="none" stroke="#E4E9F7" strokeWidth="6" />
@@ -228,16 +240,94 @@ function QuotaRing({
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
+            opacity={locked ? 0.3 : 1}
             style={{ transition: "stroke-dashoffset 400ms ease" }}
           />
         </svg>
-        <Icon className="h-5 w-5" style={{ color: colorHex }} strokeWidth={2} />
+        {locked ? (
+          <Lock className="h-4.5 w-4.5" style={{ color: colorHex }} strokeWidth={2.2} />
+        ) : (
+          <Icon className="h-5 w-5" style={{ color: colorHex }} strokeWidth={2} />
+        )}
       </div>
-      <p className="font-wit-mono text-sm font-bold text-wit-ink">
-        {Math.max(0, remaining)}
-        <span className="text-wit-gray">/{quota}</span>
-      </p>
-      <p className="text-[10px] font-semibold text-wit-gray">{label}</p>
+      {locked ? (
+        <p className="text-[10px] font-semibold text-wit-gray">{label}</p>
+      ) : (
+        <>
+          <p className="font-wit-mono text-sm font-bold text-wit-ink">
+            {Math.max(0, remaining)}
+            <span className="text-wit-gray">/{quota}</span>
+          </p>
+          <p className="text-[10px] font-semibold text-wit-gray">{label}</p>
+        </>
+      )}
+    </>
+  );
+
+  if (locked) {
+    return (
+      <button
+        type="button"
+        onClick={onLockedClick}
+        className="flex flex-col items-center gap-1.5 transition-transform active:scale-95"
+      >
+        {content}
+      </button>
+    );
+  }
+  return <div className="flex flex-col items-center gap-1.5">{content}</div>;
+}
+
+// Opens from tapping a locked quota ring — same centered-card pattern as
+// ImagePacksModal. Copy pulls the plan name/quota straight from
+// membership-plans.ts rather than a hardcoded "Grow, 2 videos" string, so
+// it never drifts if a plan's numbers change.
+function UpgradeTeaser({
+  icon: Icon,
+  colorHex,
+  title,
+  body,
+  onClose,
+}: {
+  icon: LucideIcon;
+  colorHex: string;
+  title: string;
+  body: string;
+  onClose: () => void;
+}) {
+  const { t } = useLanguage();
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-wit-ink/50 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-xs rounded-3xl bg-white p-7 text-center shadow-[0_30px_80px_rgba(5,13,40,0.25)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span
+          className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+          style={{ backgroundColor: `${colorHex}1a` }}
+        >
+          <Icon className="h-7 w-7" style={{ color: colorHex }} strokeWidth={2} />
+        </span>
+        <p className="mt-4 text-lg font-bold text-wit-ink">{title}</p>
+        <p className="mt-2 text-sm text-wit-gray">{body}</p>
+        <Link
+          to="/upgrade"
+          className="mt-6 flex items-center justify-center gap-1.5 rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-wit-blue-deep"
+        >
+          <ArrowUpCircle className="h-4 w-4" strokeWidth={2.4} />
+          {t("Hacer upgrade", "Upgrade")}
+        </Link>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-3 text-xs font-semibold text-wit-gray hover:text-wit-ink"
+        >
+          {t("Cerrar", "Close")}
+        </button>
+      </div>
     </div>
   );
 }
@@ -293,6 +383,9 @@ function Panel() {
   // expiration. A modal (not a page) since it's a quick add-on purchase,
   // not a whole new flow like activating a membership.
   const [packsOpen, setPacksOpen] = useState(false);
+  // Which locked quota ring (if any) the client just tapped — drives the
+  // upgrade teaser popover. null = closed.
+  const [upgradeTeaser, setUpgradeTeaser] = useState<"video" | "carrusel" | null>(null);
   // "Creatividades recientes" horizontal strip — scrolled with this ref
   // (arrow button + native touch swipe both use it) instead of paging
   // through state, since it's just a filmstrip, not a stepped carousel.
@@ -640,7 +733,7 @@ function Panel() {
                         : t("Sin membresía", "No membership")}
                     </span>
                   </div>
-                  <div className="flex items-start justify-center gap-6">
+                  <div className="flex items-start justify-center gap-9">
                     <QuotaRing
                       icon={ImageIcon}
                       remaining={active ? remaining : 0}
@@ -650,24 +743,24 @@ function Panel() {
                       colorHex="#0047ff"
                       label={t("Imágenes", "Images")}
                     />
-                    {membership && membership.video_requests_quota > 0 ? (
-                      <QuotaRing
-                        icon={VideoIcon}
-                        remaining={active ? videoRemaining : 0}
-                        quota={membership.video_requests_quota}
-                        colorHex="#ff3fb0"
-                        label={t("Video", "Video")}
-                      />
-                    ) : null}
-                    {membership && membership.carousel_requests_quota > 0 ? (
-                      <QuotaRing
-                        icon={GalleryHorizontal}
-                        remaining={active ? carouselRemaining : 0}
-                        quota={membership.carousel_requests_quota}
-                        colorHex="#10b981"
-                        label={t("Carrusel", "Carousel")}
-                      />
-                    ) : null}
+                    <QuotaRing
+                      icon={VideoIcon}
+                      remaining={active ? videoRemaining : 0}
+                      quota={membership?.video_requests_quota ?? 0}
+                      colorHex="#ff3fb0"
+                      label={t("Video", "Video")}
+                      locked={!membership || membership.video_requests_quota === 0}
+                      onLockedClick={() => setUpgradeTeaser("video")}
+                    />
+                    <QuotaRing
+                      icon={GalleryHorizontal}
+                      remaining={active ? carouselRemaining : 0}
+                      quota={membership?.carousel_requests_quota ?? 0}
+                      colorHex="#10b981"
+                      label={t("Carrusel", "Carousel")}
+                      locked={!membership || membership.carousel_requests_quota === 0}
+                      onLockedClick={() => setUpgradeTeaser("carrusel")}
+                    />
                   </div>
                   {membership && membership.bonus_requests_quota > 0 ? (
                     <p className="text-center text-[11px] font-semibold text-wit-blue">
@@ -1102,6 +1195,40 @@ function Panel() {
             />,
             document.body,
           )
+        : null}
+
+      {upgradeTeaser
+        ? (() => {
+            const growPlan = getPlan("grow");
+            const isVideo = upgradeTeaser === "video";
+            const growQuota = isVideo
+              ? growPlan.videoRequestsQuota
+              : growPlan.carouselRequestsQuota;
+            return createPortal(
+              <UpgradeTeaser
+                icon={isVideo ? VideoIcon : GalleryHorizontal}
+                colorHex={isVideo ? "#ff3fb0" : "#10b981"}
+                title={
+                  isVideo
+                    ? t("¿Quieres hacer videos?", "Want to make videos?")
+                    : t("¿Quieres hacer carruseles?", "Want to make carousels?")
+                }
+                body={
+                  isVideo
+                    ? t(
+                        `Con el plan ${growPlan.nombre} puedes crear hasta ${growQuota} videos al mes.`,
+                        `With the ${growPlan.nombre} plan you can create up to ${growQuota} videos a month.`,
+                      )
+                    : t(
+                        `Con el plan ${growPlan.nombre} puedes crear hasta ${growQuota} carruseles al mes.`,
+                        `With the ${growPlan.nombre} plan you can create up to ${growQuota} carousels a month.`,
+                      )
+                }
+                onClose={() => setUpgradeTeaser(null)}
+              />,
+              document.body,
+            );
+          })()
         : null}
 
       {videoWizardOpen
