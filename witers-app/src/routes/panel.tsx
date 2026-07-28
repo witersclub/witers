@@ -66,7 +66,6 @@ import {
   BusinessTypeWheel,
   ColorsPicker,
   LogoUploadPicker,
-  ProductPhotoUploadPicker,
   uploadReferenceFile,
 } from "../components/witers/lab-pickers";
 import {
@@ -884,6 +883,18 @@ function Panel() {
 
             {section === "creatividad" ? (
               <>
+                <MyRequestsQuickAccess
+                  imageRows={rows}
+                  videoRows={videoRows}
+                  carouselRows={carouselRows}
+                  onOpen={(kind) => {
+                    setCreativeMode(kind);
+                    if (kind === "imagenes") setTab("solicitudes");
+                    else if (kind === "videos") setVideoTab("solicitudes");
+                    else setCarouselTab("solicitudes");
+                  }}
+                />
+
                 {/* Quick-start entry points, now also the only selector for
                     Imágenes/Videos/Carruseles — the old separate pill row
                     became redundant once tapping a card already switches
@@ -1527,6 +1538,116 @@ function PanelTab({
 }
 
 /* ---------- top-level panel sections ---------- */
+
+// Always-visible "where are my requests" landmark, pinned above the
+// Imágenes/Videos/Carruseles create-cards — a returning client with a
+// pending or already-delivered piece used to land on a neutral picker with
+// zero indication anything existed, having to first tap a "Crear X" card
+// (which reads as "start something new") to even discover the "Mis
+// solicitudes" tab hiding inside it. This surfaces the same data one level
+// up, front and center, and tapping a row jumps straight to that type's
+// existing "Mis solicitudes" list — no separate unified view to build or
+// maintain, just a shortcut to what's already there. Renders nothing for a
+// brand-new client with zero requests of any kind — the create-cards below
+// are already that client's call to action.
+function MyRequestsQuickAccess({
+  imageRows,
+  videoRows,
+  carouselRows,
+  onOpen,
+}: {
+  imageRows: { status: string }[];
+  videoRows: { status: string }[];
+  carouselRows: { status: string }[];
+  onOpen: (kind: "imagenes" | "videos" | "carruseles") => void;
+}) {
+  const { t } = useLanguage();
+
+  const items = [
+    {
+      kind: "imagenes" as const,
+      icon: ImageIcon,
+      color: "text-wit-blue",
+      bg: "bg-wit-blue/10",
+      label: t("Imágenes", "Images"),
+      rows: imageRows,
+      enProceso: imageRows.filter(
+        (r) => r.status === "en_proceso" || r.status === "cambio_solicitado",
+      ).length,
+      listas: imageRows.filter((r) => r.status === "completada" || r.status === "cerrada").length,
+    },
+    {
+      kind: "videos" as const,
+      icon: VideoIcon,
+      color: "text-wit-pink",
+      bg: "bg-wit-pink/10",
+      label: t("Videos", "Videos"),
+      rows: videoRows,
+      enProceso: videoRows.filter((r) => r.status === "nueva" || r.status === "en_proceso").length,
+      listas: videoRows.filter((r) => r.status === "completada").length,
+    },
+    {
+      kind: "carruseles" as const,
+      icon: GalleryHorizontal,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+      label: t("Carruseles", "Carousels"),
+      rows: carouselRows,
+      enProceso: carouselRows.filter((r) => r.status === "nueva" || r.status === "en_proceso")
+        .length,
+      listas: carouselRows.filter((r) => r.status === "completada").length,
+    },
+  ].filter((item) => item.rows.length > 0);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="wit-glass mt-6 rounded-3xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)] sm:p-5">
+      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+        {t("Mis solicitudes", "My requests")}
+      </p>
+      <div className={`mt-3 grid gap-2.5 ${items.length === 1 ? "" : "sm:grid-cols-3"}`}>
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.kind}
+              type="button"
+              onClick={() => onOpen(item.kind)}
+              className="flex items-center gap-3 rounded-2xl border border-wit-ink/10 bg-white px-3.5 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(5,13,40,0.08)]"
+            >
+              <span
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.bg}`}
+              >
+                <Icon className={`h-4.5 w-4.5 ${item.color}`} strokeWidth={2} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-wit-ink">{item.label}</span>
+                <span className="mt-0.5 flex flex-wrap gap-1.5">
+                  {item.listas > 0 ? (
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                      {t(`${item.listas} lista(s) ✓`, `${item.listas} ready ✓`)}
+                    </span>
+                  ) : null}
+                  {item.enProceso > 0 ? (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                      {t(`${item.enProceso} en proceso`, `${item.enProceso} in progress`)}
+                    </span>
+                  ) : null}
+                  {item.listas === 0 && item.enProceso === 0 ? (
+                    <span className="rounded-full bg-wit-mist/60 px-2 py-0.5 text-[10px] font-bold text-wit-gray">
+                      {item.rows.length} {t("en total", "total")}
+                    </span>
+                  ) : null}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const SECTIONS: { id: "creatividad" | "activos" | "campanas"; es: string; en: string }[] = [
   { id: "creatividad", es: "Creatividad", en: "Creative" },
@@ -3328,12 +3449,22 @@ function ChatReviewBox({
         ) : (
           <PreviewRow label={t("Logotipo", "Logo")} value={t("No tiene logotipo", "No logo")} />
         )}
-        {answers.productPhotoKey ? (
-          <PreviewImageRow
-            label={t("Foto del producto", "Product photo")}
-            fileKey={answers.productPhotoKey}
-          />
-        ) : null}
+        {answers.productPhotoKeys
+          ? answers.productPhotoKeys
+              .split(",")
+              .filter(Boolean)
+              .map((key, i, all) => (
+                <PreviewImageRow
+                  key={key}
+                  label={
+                    all.length > 1
+                      ? t(`Foto de referencia ${i + 1}`, `Reference photo ${i + 1}`)
+                      : t("Foto de referencia", "Reference photo")
+                  }
+                  fileKey={key}
+                />
+              ))
+          : null}
       </dl>
 
       {sendError ? (
@@ -3451,8 +3582,14 @@ function WitConversation({
   const [typing, setTyping] = useState(false);
   const [awaitingAspectRatio, setAwaitingAspectRatio] = useState(false);
   const [pieceFields, setPieceFields] = useState<WitPieceFields | null>(null);
-  const [productPhotoKey, setProductPhotoKey] = useState<string | null>(null);
-  const [showPhotoPicker, setShowPhotoPicker] = useState(false);
+  // Every reference photo the client attaches, in the order added — used to
+  // be a single string that silently got overwritten by the next upload, so
+  // only the last photo ever reached the designer even if the client
+  // attached several. Now accumulates, with each one shown as a thumbnail
+  // (below) and removable individually.
+  const [productPhotoKeys, setProductPhotoKeys] = useState<string[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [chatError, setChatError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -3546,6 +3683,77 @@ function WitConversation({
     void askWit(next);
   }
 
+  // "A veces las personas se equivocan" — undoes the client's last message
+  // and whatever Wit replied to it, so a wrong answer (or an accidental
+  // aspect-ratio pick) can be corrected without restarting the whole
+  // conversation. Only ever rewinds one exchange at a time, not a full
+  // history — that's enough for "I made a mistake just now" without the
+  // complexity of a real multi-step undo stack.
+  function undoLast() {
+    let lastUserIdx = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        lastUserIdx = i;
+        break;
+      }
+    }
+    if (lastUserIdx === -1 || typing) return;
+    const next = messages.slice(0, lastUserIdx);
+    const newLast = next[next.length - 1];
+    // If undoing the pick lands back on the format question, reopen the
+    // picker instead of leaving the client stuck with no way to answer it.
+    const backToAspectRatio = newLast?.role === "assistant" && newLast.widget === "aspectRatio";
+    setMessages(next);
+    setAwaitingAspectRatio(backToAspectRatio);
+    if (backToAspectRatio) setPickedAspectRatio(null);
+    setPieceFields(null);
+    setChatError(null);
+  }
+
+  async function addProductPhotos(files: FileList) {
+    setUploadingPhotos(true);
+    try {
+      const uploaded: string[] = [];
+      for (const file of Array.from(files)) {
+        const key = await uploadReferenceFile(file);
+        if (key) uploaded.push(key);
+      }
+      if (uploaded.length > 0) {
+        setProductPhotoKeys((prev) => [...prev, ...uploaded]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "user",
+            content:
+              uploaded.length > 1
+                ? t(
+                    `Adjunté ${uploaded.length} fotos de referencia del producto.`,
+                    `I attached ${uploaded.length} reference photos of the product.`,
+                  )
+                : t(
+                    "Adjunté una foto de referencia del producto.",
+                    "I attached a reference photo of the product.",
+                  ),
+          },
+        ]);
+      }
+      if (uploaded.length < files.length) {
+        setChatError(
+          t(
+            "Algunas fotos no se pudieron subir (PNG, JPG o WebP, máx. 8 MB cada una).",
+            "Some photos couldn't be uploaded (PNG, JPG or WebP, max 8 MB each).",
+          ),
+        );
+      }
+    } finally {
+      setUploadingPhotos(false);
+    }
+  }
+
+  function removeProductPhoto(key: string) {
+    setProductPhotoKeys((prev) => prev.filter((k) => k !== key));
+  }
+
   // The one moment this hands off to a real picker instead of free text —
   // the client's choice both drives the visible transcript (so the model
   // sees exactly what was picked, in its own words) and is trusted
@@ -3584,7 +3792,7 @@ function WitConversation({
           aspectRatio: pickedAspectRatio ?? pieceFields.aspectRatio ?? "1:1",
           logoKey: noLogo ? undefined : (brandProfile?.logo_key ?? undefined),
           noLogo,
-          productPhotoKey: productPhotoKey || undefined,
+          productPhotoKeys: productPhotoKeys.length ? productPhotoKeys : undefined,
           audience: pieceFields.audience || undefined,
           ageRange: pieceFields.ageRanges || undefined,
           promoPrice: pieceFields.promoPrice || undefined,
@@ -3641,7 +3849,10 @@ function WitConversation({
         style: pieceFields.style,
         aspectRatio: pickedAspectRatio ?? pieceFields.aspectRatio ?? "",
         logoKey: brandProfile?.logo_key ?? "Sin logotipo",
-        productPhotoKey: productPhotoKey ?? "",
+        // Joined, not an array — reviewAnswers is a flat Record<string,
+        // string> shared with the rest of the review card; R2 keys never
+        // contain commas, so split(",") on the render side is safe.
+        productPhotoKeys: productPhotoKeys.join(","),
       }
     : null;
 
@@ -3708,34 +3919,30 @@ function WitConversation({
 
       {!pieceFields ? (
         <div className="shrink-0 border-t border-wit-ink/10 pb-4 pt-3">
-          {showPhotoPicker ? (
-            <div className="flex flex-col items-center gap-2">
-              <ProductPhotoUploadPicker
-                onPick={(key) => {
-                  setProductPhotoKey(key);
-                  setShowPhotoPicker(false);
-                  setMessages((prev) => [
-                    ...prev,
-                    {
-                      role: "user",
-                      content: t(
-                        "Adjunté una foto de referencia del producto.",
-                        "I attached a reference photo of the product.",
-                      ),
-                    },
-                  ]);
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPhotoPicker(false)}
-                className="text-xs font-semibold text-wit-gray hover:text-wit-ink"
-              >
-                {t("Cancelar", "Cancel")}
-              </button>
-            </div>
-          ) : awaitingAspectRatio ? null : (
+          {awaitingAspectRatio ? null : (
             <>
+              {productPhotoKeys.length > 0 ? (
+                <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+                  {productPhotoKeys.map((key) => (
+                    <div key={key} className="relative shrink-0">
+                      <img
+                        src={`/api/file?key=${encodeURIComponent(key)}`}
+                        alt=""
+                        className="h-14 w-14 rounded-xl border border-wit-ink/10 object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeProductPhoto(key)}
+                        aria-label={t("Quitar foto", "Remove photo")}
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-wit-navy text-[10px] font-bold text-white shadow-[0_2px_6px_rgba(5,13,40,0.3)] hover:bg-red-500"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -3786,15 +3993,40 @@ function WitConversation({
                   </svg>
                 </button>
               </form>
-              <button
-                type="button"
-                onClick={() => setShowPhotoPicker(true)}
-                className="mt-2 block w-full text-center text-xs font-semibold text-wit-gray hover:text-wit-ink"
-              >
-                {"📎 "}
-                {t("Adjuntar foto de producto", "Attach product photo")}
-                {productPhotoKey ? t(" (agregada)", " (added)") : ""}
-              </button>
+
+              <input
+                ref={photoInputRef}
+                type="file"
+                multiple
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.length) void addProductPhotos(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <div className="mt-2 flex items-center justify-center gap-4">
+                <button
+                  type="button"
+                  disabled={uploadingPhotos}
+                  onClick={() => photoInputRef.current?.click()}
+                  className="text-center text-xs font-semibold text-wit-gray hover:text-wit-ink disabled:opacity-60"
+                >
+                  {uploadingPhotos
+                    ? t("Subiendo...", "Uploading...")
+                    : `📎 ${t("Adjuntar fotos de referencia", "Attach reference photos")}`}
+                </button>
+                {messages.some((m) => m.role === "user") ? (
+                  <button
+                    type="button"
+                    disabled={typing}
+                    onClick={undoLast}
+                    className="text-center text-xs font-semibold text-wit-gray hover:text-wit-ink disabled:opacity-60"
+                  >
+                    {`↩ ${t("Deshacer", "Undo")}`}
+                  </button>
+                ) : null}
+              </div>
             </>
           )}
         </div>

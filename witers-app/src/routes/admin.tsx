@@ -101,6 +101,7 @@ type AdminRequest = {
   logo_key: string | null;
   logo_public: number;
   product_photo_key: string | null;
+  product_photo_keys: string | null;
   status: string;
   admin_note: string | null;
   revisions_used: number;

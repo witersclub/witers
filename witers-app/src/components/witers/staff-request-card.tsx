@@ -34,7 +34,11 @@ export type StaffRequestRow = {
   promo_price: string | null;
   reference_key: string | null;
   logo_key: string | null;
+  // Legacy single-photo column — still populated on requests created before
+  // product_photo_keys existed (migration 0031). New requests only write
+  // product_photo_keys (JSON array); this is read as a fallback for old rows.
   product_photo_key: string | null;
+  product_photo_keys: string | null;
   status: string;
   admin_note: string | null;
   revisions_used: number;
@@ -54,6 +58,21 @@ export type StaffRequestRow = {
   user_name?: string;
   user_email?: string;
 };
+
+// New rows carry every photo in product_photo_keys (JSON array, see
+// migration 0031); rows created before that migration only ever had the
+// single product_photo_key column, so that's the fallback for old data.
+function parseProductPhotoKeys(row: StaffRequestRow): string[] {
+  if (row.product_photo_keys) {
+    try {
+      const parsed = JSON.parse(row.product_photo_keys) as unknown;
+      if (Array.isArray(parsed)) return parsed.filter((k): k is string => typeof k === "string");
+    } catch {
+      // fall through to the legacy single-key fallback below
+    }
+  }
+  return row.product_photo_key ? [row.product_photo_key] : [];
+}
 
 export const RATIO_PROMPT: Record<string, string> = {
   "1:1": "formato cuadrado 1:1",
@@ -297,6 +316,7 @@ export function StaffRequestCard({
   })();
   const results = allResults.filter((x) => x.kind !== "draft");
   const drafts = allResults.filter((x) => x.kind === "draft");
+  const productPhotoKeys = parseProductPhotoKeys(row);
 
   const mine = row.claimed_by === me;
   const claimed = Boolean(row.claimed_by);
@@ -686,12 +706,18 @@ export function StaffRequestCard({
         </dl>
       ) : null}
 
-      {row.logo_key || row.product_photo_key || row.reference_key ? (
+      {row.logo_key || productPhotoKeys.length > 0 || row.reference_key ? (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {row.logo_key ? <FilePreview label="Logotipo" fileKey={row.logo_key} /> : null}
-          {row.product_photo_key ? (
-            <FilePreview label="Foto del producto" fileKey={row.product_photo_key} />
-          ) : null}
+          {productPhotoKeys.map((key, i) => (
+            <FilePreview
+              key={key}
+              label={
+                productPhotoKeys.length > 1 ? `Foto de referencia ${i + 1}` : "Foto de referencia"
+              }
+              fileKey={key}
+            />
+          ))}
           {row.reference_key ? (
             <FilePreview label="Referencia (solicitud anterior)" fileKey={row.reference_key} />
           ) : null}

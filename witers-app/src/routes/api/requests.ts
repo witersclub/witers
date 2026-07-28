@@ -22,7 +22,7 @@ const createSchema = z
     referenceKey: z.string().max(300).optional(),
     logoKey: z.string().max(300).optional(),
     noLogo: z.boolean().default(false),
-    productPhotoKey: z.string().max(300).optional(),
+    productPhotoKeys: z.array(z.string().max(300)).max(6).optional(),
     audience: z.string().max(200).optional(),
     ageRange: z.string().max(40).optional(),
     requiredText: z.string().max(500).optional(),
@@ -149,7 +149,7 @@ export const Route = createFileRoute("/api/requests")({
           .prepare(
             `INSERT INTO design_requests
                (id, user_id, title, brief, style, aspect_ratio, reference_key, audience, age_range, required_text, brand_colors, promo_price,
-                company_name, product_name, piece_brief, logo_key, product_photo_key)
+                company_name, product_name, piece_brief, logo_key, product_photo_keys)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)`,
           )
           .bind(
@@ -172,7 +172,9 @@ export const Route = createFileRoute("/api/requests")({
             parsed.data.productName?.trim() ?? null,
             parsed.data.pieceBrief.trim(),
             brand.logo_key,
-            parsed.data.productPhotoKey ?? null,
+            parsed.data.productPhotoKeys?.length
+              ? JSON.stringify(parsed.data.productPhotoKeys)
+              : null,
           )
           .run();
 
@@ -205,7 +207,7 @@ export const Route = createFileRoute("/api/requests")({
             requiredText: parsed.data.requiredText?.trim() || null,
             aspectRatio: parsed.data.aspectRatio,
             hasLogo: Boolean(brand.logo_key),
-            hasProductPhoto: Boolean(parsed.data.productPhotoKey),
+            hasProductPhoto: Boolean(parsed.data.productPhotoKeys?.length),
             businessType: brand.business_type,
           });
           const result = await polishPromptWithAI(rawPrompt);
