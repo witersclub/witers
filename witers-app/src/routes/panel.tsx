@@ -714,6 +714,15 @@ function Panel() {
                     "Request creatives and track every request from here.",
                   )}
                 </p>
+                <RecentCreativeQuickAccess
+                  creative={recentCreatives[0]}
+                  onOpen={(kind) => {
+                    setSection("creatividad");
+                    setCreativeMode(kind);
+                    if (kind === "carruseles") setCarouselTab("solicitudes");
+                    else setTab("solicitudes");
+                  }}
+                />
               </div>
 
               <div className="flex flex-col items-stretch gap-2">
@@ -883,18 +892,6 @@ function Panel() {
 
             {section === "creatividad" ? (
               <>
-                <MyRequestsQuickAccess
-                  imageRows={rows}
-                  videoRows={videoRows}
-                  carouselRows={carouselRows}
-                  onOpen={(kind) => {
-                    setCreativeMode(kind);
-                    if (kind === "imagenes") setTab("solicitudes");
-                    else if (kind === "videos") setVideoTab("solicitudes");
-                    else setCarouselTab("solicitudes");
-                  }}
-                />
-
                 {/* Quick-start entry points, now also the only selector for
                     Imágenes/Videos/Carruseles — the old separate pill row
                     became redundant once tapping a card already switches
@@ -1539,113 +1536,46 @@ function PanelTab({
 
 /* ---------- top-level panel sections ---------- */
 
-// Always-visible "where are my requests" landmark, pinned above the
-// Imágenes/Videos/Carruseles create-cards — a returning client with a
-// pending or already-delivered piece used to land on a neutral picker with
-// zero indication anything existed, having to first tap a "Crear X" card
-// (which reads as "start something new") to even discover the "Mis
-// solicitudes" tab hiding inside it. This surfaces the same data one level
-// up, front and center, and tapping a row jumps straight to that type's
-// existing "Mis solicitudes" list — no separate unified view to build or
-// maintain, just a shortcut to what's already there. Renders nothing for a
-// brand-new client with zero requests of any kind — the create-cards below
-// are already that client's call to action.
-function MyRequestsQuickAccess({
-  imageRows,
-  videoRows,
-  carouselRows,
+// Small square thumbnail of the client's single most recent delivered
+// creative, pinned right under the "Hola, X" greeting — a returning client
+// with an existing piece used to land on a neutral picker with zero
+// indication anything existed, having to first tap a "Crear X" card (which
+// reads as "start something new") to even discover the "Mis solicitudes"
+// tab hiding inside it. Tapping this jumps straight to that type's
+// "Mis solicitudes" list. Nothing to show (no delivered piece yet, e.g. a
+// brand-new client or one whose only request is still in progress) means
+// this renders nothing — the create-cards further down are already that
+// client's call to action.
+function RecentCreativeQuickAccess({
+  creative,
   onOpen,
 }: {
-  imageRows: { status: string }[];
-  videoRows: { status: string }[];
-  carouselRows: { status: string }[];
-  onOpen: (kind: "imagenes" | "videos" | "carruseles") => void;
+  creative: { kind: "imagen" | "carrusel"; title: string; thumbHref: string } | undefined;
+  onOpen: (kind: "imagenes" | "carruseles") => void;
 }) {
   const { t } = useLanguage();
-
-  const items = [
-    {
-      kind: "imagenes" as const,
-      icon: ImageIcon,
-      color: "text-wit-blue",
-      bg: "bg-wit-blue/10",
-      label: t("Imágenes", "Images"),
-      rows: imageRows,
-      enProceso: imageRows.filter(
-        (r) => r.status === "en_proceso" || r.status === "cambio_solicitado",
-      ).length,
-      listas: imageRows.filter((r) => r.status === "completada" || r.status === "cerrada").length,
-    },
-    {
-      kind: "videos" as const,
-      icon: VideoIcon,
-      color: "text-wit-pink",
-      bg: "bg-wit-pink/10",
-      label: t("Videos", "Videos"),
-      rows: videoRows,
-      enProceso: videoRows.filter((r) => r.status === "nueva" || r.status === "en_proceso").length,
-      listas: videoRows.filter((r) => r.status === "completada").length,
-    },
-    {
-      kind: "carruseles" as const,
-      icon: GalleryHorizontal,
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
-      label: t("Carruseles", "Carousels"),
-      rows: carouselRows,
-      enProceso: carouselRows.filter((r) => r.status === "nueva" || r.status === "en_proceso")
-        .length,
-      listas: carouselRows.filter((r) => r.status === "completada").length,
-    },
-  ].filter((item) => item.rows.length > 0);
-
-  if (items.length === 0) return null;
+  if (!creative) return null;
 
   return (
-    <div className="wit-glass mt-6 rounded-3xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)] sm:p-5">
-      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-        {t("Mis solicitudes", "My requests")}
-      </p>
-      <div className={`mt-3 grid gap-2.5 ${items.length === 1 ? "" : "sm:grid-cols-3"}`}>
-        {items.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.kind}
-              type="button"
-              onClick={() => onOpen(item.kind)}
-              className="flex items-center gap-3 rounded-2xl border border-wit-ink/10 bg-white px-3.5 py-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(5,13,40,0.08)]"
-            >
-              <span
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.bg}`}
-              >
-                <Icon className={`h-4.5 w-4.5 ${item.color}`} strokeWidth={2} />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-bold text-wit-ink">{item.label}</span>
-                <span className="mt-0.5 flex flex-wrap gap-1.5">
-                  {item.listas > 0 ? (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                      {t(`${item.listas} lista(s) ✓`, `${item.listas} ready ✓`)}
-                    </span>
-                  ) : null}
-                  {item.enProceso > 0 ? (
-                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                      {t(`${item.enProceso} en proceso`, `${item.enProceso} in progress`)}
-                    </span>
-                  ) : null}
-                  {item.listas === 0 && item.enProceso === 0 ? (
-                    <span className="rounded-full bg-wit-mist/60 px-2 py-0.5 text-[10px] font-bold text-wit-gray">
-                      {item.rows.length} {t("en total", "total")}
-                    </span>
-                  ) : null}
-                </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={() => onOpen(creative.kind === "carrusel" ? "carruseles" : "imagenes")}
+      className="mt-4 flex items-center gap-3 self-start rounded-2xl transition-opacity hover:opacity-80"
+    >
+      <img
+        src={creative.thumbHref}
+        alt={creative.title}
+        className="h-16 w-16 shrink-0 rounded-2xl border border-wit-ink/10 object-cover shadow-[0_10px_30px_rgba(5,13,40,0.08)]"
+      />
+      <span className="text-left">
+        <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
+          {t("Mis solicitudes", "My requests")}
+        </span>
+        <span className="mt-0.5 block text-sm font-bold text-wit-blue">
+          {t("Ver piezas ya hechas →", "See finished pieces →")}
+        </span>
+      </span>
+    </button>
   );
 }
 
