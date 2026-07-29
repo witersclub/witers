@@ -370,15 +370,22 @@ function Panel() {
   // The "app opening" intro (see PanelSplashIntro) — once per tab/session,
   // not replayed on every mount (e.g. navigating away to /upgrade and back
   // would otherwise remount Panel() and show it again, which reads as
-  // repetitive rather than "opening the app"). Lazy-init reads
-  // sessionStorage directly; matches false on the server (no window there),
-  // which is fine — SSR never plays the animation anyway, only hydration
-  // decides whether the client shows it in the first client render.
-  const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window === "undefined") return false;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false;
-    return !sessionStorage.getItem(PANEL_SPLASH_SESSION_KEY);
-  });
+  // repetitive rather than "opening the app"). Starts false on BOTH server
+  // and client — reading sessionStorage inside the useState initializer
+  // used to return true on the client's first (hydrating) render since
+  // window exists there, but false during SSR (no window). That mismatch
+  // between what the server sent and what the client immediately wanted to
+  // paint is exactly the black-flash-white-flash-then-splash sequence: React
+  // detects the hydration mismatch and throws away/redoes that render before
+  // settling on the client's version. Deciding in an effect instead means
+  // the very first paint is identical on both sides (no splash), and the
+  // splash mounts a beat later, client-only, with nothing to reconcile.
+  const [showSplash, setShowSplash] = useState(false);
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (sessionStorage.getItem(PANEL_SPLASH_SESSION_KEY)) return;
+    setShowSplash(true);
+  }, []);
   function dismissSplash() {
     setShowSplash(false);
     sessionStorage.setItem(PANEL_SPLASH_SESSION_KEY, "1");
