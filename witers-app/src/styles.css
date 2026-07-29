@@ -446,9 +446,71 @@
   animation: wit-float 6s ease-in-out infinite;
 }
 
+/* App-open intro: the W appears small, a navy disc grows outward from it
+   until it covers the whole screen, holds for a beat, then the whole thing
+   fades to reveal the page underneath (already rendered behind it, so the
+   reveal is instant, not a load). Two elements animate independently —
+   the disc's clip-path circle radius, and the mark's own scale/opacity —
+   so the mark visibly leads the expansion instead of just riding along. */
+@keyframes wit-splash-disc {
+  0% {
+    clip-path: circle(0% at 50% 50%);
+  }
+  /* 150%, not 100% — a circle percentage radius resolves relative to the
+     box, not the diagonal, so covering every corner on a wide viewport
+     needs real overshoot here, not just "big enough on paper." */
+  55%,
+  100% {
+    clip-path: circle(150% at 50% 50%);
+  }
+}
+@keyframes wit-splash-mark {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  22% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  55% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  78% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+@keyframes wit-splash-fade {
+  0%,
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.wit-splash {
+  animation: wit-splash-fade 1.3s ease-in-out both;
+}
+.wit-splash-disc {
+  animation: wit-splash-disc 1.3s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+.wit-splash-mark {
+  animation: wit-splash-mark 1.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wit-rise,
-  .wit-float {
+  .wit-float,
+  .wit-splash,
+  .wit-splash-disc,
+  .wit-splash-mark {
     animation: none;
   }
   .wit-navlink::after {

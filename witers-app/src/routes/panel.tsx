@@ -332,11 +332,55 @@ function UpgradeTeaser({
   );
 }
 
+const PANEL_SPLASH_MS = 1300;
+const PANEL_SPLASH_SESSION_KEY = "wit_panel_splash_shown";
+
+// The "app opening" moment — the W appears, a navy disc grows outward from
+// it until it fills the screen, then the whole thing fades to reveal the
+// panel underneath (already rendering behind it the whole time, so nothing
+// is delayed — this is a branded beat, not a loading wait). Shown once per
+// browser tab/session, not on every visit while navigating around, so it
+// reads as "opening the app" rather than repeating itself.
+function PanelSplashIntro({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, PANEL_SPLASH_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return createPortal(
+    <div className="wit-splash fixed inset-0 z-[100]">
+      <div className="wit-splash-disc absolute inset-0 flex items-center justify-center bg-wit-navy">
+        <span className="wit-splash-mark" style={{ filter: "brightness(0) invert(1)" }}>
+          <WMark size={56} />
+        </span>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function Panel() {
   const me = useMe();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  // The "app opening" intro (see PanelSplashIntro) — once per tab/session,
+  // not replayed on every mount (e.g. navigating away to /upgrade and back
+  // would otherwise remount Panel() and show it again, which reads as
+  // repetitive rather than "opening the app"). Lazy-init reads
+  // sessionStorage directly; matches false on the server (no window there),
+  // which is fine — SSR never plays the animation anyway, only hydration
+  // decides whether the client shows it in the first client render.
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === "undefined") return false;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false;
+    return !sessionStorage.getItem(PANEL_SPLASH_SESSION_KEY);
+  });
+  function dismissSplash() {
+    setShowSplash(false);
+    sessionStorage.setItem(PANEL_SPLASH_SESSION_KEY, "1");
+  }
   // Top-level areas of the panel — Creatividad wraps everything that
   // existed before this section was introduced (solicitudes + hacer
   // solicitud); Activos de marca and Campañas are new.
@@ -619,6 +663,7 @@ function Panel() {
     return (
       <div className="wit-page flex min-h-dvh items-center justify-center">
         <div className="h-40 w-full max-w-md animate-pulse rounded-3xl bg-wit-mist/40" />
+        {showSplash ? <PanelSplashIntro onDone={dismissSplash} /> : null}
       </div>
     );
   }
@@ -630,6 +675,7 @@ function Panel() {
     // forcing a layout reflow on close to every keystroke while answering
     // the AI chat and reading as the whole page "jumping."
     <div className="wit-page min-h-svh">
+      {showSplash ? <PanelSplashIntro onDone={dismissSplash} /> : null}
       {justSent ? (
         <div className="wit-rise fixed inset-x-0 top-5 z-50 flex justify-center px-5">
           <div className="flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(5,13,40,0.25)]">
