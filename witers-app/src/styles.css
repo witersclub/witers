@@ -446,44 +446,34 @@
   animation: wit-float 6s ease-in-out infinite;
 }
 
-/* App-open intro: the W appears small, a navy disc grows outward from it
-   until it covers the whole screen, holds for a beat, then the whole thing
-   fades to reveal the page underneath (already rendered behind it, so the
-   reveal is instant, not a load). Two elements animate independently —
-   the disc's clip-path circle radius, and the mark's own scale/opacity —
-   so the mark visibly leads the expansion instead of just riding along. */
-@keyframes wit-splash-disc {
-  0% {
-    clip-path: circle(0% at 50% 50%);
-  }
-  /* 150%, not 100% — a circle percentage radius resolves relative to the
-     box, not the diagonal, so covering every corner on a wide viewport
-     needs real overshoot here, not just "big enough on paper." */
-  55%,
-  100% {
-    clip-path: circle(150% at 50% 50%);
-  }
-}
+/* App-open intro: solid navy screen, the W appears centered, softly lights
+   up (a glow blooms around it), holds, then the whole screen fades to
+   reveal the page underneath (already rendered behind it — a branded
+   beat, not a loading wait). The invert-to-white filter lives inside the
+   same keyframes as the glow, not as a separate inline style — animating
+   `filter` overrides any inline filter value, so both have to be defined
+   together in every step or the white recolor would drop out mid-animation. */
 @keyframes wit-splash-mark {
   0% {
-    transform: scale(0.5);
+    transform: scale(0.7);
     opacity: 0;
+    filter: brightness(0) invert(1) drop-shadow(0 0 0 rgba(140, 180, 255, 0));
   }
   22% {
     transform: scale(1);
     opacity: 1;
+    filter: brightness(0) invert(1) drop-shadow(0 0 0 rgba(140, 180, 255, 0));
   }
-  55% {
+  60%,
+  85% {
     transform: scale(1);
     opacity: 1;
-  }
-  78% {
-    transform: scale(1.5);
-    opacity: 0;
+    filter: brightness(0) invert(1) drop-shadow(0 0 28px rgba(140, 180, 255, 0.95));
   }
   100% {
-    transform: scale(1.5);
-    opacity: 0;
+    transform: scale(1);
+    opacity: 1;
+    filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(140, 180, 255, 0.4));
   }
 }
 @keyframes wit-splash-fade {
@@ -498,9 +488,6 @@
 .wit-splash {
   animation: wit-splash-fade 1.3s ease-in-out both;
 }
-.wit-splash-disc {
-  animation: wit-splash-disc 1.3s cubic-bezier(0.65, 0, 0.35, 1) both;
-}
 .wit-splash-mark {
   animation: wit-splash-mark 1.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -509,7 +496,6 @@
   .wit-rise,
   .wit-float,
   .wit-splash,
-  .wit-splash-disc,
   .wit-splash-mark {
     animation: none;
   }

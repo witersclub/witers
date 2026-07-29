@@ -335,12 +335,16 @@ function UpgradeTeaser({
 const PANEL_SPLASH_MS = 1300;
 const PANEL_SPLASH_SESSION_KEY = "wit_panel_splash_shown";
 
-// The "app opening" moment — the W appears, a navy disc grows outward from
-// it until it fills the screen, then the whole thing fades to reveal the
-// panel underneath (already rendering behind it the whole time, so nothing
-// is delayed — this is a branded beat, not a loading wait). Shown once per
-// browser tab/session, not on every visit while navigating around, so it
-// reads as "opening the app" rather than repeating itself.
+// The "app opening" moment — a solid navy screen with the W centered,
+// softly lighting up (a glow blooms around it, see .wit-splash-mark), then
+// the whole thing fades to reveal the panel underneath (already rendering
+// behind it the whole time, so nothing is delayed — this is a branded
+// beat, not a loading wait). Shown once per browser tab/session, not on
+// every visit while navigating around, so it reads as "opening the app"
+// rather than repeating itself. Deliberately just a static screen + a
+// glow, not a shape animation — matches how a real app splash (Instagram,
+// TikTok, YouTube) actually behaves, not a logo "drawing itself in," which
+// would need the mark as an SVG with real vector paths (it's a PNG).
 function PanelSplashIntro({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const timer = setTimeout(onDone, PANEL_SPLASH_MS);
@@ -349,12 +353,10 @@ function PanelSplashIntro({ onDone }: { onDone: () => void }) {
   }, []);
 
   return createPortal(
-    <div className="wit-splash fixed inset-0 z-[100]">
-      <div className="wit-splash-disc absolute inset-0 flex items-center justify-center bg-wit-navy">
-        <span className="wit-splash-mark" style={{ filter: "brightness(0) invert(1)" }}>
-          <WMark size={56} />
-        </span>
-      </div>
+    <div className="wit-splash fixed inset-0 z-[100] flex items-center justify-center bg-wit-navy">
+      <span className="wit-splash-mark">
+        <WMark size={64} />
+      </span>
     </div>,
     document.body,
   );
