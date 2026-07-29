@@ -45,10 +45,22 @@ function buildHead() {
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:image", content: "/assets/og.jpg" },
       { name: "theme-color", content: "#0047ff" },
+      // Without this, a device with OS-level dark mode paints the very
+      // first frame (before styles.css finishes loading over the network)
+      // with the browser's dark UA default — a black flash on every load,
+      // unrelated to any of our own React/CSS. Declaring the scheme here,
+      // synchronously in <head>, is what apps that don't do this actually
+      // get right.
+      { name: "color-scheme", content: "light" },
       // iOS ignores manifest.json's display/icons — these are the tags
       // Safari actually reads for "Agregar a pantalla de inicio".
       { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      // "black-translucent" draws page content underneath the status bar
+      // (translucent black over whatever is there) instead of reserving
+      // space for it — on our light header that reads as a black strip
+      // clipping the top of the page. "default" gives a normal light
+      // status bar and lets iOS reserve its own space automatically.
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { name: "apple-mobile-web-app-title", content: "WITERS" },
     ],
     links: [
