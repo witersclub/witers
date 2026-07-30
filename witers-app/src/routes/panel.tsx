@@ -335,16 +335,13 @@ function UpgradeTeaser({
 const PANEL_SPLASH_MS = 1300;
 const PANEL_SPLASH_SESSION_KEY = "wit_panel_splash_shown";
 
-// The "app opening" moment — a solid navy screen with the W centered,
-// softly lighting up (a glow blooms around it, see .wit-splash-mark), then
-// the whole thing fades to reveal the panel underneath (already rendering
-// behind it the whole time, so nothing is delayed — this is a branded
-// beat, not a loading wait). Shown once per browser tab/session, not on
-// every visit while navigating around, so it reads as "opening the app"
-// rather than repeating itself. Deliberately just a static screen + a
-// glow, not a shape animation — matches how a real app splash (Instagram,
-// TikTok, YouTube) actually behaves, not a logo "drawing itself in," which
-// would need the mark as an SVG with real vector paths (it's a PNG).
+// The "app opening" moment — a plain white screen with the (already
+// brand-blue) W centered and fading in, then the whole thing fades to
+// reveal the panel underneath (already rendering behind it the whole
+// time, so nothing is delayed — this is a branded beat, not a loading
+// wait). Shown once per browser tab/session, not on every visit while
+// navigating around, so it reads as "opening the app" rather than
+// repeating itself.
 function PanelSplashIntro({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const timer = setTimeout(onDone, PANEL_SPLASH_MS);
@@ -353,7 +350,7 @@ function PanelSplashIntro({ onDone }: { onDone: () => void }) {
   }, []);
 
   return createPortal(
-    <div className="wit-splash fixed inset-0 z-[100] flex items-center justify-center bg-wit-navy">
+    <div className="wit-splash fixed inset-0 z-[100] flex items-center justify-center bg-white">
       <span className="wit-splash-mark">
         <WMark size={64} />
       </span>
