@@ -446,34 +446,21 @@
   animation: wit-float 6s ease-in-out infinite;
 }
 
-/* App-open intro: solid navy screen, the W appears centered, softly lights
-   up (a glow blooms around it), holds, then the whole screen fades to
-   reveal the page underneath (already rendered behind it — a branded
-   beat, not a loading wait). The invert-to-white filter lives inside the
-   same keyframes as the glow, not as a separate inline style — animating
-   `filter` overrides any inline filter value, so both have to be defined
-   together in every step or the white recolor would drop out mid-animation. */
+/* App-open intro: solid navy screen, the W fades in centered, holds
+   static (like Instagram/TikTok/YouTube's own splash — no pulsing glow),
+   then the whole screen fades to reveal the page underneath (already
+   rendered behind it — a branded beat, not a loading wait). */
 @keyframes wit-splash-mark {
   0% {
     transform: scale(0.7);
     opacity: 0;
-    filter: brightness(0) invert(1) drop-shadow(0 0 0 rgba(140, 180, 255, 0));
+    filter: brightness(0) invert(1);
   }
-  22% {
-    transform: scale(1);
-    opacity: 1;
-    filter: brightness(0) invert(1) drop-shadow(0 0 0 rgba(140, 180, 255, 0));
-  }
-  60%,
-  85% {
-    transform: scale(1);
-    opacity: 1;
-    filter: brightness(0) invert(1) drop-shadow(0 0 28px rgba(140, 180, 255, 0.95));
-  }
+  22%,
   100% {
     transform: scale(1);
     opacity: 1;
-    filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(140, 180, 255, 0.4));
+    filter: brightness(0) invert(1);
   }
 }
 @keyframes wit-splash-fade {
