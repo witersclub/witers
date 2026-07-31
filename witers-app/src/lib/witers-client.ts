@@ -21,10 +21,24 @@ export type Me = {
 };
 
 export async function fetchMe(): Promise<Me | null> {
-  const res = await fetch("/api/auth/me", { credentials: "include" });
-  if (res.status === 401) return null;
-  if (!res.ok) return null;
-  return (await res.json()) as Me;
+  try {
+    // A plain fetch() has no built-in timeout — on a weak/flaky connection
+    // (bad signal, captive network) the request can just sit there forever,
+    // never resolving or rejecting. Nothing about that is visible to
+    // react-query, so `isLoading` never turns off and the panel is stuck on
+    // its loading skeleton with no way out. Aborting after 10s turns that
+    // stall into a normal failure, which falls through to the "inicia
+    // sesión" screen below instead of hanging indefinitely.
+    const res = await fetch("/api/auth/me", {
+      credentials: "include",
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.status === 401) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as Me;
+  } catch {
+    return null;
+  }
 }
 
 export function useMe() {

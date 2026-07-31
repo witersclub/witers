@@ -505,9 +505,20 @@ function Panel() {
   const brandProfileQuery = useQuery({
     queryKey: ["brand-profile"],
     queryFn: async () => {
-      const res = await fetch("/api/brand-profile", { credentials: "include" });
-      if (!res.ok) return { ok: false, profile: null as BrandProfile | null };
-      return (await res.json()) as { ok: boolean; profile: BrandProfile | null };
+      // Same reasoning as fetchMe() in witers-client.ts — an unbounded
+      // fetch() can stall forever on a bad connection, leaving the panel
+      // stuck on its loading skeleton with nothing the client can do about
+      // it. Timing out turns that into a normal, recoverable failure.
+      try {
+        const res = await fetch("/api/brand-profile", {
+          credentials: "include",
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!res.ok) return { ok: false, profile: null as BrandProfile | null };
+        return (await res.json()) as { ok: boolean; profile: BrandProfile | null };
+      } catch {
+        return { ok: false, profile: null as BrandProfile | null };
+      }
     },
     enabled: Boolean(me.data?.ok),
   });
@@ -668,10 +679,10 @@ function Panel() {
   // once, before anything else in the panel — company name/colors/
   // category/logo get locked in right here instead of trickling in from
   // whatever a client happens to type on their first design request.
-  // Gated on brandProfileQuery having actually resolved (not just
-  // !brandProfile) so a still-loading query never flashes the gate for a
-  // returning member who already has one.
-  const needsOnboarding = brandProfileQuery.isFetched && !brandProfile;
+  // Gated on the fetch having actually succeeded (not just isFetched) so a
+  // returning member with a real profile never gets funneled back into
+  // onboarding just because that one fetch timed out or errored.
+  const needsOnboarding = brandProfileQuery.data?.ok === true && !brandProfile;
 
   if (brandProfileQuery.isLoading) {
     return (
