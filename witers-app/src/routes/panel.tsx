@@ -677,6 +677,13 @@ function Panel() {
       }
     : null;
   const brandProfile = brandProfileQuery.data?.profile ?? null;
+  // Every brand's own palette, reused as the "atmosphere" wash behind the
+  // Mi marca section (see BrandAtmosphere) — each client's panel should
+  // actually feel like their brand, not a fixed WITERS color.
+  const brandColorList = (brandProfile?.brand_colors ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
   // Every member goes through the mandatory brand-onboarding chat exactly
   // once, before anything else in the panel — company name/colors/
   // category/logo get locked in right here instead of trickling in from
@@ -703,6 +710,9 @@ function Panel() {
     // the AI chat and reading as the whole page "jumping."
     <div className="wit-page min-h-svh">
       {showSplash ? <PanelSplashIntro onDone={dismissSplash} /> : null}
+      {section === "activos" ? (
+        <BrandAtmosphere colors={brandColorList} key={brandProfile?.company_name ?? "none"} />
+      ) : null}
       {justSent ? (
         <div className="wit-rise fixed inset-x-0 top-5 z-50 flex justify-center px-5">
           <div className="flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(5,13,40,0.25)]">
@@ -1217,7 +1227,10 @@ function Panel() {
               </>
             ) : section === "activos" ? (
               <div className="mt-8">
-                <ActivosDeMarca brandProfile={brandProfile} />
+                <BrandShowcaseCarousel brandProfile={brandProfile} />
+                <div className="mt-10">
+                  <ActivosDeMarca brandProfile={brandProfile} />
+                </div>
               </div>
             ) : (
               <div className="mt-8">
@@ -3353,6 +3366,205 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
         <p className="mt-2 text-xs font-semibold text-wit-blue">{t("Guardando...", "Saving...")}</p>
       ) : null}
       {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
+// The Mi marca section's "atmosphere" — a soft, slow-drifting wash built
+// from the client's own brand colors, so each brand's panel actually
+// feels like their brand instead of a fixed WITERS color. Blurred blobs
+// sit behind everything (cards stay white/opaque on top, so legibility
+// never depends on what colors a client happens to have picked); falls
+// back to a neutral WITERS-blue duo when no colors are set yet.
+function BrandAtmosphere({ colors }: { colors: string[] }) {
+  const palette = colors.length ? colors : ["#0047FF", "#6B8CFF"];
+  return (
+    <div className="pointer-events-none fixed inset-0 -z-10 animate-in fade-in overflow-hidden duration-700">
+      <span
+        className="wit-atmosphere-blob wit-atmosphere-blob-a"
+        style={{ background: palette[0] }}
+      />
+      <span
+        className="wit-atmosphere-blob wit-atmosphere-blob-b"
+        style={{ background: palette[1 % palette.length] }}
+      />
+      {palette.length > 2 ? (
+        <span
+          className="wit-atmosphere-blob wit-atmosphere-blob-c"
+          style={{ background: palette[2] }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+// A visual-only "wow, this is my brand" showcase — swipeable cards you
+// glance at, not edit. The actual upload/edit controls stay in the plain
+// list below (ActivosDeMarca) unchanged; cramming forms into a
+// swipeable card felt clumsy on mobile, so this stays a pure preview.
+function BrandShowcaseCarousel({ brandProfile }: { brandProfile: BrandProfile | null }) {
+  const { t } = useLanguage();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+
+  const colors = (brandProfile?.brand_colors ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+
+  const cards: { id: string; content: ReactNode }[] = [
+    {
+      id: "identidad",
+      content: (
+        <BrandShowcaseIdentityCard
+          companyName={brandProfile?.company_name ?? t("Tu marca", "Your brand")}
+          businessType={brandProfile?.business_type ?? null}
+          colors={colors}
+        />
+      ),
+    },
+    { id: "logo", content: <BrandShowcaseLogoCard fileKey={brandProfile?.logo_key ?? null} /> },
+    { id: "colores", content: <BrandShowcaseColorsCard colors={colors} /> },
+    {
+      id: "manual",
+      content: <BrandShowcaseManualCard hasManual={Boolean(brandProfile?.brand_manual_key)} />,
+    },
+  ];
+
+  function handleScroll() {
+    const el = trackRef.current;
+    const first = el?.firstElementChild;
+    if (!el || !(first instanceof HTMLElement)) return;
+    const cardWidth = first.offsetWidth + 16;
+    setActive(Math.round(el.scrollLeft / cardWidth));
+  }
+
+  return (
+    <div>
+      <div
+        ref={trackRef}
+        onScroll={handleScroll}
+        className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {cards.map((card) => (
+          <div key={card.id} className="w-[86%] shrink-0 snap-center sm:w-80">
+            {card.content}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex justify-center gap-1.5">
+        {cards.map((card, i) => (
+          <span
+            key={card.id}
+            className={`h-1.5 rounded-full transition-all ${
+              i === active ? "w-5 bg-wit-blue" : "w-1.5 bg-wit-ink/15"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BrandShowcaseIdentityCard({
+  companyName,
+  businessType,
+  colors,
+}: {
+  companyName: string;
+  businessType: string | null;
+  colors: string[];
+}) {
+  const gradient =
+    colors.length >= 2
+      ? `linear-gradient(135deg, ${colors[0]}, ${colors[colors.length - 1]})`
+      : colors.length === 1
+        ? `linear-gradient(135deg, ${colors[0]}, ${colors[0]})`
+        : "linear-gradient(135deg, #0047FF, #6B8CFF)";
+  return (
+    <div
+      className="flex aspect-[4/5] flex-col justify-end rounded-3xl p-6 text-white shadow-[0_20px_60px_rgba(5,13,40,0.15)]"
+      style={{ background: gradient }}
+    >
+      {businessType ? (
+        <span className="mb-2 self-start rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] backdrop-blur-sm">
+          {businessType}
+        </span>
+      ) : null}
+      <p className="text-2xl font-extrabold leading-tight">{companyName}</p>
+    </div>
+  );
+}
+
+function BrandShowcaseLogoCard({ fileKey }: { fileKey: string | null }) {
+  const { t } = useLanguage();
+  return (
+    <div className="flex aspect-[4/5] flex-col items-center justify-center gap-4 rounded-3xl border border-wit-ink/10 bg-white p-6 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
+      {fileKey ? (
+        <img
+          src={`/api/file?key=${encodeURIComponent(fileKey)}`}
+          alt={t("Logotipo", "Logo")}
+          className="max-h-40 max-w-full object-contain"
+        />
+      ) : (
+        <p className="text-center text-sm text-wit-gray">
+          {t("Aún no tienes logotipo guardado.", "You don't have a saved logo yet.")}
+        </p>
+      )}
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">
+        {t("Logotipo", "Logo")}
+      </p>
+    </div>
+  );
+}
+
+function BrandShowcaseColorsCard({ colors }: { colors: string[] }) {
+  const { t } = useLanguage();
+  return (
+    <div className="flex aspect-[4/5] flex-col justify-between rounded-3xl border border-wit-ink/10 bg-white p-6 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
+      {colors.length ? (
+        <div className="grid flex-1 grid-cols-2 gap-2.5">
+          {colors.slice(0, 4).map((c) => (
+            <div
+              key={c}
+              className="flex flex-col justify-end rounded-2xl p-2.5"
+              style={{ background: c }}
+            >
+              <span className="rounded-full bg-black/25 px-2 py-0.5 text-center text-[10px] font-bold uppercase text-white backdrop-blur-sm">
+                {c}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-center text-sm text-wit-gray">
+            {t("Aún no tienes colores guardados.", "You don't have saved colors yet.")}
+          </p>
+        </div>
+      )}
+      <p className="mt-4 text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">
+        {t("Colores de marca", "Brand colors")}
+      </p>
+    </div>
+  );
+}
+
+function BrandShowcaseManualCard({ hasManual }: { hasManual: boolean }) {
+  const { t } = useLanguage();
+  return (
+    <div className="flex aspect-[4/5] flex-col items-center justify-center gap-4 rounded-3xl border border-wit-ink/10 bg-white p-6 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
+      <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
+        <FileText className="h-7 w-7" strokeWidth={2} />
+      </span>
+      <p className="text-center text-sm text-wit-gray">
+        {hasManual
+          ? t("Tu manual de marca está guardado.", "Your brand manual is saved.")
+          : t("Aún no tienes manual de marca.", "You don't have a brand manual yet.")}
+      </p>
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">
+        {t("Manual de marca", "Brand manual")}
+      </p>
     </div>
   );
 }

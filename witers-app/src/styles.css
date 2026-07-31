@@ -506,12 +506,54 @@
   }
 }
 
+/* Mi marca "atmosphere" — soft blurred blobs in the client's own brand
+   colors, drifting slowly behind the section (see BrandAtmosphere in
+   panel.tsx). Low opacity + heavy blur so it reads as mood, not noise. */
+.wit-atmosphere-blob {
+  position: absolute;
+  width: 46vw;
+  height: 46vw;
+  max-width: 620px;
+  max-height: 620px;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.32;
+  animation: wit-atmosphere-drift 28s ease-in-out infinite;
+}
+.wit-atmosphere-blob-a {
+  top: -12%;
+  left: -10%;
+}
+.wit-atmosphere-blob-b {
+  right: -8%;
+  bottom: -16%;
+  animation-delay: -9s;
+}
+.wit-atmosphere-blob-c {
+  top: 28%;
+  right: 18%;
+  animation-delay: -18s;
+}
+@keyframes wit-atmosphere-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(4%, 6%) scale(1.08);
+  }
+  66% {
+    transform: translate(-5%, -4%) scale(0.95);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wit-rise,
   .wit-float,
   .wit-splash,
   .wit-splash-mark,
-  .wit-energy-tip {
+  .wit-energy-tip,
+  .wit-atmosphere-blob {
     animation: none;
   }
   .wit-navlink::after {
