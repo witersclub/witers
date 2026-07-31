@@ -505,6 +505,22 @@
     opacity: 1;
   }
 }
+/* A batch (5 pieces) just completed and paid out — one brief outward
+   flash on the track itself, on top of the tip's constant spark. */
+.wit-energy-complete {
+  animation: wit-energy-complete-flash 1.8s ease-out;
+}
+@keyframes wit-energy-complete-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 71, 255, 0);
+  }
+  25% {
+    box-shadow: 0 0 0 7px rgba(0, 71, 255, 0.22);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 71, 255, 0);
+  }
+}
 
 /* Mi marca "atmosphere" — soft blurred blobs in the client's own brand
    colors, drifting slowly behind the section (see BrandAtmosphere in
@@ -553,6 +569,7 @@
   .wit-splash,
   .wit-splash-mark,
   .wit-energy-tip,
+  .wit-energy-complete,
   .wit-atmosphere-blob {
     animation: none;
   }

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Award, GalleryHorizontal, Image as ImageIcon, Video } from "lucide-react";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { WitersLogo } from "../components/witers/brand";
 import { StaffCarouselRequestsPanel } from "../components/witers/staff-carousel-requests";
@@ -61,6 +61,7 @@ function DesignerPanel() {
         images: number;
         videos: number;
         carousels: number;
+        geo: { currency: string; rate: number } | null;
       };
     },
     enabled: Boolean(platform.data),
@@ -295,31 +296,85 @@ function DesignerPanel() {
   );
 }
 
-// Every 5 pieces a client finalizes (of one type) fills the bar and pays
-// out 100 créditos — a purely motivational counter for now, no payout
-// mechanism behind it yet (see the discussion with the client about the
-// eventual rewards system). Images use "cerrada" (the client's explicit
-// confirm step); video/carousel have no such step, "completada" is
-// already their terminal state — see /api/designer/stats.
+const MXN_FMT = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  maximumFractionDigits: 0,
+});
+
+function formatGeoAmount(amountMxn: number, currency: string, rate: number): string {
+  const converted = amountMxn * rate;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: converted >= 100 ? 0 : 2,
+    }).format(converted);
+  } catch {
+    return `${converted.toLocaleString("en-US", { maximumFractionDigits: 0 })} ${currency}`;
+  }
+}
+
+// Real pay, not gamification: $50 MXN per piece a client finalizes, paid
+// out in batches of 5 ($250 MXN per completed batch). Images use
+// "cerrada" (the client's explicit confirm step); video/carousel have no
+// such step, "completada" is already their terminal state — see
+// /api/designer/stats, which also resolves the designer's country
+// straight from Cloudflare's edge request (same approach as the public
+// membership cards' /api/geo-price) for the "≈" reference conversion.
 function DesignerStreakCard({
   stats,
 }: {
-  stats: { images: number; videos: number; carousels: number };
+  stats: {
+    images: number;
+    videos: number;
+    carousels: number;
+    geo: { currency: string; rate: number } | null;
+  };
 }) {
-  const totalCreditos =
-    Math.floor(stats.images / 5) * 100 +
-    Math.floor(stats.videos / 5) * 100 +
-    Math.floor(stats.carousels / 5) * 100;
+  const totalMxn =
+    Math.floor(stats.images / 5) * 250 +
+    Math.floor(stats.videos / 5) * 250 +
+    Math.floor(stats.carousels / 5) * 250;
+
+  // Detects a batch just completing (count crossing a multiple of 5
+  // between polls) to give that row a brief flourish — the running total
+  // stays visible the whole time either way, since this is real pay a
+  // designer should always be able to see, not something to hide until a
+  // reveal moment.
+  const prevRef = useRef<{ images: number; videos: number; carousels: number } | null>(null);
+  const [justCompleted, setJustCompleted] = useState<{
+    images: boolean;
+    videos: boolean;
+    carousels: boolean;
+  }>({ images: false, videos: false, carousels: false });
+
+  useEffect(() => {
+    const prev = prevRef.current;
+    prevRef.current = { images: stats.images, videos: stats.videos, carousels: stats.carousels };
+    if (!prev) return;
+    (["images", "videos", "carousels"] as const).forEach((key) => {
+      if (Math.floor(stats[key] / 5) > Math.floor(prev[key] / 5)) {
+        setJustCompleted((s) => ({ ...s, [key]: true }));
+        setTimeout(() => setJustCompleted((s) => ({ ...s, [key]: false })), 1800);
+      }
+    });
+  }, [stats]);
 
   return (
     <div className="wit-glass mt-6 max-w-lg rounded-3xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">
-          Créditos WITERS
-        </p>
-        <span className="flex items-center gap-1.5 rounded-full bg-wit-blue/10 px-3 py-1 text-sm font-extrabold text-wit-blue">
-          <Award className="h-4 w-4" strokeWidth={2.4} />
-          {totalCreditos}
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">Total ganado</p>
+        <span className="flex flex-col items-end gap-0.5">
+          <span className="flex items-center gap-1.5 rounded-full bg-wit-blue/10 px-3 py-1 text-sm font-extrabold text-wit-blue">
+            <Award className="h-4 w-4" strokeWidth={2.4} />
+            {MXN_FMT.format(totalMxn)}
+          </span>
+          {stats.geo ? (
+            <span className="text-[11px] font-semibold text-wit-gray">
+              ≈ {formatGeoAmount(totalMxn, stats.geo.currency, stats.geo.rate)}
+            </span>
+          ) : null}
         </span>
       </div>
       <div className="mt-5 space-y-4">
@@ -327,16 +382,19 @@ function DesignerStreakCard({
           icon={<ImageIcon className="h-4 w-4" strokeWidth={2.2} />}
           label="Imágenes"
           count={stats.images}
+          justCompleted={justCompleted.images}
         />
         <DesignerStreakRow
           icon={<Video className="h-4 w-4" strokeWidth={2.2} />}
           label="Videos"
           count={stats.videos}
+          justCompleted={justCompleted.videos}
         />
         <DesignerStreakRow
           icon={<GalleryHorizontal className="h-4 w-4" strokeWidth={2.2} />}
           label="Carruseles"
           count={stats.carousels}
+          justCompleted={justCompleted.carousels}
         />
       </div>
     </div>
@@ -347,10 +405,12 @@ function DesignerStreakRow({
   icon,
   label,
   count,
+  justCompleted,
 }: {
   icon: ReactNode;
   label: string;
   count: number;
+  justCompleted: boolean;
 }) {
   const filled = count % 5;
   const pct = (filled / 5) * 100;
@@ -362,9 +422,17 @@ function DesignerStreakRow({
       <div className="flex-1">
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold text-wit-ink">{label}</p>
-          <p className="text-xs font-semibold text-wit-gray">{filled}/5</p>
+          <p
+            className={`text-xs font-semibold ${justCompleted ? "text-wit-blue" : "text-wit-gray"}`}
+          >
+            {filled}/5 · {MXN_FMT.format(filled * 50)}
+          </p>
         </div>
-        <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-wit-mist/60">
+        <div
+          className={`mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-wit-mist/60 ${
+            justCompleted ? "wit-energy-complete" : ""
+          }`}
+        >
           <div
             className="wit-energy-fill relative h-full rounded-full transition-[width] duration-700 ease-out"
             style={{ width: `${pct}%` }}
