@@ -3486,23 +3486,29 @@ function BrandShowcaseIdentityCard({
   businessType: string | null;
   colors: string[];
 }) {
-  const gradient =
-    colors.length >= 2
-      ? `linear-gradient(135deg, ${colors[0]}, ${colors[colors.length - 1]})`
-      : colors.length === 1
-        ? `linear-gradient(135deg, ${colors[0]}, ${colors[0]})`
-        : "linear-gradient(135deg, #0047FF, #6B8CFF)";
+  const { t } = useLanguage();
+  const c1 = colors[0] ?? "#0047FF";
+  const c2 = colors[colors.length - 1] ?? "#6B8CFF";
+  // Layered soft-edged radials instead of one hard linear gradient — reads
+  // as a diffused blend of the brand's own colors, not a flat two-tone
+  // swatch.
+  const background = `radial-gradient(120% 140% at 8% -10%, ${c1} 0%, transparent 62%), radial-gradient(130% 150% at 100% 115%, ${c2} 0%, transparent 62%), linear-gradient(135deg, ${c1}, ${c2})`;
   return (
     <div
-      className="flex aspect-[4/5] flex-col justify-end rounded-3xl p-6 text-white shadow-[0_20px_60px_rgba(5,13,40,0.15)]"
-      style={{ background: gradient }}
+      className="relative flex aspect-[3/2] flex-col justify-between overflow-hidden rounded-3xl p-6 text-white shadow-[0_20px_60px_rgba(5,13,40,0.15)]"
+      style={{ background }}
     >
-      {businessType ? (
-        <span className="mb-2 self-start rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] backdrop-blur-sm">
-          {businessType}
-        </span>
-      ) : null}
-      <p className="text-2xl font-extrabold leading-tight">{companyName}</p>
+      <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/80">
+        {t("Tu marca", "Your brand")}
+      </span>
+      <div>
+        {businessType ? (
+          <span className="mb-2 inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] backdrop-blur-sm">
+            {businessType}
+          </span>
+        ) : null}
+        <p className="text-2xl font-extrabold leading-tight">{companyName}</p>
+      </div>
     </div>
   );
 }
@@ -3510,12 +3516,12 @@ function BrandShowcaseIdentityCard({
 function BrandShowcaseLogoCard({ fileKey }: { fileKey: string | null }) {
   const { t } = useLanguage();
   return (
-    <div className="flex aspect-[4/5] flex-col items-center justify-center gap-4 rounded-3xl border border-wit-ink/10 bg-white p-6 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
+    <div className="flex aspect-[3/2] flex-col items-center justify-center gap-3 rounded-3xl border border-wit-ink/10 bg-white p-6 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
       {fileKey ? (
         <img
           src={`/api/file?key=${encodeURIComponent(fileKey)}`}
           alt={t("Logotipo", "Logo")}
-          className="max-h-40 max-w-full object-contain"
+          className="max-h-24 max-w-full object-contain"
         />
       ) : (
         <p className="text-center text-sm text-wit-gray">
@@ -3532,7 +3538,7 @@ function BrandShowcaseLogoCard({ fileKey }: { fileKey: string | null }) {
 function BrandShowcaseColorsCard({ colors }: { colors: string[] }) {
   const { t } = useLanguage();
   return (
-    <div className="flex aspect-[4/5] flex-col justify-between rounded-3xl border border-wit-ink/10 bg-white p-6 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
+    <div className="flex aspect-[3/2] flex-col justify-between rounded-3xl border border-wit-ink/10 bg-white p-5 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
       {colors.length ? (
         <div className="grid flex-1 grid-cols-2 gap-2.5">
           {colors.slice(0, 4).map((c) => (
@@ -3564,9 +3570,9 @@ function BrandShowcaseColorsCard({ colors }: { colors: string[] }) {
 function BrandShowcaseManualCard({ hasManual }: { hasManual: boolean }) {
   const { t } = useLanguage();
   return (
-    <div className="flex aspect-[4/5] flex-col items-center justify-center gap-4 rounded-3xl border border-wit-ink/10 bg-white p-6 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
-      <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
-        <FileText className="h-7 w-7" strokeWidth={2} />
+    <div className="flex aspect-[3/2] flex-col items-center justify-center gap-3 rounded-3xl border border-wit-ink/10 bg-white p-6 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
+      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
+        <FileText className="h-6 w-6" strokeWidth={2} />
       </span>
       <p className="text-center text-sm text-wit-gray">
         {hasManual
