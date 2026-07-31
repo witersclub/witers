@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type * as LeafletNS from "leaflet";
 import {
@@ -335,6 +335,14 @@ function UpgradeTeaser({
 const PANEL_SPLASH_MS = 1300;
 const PANEL_SPLASH_SESSION_KEY = "wit_panel_splash_shown";
 
+// useEffect fires after the browser has already painted, so deciding
+// showSplash there left a visible gap — one frame (or more, on a slow
+// device) showing whatever was underneath (the profile-loading skeleton)
+// before the splash caught up and covered it. useLayoutEffect flushes
+// synchronously before paint, closing that gap; it only needs to be
+// conditional so SSR (no DOM, so no layout effects) doesn't warn.
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
 // The "app opening" moment — a plain white screen with the (already
 // brand-blue) W centered and fading in, then the whole thing fades to
 // reveal the panel underneath (already rendering behind it the whole
@@ -378,7 +386,7 @@ function Panel() {
   // the very first paint is identical on both sides (no splash), and the
   // splash mounts a beat later, client-only, with nothing to reconcile.
   const [showSplash, setShowSplash] = useState(false);
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     if (sessionStorage.getItem(PANEL_SPLASH_SESSION_KEY)) return;
     setShowSplash(true);
