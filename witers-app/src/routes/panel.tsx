@@ -773,202 +773,213 @@ function Panel() {
           />
         ) : (
           <>
-            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
-                    {t("Hola,", "Hi,")}{" "}
-                    <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
-                  </h1>
-                  {streakWeeks > 0 ? (
-                    <span className="flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
-                      <Flame className="h-3.5 w-3.5" strokeWidth={2} />
-                      {streakWeeks}{" "}
+            {/* Greeting, quota rings, campaign badges, membership CTA — all
+                of it is "Inicio" content (the quick-glance overview a
+                returning client wants first). Mi marca and Campañas now
+                have their own top-of-section identity (BrandShowcaseCarousel
+                / CampanasPanel's own header), so repeating this here just
+                duplicated Inicio instead of feeling like a different place. */}
+            {section === "creatividad" ? (
+              <>
+                <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
+                        {t("Hola,", "Hi,")}{" "}
+                        <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
+                      </h1>
+                      {streakWeeks > 0 ? (
+                        <span className="flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
+                          <Flame className="h-3.5 w-3.5" strokeWidth={2} />
+                          {streakWeeks}{" "}
+                          {t(
+                            streakWeeks === 1 ? "semana seguida" : "semanas seguidas",
+                            streakWeeks === 1 ? "week in a row" : "weeks in a row",
+                          )}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-base text-wit-gray">
                       {t(
-                        streakWeeks === 1 ? "semana seguida" : "semanas seguidas",
-                        streakWeeks === 1 ? "week in a row" : "weeks in a row",
+                        "Pide creatividades y da seguimiento a cada solicitud desde aquí.",
+                        "Request creatives and track every request from here.",
                       )}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-2 text-base text-wit-gray">
-                  {t(
-                    "Pide creatividades y da seguimiento a cada solicitud desde aquí.",
-                    "Request creatives and track every request from here.",
-                  )}
-                </p>
-                <RecentCreativeQuickAccess
-                  creative={recentCreatives[0]}
-                  onOpen={(kind) => {
-                    setSection("creatividad");
-                    setCreativeMode(kind);
-                    if (kind === "carruseles") setCarouselTab("solicitudes");
-                    else setTab("solicitudes");
-                  }}
-                />
-              </div>
-
-              <div className="flex flex-col items-stretch gap-2">
-                <div className="wit-glass flex flex-col gap-3 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
-                      {t("Tu cupo este mes", "Your quota this month")}
                     </p>
-                    <span
-                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                    <RecentCreativeQuickAccess
+                      creative={recentCreatives[0]}
+                      onOpen={(kind) => {
+                        setSection("creatividad");
+                        setCreativeMode(kind);
+                        if (kind === "carruseles") setCarouselTab("solicitudes");
+                        else setTab("solicitudes");
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex flex-col items-stretch gap-2">
+                    <div className="wit-glass flex flex-col gap-3 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
+                          {t("Tu cupo este mes", "Your quota this month")}
+                        </p>
+                        <span
+                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                        >
+                          {active
+                            ? t(
+                                `${getPlan(membership?.plan).nombre} activa`,
+                                `${getPlan(membership?.plan).nombre} active`,
+                              )
+                            : t("Sin membresía", "No membership")}
+                        </span>
+                      </div>
+                      <div className="flex items-start justify-center gap-9">
+                        <QuotaRing
+                          icon={ImageIcon}
+                          remaining={active ? remaining : 0}
+                          quota={
+                            (membership?.requests_quota ?? 20) +
+                            (membership?.bonus_requests_quota ?? 0)
+                          }
+                          colorHex="#0047ff"
+                          label={t("Imágenes", "Images")}
+                        />
+                        <QuotaRing
+                          icon={VideoIcon}
+                          remaining={active ? videoRemaining : 0}
+                          quota={membership?.video_requests_quota ?? 0}
+                          colorHex="#ff3fb0"
+                          label={t("Video", "Video")}
+                          locked={!membership || membership.video_requests_quota === 0}
+                          onLockedClick={() => setUpgradeTeaser("video")}
+                        />
+                        <QuotaRing
+                          icon={GalleryHorizontal}
+                          remaining={active ? carouselRemaining : 0}
+                          quota={membership?.carousel_requests_quota ?? 0}
+                          colorHex="#10b981"
+                          label={t("Carrusel", "Carousel")}
+                          locked={!membership || membership.carousel_requests_quota === 0}
+                          onLockedClick={() => setUpgradeTeaser("carrusel")}
+                        />
+                      </div>
+                      {membership && membership.bonus_requests_quota > 0 ? (
+                        <p className="text-center text-[11px] font-semibold text-wit-blue">
+                          {t(
+                            `+${membership.bonus_requests_quota} de paquetes comprados`,
+                            `+${membership.bonus_requests_quota} from purchased packs`,
+                          )}
+                        </p>
+                      ) : null}
+                    </div>
+                    {active && membership?.plan !== "scale" ? (
+                      <Link
+                        to="/upgrade"
+                        className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10"
+                      >
+                        <ArrowUpCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
+                        {t("Upgrade", "Upgrade")}
+                      </Link>
+                    ) : null}
+                    {active ? (
+                      <button
+                        type="button"
+                        onClick={() => setPacksOpen(true)}
+                        className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/25 bg-white px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/5"
+                      >
+                        <PackagePlus className="h-3.5 w-3.5" strokeWidth={2.4} />
+                        {t("Comprar paquete de imágenes", "Buy an image pack")}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                {campaignsLaunched > 0 || totalReach > 0 || totalResultsImpact > 0 ? (
+                  // Their own history read back as an achievement, and the
+                  // loop closed all the way to real results — not just a
+                  // request counter. Each stat only shows once there's a real
+                  // number to show; 0 campañas/0 alcance/0 clics would read as
+                  // failure, not motivation. Fixed-size squares (not a
+                  // stretching grid or plain rectangle) so they read as little
+                  // badges, not wide bars — same size on every breakpoint.
+                  // All three jump straight to Campañas when tapped — they're
+                  // campaign stats, so "tell me more" should mean "show me the
+                  // campaigns," not just sit there as a static number.
+                  <div className="mt-6 flex flex-wrap gap-2.5">
+                    {campaignsLaunched > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setSection("campanas")}
+                        className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-navy p-3 text-left text-white transition-transform active:scale-95"
+                      >
+                        <Rocket className="h-4 w-4 text-white/70" strokeWidth={1.75} />
+                        <p className="mt-1.5 text-lg font-extrabold">{campaignsLaunched}</p>
+                        <p className="text-[10px] leading-tight text-white/70">
+                          {t(
+                            campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas",
+                            campaignsLaunched === 1 ? "campaign launched" : "campaigns launched",
+                          )}
+                        </p>
+                      </button>
+                    ) : null}
+                    {totalReach > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setSection("campanas")}
+                        className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-blue p-3 text-left text-white transition-transform active:scale-95"
+                      >
+                        <Eye className="h-4 w-4 text-white/70" strokeWidth={1.75} />
+                        <p className="mt-1.5 text-lg font-extrabold">
+                          {totalReach.toLocaleString("es-MX")}
+                        </p>
+                        <p className="text-[10px] text-white/70">
+                          {t("personas alcanzadas", "people reached")}
+                        </p>
+                      </button>
+                    ) : null}
+                    {totalResultsImpact > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setSection("campanas")}
+                        className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-pink p-3 text-left text-white transition-transform active:scale-95"
+                      >
+                        <Target className="h-4 w-4 text-white/70" strokeWidth={1.75} />
+                        <p className="mt-1.5 text-lg font-extrabold">
+                          {totalResultsImpact.toLocaleString("es-MX")}
+                        </p>
+                        <p className="text-[10px] text-white/70">
+                          {t("resultados totales", "total results")}
+                        </p>
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {!active ? (
+                  <div className="mt-8 flex flex-col items-start gap-4 rounded-3xl bg-wit-navy p-8 text-white md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-xl font-bold">
+                        {t(
+                          "Activa tu membresía para empezar a crear.",
+                          "Activate your membership to start creating.",
+                        )}
+                      </p>
+                      <p className="mt-1 text-sm text-white/70">
+                        {t(
+                          "Elige entre Essential, Grow o Scale — desde $5,999 MXN al mes.",
+                          "Choose Essential, Grow, or Scale — starting at $5,999 MXN a month.",
+                        )}
+                      </p>
+                    </div>
+                    <Link
+                      to="/upgrade"
+                      className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:brightness-110"
                     >
-                      {active
-                        ? t(
-                            `${getPlan(membership?.plan).nombre} activa`,
-                            `${getPlan(membership?.plan).nombre} active`,
-                          )
-                        : t("Sin membresía", "No membership")}
-                    </span>
+                      {t("Quiero mi membresía", "I want my membership")}
+                    </Link>
                   </div>
-                  <div className="flex items-start justify-center gap-9">
-                    <QuotaRing
-                      icon={ImageIcon}
-                      remaining={active ? remaining : 0}
-                      quota={
-                        (membership?.requests_quota ?? 20) + (membership?.bonus_requests_quota ?? 0)
-                      }
-                      colorHex="#0047ff"
-                      label={t("Imágenes", "Images")}
-                    />
-                    <QuotaRing
-                      icon={VideoIcon}
-                      remaining={active ? videoRemaining : 0}
-                      quota={membership?.video_requests_quota ?? 0}
-                      colorHex="#ff3fb0"
-                      label={t("Video", "Video")}
-                      locked={!membership || membership.video_requests_quota === 0}
-                      onLockedClick={() => setUpgradeTeaser("video")}
-                    />
-                    <QuotaRing
-                      icon={GalleryHorizontal}
-                      remaining={active ? carouselRemaining : 0}
-                      quota={membership?.carousel_requests_quota ?? 0}
-                      colorHex="#10b981"
-                      label={t("Carrusel", "Carousel")}
-                      locked={!membership || membership.carousel_requests_quota === 0}
-                      onLockedClick={() => setUpgradeTeaser("carrusel")}
-                    />
-                  </div>
-                  {membership && membership.bonus_requests_quota > 0 ? (
-                    <p className="text-center text-[11px] font-semibold text-wit-blue">
-                      {t(
-                        `+${membership.bonus_requests_quota} de paquetes comprados`,
-                        `+${membership.bonus_requests_quota} from purchased packs`,
-                      )}
-                    </p>
-                  ) : null}
-                </div>
-                {active && membership?.plan !== "scale" ? (
-                  <Link
-                    to="/upgrade"
-                    className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10"
-                  >
-                    <ArrowUpCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
-                    {t("Upgrade", "Upgrade")}
-                  </Link>
                 ) : null}
-                {active ? (
-                  <button
-                    type="button"
-                    onClick={() => setPacksOpen(true)}
-                    className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/25 bg-white px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/5"
-                  >
-                    <PackagePlus className="h-3.5 w-3.5" strokeWidth={2.4} />
-                    {t("Comprar paquete de imágenes", "Buy an image pack")}
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            {campaignsLaunched > 0 || totalReach > 0 || totalResultsImpact > 0 ? (
-              // Their own history read back as an achievement, and the
-              // loop closed all the way to real results — not just a
-              // request counter. Each stat only shows once there's a real
-              // number to show; 0 campañas/0 alcance/0 clics would read as
-              // failure, not motivation. Fixed-size squares (not a
-              // stretching grid or plain rectangle) so they read as little
-              // badges, not wide bars — same size on every breakpoint.
-              // All three jump straight to Campañas when tapped — they're
-              // campaign stats, so "tell me more" should mean "show me the
-              // campaigns," not just sit there as a static number.
-              <div className="mt-6 flex flex-wrap gap-2.5">
-                {campaignsLaunched > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setSection("campanas")}
-                    className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-navy p-3 text-left text-white transition-transform active:scale-95"
-                  >
-                    <Rocket className="h-4 w-4 text-white/70" strokeWidth={1.75} />
-                    <p className="mt-1.5 text-lg font-extrabold">{campaignsLaunched}</p>
-                    <p className="text-[10px] leading-tight text-white/70">
-                      {t(
-                        campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas",
-                        campaignsLaunched === 1 ? "campaign launched" : "campaigns launched",
-                      )}
-                    </p>
-                  </button>
-                ) : null}
-                {totalReach > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setSection("campanas")}
-                    className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-blue p-3 text-left text-white transition-transform active:scale-95"
-                  >
-                    <Eye className="h-4 w-4 text-white/70" strokeWidth={1.75} />
-                    <p className="mt-1.5 text-lg font-extrabold">
-                      {totalReach.toLocaleString("es-MX")}
-                    </p>
-                    <p className="text-[10px] text-white/70">
-                      {t("personas alcanzadas", "people reached")}
-                    </p>
-                  </button>
-                ) : null}
-                {totalResultsImpact > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setSection("campanas")}
-                    className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-pink p-3 text-left text-white transition-transform active:scale-95"
-                  >
-                    <Target className="h-4 w-4 text-white/70" strokeWidth={1.75} />
-                    <p className="mt-1.5 text-lg font-extrabold">
-                      {totalResultsImpact.toLocaleString("es-MX")}
-                    </p>
-                    <p className="text-[10px] text-white/70">
-                      {t("resultados totales", "total results")}
-                    </p>
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-
-            {!active ? (
-              <div className="mt-8 flex flex-col items-start gap-4 rounded-3xl bg-wit-navy p-8 text-white md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-xl font-bold">
-                    {t(
-                      "Activa tu membresía para empezar a crear.",
-                      "Activate your membership to start creating.",
-                    )}
-                  </p>
-                  <p className="mt-1 text-sm text-white/70">
-                    {t(
-                      "Elige entre Essential, Grow o Scale — desde $5,999 MXN al mes.",
-                      "Choose Essential, Grow, or Scale — starting at $5,999 MXN a month.",
-                    )}
-                  </p>
-                </div>
-                <Link
-                  to="/upgrade"
-                  className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:brightness-110"
-                >
-                  {t("Quiero mi membresía", "I want my membership")}
-                </Link>
-              </div>
+              </>
             ) : null}
 
             <SectionNav section={section} onChange={setSection} />
