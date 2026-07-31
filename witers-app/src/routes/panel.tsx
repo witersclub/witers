@@ -3519,7 +3519,7 @@ function BrandShowcaseCarousel({ brandProfile }: { brandProfile: BrandProfile | 
               cardRefs.current[i] = el;
             }}
             style={{ backfaceVisibility: "hidden" }}
-            className="w-[92%] shrink-0 snap-center sm:w-[26rem]"
+            className="w-[96%] shrink-0 snap-center sm:w-[30rem]"
           >
             {card.content}
           </div>
@@ -3551,25 +3551,30 @@ function BrandShowcaseIdentityCard({
   const { t } = useLanguage();
   const c1 = colors[0] ?? "#0047FF";
   const c2 = colors[colors.length - 1] ?? "#6B8CFF";
-  // Layered soft-edged radials instead of one hard linear gradient — reads
-  // as a diffused blend of the brand's own colors, not a flat two-tone
-  // swatch.
-  const background = `radial-gradient(120% 140% at 8% -10%, ${c1} 0%, transparent 62%), radial-gradient(130% 150% at 100% 115%, ${c2} 0%, transparent 62%), linear-gradient(135deg, ${c1}, ${c2})`;
+  // Layered soft-edged radials, sitting BEHIND a wit-glass pane rather than
+  // painted straight on the card — the frost is what turns it into a
+  // diffused wash instead of a flat colored block, and matches the same
+  // liquid-glass look as every other card here (and the header above).
+  // `isolate` keeps the wash contained to this card: wit-glass itself has
+  // no z-index, so a negative one on a child would otherwise escape past
+  // it looking for the next real stacking context up the tree.
+  const wash = `radial-gradient(120% 140% at 8% -10%, ${c1} 0%, transparent 62%), radial-gradient(130% 150% at 100% 115%, ${c2} 0%, transparent 62%)`;
   return (
-    <div
-      className="relative flex aspect-[3/2] flex-col justify-between overflow-hidden rounded-3xl p-6 text-white shadow-[0_20px_60px_rgba(5,13,40,0.15)]"
-      style={{ background }}
-    >
-      <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/80">
-        {t("Tu marca", "Your brand")}
-      </span>
-      <div>
-        {businessType ? (
-          <span className="mb-2 inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] backdrop-blur-sm">
-            {businessType}
-          </span>
-        ) : null}
-        <p className="text-2xl font-extrabold leading-tight">{companyName}</p>
+    <div className="relative isolate flex aspect-[4/3] overflow-hidden rounded-3xl shadow-[0_20px_60px_rgba(5,13,40,0.12)]">
+      <div className="absolute inset-0" style={{ background: wash }} />
+      <div className="wit-glass absolute inset-0 rounded-3xl" />
+      <div className="relative z-10 flex h-full w-full flex-col justify-between p-6">
+        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
+          {t("Tu marca", "Your brand")}
+        </span>
+        <div>
+          {businessType ? (
+            <span className="mb-2 inline-block rounded-full bg-wit-ink/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-wit-ink">
+              {businessType}
+            </span>
+          ) : null}
+          <p className="text-2xl font-extrabold leading-tight text-wit-ink">{companyName}</p>
+        </div>
       </div>
     </div>
   );
@@ -3578,12 +3583,12 @@ function BrandShowcaseIdentityCard({
 function BrandShowcaseLogoCard({ fileKey }: { fileKey: string | null }) {
   const { t } = useLanguage();
   return (
-    <div className="flex aspect-[3/2] flex-col items-center justify-center gap-3 rounded-3xl border border-wit-ink/10 bg-white p-6 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
+    <div className="wit-glass flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-3xl p-6">
       {fileKey ? (
         <img
           src={`/api/file?key=${encodeURIComponent(fileKey)}`}
           alt={t("Logotipo", "Logo")}
-          className="max-h-24 max-w-full object-contain"
+          className="max-h-28 max-w-full object-contain"
         />
       ) : (
         <p className="text-center text-sm text-wit-gray">
@@ -3600,7 +3605,7 @@ function BrandShowcaseLogoCard({ fileKey }: { fileKey: string | null }) {
 function BrandShowcaseColorsCard({ colors }: { colors: string[] }) {
   const { t } = useLanguage();
   return (
-    <div className="flex aspect-[3/2] flex-col justify-between rounded-3xl border border-wit-ink/10 bg-white p-5 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
+    <div className="wit-glass flex aspect-[4/3] flex-col justify-between rounded-3xl p-5">
       {colors.length ? (
         <div className="grid flex-1 grid-cols-2 gap-2.5">
           {colors.slice(0, 4).map((c) => (
@@ -3632,7 +3637,7 @@ function BrandShowcaseColorsCard({ colors }: { colors: string[] }) {
 function BrandShowcaseManualCard({ hasManual }: { hasManual: boolean }) {
   const { t } = useLanguage();
   return (
-    <div className="flex aspect-[3/2] flex-col items-center justify-center gap-3 rounded-3xl border border-wit-ink/10 bg-white p-6 shadow-[0_20px_60px_rgba(5,13,40,0.1)]">
+    <div className="wit-glass flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-3xl p-6">
       <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
         <FileText className="h-6 w-6" strokeWidth={2} />
       </span>
