@@ -478,21 +478,32 @@
   animation: wit-splash-mark 1.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Designer credit bars (witer.tsx) — a continuous glow pulsing at the
-   leading edge of the fill, like an energy bar topping up. */
-@keyframes wit-energy-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(0, 71, 255, 0.5);
-    transform: translateY(-50%) translateX(33%) scale(1);
-  }
-  50% {
-    box-shadow: 0 0 10px 4px rgba(0, 71, 255, 0.35);
-    transform: translateY(-50%) translateX(33%) scale(1.25);
-  }
+/* Designer credit bars (witer.tsx) — a silvery-blue metallic fill (not
+   flat brand blue, reads more like "energy") with a spark flickering at
+   the fill's leading edge instead of a plain pulsing dot. */
+.wit-energy-fill {
+  background: linear-gradient(90deg, #93a6c4 0%, #dce8ff 45%, #7fb2ff 75%, #eef5ff 100%);
 }
 .wit-energy-tip {
-  animation: wit-energy-pulse 1.4s ease-in-out infinite;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #dbe9ff 35%, #6fa3f2 70%, transparent 100%);
+  animation: wit-energy-spark 0.9s ease-in-out infinite;
+}
+@keyframes wit-energy-spark {
+  0%,
+  100% {
+    box-shadow:
+      0 0 3px 1px rgba(255, 255, 255, 0.7),
+      0 0 8px 2px rgba(143, 187, 255, 0.5);
+    transform: translateY(-50%) translateX(33%) scale(0.85);
+    opacity: 0.85;
+  }
+  50% {
+    box-shadow:
+      0 0 6px 2px rgba(255, 255, 255, 0.9),
+      0 0 16px 6px rgba(143, 187, 255, 0.7);
+    transform: translateY(-50%) translateX(33%) scale(1.3);
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

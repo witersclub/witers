@@ -366,11 +366,11 @@ function DesignerStreakRow({
         </div>
         <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-wit-mist/60">
           <div
-            className="relative h-full rounded-full bg-wit-blue transition-[width] duration-700 ease-out"
+            className="wit-energy-fill relative h-full rounded-full transition-[width] duration-700 ease-out"
             style={{ width: `${pct}%` }}
           >
             {filled > 0 ? (
-              <span className="wit-energy-tip absolute right-0 top-1/2 h-2.5 w-2.5 rounded-full bg-wit-blue" />
+              <span className="wit-energy-tip absolute right-0 top-1/2 h-3 w-3 rounded-full" />
             ) : null}
           </div>
         </div>
