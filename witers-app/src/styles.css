@@ -450,15 +450,15 @@
    in centered, holds static (like Instagram/TikTok/YouTube's own splash
    — no pulsing glow), then the whole screen fades to reveal the page
    underneath (already rendered behind it — a branded beat, not a
-   loading wait). */
+   loading wait). No transform/scale on the mark — it just appears and
+   sits still; a scale animation on a small element like this is what
+   was reading as it "cutting"/clipping instead of a clean, fixed logo. */
 @keyframes wit-splash-mark {
   0% {
-    transform: scale(0.7);
     opacity: 0;
   }
-  22%,
+  15%,
   100% {
-    transform: scale(1);
     opacity: 1;
   }
 }

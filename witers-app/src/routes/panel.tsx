@@ -538,6 +538,7 @@ function Panel() {
     return (
       <div className="wit-page flex min-h-dvh items-center justify-center">
         <div className="h-40 w-full max-w-md animate-pulse rounded-3xl bg-wit-mist/40" />
+        {showSplash ? <PanelSplashIntro onDone={dismissSplash} /> : null}
       </div>
     );
   }
