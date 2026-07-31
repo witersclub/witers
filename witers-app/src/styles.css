@@ -478,11 +478,29 @@
   animation: wit-splash-mark 1.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Designer credit bars (witer.tsx) — a continuous glow pulsing at the
+   leading edge of the fill, like an energy bar topping up. */
+@keyframes wit-energy-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 71, 255, 0.5);
+    transform: translateY(-50%) translateX(33%) scale(1);
+  }
+  50% {
+    box-shadow: 0 0 10px 4px rgba(0, 71, 255, 0.35);
+    transform: translateY(-50%) translateX(33%) scale(1.25);
+  }
+}
+.wit-energy-tip {
+  animation: wit-energy-pulse 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wit-rise,
   .wit-float,
   .wit-splash,
-  .wit-splash-mark {
+  .wit-splash-mark,
+  .wit-energy-tip {
     animation: none;
   }
   .wit-navlink::after {
