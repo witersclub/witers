@@ -517,7 +517,7 @@
   max-height: 620px;
   border-radius: 9999px;
   filter: blur(90px);
-  opacity: 0.32;
+  opacity: 0.42;
   animation: wit-atmosphere-drift 28s ease-in-out infinite;
 }
 .wit-atmosphere-blob-a {

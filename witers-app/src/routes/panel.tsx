@@ -3381,6 +3381,21 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
   );
 }
 
+// Near-white brand colors (plenty of brands have one) would otherwise
+// pick as an atmosphere blob and render as an invisible smear against
+// the page's already-light background — most visibly right behind the
+// header, which is exactly the "stark white bar" seam a client would
+// notice. Filtering those out keeps every blob actually visible.
+function isNearWhite(hex: string): boolean {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.88;
+}
+
 // The Mi marca section's "atmosphere" — a soft, slow-drifting wash built
 // from the client's own brand colors, so each brand's panel actually
 // feels like their brand instead of a fixed WITERS color. Blurred blobs
@@ -3388,7 +3403,8 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
 // never depends on what colors a client happens to have picked); falls
 // back to a neutral WITERS-blue duo when no colors are set yet.
 function BrandAtmosphere({ colors }: { colors: string[] }) {
-  const palette = colors.length ? colors : ["#0047FF", "#6B8CFF"];
+  const usable = colors.filter((c) => !isNearWhite(c));
+  const palette = usable.length ? usable : ["#0047FF", "#6B8CFF"];
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 animate-in fade-in overflow-hidden duration-700">
       <span
@@ -3416,6 +3432,8 @@ function BrandAtmosphere({ colors }: { colors: string[] }) {
 function BrandShowcaseCarousel({ brandProfile }: { brandProfile: BrandProfile | null }) {
   const { t } = useLanguage();
   const trackRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const rafRef = useRef<number | null>(null);
   const [active, setActive] = useState(0);
 
   const colors = (brandProfile?.brand_colors ?? "")
@@ -3442,23 +3460,67 @@ function BrandShowcaseCarousel({ brandProfile }: { brandProfile: BrandProfile | 
     },
   ];
 
+  // The Instagram-stories "cube" feeling — each card tilts in 3D around
+  // the edge it shares with its neighbor as it approaches/leaves center,
+  // instead of just sliding flat. Riding on native scroll-snap (not a
+  // hand-rolled drag/touch implementation) for the actual swipe physics —
+  // this only recomputes each card's rotation from its live scroll
+  // position, rAF-throttled so it stays cheap during the scroll gesture.
+  function updateTilt() {
+    const el = trackRef.current;
+    if (!el) return;
+    const centerX = el.scrollLeft + el.clientWidth / 2;
+    cardRefs.current.forEach((card) => {
+      if (!card) return;
+      const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+      const raw = (cardCenter - centerX) / card.offsetWidth;
+      const offset = Math.max(-1.3, Math.min(1.3, raw));
+      const rotation = offset * -38;
+      const scale = 1 - Math.min(Math.abs(offset), 1) * 0.1;
+      card.style.transformOrigin = offset >= 0 ? "left center" : "right center";
+      card.style.transform = `rotateY(${rotation}deg) scale(${scale})`;
+      card.style.opacity = String(1 - Math.min(Math.abs(offset), 1) * 0.4);
+    });
+  }
+
   function handleScroll() {
     const el = trackRef.current;
     const first = el?.firstElementChild;
-    if (!el || !(first instanceof HTMLElement)) return;
-    const cardWidth = first.offsetWidth + 16;
-    setActive(Math.round(el.scrollLeft / cardWidth));
+    if (el && first instanceof HTMLElement) {
+      const cardWidth = first.offsetWidth + 16;
+      setActive(Math.round(el.scrollLeft / cardWidth));
+    }
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      updateTilt();
+      rafRef.current = null;
+    });
   }
+
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    updateTilt();
+    window.addEventListener("resize", updateTilt);
+    return () => window.removeEventListener("resize", updateTilt);
+  }, []);
 
   return (
     <div>
       <div
         ref={trackRef}
         onScroll={handleScroll}
-        className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ perspective: "1400px" }}
+        className="flex snap-x snap-mandatory gap-5 overflow-x-auto px-1 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {cards.map((card) => (
-          <div key={card.id} className="w-[86%] shrink-0 snap-center sm:w-80">
+        {cards.map((card, i) => (
+          <div
+            key={card.id}
+            ref={(el) => {
+              cardRefs.current[i] = el;
+            }}
+            style={{ backfaceVisibility: "hidden" }}
+            className="w-[92%] shrink-0 snap-center sm:w-[26rem]"
+          >
             {card.content}
           </div>
         ))}
