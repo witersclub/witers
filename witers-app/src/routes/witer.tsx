@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { Award, GalleryHorizontal, Image as ImageIcon, Video } from "lucide-react";
+import { useRef, useState, type ReactNode } from "react";
 
 import { WitersLogo } from "../components/witers/brand";
 import { StaffCarouselRequestsPanel } from "../components/witers/staff-carousel-requests";
@@ -46,6 +47,21 @@ function DesignerPanel() {
       const res = await fetch("/api/designer/requests", { credentials: "include" });
       if (!res.ok) return null;
       return (await res.json()) as { ok: boolean; requests: DesignerRequest[]; me: string };
+    },
+    enabled: Boolean(platform.data),
+    refetchInterval: 20_000,
+  });
+  const stats = useQuery({
+    queryKey: ["designer-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/designer/stats", { credentials: "include" });
+      if (!res.ok) return null;
+      return (await res.json()) as {
+        ok: boolean;
+        images: number;
+        videos: number;
+        carousels: number;
+      };
     },
     enabled: Boolean(platform.data),
     refetchInterval: 20_000,
@@ -133,6 +149,8 @@ function DesignerPanel() {
         <p className="mt-2 text-sm text-wit-gray">
           Toma una solicitud para trabajarla — así nadie más la duplica.
         </p>
+
+        {stats.data?.ok ? <DesignerStreakCard stats={stats.data} /> : null}
 
         <div className="wit-glass mt-5 inline-flex gap-1 rounded-2xl p-1 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
           <button
@@ -273,6 +291,89 @@ function DesignerPanel() {
           </span>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// Every 5 pieces a client finalizes (of one type) fills the bar and pays
+// out 100 créditos — a purely motivational counter for now, no payout
+// mechanism behind it yet (see the discussion with the client about the
+// eventual rewards system). Images use "cerrada" (the client's explicit
+// confirm step); video/carousel have no such step, "completada" is
+// already their terminal state — see /api/designer/stats.
+function DesignerStreakCard({
+  stats,
+}: {
+  stats: { images: number; videos: number; carousels: number };
+}) {
+  const totalCreditos =
+    Math.floor(stats.images / 5) * 100 +
+    Math.floor(stats.videos / 5) * 100 +
+    Math.floor(stats.carousels / 5) * 100;
+
+  return (
+    <div className="wit-glass mt-6 max-w-lg rounded-3xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">
+          Créditos WITERS
+        </p>
+        <span className="flex items-center gap-1.5 rounded-full bg-wit-blue/10 px-3 py-1 text-sm font-extrabold text-wit-blue">
+          <Award className="h-4 w-4" strokeWidth={2.4} />
+          {totalCreditos}
+        </span>
+      </div>
+      <div className="mt-5 space-y-4">
+        <DesignerStreakRow
+          icon={<ImageIcon className="h-4 w-4" strokeWidth={2.2} />}
+          label="Imágenes"
+          count={stats.images}
+        />
+        <DesignerStreakRow
+          icon={<Video className="h-4 w-4" strokeWidth={2.2} />}
+          label="Videos"
+          count={stats.videos}
+        />
+        <DesignerStreakRow
+          icon={<GalleryHorizontal className="h-4 w-4" strokeWidth={2.2} />}
+          label="Carruseles"
+          count={stats.carousels}
+        />
+      </div>
+    </div>
+  );
+}
+
+function DesignerStreakRow({
+  icon,
+  label,
+  count,
+}: {
+  icon: ReactNode;
+  label: string;
+  count: number;
+}) {
+  const filled = count % 5;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-wit-mist/50 text-wit-blue">
+        {icon}
+      </span>
+      <div className="flex-1">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold text-wit-ink">{label}</p>
+          <p className="text-xs font-semibold text-wit-gray">{filled}/5</p>
+        </div>
+        <div className="mt-1.5 flex gap-1">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <span
+              key={i}
+              className={`h-2 flex-1 rounded-full transition-colors ${
+                i < filled ? "bg-wit-blue" : "bg-wit-mist/60"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

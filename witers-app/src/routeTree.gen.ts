@@ -60,6 +60,7 @@ import { Route as ApiPublicBrandLogoRouteImport } from './routes/api/public/bran
 import { Route as ApiOnboardingDraftRouteImport } from './routes/api/onboarding/draft'
 import { Route as ApiOnboardingCompleteRouteImport } from './routes/api/onboarding/complete'
 import { Route as ApiDesignerVideoRequestsRouteImport } from './routes/api/designer/video-requests'
+import { Route as ApiDesignerStatsRouteImport } from './routes/api/designer/stats'
 import { Route as ApiDesignerRequestsRouteImport } from './routes/api/designer/requests'
 import { Route as ApiDesignerClaimVideoRouteImport } from './routes/api/designer/claim-video'
 import { Route as ApiDesignerClaimCarouselRouteImport } from './routes/api/designer/claim-carousel'
@@ -364,6 +365,11 @@ const ApiDesignerVideoRequestsRoute =
     path: '/api/designer/video-requests',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiDesignerStatsRoute = ApiDesignerStatsRouteImport.update({
+  id: '/api/designer/stats',
+  path: '/api/designer/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDesignerRequestsRoute = ApiDesignerRequestsRouteImport.update({
   id: '/api/designer/requests',
   path: '/api/designer/requests',
@@ -685,6 +691,7 @@ export interface FileRoutesByFullPath {
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
   '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/designer/stats': typeof ApiDesignerStatsRoute
   '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
   '/api/onboarding/complete': typeof ApiOnboardingCompleteRoute
   '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
@@ -783,6 +790,7 @@ export interface FileRoutesByTo {
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
   '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/designer/stats': typeof ApiDesignerStatsRoute
   '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
   '/api/onboarding/complete': typeof ApiOnboardingCompleteRoute
   '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
@@ -882,6 +890,7 @@ export interface FileRoutesById {
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
   '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
+  '/api/designer/stats': typeof ApiDesignerStatsRoute
   '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
   '/api/onboarding/complete': typeof ApiOnboardingCompleteRoute
   '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
@@ -982,6 +991,7 @@ export interface FileRouteTypes {
     | '/api/designer/claim-carousel'
     | '/api/designer/claim-video'
     | '/api/designer/requests'
+    | '/api/designer/stats'
     | '/api/designer/video-requests'
     | '/api/onboarding/complete'
     | '/api/onboarding/draft'
@@ -1080,6 +1090,7 @@ export interface FileRouteTypes {
     | '/api/designer/claim-carousel'
     | '/api/designer/claim-video'
     | '/api/designer/requests'
+    | '/api/designer/stats'
     | '/api/designer/video-requests'
     | '/api/onboarding/complete'
     | '/api/onboarding/draft'
@@ -1178,6 +1189,7 @@ export interface FileRouteTypes {
     | '/api/designer/claim-carousel'
     | '/api/designer/claim-video'
     | '/api/designer/requests'
+    | '/api/designer/stats'
     | '/api/designer/video-requests'
     | '/api/onboarding/complete'
     | '/api/onboarding/draft'
@@ -1277,6 +1289,7 @@ export interface RootRouteChildren {
   ApiDesignerClaimCarouselRoute: typeof ApiDesignerClaimCarouselRoute
   ApiDesignerClaimVideoRoute: typeof ApiDesignerClaimVideoRoute
   ApiDesignerRequestsRoute: typeof ApiDesignerRequestsRoute
+  ApiDesignerStatsRoute: typeof ApiDesignerStatsRoute
   ApiDesignerVideoRequestsRoute: typeof ApiDesignerVideoRequestsRoute
   ApiOnboardingCompleteRoute: typeof ApiOnboardingCompleteRoute
   ApiOnboardingDraftRoute: typeof ApiOnboardingDraftRoute
@@ -1651,6 +1664,13 @@ declare module '@tanstack/react-router' {
       path: '/api/designer/video-requests'
       fullPath: '/api/designer/video-requests'
       preLoaderRoute: typeof ApiDesignerVideoRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/designer/stats': {
+      id: '/api/designer/stats'
+      path: '/api/designer/stats'
+      fullPath: '/api/designer/stats'
+      preLoaderRoute: typeof ApiDesignerStatsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/designer/requests': {
@@ -2053,6 +2073,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDesignerClaimCarouselRoute: ApiDesignerClaimCarouselRoute,
   ApiDesignerClaimVideoRoute: ApiDesignerClaimVideoRoute,
   ApiDesignerRequestsRoute: ApiDesignerRequestsRoute,
+  ApiDesignerStatsRoute: ApiDesignerStatsRoute,
   ApiDesignerVideoRequestsRoute: ApiDesignerVideoRequestsRoute,
   ApiOnboardingCompleteRoute: ApiOnboardingCompleteRoute,
   ApiOnboardingDraftRoute: ApiOnboardingDraftRoute,
