@@ -43,6 +43,7 @@ import {
   Rocket,
   Route as RouteIcon,
   Search,
+  ShieldCheck,
   ShoppingBag,
   ShoppingCart,
   Smartphone,
@@ -1773,6 +1774,8 @@ function PerfilView({
         <PasswordCard />
         <MembershipSummaryCard membership={me.membership} plan={plan} />
 
+        {me.user?.role === "admin" ? <StaffPanelLinksCard /> : null}
+
         <button
           type="button"
           onClick={onLogout}
@@ -1781,6 +1784,44 @@ function PerfilView({
           <LogOut size={16} strokeWidth={2.25} />
           {t("Cerrar sesión", "Log out")}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// Admin accounts aren't blocked from browsing the client panel (unlike
+// designer accounts, which get redirected to /witer on sight — see the
+// role === "designer" check above), so an admin who ends up here still
+// needs a quick way back to the panels their role actually works in.
+// Not shown for plain members — they have no other panel to go to.
+function StaffPanelLinksCard() {
+  const { t } = useLanguage();
+  return (
+    <div className="wit-glass rounded-2xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">
+        {t("Otros accesos", "Other access")}
+      </p>
+      <div className="mt-3 space-y-2">
+        <Link
+          to="/admin"
+          className="flex items-center justify-between rounded-xl border border-wit-ink/10 px-4 py-3 text-sm font-bold text-wit-ink transition-colors hover:bg-wit-mist/40"
+        >
+          <span className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-wit-blue" strokeWidth={2.2} />
+            {t("Panel de administrador", "Admin panel")}
+          </span>
+          <ChevronRight className="h-4 w-4 text-wit-gray" />
+        </Link>
+        <Link
+          to="/witer"
+          className="flex items-center justify-between rounded-xl border border-wit-ink/10 px-4 py-3 text-sm font-bold text-wit-ink transition-colors hover:bg-wit-mist/40"
+        >
+          <span className="flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-wit-blue" strokeWidth={2.2} />
+            {t("Panel de diseñador", "Designer panel")}
+          </span>
+          <ChevronRight className="h-4 w-4 text-wit-gray" />
+        </Link>
       </div>
     </div>
   );
