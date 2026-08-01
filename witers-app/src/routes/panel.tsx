@@ -94,6 +94,13 @@ export const Route = createFileRoute("/panel")({
       { title: "Mi panel. WITERS" },
       { name: "description", content: "Tu panel de solicitudes de diseño WITERS." },
     ],
+    // Preloads the splash's W mark before PanelSplashIntro ever mounts —
+    // without this, the browser only starts fetching that PNG once the
+    // component renders it, and on a slow/uncached load the fade-in
+    // animation can finish (mark fully opaque) before the image itself has
+    // actually painted, which reads as a brief flicker/pop rather than a
+    // clean fade.
+    links: [{ rel: "preload", as: "image", href: "/assets/logo_w.png" }],
   }),
   component: Panel,
 });
@@ -368,11 +375,23 @@ function PanelSplashIntro({ onDone }: { onDone: () => void }) {
   );
 }
 
+// Owns the splash overlay and nothing else, so its lifecycle is
+// completely decoupled from whatever PanelContent is doing internally.
+// PanelContent has several early returns (me.isLoading, not logged in,
+// designer account, brandProfileQuery.isLoading, the real page) — each
+// one is a different root element, so React unmounts/remounts whatever
+// was rendered from the PREVIOUS branch every time the app moves between
+// them. When the splash was rendered from inside each of those branches
+// individually, a query resolving mid-splash (e.g. brandProfileQuery
+// finishing while the 1.3s splash window was still running) unmounted
+// that branch's <PanelSplashIntro/> instance and mounted a brand new one
+// in the next branch — a fresh DOM node whose fade-in animation restarts
+// from 0% opacity, which is exactly the brief flicker a client reported
+// ("a veces parpadea, menos de un segundo"). Hoisting the splash here,
+// one level up, means PanelContent can re-render and switch between
+// branches however it needs to without ever touching this component or
+// its portaled DOM node.
 function Panel() {
-  const me = useMe();
-  const { t } = useLanguage();
-  const navigate = useNavigate();
-  const qc = useQueryClient();
   // The "app opening" intro (see PanelSplashIntro) — once per tab/session,
   // not replayed on every mount (e.g. navigating away to /upgrade and back
   // would otherwise remount Panel() and show it again, which reads as
@@ -396,6 +415,19 @@ function Panel() {
     setShowSplash(false);
     sessionStorage.setItem(PANEL_SPLASH_SESSION_KEY, "1");
   }
+  return (
+    <>
+      {showSplash ? <PanelSplashIntro onDone={dismissSplash} /> : null}
+      <PanelContent />
+    </>
+  );
+}
+
+function PanelContent() {
+  const me = useMe();
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   // Top-level areas of the panel — Creatividad wraps everything that
   // existed before this section was introduced (solicitudes + hacer
   // solicitud); Activos de marca and Campañas are new.
@@ -539,7 +571,6 @@ function Panel() {
     return (
       <div className="wit-page flex min-h-dvh items-center justify-center">
         <div className="h-40 w-full max-w-md animate-pulse rounded-3xl bg-wit-mist/40" />
-        {showSplash ? <PanelSplashIntro onDone={dismissSplash} /> : null}
       </div>
     );
   }
@@ -697,7 +728,6 @@ function Panel() {
     return (
       <div className="wit-page flex min-h-dvh items-center justify-center">
         <div className="h-40 w-full max-w-md animate-pulse rounded-3xl bg-wit-mist/40" />
-        {showSplash ? <PanelSplashIntro onDone={dismissSplash} /> : null}
       </div>
     );
   }
@@ -709,7 +739,6 @@ function Panel() {
     // forcing a layout reflow on close to every keystroke while answering
     // the AI chat and reading as the whole page "jumping."
     <div className="wit-page min-h-svh">
-      {showSplash ? <PanelSplashIntro onDone={dismissSplash} /> : null}
       {section === "activos" ? (
         <BrandAtmosphere colors={brandColorList} key={brandProfile?.company_name ?? "none"} />
       ) : null}
