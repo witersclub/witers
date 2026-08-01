@@ -3506,33 +3506,48 @@ function BrandShowcaseCarousel({ brandProfile }: { brandProfile: BrandProfile | 
 
   return (
     <div>
-      <div
-        ref={trackRef}
-        onScroll={handleScroll}
-        style={{ perspective: "1400px" }}
-        className="flex snap-x snap-mandatory gap-5 overflow-x-auto px-1 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {cards.map((card, i) => (
-          <div
-            key={card.id}
-            ref={(el) => {
-              cardRefs.current[i] = el;
-            }}
-            style={{ backfaceVisibility: "hidden" }}
-            className="w-[96%] shrink-0 snap-center sm:w-[30rem]"
-          >
-            {card.content}
-          </div>
-        ))}
+      {/* Mobile/narrow: the swipeable cube-tilt carousel — one card
+          centered at a time, which is exactly the layout the tilt math
+          assumes. On a wide viewport several cards are visible at once,
+          and rotating the off-center ones made them visually overlap/fan
+          out instead of reading as a cube — so desktop gets a plain
+          static grid instead (below), no scroll or tilt needed once
+          there's enough room to just show all four side by side. */}
+      <div className="md:hidden">
+        <div
+          ref={trackRef}
+          onScroll={handleScroll}
+          style={{ perspective: "1400px" }}
+          className="flex snap-x snap-mandatory gap-5 overflow-x-auto px-1 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {cards.map((card, i) => (
+            <div
+              key={card.id}
+              ref={(el) => {
+                cardRefs.current[i] = el;
+              }}
+              style={{ backfaceVisibility: "hidden" }}
+              className="w-[96%] shrink-0 snap-center sm:w-[30rem]"
+            >
+              {card.content}
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex justify-center gap-1.5">
+          {cards.map((card, i) => (
+            <span
+              key={card.id}
+              className={`h-1.5 rounded-full transition-all ${
+                i === active ? "w-5 bg-wit-blue" : "w-1.5 bg-wit-ink/15"
+              }`}
+            />
+          ))}
+        </div>
       </div>
-      <div className="mt-3 flex justify-center gap-1.5">
-        {cards.map((card, i) => (
-          <span
-            key={card.id}
-            className={`h-1.5 rounded-full transition-all ${
-              i === active ? "w-5 bg-wit-blue" : "w-1.5 bg-wit-ink/15"
-            }`}
-          />
+
+      <div className="hidden gap-5 md:grid md:grid-cols-2 lg:grid-cols-4">
+        {cards.map((card) => (
+          <div key={card.id}>{card.content}</div>
         ))}
       </div>
     </div>
