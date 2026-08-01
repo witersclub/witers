@@ -764,6 +764,16 @@ function Panel() {
         userInitial={(me.data.user?.name?.trim()[0] ?? "?").toUpperCase()}
       />
 
+      <DesktopTopNav
+        section={section}
+        view={view}
+        onSection={(s) => {
+          setSection(s);
+          setView("panel");
+        }}
+        onProfile={() => setView("perfil")}
+      />
+
       <main className="mx-auto max-w-6xl px-5 py-10 pb-24 sm:pb-10">
         {view === "perfil" ? (
           <PerfilView me={me.data} onBack={() => setView("panel")} onLogout={logout} />
@@ -981,8 +991,6 @@ function Panel() {
                 ) : null}
               </>
             ) : null}
-
-            <SectionNav section={section} onChange={setSection} />
 
             {section === "creatividad" ? (
               <>
@@ -1675,12 +1683,6 @@ function RecentCreativeQuickAccess({
     </button>
   );
 }
-
-const SECTIONS: { id: "creatividad" | "activos" | "campanas"; es: string; en: string }[] = [
-  { id: "creatividad", es: "Creatividad", en: "Creative" },
-  { id: "activos", es: "Activos de marca", en: "Brand assets" },
-  { id: "campanas", es: "Campañas", en: "Campaigns" },
-];
 
 // Avatar + dropdown in the header, replacing the old plain "Cerrar sesión"
 // text link — account settings ("Mi perfil") live behind this, same as
@@ -2505,37 +2507,66 @@ function ImagePacksModal({
   );
 }
 
-// The panel's primary navigation — one level above "Mis solicitudes / Hacer
-// solicitud", which now only lives inside "Creatividad". Styled as a
-// segmented control (not the underline tabs used one level down) so it
-// reads as the main way to move around the panel, not a peer of the
-// sub-tabs underneath it.
-function SectionNav({
+// The panel's primary navigation, desktop-only — the same 4 destinations
+// PanelBottomNav gives mobile (Inicio/Mi marca/Campañas/Perfil), just
+// styled as a segmented pill row and moved above the greeting instead of
+// docked to the bottom of the screen, since a wide viewport has no
+// thumb-reach reason to keep it fixed at the bottom. Mobile is untouched
+// — this sits in `sm:` and up only, PanelBottomNav still owns everything
+// below that breakpoint.
+function DesktopTopNav({
   section,
-  onChange,
+  view,
+  onSection,
+  onProfile,
 }: {
   section: "creatividad" | "activos" | "campanas";
-  onChange: (section: "creatividad" | "activos" | "campanas") => void;
+  view: "panel" | "perfil";
+  onSection: (section: "creatividad" | "activos" | "campanas") => void;
+  onProfile: () => void;
 }) {
   const { t } = useLanguage();
+  const items: { active: boolean; onClick: () => void; es: string; en: string }[] = [
+    {
+      active: view === "panel" && section === "creatividad",
+      onClick: () => onSection("creatividad"),
+      es: "Inicio",
+      en: "Home",
+    },
+    {
+      active: view === "panel" && section === "activos",
+      onClick: () => onSection("activos"),
+      es: "Mi marca",
+      en: "My brand",
+    },
+    {
+      active: view === "panel" && section === "campanas",
+      onClick: () => onSection("campanas"),
+      es: "Campañas",
+      en: "Campaigns",
+    },
+    { active: view === "perfil", onClick: onProfile, es: "Perfil", en: "Profile" },
+  ];
   return (
-    // Hidden on mobile — the bottom tab bar (PanelBottomNav) covers this
-    // same job there, and showing both would be two navs doing one thing.
-    <div className="wit-glass mt-8 hidden gap-1 rounded-2xl p-1 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:inline-flex">
-      {SECTIONS.map((s) => (
-        <button
-          key={s.id}
-          type="button"
-          onClick={() => onChange(s.id)}
-          className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
-            section === s.id
-              ? "bg-wit-blue text-white"
-              : "text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
-          }`}
-        >
-          {t(s.es, s.en)}
-        </button>
-      ))}
+    <div className="hidden sm:block">
+      <div className="mx-auto max-w-6xl px-5 pt-6">
+        <div className="wit-glass inline-flex gap-1 rounded-2xl p-1 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+          {items.map((it) => (
+            <button
+              key={it.es}
+              type="button"
+              onClick={it.onClick}
+              className={`rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+                it.active
+                  ? "bg-wit-blue text-white"
+                  : "text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
+              }`}
+            >
+              {t(it.es, it.en)}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
