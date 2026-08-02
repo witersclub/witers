@@ -51,7 +51,7 @@ type AdDetail = {
   costPerResult: string;
 };
 
-const CAMPAIGN_RANGE_PRESET_DAYS = [1, 2, 5, 7, 10];
+const CAMPAIGN_RANGE_PRESET_DAYS = [1, 3, 7, 15, 30, 60];
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
