@@ -18,13 +18,22 @@ export const Route = createFileRoute("/api/campaign-ads")({
         const id = url.searchParams.get("id") ?? "";
         if (!id) return json({ ok: false, error: "id_requerido" }, { status: 400 });
 
+        // Optional exact date range from the client's date-range picker —
+        // both or neither, malformed/partial values are ignored rather
+        // than rejected so a bad param just falls back to the default
+        // full-lifetime view instead of erroring the whole request.
+        const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+        const since = url.searchParams.get("since") ?? "";
+        const until = url.searchParams.get("until") ?? "";
+        const range = DATE_RE.test(since) && DATE_RE.test(until) ? { since, until } : undefined;
+
         const row = await db()
           .prepare(`SELECT meta_campaign_id FROM ad_campaigns WHERE id = ?1 AND user_id = ?2`)
           .bind(id, user.id)
           .first<{ meta_campaign_id: string }>();
         if (!row) return json({ ok: false, error: "no_encontrada" }, { status: 404 });
 
-        const details = await getCampaignAdDetails(row.meta_campaign_id);
+        const details = await getCampaignAdDetails(row.meta_campaign_id, range);
         if (!details.ok) return json({ ok: false, error: details.error }, { status: 502 });
 
         return json({ ok: true, ads: details.data });

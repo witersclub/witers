@@ -292,6 +292,7 @@ export type AdDetail = {
 // creative) by id.
 export async function getCampaignAdDetails(
   campaignId: string,
+  range?: { since: string; until: string },
 ): Promise<{ ok: true; data: AdDetail[] } | { ok: false; error: string }> {
   const config = getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
@@ -310,6 +311,14 @@ export async function getCampaignAdDetails(
       { fields: "id,name,status,creative{image_url,thumbnail_url}", limit: 50 },
       "GET",
     ),
+    // Same "fields and date must both be explicit" reasoning as
+    // getCampaignInsight above. `range` (an exact since/until, from the
+    // client's date-range picker in the campaign detail modal) uses
+    // `time_range` instead of `date_preset` — Meta's presets top out at
+    // named windows like last_7d, nothing that maps onto an arbitrary
+    // 1/2/5/10-day pick, so an explicit range is the only way to get
+    // those exactly. No `range` (the default view) keeps the original
+    // full-lifetime "maximum" behavior.
     graphRequest<{
       data: Array<{
         ad_id?: string;
@@ -326,7 +335,9 @@ export async function getCampaignAdDetails(
       {
         level: "ad",
         fields: "ad_id,spend,impressions,clicks,reach,actions,cost_per_action_type",
-        date_preset: "maximum",
+        ...(range
+          ? { time_range: { since: range.since, until: range.until } }
+          : { date_preset: "maximum" }),
       },
       "GET",
     ),
