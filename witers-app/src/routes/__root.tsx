@@ -23,6 +23,7 @@ function isStaleChunkError(error: Error | undefined | null): boolean {
 }
 
 import { IosInstallHint } from "../components/witers/ios-install-hint";
+import { LiveVisitorHeartbeat } from "../components/witers/live-visitor-heartbeat";
 import { LanguageProvider } from "../lib/i18n";
 
 import appCss from "../styles.css?url";
@@ -189,6 +190,7 @@ function RootComponent() {
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
         <IosInstallHint />
+        <LiveVisitorHeartbeat />
       </LanguageProvider>
     </QueryClientProvider>
   );

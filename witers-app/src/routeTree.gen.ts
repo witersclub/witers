@@ -27,6 +27,7 @@ import { Route as AdminLabRouteImport } from './routes/admin-lab'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiWitVideoIdeaRouteImport } from './routes/api/wit-video-idea'
+import { Route as ApiVisitorHeartbeatRouteImport } from './routes/api/visitor-heartbeat'
 import { Route as ApiVideoRequestsRouteImport } from './routes/api/video-requests'
 import { Route as ApiUserRouteImport } from './routes/api/user'
 import { Route as ApiUploadVideoRawRouteImport } from './routes/api/upload-video-raw'
@@ -84,6 +85,7 @@ import { Route as ApiAdminUnlinkCampaignRouteImport } from './routes/api/admin/u
 import { Route as ApiAdminToggleLogoVisibilityRouteImport } from './routes/api/admin/toggle-logo-visibility'
 import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overview'
 import { Route as ApiAdminMetaCampaignsRouteImport } from './routes/api/admin/meta-campaigns'
+import { Route as ApiAdminLiveVisitorsRouteImport } from './routes/api/admin/live-visitors'
 import { Route as ApiAdminLinkCampaignRouteImport } from './routes/api/admin/link-campaign'
 import { Route as ApiAdminGrantRequestsRouteImport } from './routes/api/admin/grant-requests'
 import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
@@ -195,6 +197,11 @@ const IndexRoute = IndexRouteImport.update({
 const ApiWitVideoIdeaRoute = ApiWitVideoIdeaRouteImport.update({
   id: '/api/wit-video-idea',
   path: '/api/wit-video-idea',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVisitorHeartbeatRoute = ApiVisitorHeartbeatRouteImport.update({
+  id: '/api/visitor-heartbeat',
+  path: '/api/visitor-heartbeat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiVideoRequestsRoute = ApiVideoRequestsRouteImport.update({
@@ -491,6 +498,11 @@ const ApiAdminMetaCampaignsRoute = ApiAdminMetaCampaignsRouteImport.update({
   path: '/api/admin/meta-campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminLiveVisitorsRoute = ApiAdminLiveVisitorsRouteImport.update({
+  id: '/api/admin/live-visitors',
+  path: '/api/admin/live-visitors',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminLinkCampaignRoute = ApiAdminLinkCampaignRouteImport.update({
   id: '/api/admin/link-campaign',
   path: '/api/admin/link-campaign',
@@ -649,6 +661,7 @@ export interface FileRoutesByFullPath {
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
   '/api/video-requests': typeof ApiVideoRequestsRoute
+  '/api/visitor-heartbeat': typeof ApiVisitorHeartbeatRoute
   '/api/wit-video-idea': typeof ApiWitVideoIdeaRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
@@ -668,6 +681,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
   '/api/admin/link-campaign': typeof ApiAdminLinkCampaignRoute
+  '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
@@ -748,6 +762,7 @@ export interface FileRoutesByTo {
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
   '/api/video-requests': typeof ApiVideoRequestsRoute
+  '/api/visitor-heartbeat': typeof ApiVisitorHeartbeatRoute
   '/api/wit-video-idea': typeof ApiWitVideoIdeaRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
@@ -767,6 +782,7 @@ export interface FileRoutesByTo {
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
   '/api/admin/link-campaign': typeof ApiAdminLinkCampaignRoute
+  '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
@@ -848,6 +864,7 @@ export interface FileRoutesById {
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
   '/api/video-requests': typeof ApiVideoRequestsRoute
+  '/api/visitor-heartbeat': typeof ApiVisitorHeartbeatRoute
   '/api/wit-video-idea': typeof ApiWitVideoIdeaRoute
   '/api/account/change-password': typeof ApiAccountChangePasswordRoute
   '/api/account/update-name': typeof ApiAccountUpdateNameRoute
@@ -867,6 +884,7 @@ export interface FileRoutesById {
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
   '/api/admin/link-campaign': typeof ApiAdminLinkCampaignRoute
+  '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
@@ -949,6 +967,7 @@ export interface FileRouteTypes {
     | '/api/upload-video-raw'
     | '/api/user'
     | '/api/video-requests'
+    | '/api/visitor-heartbeat'
     | '/api/wit-video-idea'
     | '/api/account/change-password'
     | '/api/account/update-name'
@@ -968,6 +987,7 @@ export interface FileRouteTypes {
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
     | '/api/admin/link-campaign'
+    | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
@@ -1048,6 +1068,7 @@ export interface FileRouteTypes {
     | '/api/upload-video-raw'
     | '/api/user'
     | '/api/video-requests'
+    | '/api/visitor-heartbeat'
     | '/api/wit-video-idea'
     | '/api/account/change-password'
     | '/api/account/update-name'
@@ -1067,6 +1088,7 @@ export interface FileRouteTypes {
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
     | '/api/admin/link-campaign'
+    | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
@@ -1147,6 +1169,7 @@ export interface FileRouteTypes {
     | '/api/upload-video-raw'
     | '/api/user'
     | '/api/video-requests'
+    | '/api/visitor-heartbeat'
     | '/api/wit-video-idea'
     | '/api/account/change-password'
     | '/api/account/update-name'
@@ -1166,6 +1189,7 @@ export interface FileRouteTypes {
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
     | '/api/admin/link-campaign'
+    | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
     | '/api/admin/toggle-logo-visibility'
@@ -1247,6 +1271,7 @@ export interface RootRouteChildren {
   ApiUploadVideoRawRoute: typeof ApiUploadVideoRawRoute
   ApiUserRoute: typeof ApiUserRoute
   ApiVideoRequestsRoute: typeof ApiVideoRequestsRoute
+  ApiVisitorHeartbeatRoute: typeof ApiVisitorHeartbeatRoute
   ApiWitVideoIdeaRoute: typeof ApiWitVideoIdeaRoute
   ApiAccountChangePasswordRoute: typeof ApiAccountChangePasswordRoute
   ApiAccountUpdateNameRoute: typeof ApiAccountUpdateNameRoute
@@ -1266,6 +1291,7 @@ export interface RootRouteChildren {
   ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
   ApiAdminGrantRequestsRoute: typeof ApiAdminGrantRequestsRoute
   ApiAdminLinkCampaignRoute: typeof ApiAdminLinkCampaignRoute
+  ApiAdminLiveVisitorsRoute: typeof ApiAdminLiveVisitorsRoute
   ApiAdminMetaCampaignsRoute: typeof ApiAdminMetaCampaignsRoute
   ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
   ApiAdminToggleLogoVisibilityRoute: typeof ApiAdminToggleLogoVisibilityRoute
@@ -1433,6 +1459,13 @@ declare module '@tanstack/react-router' {
       path: '/api/wit-video-idea'
       fullPath: '/api/wit-video-idea'
       preLoaderRoute: typeof ApiWitVideoIdeaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/visitor-heartbeat': {
+      id: '/api/visitor-heartbeat'
+      path: '/api/visitor-heartbeat'
+      fullPath: '/api/visitor-heartbeat'
+      preLoaderRoute: typeof ApiVisitorHeartbeatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/video-requests': {
@@ -1834,6 +1867,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminMetaCampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/live-visitors': {
+      id: '/api/admin/live-visitors'
+      path: '/api/admin/live-visitors'
+      fullPath: '/api/admin/live-visitors'
+      preLoaderRoute: typeof ApiAdminLiveVisitorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/link-campaign': {
       id: '/api/admin/link-campaign'
       path: '/api/admin/link-campaign'
@@ -2031,6 +2071,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUploadVideoRawRoute: ApiUploadVideoRawRoute,
   ApiUserRoute: ApiUserRoute,
   ApiVideoRequestsRoute: ApiVideoRequestsRoute,
+  ApiVisitorHeartbeatRoute: ApiVisitorHeartbeatRoute,
   ApiWitVideoIdeaRoute: ApiWitVideoIdeaRoute,
   ApiAccountChangePasswordRoute: ApiAccountChangePasswordRoute,
   ApiAccountUpdateNameRoute: ApiAccountUpdateNameRoute,
@@ -2050,6 +2091,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
   ApiAdminGrantRequestsRoute: ApiAdminGrantRequestsRoute,
   ApiAdminLinkCampaignRoute: ApiAdminLinkCampaignRoute,
+  ApiAdminLiveVisitorsRoute: ApiAdminLiveVisitorsRoute,
   ApiAdminMetaCampaignsRoute: ApiAdminMetaCampaignsRoute,
   ApiAdminOverviewRoute: ApiAdminOverviewRoute,
   ApiAdminToggleLogoVisibilityRoute: ApiAdminToggleLogoVisibilityRoute,

@@ -13,6 +13,7 @@ import {
   Megaphone,
   Palette,
   Plus,
+  Radar,
   Star,
   Users,
   Video,
@@ -563,7 +564,8 @@ function DashboardView({
   );
 }
 
-type AdminTab = "dashboard" | "solicitudes" | "diseñadores" | "usuarios" | "campanas" | "pagos";
+type AdminTab =
+  "dashboard" | "solicitudes" | "diseñadores" | "usuarios" | "campanas" | "pagos" | "visitantes";
 
 const NAV_ITEMS: { key: AdminTab; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -572,6 +574,7 @@ const NAV_ITEMS: { key: AdminTab; label: string; icon: typeof LayoutDashboard }[
   { key: "usuarios", label: "Usuarios", icon: Users },
   { key: "campanas", label: "Campañas", icon: Megaphone },
   { key: "pagos", label: "Pagos", icon: CreditCard },
+  { key: "visitantes", label: "En vivo", icon: Radar },
 ];
 
 function Admin() {
@@ -647,6 +650,7 @@ function Admin() {
     usuarios: "Usuarios",
     campanas: "Campañas",
     pagos: "Pagos",
+    visitantes: "En vivo",
   };
 
   return (
@@ -782,8 +786,10 @@ function Admin() {
             <UsersTable rows={data.users} />
           ) : tab === "campanas" ? (
             <CampaignsAdmin users={data.users} />
-          ) : (
+          ) : tab === "pagos" ? (
             <PagosPanel payments={data.payments} discountCodes={data.discountCodes} />
+          ) : (
+            <LiveVisitorsPanel />
           )}
         </main>
       </div>
@@ -2574,6 +2580,100 @@ function ClientCampaignsPanel({ user }: { user: AdminUser }) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type LiveVisitorRow = {
+  id: string;
+  user_id: string | null;
+  user_name: string | null;
+  user_role: string | null;
+  path: string;
+  country: string | null;
+  last_seen: string;
+};
+
+function secondsAgo(lastSeen: string): number {
+  return Math.max(0, Math.round((Date.now() - new Date(`${lastSeen}Z`).getTime()) / 1000));
+}
+
+// Wix-style "who's browsing right now" — public site or the client/designer
+// panels, logged in or not. Polls every 4s (see /api/admin/live-visitors,
+// which only returns heartbeats from the last 45s) rather than a live
+// socket connection — same pattern the rest of admin already uses for
+// near-real-time data (e.g. the dashboard's 30s overview poll).
+function LiveVisitorsPanel() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["live-visitors"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/live-visitors", { credentials: "include" });
+      if (!res.ok) return null;
+      return (await res.json()) as { ok: boolean; visitors: LiveVisitorRow[] };
+    },
+    refetchInterval: 4_000,
+  });
+
+  const visitors = data?.visitors ?? [];
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-extrabold tracking-tight text-wit-ink">En vivo</h1>
+        <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-700">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+          {visitors.length} {visitors.length === 1 ? "persona ahora" : "personas ahora"}
+        </span>
+      </div>
+      <p className="mt-1 text-sm text-wit-gray">
+        Quién está navegando el sitio o el panel en este momento.
+      </p>
+
+      {isLoading ? (
+        <div className="mt-6 h-40 animate-pulse rounded-2xl bg-white" />
+      ) : visitors.length === 0 ? (
+        <div className="wit-glass mt-6 rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
+          <p className="text-base font-semibold text-wit-ink">Nadie navegando en este momento.</p>
+        </div>
+      ) : (
+        <div className="wit-glass mt-6 overflow-x-auto rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+          <table className="w-full min-w-[560px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-wit-ink/10 text-xs uppercase tracking-wider text-wit-gray">
+                <th className="px-5 py-3.5">Quién</th>
+                <th className="px-5 py-3.5">Página</th>
+                <th className="px-5 py-3.5">País</th>
+                <th className="px-5 py-3.5">Hace</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visitors.map((v) => (
+                <tr key={v.id} className="border-b border-wit-ink/5 last:border-0">
+                  <td className="px-5 py-3.5">
+                    {v.user_name ? (
+                      <>
+                        <p className="font-semibold text-wit-ink">{v.user_name}</p>
+                        <p className="text-xs text-wit-gray">
+                          {v.user_role === "admin"
+                            ? "Admin"
+                            : v.user_role === "designer"
+                              ? "Diseñador"
+                              : "Miembro"}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-wit-gray">Visitante</p>
+                    )}
+                  </td>
+                  <td className="px-5 py-3.5 font-wit-mono text-xs">{v.path}</td>
+                  <td className="px-5 py-3.5">{v.country ?? "—"}</td>
+                  <td className="px-5 py-3.5 text-wit-gray">{secondsAgo(v.last_seen)}s</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
