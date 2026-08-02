@@ -159,49 +159,56 @@ export default function CampaignAdDetailModal({
                 {rangeLabel}
               </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-auto p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-                <div className="flex shrink-0 flex-row flex-wrap gap-1 sm:w-32 sm:flex-col sm:border-r sm:border-wit-ink/10 sm:pr-4">
+            <PopoverContent
+              align="start"
+              className="w-[calc(100vw-2rem)] max-w-xs p-4 sm:w-auto sm:max-w-sm"
+            >
+              {/* One month, not two side by side — a two-month calendar was
+                  taller than the screen on mobile and forced the popover
+                  wider than the viewport, cutting off the last preset
+                  chips. A single compact box fits comfortably instead;
+                  dragging across a month boundary still works fine, the
+                  calendar just pages forward/back as usual. */}
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={clearRange}
+                  className={`rounded-lg px-2.5 py-1.5 text-sm font-semibold transition-colors hover:bg-wit-mist/60 ${
+                    range === null ? "bg-wit-blue/10 text-wit-blue" : "text-wit-ink"
+                  }`}
+                >
+                  {t("Todo el tiempo", "All time")}
+                </button>
+                {CAMPAIGN_RANGE_PRESET_DAYS.map((days) => (
                   <button
+                    key={days}
                     type="button"
-                    onClick={clearRange}
-                    className={`rounded-lg px-2.5 py-1.5 text-left text-sm font-semibold transition-colors hover:bg-wit-mist/60 ${
-                      range === null ? "bg-wit-blue/10 text-wit-blue" : "text-wit-ink"
-                    }`}
+                    onClick={() => applyPreset(days)}
+                    className="rounded-lg px-2.5 py-1.5 text-sm font-semibold text-wit-ink transition-colors hover:bg-wit-mist/60"
                   >
-                    {t("Todo el tiempo", "All time")}
+                    {t(`${days} día${days > 1 ? "s" : ""}`, `${days} day${days > 1 ? "s" : ""}`)}
                   </button>
-                  {CAMPAIGN_RANGE_PRESET_DAYS.map((days) => (
-                    <button
-                      key={days}
-                      type="button"
-                      onClick={() => applyPreset(days)}
-                      className="rounded-lg px-2.5 py-1.5 text-left text-sm font-semibold text-wit-ink transition-colors hover:bg-wit-mist/60"
-                    >
-                      {t(`${days} día${days > 1 ? "s" : ""}`, `${days} day${days > 1 ? "s" : ""}`)}
-                    </button>
-                  ))}
-                </div>
-                <div>
-                  <DateRangeCalendar
-                    mode="range"
-                    numberOfMonths={2}
-                    selected={draftRange}
-                    onSelect={setDraftRange}
-                    disabled={{ after: new Date() }}
-                    locale={es}
-                  />
-                  <div className="mt-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={applyCustomRange}
-                      disabled={!draftRange?.from}
-                      className="rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white transition-opacity disabled:opacity-40"
-                    >
-                      {t("Aplicar", "Apply")}
-                    </button>
-                  </div>
-                </div>
+                ))}
+              </div>
+              <div className="mt-3 flex justify-center">
+                <DateRangeCalendar
+                  mode="range"
+                  numberOfMonths={1}
+                  selected={draftRange}
+                  onSelect={setDraftRange}
+                  disabled={{ after: new Date() }}
+                  locale={es}
+                />
+              </div>
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={applyCustomRange}
+                  disabled={!draftRange?.from}
+                  className="rounded-full bg-wit-blue px-4 py-1.5 text-xs font-bold text-white transition-opacity disabled:opacity-40"
+                >
+                  {t("Aplicar", "Apply")}
+                </button>
               </div>
             </PopoverContent>
           </Popover>
