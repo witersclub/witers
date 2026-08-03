@@ -885,15 +885,6 @@ function PanelContent() {
                         "Request creatives and track every request from here.",
                       )}
                     </p>
-                    <RecentCreativeQuickAccess
-                      creative={recentCreatives[0]}
-                      onOpen={(kind) => {
-                        setSection("creatividad");
-                        setCreativeMode(kind);
-                        if (kind === "carruseles") setCarouselTab("solicitudes");
-                        else setTab("solicitudes");
-                      }}
-                    />
                   </div>
 
                   <div className="flex flex-col items-stretch gap-2">
@@ -974,6 +965,62 @@ function PanelContent() {
                   </div>
                 </div>
 
+                {/* "Mis solicitudes" — moved up to be the first real
+                    content on Inicio, replacing the old single-thumbnail
+                    RecentCreativeQuickAccess teaser that pointed at this
+                    same list one tab-click away. Showing the whole strip
+                    right here made that shortcut redundant. */}
+                {recentCreatives.length > 0 ? (
+                  <div className="mt-8">
+                    <h2 className="text-lg font-bold text-wit-ink">
+                      {t("Mis solicitudes", "My requests")}
+                    </h2>
+                    <div className="relative mt-3">
+                      <div
+                        ref={recentScrollRef}
+                        className="flex snap-x snap-mandatory items-end gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                      >
+                        {/* Fixed height, auto width from each piece's own
+                            aspect_ratio — a story-format piece and a square
+                            one sit at the height, in their real shape,
+                            instead of both getting force-cropped into the
+                            same square. Tapping opens it full-size in a
+                            lightbox rather than navigating away. */}
+                        {recentCreatives.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            title={c.title}
+                            onClick={() =>
+                              setLightboxCreative({ thumbHref: c.thumbHref, title: c.title })
+                            }
+                            style={{ aspectRatio: cssAspectRatio(c.aspectRatio) }}
+                            className="h-40 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 shadow-[0_10px_25px_rgba(5,13,40,0.08)] transition-transform active:scale-95 sm:h-48"
+                          >
+                            <img
+                              src={c.thumbHref}
+                              alt={c.title}
+                              className="h-full w-full object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                      {recentCreatives.length > 3 ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            recentScrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })
+                          }
+                          aria-label={t("Ver más solicitudes", "See more requests")}
+                          className="absolute -right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-wit-ink/10 bg-white shadow-[0_10px_30px_rgba(5,13,40,0.15)]"
+                        >
+                          <ChevronRight className="h-4 w-4 text-wit-ink" strokeWidth={2.4} />
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+
                 {campaignsLaunched > 0 || totalReach > 0 || totalResultsImpact > 0 ? (
                   // Their own history read back as an achievement, and the
                   // loop closed all the way to real results — not just a
@@ -988,26 +1035,26 @@ function PanelContent() {
                     <p className="text-sm font-bold text-wit-ink">
                       {t("Tus campañas han generado", "Your campaigns have generated")}
                     </p>
-                    <div className="mt-4 flex flex-wrap gap-x-8 gap-y-4">
+                    {/* grid-cols-3 (not flex-wrap) so the three points always
+                        sit on one line, even on a narrow phone — a vertical
+                        icon-over-number stack per point keeps each column
+                        narrow enough for that to hold up. */}
+                    <div className="mt-4 grid grid-cols-3 gap-2">
                       {campaignsLaunched > 0 ? (
                         <button
                           type="button"
                           onClick={() => setSection("campanas")}
-                          className="flex items-center gap-2.5 text-left"
+                          className="flex flex-col items-center gap-1 rounded-xl py-1 text-center transition-colors hover:bg-wit-mist/40"
                         >
                           <Rocket className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
-                          <span>
-                            <span className="block text-lg font-extrabold leading-none text-wit-ink">
-                              {campaignsLaunched}
-                            </span>
-                            <span className="text-[11px] leading-tight text-wit-gray">
-                              {t(
-                                campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas",
-                                campaignsLaunched === 1
-                                  ? "campaign launched"
-                                  : "campaigns launched",
-                              )}
-                            </span>
+                          <span className="text-lg font-extrabold leading-none text-wit-ink">
+                            {campaignsLaunched}
+                          </span>
+                          <span className="text-[10px] leading-tight text-wit-gray">
+                            {t(
+                              campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas",
+                              campaignsLaunched === 1 ? "campaign launched" : "campaigns launched",
+                            )}
                           </span>
                         </button>
                       ) : null}
@@ -1015,16 +1062,14 @@ function PanelContent() {
                         <button
                           type="button"
                           onClick={() => setSection("campanas")}
-                          className="flex items-center gap-2.5 text-left"
+                          className="flex flex-col items-center gap-1 rounded-xl py-1 text-center transition-colors hover:bg-wit-mist/40"
                         >
                           <Eye className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
-                          <span>
-                            <span className="block text-lg font-extrabold leading-none text-wit-ink">
-                              {totalReach.toLocaleString("es-MX")}
-                            </span>
-                            <span className="text-[11px] leading-tight text-wit-gray">
-                              {t("personas alcanzadas", "people reached")}
-                            </span>
+                          <span className="text-lg font-extrabold leading-none text-wit-ink">
+                            {totalReach.toLocaleString("es-MX")}
+                          </span>
+                          <span className="text-[10px] leading-tight text-wit-gray">
+                            {t("personas alcanzadas", "people reached")}
                           </span>
                         </button>
                       ) : null}
@@ -1032,16 +1077,14 @@ function PanelContent() {
                         <button
                           type="button"
                           onClick={() => setSection("campanas")}
-                          className="flex items-center gap-2.5 text-left"
+                          className="flex flex-col items-center gap-1 rounded-xl py-1 text-center transition-colors hover:bg-wit-mist/40"
                         >
                           <Target className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
-                          <span>
-                            <span className="block text-lg font-extrabold leading-none text-wit-ink">
-                              {totalResultsImpact.toLocaleString("es-MX")}
-                            </span>
-                            <span className="text-[11px] leading-tight text-wit-gray">
-                              {t("resultados totales", "total results")}
-                            </span>
+                          <span className="text-lg font-extrabold leading-none text-wit-ink">
+                            {totalResultsImpact.toLocaleString("es-MX")}
+                          </span>
+                          <span className="text-[10px] leading-tight text-wit-gray">
+                            {t("mensajes recibidos", "messages received")}
                           </span>
                         </button>
                       ) : null}
@@ -1285,57 +1328,6 @@ function PanelContent() {
                         </div>
                       </>
                     )}
-                  </div>
-                ) : null}
-
-                {recentCreatives.length > 0 ? (
-                  <div className="mt-8">
-                    <h2 className="text-lg font-bold text-wit-ink">
-                      {t("Mis solicitudes", "My requests")}
-                    </h2>
-                    <div className="relative mt-3">
-                      <div
-                        ref={recentScrollRef}
-                        className="flex snap-x snap-mandatory items-end gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                      >
-                        {/* Fixed height, auto width from each piece's own
-                            aspect_ratio — a story-format piece and a square
-                            one sit at the height, in their real shape,
-                            instead of both getting force-cropped into the
-                            same square. Tapping opens it full-size in a
-                            lightbox rather than navigating away. */}
-                        {recentCreatives.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            title={c.title}
-                            onClick={() =>
-                              setLightboxCreative({ thumbHref: c.thumbHref, title: c.title })
-                            }
-                            style={{ aspectRatio: cssAspectRatio(c.aspectRatio) }}
-                            className="h-40 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 shadow-[0_10px_25px_rgba(5,13,40,0.08)] transition-transform active:scale-95 sm:h-48"
-                          >
-                            <img
-                              src={c.thumbHref}
-                              alt={c.title}
-                              className="h-full w-full object-cover"
-                            />
-                          </button>
-                        ))}
-                      </div>
-                      {recentCreatives.length > 3 ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            recentScrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })
-                          }
-                          aria-label={t("Ver más solicitudes", "See more requests")}
-                          className="absolute -right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-wit-ink/10 bg-white shadow-[0_10px_30px_rgba(5,13,40,0.15)]"
-                        >
-                          <ChevronRight className="h-4 w-4 text-wit-ink" strokeWidth={2.4} />
-                        </button>
-                      ) : null}
-                    </div>
                   </div>
                 ) : null}
 
@@ -1761,49 +1753,6 @@ function PanelTab({
 }
 
 /* ---------- top-level panel sections ---------- */
-
-// Small square thumbnail of the client's single most recent delivered
-// creative, pinned right under the "Hola, X" greeting — a returning client
-// with an existing piece used to land on a neutral picker with zero
-// indication anything existed, having to first tap a "Crear X" card (which
-// reads as "start something new") to even discover the "Mis solicitudes"
-// tab hiding inside it. Tapping this jumps straight to that type's
-// "Mis solicitudes" list. Nothing to show (no delivered piece yet, e.g. a
-// brand-new client or one whose only request is still in progress) means
-// this renders nothing — the create-cards further down are already that
-// client's call to action.
-function RecentCreativeQuickAccess({
-  creative,
-  onOpen,
-}: {
-  creative: { kind: "imagen" | "carrusel"; title: string; thumbHref: string } | undefined;
-  onOpen: (kind: "imagenes" | "carruseles") => void;
-}) {
-  const { t } = useLanguage();
-  if (!creative) return null;
-
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(creative.kind === "carrusel" ? "carruseles" : "imagenes")}
-      className="mt-4 flex items-center gap-3 self-start rounded-2xl transition-opacity hover:opacity-80"
-    >
-      <img
-        src={creative.thumbHref}
-        alt={creative.title}
-        className="h-16 w-16 shrink-0 rounded-2xl border border-wit-ink/10 object-cover shadow-[0_10px_30px_rgba(5,13,40,0.08)]"
-      />
-      <span className="text-left">
-        <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-          {t("Mis solicitudes", "My requests")}
-        </span>
-        <span className="mt-0.5 block text-sm font-bold text-wit-blue">
-          {t("Ver piezas ya hechas →", "See finished pieces →")}
-        </span>
-      </span>
-    </button>
-  );
-}
 
 // Avatar + dropdown in the header, replacing the old plain "Cerrar sesión"
 // text link — account settings ("Mi perfil") live behind this, same as
