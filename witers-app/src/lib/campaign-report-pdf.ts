@@ -103,7 +103,7 @@ function drawTableHeader(page: import("./simple-pdf").PdfPage, yTop: number): nu
 function drawFooter(page: import("./simple-pdf").PdfPage, pageNum: number, pageCount: number) {
   const y = PAGE_H - 28;
   page.line(MARGIN, y - 10, PAGE_W - MARGIN, y - 10, [0.88, 0.9, 0.94], 0.75);
-  page.text(MARGIN, y, "Generado por WITERS · witers.club", "F1", 8, GRAY);
+  page.text(MARGIN, y, "Generado por WITERS · www.witers.com", "F1", 8, GRAY);
   const pageLabel = `Página ${pageNum} de ${pageCount}`;
   page.text(PAGE_W - MARGIN - textWidth(pageLabel, 8, false), y, pageLabel, "F1", 8, GRAY);
 }
