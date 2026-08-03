@@ -3,11 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
-import { Calendar as CalendarIcon, X } from "lucide-react";
+import { Calendar as CalendarIcon, FileDown, Loader2, X } from "lucide-react";
 
 import { Calendar as DateRangeCalendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useLanguage } from "../../lib/i18n";
+import { buildCampaignReportPdf, downloadPdf } from "../../lib/campaign-report-pdf";
 
 // Pulled into its own file so panel.tsx can React.lazy() it — react-day-picker
 // + date-fns added ~430KB to the main panel bundle when they were just
@@ -65,15 +66,18 @@ function isoDate(d: Date): string {
 // all-time regardless of what's picked in here, per the client's call.
 export default function CampaignAdDetailModal({
   campaign,
+  companyName,
   onClose,
 }: {
   campaign: { id: string; name: string | null };
+  companyName: string | null;
   onClose: () => void;
 }) {
   const { t } = useLanguage();
   // null = "todo el tiempo" (the original, unfiltered behavior).
   const [range, setRange] = useState<{ since: string; until: string } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
   // The calendar's in-progress selection, separate from `range` — dragging
   // a range takes two clicks (start, then end), so this only becomes the
   // real filter once "Aplicar" confirms it, instead of refetching after
@@ -120,6 +124,28 @@ export default function CampaignAdDetailModal({
     ? `${format(new Date(`${range.since}T00:00:00`), "d MMM", { locale: es })} – ${format(new Date(`${range.until}T00:00:00`), "d MMM", { locale: es })}`
     : t("Todo el tiempo", "All time");
 
+  async function handleReport() {
+    if (generatingReport || !ads.data?.ok) return;
+    setGeneratingReport(true);
+    try {
+      const bytes = await buildCampaignReportPdf({
+        companyName,
+        campaignName: campaign.name ?? "",
+        rangeLabel,
+        ads: ads.data.ads ?? [],
+      });
+      const slug = (campaign.name ?? "campana")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      downloadPdf(bytes, `WITERS-Reporte-${slug || "campana"}.pdf`);
+    } finally {
+      setGeneratingReport(false);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-wit-ink/50 p-4 backdrop-blur-sm"
@@ -148,7 +174,7 @@ export default function CampaignAdDetailModal({
           </button>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
             <PopoverTrigger asChild>
               <button
@@ -212,6 +238,19 @@ export default function CampaignAdDetailModal({
               </div>
             </PopoverContent>
           </Popover>
+          <button
+            type="button"
+            onClick={handleReport}
+            disabled={generatingReport || !ads.data?.ok}
+            className="flex items-center gap-1.5 rounded-full bg-wit-blue px-3.5 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+          >
+            {generatingReport ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.2} />
+            ) : (
+              <FileDown className="h-3.5 w-3.5" strokeWidth={2.2} />
+            )}
+            {t("Hacer reporte", "Generate report")}
+          </button>
         </div>
 
         <div className="mt-6 space-y-3">

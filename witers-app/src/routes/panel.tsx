@@ -1291,7 +1291,7 @@ function PanelContent() {
               </div>
             ) : (
               <div className="mt-8">
-                <CampanasPanel />
+                <CampanasPanel companyName={brandProfile?.company_name ?? null} />
               </div>
             )}
           </>
@@ -2904,7 +2904,7 @@ function CampaignCard({ c, onOpenDetail }: { c: Campaign; onOpenDetail: () => vo
 // Real campaign list now — refreshes every time this mounts, and every 60s
 // while it's open, matching the "se actualiza sola, no empujado al
 // instante" explanation given for how Meta itself reports ad performance.
-function CampanasPanel() {
+function CampanasPanel({ companyName }: { companyName: string | null }) {
   const { t } = useLanguage();
   const [showArchived, setShowArchived] = useState(false);
   const [openCampaign, setOpenCampaign] = useState<Campaign | null>(null);
@@ -3011,6 +3011,7 @@ function CampanasPanel() {
             >
               <CampaignAdDetailModal
                 campaign={openCampaign}
+                companyName={companyName}
                 onClose={() => setOpenCampaign(null)}
               />
             </Suspense>,
