@@ -27,6 +27,7 @@ import {
   Crosshair,
   Dumbbell,
   Eye,
+  FileDown,
   FileText,
   Flame,
   GalleryHorizontal,
@@ -96,6 +97,14 @@ import { useLanguage, LanguageToggle } from "../lib/i18n";
 import { getPlan } from "../lib/membership-plans";
 import { consumeTeaserAnswers } from "../lib/teaser-handoff";
 import { useMe, type Me } from "../lib/witers-client";
+import {
+  buildAllCampaignsReportPdf,
+  downloadPdf,
+  type ReportAd,
+  type ReportCampaignSummary,
+  type ReportCampaignSection,
+} from "../lib/campaign-report-pdf";
+import type { CampaignRange } from "../components/witers/campaign-date-range-picker";
 
 export const Route = createFileRoute("/panel")({
   head: () => ({
@@ -2819,6 +2828,11 @@ function CampaignStat({ label, value }: { label: string; value: string }) {
 // added ~430KB to this route's bundle when they were imported here directly
 // for a modal most visits never open.
 const CampaignAdDetailModal = lazy(() => import("../components/witers/campaign-ad-detail-modal"));
+// Same react-day-picker/date-fns weight as the modal above, now reused at
+// the top of the Campañas tab itself — lazy for the same reason.
+const CampaignDateRangePicker = lazy(
+  () => import("../components/witers/campaign-date-range-picker"),
+);
 
 // Real campaign list now — refreshes every time this mounts, and every 60s
 // while it's open, matching the "se actualiza sola, no empujado al
@@ -2901,6 +2915,30 @@ function CampaignCard({ c, onOpenDetail }: { c: Campaign; onOpenDetail: () => vo
   );
 }
 
+const ES_MONTH_SHORT = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
+];
+
+// Formats an ISO date as "1 ago" — matches the per-campaign modal's
+// date-fns "d MMM" (Spanish locale) output, but hand-rolled here so
+// CampanasPanel (part of panel.tsx's main bundle, not lazy like the modal)
+// doesn't need to statically import date-fns just to render a label.
+function formatEsShortDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${d.getDate()} ${ES_MONTH_SHORT[d.getMonth()]}`;
+}
+
 // Real campaign list now — refreshes every time this mounts, and every 60s
 // while it's open, matching the "se actualiza sola, no empujado al
 // instante" explanation given for how Meta itself reports ad performance.
@@ -2908,10 +2946,21 @@ function CampanasPanel({ companyName }: { companyName: string | null }) {
   const { t } = useLanguage();
   const [showArchived, setShowArchived] = useState(false);
   const [openCampaign, setOpenCampaign] = useState<Campaign | null>(null);
+  // null = "todo el tiempo" — same date-range filter as the per-campaign
+  // detail modal, now scoped to the whole Campañas tab: the list's own
+  // stats and the "todas las campañas" report below both read from this.
+  const [range, setRange] = useState<CampaignRange | null>(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
   const campaigns = useQuery({
-    queryKey: ["campaigns"],
+    queryKey: ["campaigns", range?.since ?? null, range?.until ?? null],
     queryFn: async () => {
-      const res = await fetch("/api/campaigns", { credentials: "include" });
+      const params = new URLSearchParams();
+      if (range) {
+        params.set("since", range.since);
+        params.set("until", range.until);
+      }
+      const qs = params.toString();
+      const res = await fetch(`/api/campaigns${qs ? `?${qs}` : ""}`, { credentials: "include" });
       if (!res.ok) return { ok: false, campaigns: [] as Campaign[] };
       return (await res.json()) as { ok: boolean; campaigns: Campaign[] };
     },
@@ -2927,6 +2976,56 @@ function CampanasPanel({ companyName }: { companyName: string | null }) {
   const archivedRows = rows.filter(
     (c) => c.metaStatus === "ARCHIVED" || c.metaStatus === "DELETED",
   );
+  const rangeLabel = range
+    ? `${formatEsShortDate(range.since)} – ${formatEsShortDate(range.until)}`
+    : t("Todo el tiempo", "All time");
+
+  // "Hacer reporte" for the whole tab, not one campaign — a summary row per
+  // campaign plus each campaign's own ad breakdown, all for the currently
+  // selected range. The summary numbers come straight from `rows` (already
+  // range-filtered by the query above); the per-campaign ad tables need
+  // their own fetch each, same endpoint the per-campaign modal uses.
+  async function handleGlobalReport() {
+    if (generatingReport || rows.length === 0) return;
+    setGeneratingReport(true);
+    try {
+      const summaries: ReportCampaignSummary[] = rows.map((c) => ({
+        name: c.name,
+        status: c.metaStatus,
+        spend: c.spend ?? "0",
+        impressions: c.impressions ?? "0",
+        reach: c.reach ?? "0",
+        results: c.results ?? "0",
+        costPerResult: c.costPerResult ?? "0",
+      }));
+      const sections: ReportCampaignSection[] = await Promise.all(
+        rows.map(async (c) => {
+          const params = new URLSearchParams({ id: c.id });
+          if (range) {
+            params.set("since", range.since);
+            params.set("until", range.until);
+          }
+          const res = await fetch(`/api/campaign-ads?${params.toString()}`, {
+            credentials: "include",
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            ok: boolean;
+            ads?: ReportAd[];
+          };
+          return { name: c.name, ads: data.ok ? (data.ads ?? []) : [] };
+        }),
+      );
+      const bytes = await buildAllCampaignsReportPdf({
+        companyName,
+        rangeLabel,
+        campaigns: summaries,
+        sections,
+      });
+      downloadPdf(bytes, "WITERS-Reporte-campanas.pdf");
+    } finally {
+      setGeneratingReport(false);
+    }
+  }
 
   if (campaigns.isLoading) {
     return (
@@ -2959,6 +3058,24 @@ function CampanasPanel({ companyName }: { companyName: string | null }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Suspense fallback={<div className="h-9 w-40 animate-pulse rounded-full bg-white/70" />}>
+          <CampaignDateRangePicker range={range} onChange={setRange} />
+        </Suspense>
+        <button
+          type="button"
+          onClick={handleGlobalReport}
+          disabled={generatingReport || rows.length === 0}
+          className="flex items-center gap-1.5 rounded-full bg-wit-blue px-3.5 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+        >
+          {generatingReport ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2.2} />
+          ) : (
+            <FileDown className="h-3.5 w-3.5" strokeWidth={2.2} />
+          )}
+          {t("Hacer reporte", "Generate report")}
+        </button>
+      </div>
       {liveRows.length === 0 ? (
         <div className="wit-glass flex flex-col items-center gap-4 rounded-3xl px-6 py-14 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">

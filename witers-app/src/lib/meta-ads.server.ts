@@ -194,6 +194,7 @@ type AdCreativeField = { creative?: { image_url?: string; thumbnail_url?: string
 // of them) and a client-facing display both work the same way.
 export async function getCampaignInsight(
   campaignId: string,
+  range?: { since: string; until: string },
 ): Promise<{ ok: true; data: CampaignInsight } | { ok: false; error: string }> {
   const config = getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
@@ -205,13 +206,15 @@ export async function getCampaignInsight(
       { fields: "name,status,daily_budget" },
       "GET",
     ),
-    // Both fields and date_preset must be explicit — Meta's insights edge,
-    // if called with neither, silently falls back to its own default field
-    // set (which includes spend but not reach/clicks) over its own default
-    // date window, not "the campaign's lifetime." Without this, reach/
-    // clicks read as 0 for every campaign (never actually missing, just
-    // never requested), and spend reads as a partial recent window instead
-    // of the true total.
+    // Both fields and date_preset/time_range must be explicit — Meta's
+    // insights edge, if called with neither, silently falls back to its own
+    // default field set (which includes spend but not reach/clicks) over
+    // its own default date window, not "the campaign's lifetime." Without
+    // this, reach/clicks read as 0 for every campaign (never actually
+    // missing, just never requested), and spend reads as a partial recent
+    // window instead of the true total. `range`, when given (the
+    // Campañas-tab date-range picker), uses an explicit `time_range` the
+    // same way getCampaignAdDetails does — see that function for why.
     graphRequest<{
       data: Array<{
         spend?: string;
@@ -226,7 +229,9 @@ export async function getCampaignInsight(
       config.accessToken,
       {
         fields: "spend,impressions,clicks,reach,actions,cost_per_action_type",
-        date_preset: "maximum",
+        ...(range
+          ? { time_range: { since: range.since, until: range.until } }
+          : { date_preset: "maximum" }),
       },
       "GET",
     ),

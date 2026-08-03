@@ -24,6 +24,15 @@ export const Route = createFileRoute("/api/campaigns")({
         const user = await getSessionUser(request);
         if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
 
+        // Optional exact date range from the Campañas tab's date-range
+        // picker — same "both or neither, malformed falls back to
+        // all-time" contract as /api/campaign-ads.
+        const url = new URL(request.url);
+        const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+        const since = url.searchParams.get("since") ?? "";
+        const until = url.searchParams.get("until") ?? "";
+        const range = DATE_RE.test(since) && DATE_RE.test(until) ? { since, until } : undefined;
+
         const rows = await db()
           .prepare(
             `SELECT id, meta_campaign_id, status, created_at
@@ -36,7 +45,7 @@ export const Route = createFileRoute("/api/campaigns")({
 
         const campaigns = await Promise.all(
           (rows.results ?? []).map(async (row) => {
-            const insight = await getCampaignInsight(row.meta_campaign_id);
+            const insight = await getCampaignInsight(row.meta_campaign_id, range);
             return {
               id: row.id,
               name: insight.ok ? insight.data.name : null,
