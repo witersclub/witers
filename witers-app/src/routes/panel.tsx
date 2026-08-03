@@ -441,6 +441,15 @@ function Panel() {
   );
 }
 
+// Converts a stored "w:h" aspect ratio (e.g. "9:16") into a CSS
+// aspect-ratio value — used to size a "Mis solicitudes" card as the piece's
+// real format instead of force-cropping everything into a square. Falls
+// back to square for anything missing or malformed rather than throwing.
+function cssAspectRatio(aspectRatio: string | undefined): string {
+  const [w, h] = (aspectRatio ?? "1:1").split(":").map(Number);
+  return w > 0 && h > 0 ? `${w} / ${h}` : "1 / 1";
+}
+
 function PanelContent() {
   const me = useMe();
   const { t } = useLanguage();
@@ -499,6 +508,12 @@ function PanelContent() {
   // (arrow button + native touch swipe both use it) instead of paging
   // through state, since it's just a filmstrip, not a stepped carousel.
   const recentScrollRef = useRef<HTMLDivElement>(null);
+  // Which "Mis solicitudes" card is open full-size, if any — tapping a
+  // card enlarges it right there instead of navigating away from Inicio.
+  const [lightboxCreative, setLightboxCreative] = useState<{
+    thumbHref: string;
+    title: string;
+  } | null>(null);
   // Read (and clear) once per mount — only the very first chat (chatKey
   // still at its initial value) should inherit these, not a later
   // conversation opened via the button.
@@ -682,7 +697,14 @@ function PanelContent() {
         ? (latest.image_url ?? `/api/file?key=${encodeURIComponent(latest.r2_key ?? "")}`)
         : null;
       return thumbHref
-        ? { kind: "imagen" as const, id: r.id, title: r.title, thumbHref, createdAt: r.created_at }
+        ? {
+            kind: "imagen" as const,
+            id: r.id,
+            title: r.title,
+            thumbHref,
+            createdAt: r.created_at,
+            aspectRatio: r.aspect_ratio,
+          }
         : null;
     })
     .filter((c) => c !== null);
@@ -697,6 +719,7 @@ function PanelContent() {
             title: r.title,
             thumbHref: `/api/file?key=${encodeURIComponent(cover)}`,
             createdAt: r.created_at,
+            aspectRatio: r.aspect_ratio,
           }
         : null;
     })
@@ -954,61 +977,75 @@ function PanelContent() {
                 {campaignsLaunched > 0 || totalReach > 0 || totalResultsImpact > 0 ? (
                   // Their own history read back as an achievement, and the
                   // loop closed all the way to real results — not just a
-                  // request counter. Each stat only shows once there's a real
-                  // number to show; 0 campañas/0 alcance/0 clics would read as
-                  // failure, not motivation. Fixed-size squares (not a
-                  // stretching grid or plain rectangle) so they read as little
-                  // badges, not wide bars — same size on every breakpoint.
-                  // All three jump straight to Campañas when tapped — they're
-                  // campaign stats, so "tell me more" should mean "show me the
-                  // campaigns," not just sit there as a static number.
-                  <div className="mt-6 flex flex-wrap gap-2.5">
-                    {campaignsLaunched > 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => setSection("campanas")}
-                        className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-navy p-3 text-left text-white transition-transform active:scale-95"
-                      >
-                        <Rocket className="h-4 w-4 text-white/70" strokeWidth={1.75} />
-                        <p className="mt-1.5 text-lg font-extrabold">{campaignsLaunched}</p>
-                        <p className="text-[10px] leading-tight text-white/70">
-                          {t(
-                            campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas",
-                            campaignsLaunched === 1 ? "campaign launched" : "campaigns launched",
-                          )}
-                        </p>
-                      </button>
-                    ) : null}
-                    {totalReach > 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => setSection("campanas")}
-                        className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-blue p-3 text-left text-white transition-transform active:scale-95"
-                      >
-                        <Eye className="h-4 w-4 text-white/70" strokeWidth={1.75} />
-                        <p className="mt-1.5 text-lg font-extrabold">
-                          {totalReach.toLocaleString("es-MX")}
-                        </p>
-                        <p className="text-[10px] text-white/70">
-                          {t("personas alcanzadas", "people reached")}
-                        </p>
-                      </button>
-                    ) : null}
-                    {totalResultsImpact > 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => setSection("campanas")}
-                        className="flex aspect-square w-24 flex-col justify-center rounded-xl bg-wit-pink p-3 text-left text-white transition-transform active:scale-95"
-                      >
-                        <Target className="h-4 w-4 text-white/70" strokeWidth={1.75} />
-                        <p className="mt-1.5 text-lg font-extrabold">
-                          {totalResultsImpact.toLocaleString("es-MX")}
-                        </p>
-                        <p className="text-[10px] text-white/70">
-                          {t("resultados totales", "total results")}
-                        </p>
-                      </button>
-                    ) : null}
+                  // request counter. One plain card instead of three bold
+                  // colored squares — a quieter "here's what's working" note
+                  // rather than a trio of badges competing for attention.
+                  // Each stat only shows once there's a real number behind
+                  // it (0 campañas/0 alcance/0 resultados would read as
+                  // failure, not motivation), and all three still jump
+                  // straight to Campañas when tapped.
+                  <div className="mt-6 rounded-2xl border border-wit-ink/8 bg-white p-5">
+                    <p className="text-sm font-bold text-wit-ink">
+                      {t("Tus campañas han generado", "Your campaigns have generated")}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-x-8 gap-y-4">
+                      {campaignsLaunched > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setSection("campanas")}
+                          className="flex items-center gap-2.5 text-left"
+                        >
+                          <Rocket className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
+                          <span>
+                            <span className="block text-lg font-extrabold leading-none text-wit-ink">
+                              {campaignsLaunched}
+                            </span>
+                            <span className="text-[11px] leading-tight text-wit-gray">
+                              {t(
+                                campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas",
+                                campaignsLaunched === 1
+                                  ? "campaign launched"
+                                  : "campaigns launched",
+                              )}
+                            </span>
+                          </span>
+                        </button>
+                      ) : null}
+                      {totalReach > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setSection("campanas")}
+                          className="flex items-center gap-2.5 text-left"
+                        >
+                          <Eye className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
+                          <span>
+                            <span className="block text-lg font-extrabold leading-none text-wit-ink">
+                              {totalReach.toLocaleString("es-MX")}
+                            </span>
+                            <span className="text-[11px] leading-tight text-wit-gray">
+                              {t("personas alcanzadas", "people reached")}
+                            </span>
+                          </span>
+                        </button>
+                      ) : null}
+                      {totalResultsImpact > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setSection("campanas")}
+                          className="flex items-center gap-2.5 text-left"
+                        >
+                          <Target className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
+                          <span>
+                            <span className="block text-lg font-extrabold leading-none text-wit-ink">
+                              {totalResultsImpact.toLocaleString("es-MX")}
+                            </span>
+                            <span className="text-[11px] leading-tight text-wit-gray">
+                              {t("resultados totales", "total results")}
+                            </span>
+                          </span>
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
 
@@ -1254,25 +1291,36 @@ function PanelContent() {
                 {recentCreatives.length > 0 ? (
                   <div className="mt-8">
                     <h2 className="text-lg font-bold text-wit-ink">
-                      {t("Creatividades recientes", "Recent creatives")}
+                      {t("Mis solicitudes", "My requests")}
                     </h2>
                     <div className="relative mt-3">
                       <div
                         ref={recentScrollRef}
-                        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                        className="flex snap-x snap-mandatory items-end gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                       >
+                        {/* Fixed height, auto width from each piece's own
+                            aspect_ratio — a story-format piece and a square
+                            one sit at the height, in their real shape,
+                            instead of both getting force-cropped into the
+                            same square. Tapping opens it full-size in a
+                            lightbox rather than navigating away. */}
                         {recentCreatives.map((c) => (
-                          <div
+                          <button
                             key={c.id}
+                            type="button"
                             title={c.title}
-                            className="aspect-square w-28 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 sm:w-36"
+                            onClick={() =>
+                              setLightboxCreative({ thumbHref: c.thumbHref, title: c.title })
+                            }
+                            style={{ aspectRatio: cssAspectRatio(c.aspectRatio) }}
+                            className="h-40 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 shadow-[0_10px_25px_rgba(5,13,40,0.08)] transition-transform active:scale-95 sm:h-48"
                           >
                             <img
                               src={c.thumbHref}
                               alt={c.title}
                               className="h-full w-full object-cover"
                             />
-                          </div>
+                          </button>
                         ))}
                       </div>
                       {recentCreatives.length > 3 ? (
@@ -1281,7 +1329,7 @@ function PanelContent() {
                           onClick={() =>
                             recentScrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })
                           }
-                          aria-label={t("Ver más creatividades", "See more creatives")}
+                          aria-label={t("Ver más solicitudes", "See more requests")}
                           className="absolute -right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-wit-ink/10 bg-white shadow-[0_10px_30px_rgba(5,13,40,0.15)]"
                         >
                           <ChevronRight className="h-4 w-4 text-wit-ink" strokeWidth={2.4} />
@@ -1290,6 +1338,32 @@ function PanelContent() {
                     </div>
                   </div>
                 ) : null}
+
+                {lightboxCreative
+                  ? createPortal(
+                      <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-wit-ink/70 p-6 backdrop-blur-sm"
+                        onClick={() => setLightboxCreative(null)}
+                      >
+                        <div className="relative max-h-[85vh] max-w-lg">
+                          <img
+                            src={lightboxCreative.thumbHref}
+                            alt={lightboxCreative.title}
+                            className="max-h-[85vh] w-auto rounded-2xl object-contain shadow-[0_30px_80px_rgba(5,13,40,0.4)]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setLightboxCreative(null)}
+                            aria-label={t("Cerrar", "Close")}
+                            className="absolute -right-3 -top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.25)]"
+                          >
+                            <X className="h-4 w-4" strokeWidth={2.5} />
+                          </button>
+                        </div>
+                      </div>,
+                      document.body,
+                    )
+                  : null}
               </>
             ) : section === "activos" ? (
               <div className="mt-8">
