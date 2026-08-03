@@ -7,6 +7,7 @@ import { WMark } from "../components/witers/brand";
 import { MembershipComparisonTable } from "../components/witers/membership-comparison-table";
 import { MembershipPlanCards } from "../components/witers/membership-cards";
 import { MetaAdsDashboardCard, WhatsAppPhoneMockup } from "../components/witers/meta-ads-card";
+import { PanelPreviewShowcase } from "../components/witers/panel-preview-showcase";
 import {
   AspectRatioPicker,
   ColorsPicker,
@@ -44,6 +45,7 @@ function Landing() {
       <MarcasQueConfian />
       <PruebaInteractiva />
       <CampanasTeaser />
+      <PanelPreview />
       <Membresia />
       <Faq />
       <CtaFinal />
@@ -697,6 +699,38 @@ function CampanasTeaser() {
             </svg>
           </Link>
         </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- 9c. VISTA DEL PANEL ---------------- */
+
+function PanelPreview() {
+  const { t } = useLanguage();
+  return (
+    <section className="relative overflow-hidden bg-wit-mist/30 py-20 md:py-28">
+      <div className="px-5 text-center md:px-[110px]">
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-wit-blue">
+          {t("Así se ve por dentro", "A look inside")}
+        </p>
+        <h2 className="mt-2 text-3xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
+          {t("Tu panel, con todo lo que", "Your panel, with everything you")}{" "}
+          <span className="wit-underline italic text-wit-blue">
+            {t("necesitas ver", "need to see")}
+          </span>
+          .
+        </h2>
+        <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-wit-gray">
+          {t(
+            "Tus piezas listas y tus campañas con resultados reales, en el mismo lugar — sin instalar nada, desde tu teléfono.",
+            "Your finished pieces and your campaigns' real results, in the same place — no install, right from your phone.",
+          )}
+        </p>
+      </div>
+
+      <div className="mt-16 px-5 md:px-[110px]">
+        <PanelPreviewShowcase />
       </div>
     </section>
   );
