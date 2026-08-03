@@ -861,117 +861,39 @@ function PanelContent() {
                 duplicated Inicio instead of feeling like a different place. */}
             {section === "creatividad" ? (
               <>
-                <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
-                        {t("Hola,", "Hi,")}{" "}
-                        <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
-                      </h1>
-                      {streakWeeks > 0 ? (
-                        <span className="flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
-                          <Flame className="h-3.5 w-3.5" strokeWidth={2} />
-                          {streakWeeks}{" "}
-                          {t(
-                            streakWeeks === 1 ? "semana seguida" : "semanas seguidas",
-                            streakWeeks === 1 ? "week in a row" : "weeks in a row",
-                          )}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-2 text-base text-wit-gray">
-                      {t(
-                        "Pide creatividades y da seguimiento a cada solicitud desde aquí.",
-                        "Request creatives and track every request from here.",
-                      )}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col items-stretch gap-2">
-                    <div className="wit-glass flex flex-col gap-3 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
-                          {t("Tu cupo este mes", "Your quota this month")}
-                        </p>
-                        <span
-                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
-                        >
-                          {active
-                            ? t(
-                                `${getPlan(membership?.plan).nombre} activa`,
-                                `${getPlan(membership?.plan).nombre} active`,
-                              )
-                            : t("Sin membresía", "No membership")}
-                        </span>
-                      </div>
-                      <div className="flex items-start justify-center gap-9">
-                        <QuotaRing
-                          icon={ImageIcon}
-                          remaining={active ? remaining : 0}
-                          quota={
-                            (membership?.requests_quota ?? 20) +
-                            (membership?.bonus_requests_quota ?? 0)
-                          }
-                          colorHex="#0047ff"
-                          label={t("Imágenes", "Images")}
-                        />
-                        <QuotaRing
-                          icon={VideoIcon}
-                          remaining={active ? videoRemaining : 0}
-                          quota={membership?.video_requests_quota ?? 0}
-                          colorHex="#ff3fb0"
-                          label={t("Video", "Video")}
-                          locked={!membership || membership.video_requests_quota === 0}
-                          onLockedClick={() => setUpgradeTeaser("video")}
-                        />
-                        <QuotaRing
-                          icon={GalleryHorizontal}
-                          remaining={active ? carouselRemaining : 0}
-                          quota={membership?.carousel_requests_quota ?? 0}
-                          colorHex="#10b981"
-                          label={t("Carrusel", "Carousel")}
-                          locked={!membership || membership.carousel_requests_quota === 0}
-                          onLockedClick={() => setUpgradeTeaser("carrusel")}
-                        />
-                      </div>
-                      {membership && membership.bonus_requests_quota > 0 ? (
-                        <p className="text-center text-[11px] font-semibold text-wit-blue">
-                          {t(
-                            `+${membership.bonus_requests_quota} de paquetes comprados`,
-                            `+${membership.bonus_requests_quota} from purchased packs`,
-                          )}
-                        </p>
-                      ) : null}
-                    </div>
-                    {active && membership?.plan !== "scale" ? (
-                      <Link
-                        to="/upgrade"
-                        className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10"
-                      >
-                        <ArrowUpCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
-                        {t("Upgrade", "Upgrade")}
-                      </Link>
-                    ) : null}
-                    {active ? (
-                      <button
-                        type="button"
-                        onClick={() => setPacksOpen(true)}
-                        className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/25 bg-white px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/5"
-                      >
-                        <PackagePlus className="h-3.5 w-3.5" strokeWidth={2.4} />
-                        {t("Comprar paquete de imágenes", "Buy an image pack")}
-                      </button>
+                <div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
+                      {t("Hola,", "Hi,")}{" "}
+                      <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
+                    </h1>
+                    {streakWeeks > 0 ? (
+                      <span className="flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
+                        <Flame className="h-3.5 w-3.5" strokeWidth={2} />
+                        {streakWeeks}{" "}
+                        {t(
+                          streakWeeks === 1 ? "semana seguida" : "semanas seguidas",
+                          streakWeeks === 1 ? "week in a row" : "weeks in a row",
+                        )}
+                      </span>
                     ) : null}
                   </div>
+                  <p className="mt-2 text-base text-wit-gray">
+                    {t(
+                      "Pide creatividades y da seguimiento a cada solicitud desde aquí.",
+                      "Request creatives and track every request from here.",
+                    )}
+                  </p>
                 </div>
 
-                {/* "Mis solicitudes" — moved up to be the first real
-                    content on Inicio, replacing the old single-thumbnail
-                    RecentCreativeQuickAccess teaser that pointed at this
-                    same list one tab-click away. Showing the whole strip
-                    right here made that shortcut redundant. */}
+                {/* "Mis solicitudes" — the very first thing after the
+                    greeting, above even the quota rings — replacing the old
+                    single-thumbnail RecentCreativeQuickAccess teaser that
+                    pointed at this same list one tab-click away. Showing
+                    the whole strip right here made that shortcut
+                    redundant. */}
                 {recentCreatives.length > 0 ? (
-                  <div className="mt-8">
+                  <div className="mt-6">
                     <h2 className="text-lg font-bold text-wit-ink">
                       {t("Mis solicitudes", "My requests")}
                     </h2>
@@ -1020,6 +942,83 @@ function PanelContent() {
                     </div>
                   </div>
                 ) : null}
+
+                <div className="mt-8 flex flex-col items-stretch gap-2 sm:max-w-xs">
+                  <div className="wit-glass flex flex-col gap-3 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
+                        {t("Tu cupo este mes", "Your quota this month")}
+                      </p>
+                      <span
+                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                      >
+                        {active
+                          ? t(
+                              `${getPlan(membership?.plan).nombre} activa`,
+                              `${getPlan(membership?.plan).nombre} active`,
+                            )
+                          : t("Sin membresía", "No membership")}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-center gap-9">
+                      <QuotaRing
+                        icon={ImageIcon}
+                        remaining={active ? remaining : 0}
+                        quota={
+                          (membership?.requests_quota ?? 20) +
+                          (membership?.bonus_requests_quota ?? 0)
+                        }
+                        colorHex="#0047ff"
+                        label={t("Imágenes", "Images")}
+                      />
+                      <QuotaRing
+                        icon={VideoIcon}
+                        remaining={active ? videoRemaining : 0}
+                        quota={membership?.video_requests_quota ?? 0}
+                        colorHex="#ff3fb0"
+                        label={t("Video", "Video")}
+                        locked={!membership || membership.video_requests_quota === 0}
+                        onLockedClick={() => setUpgradeTeaser("video")}
+                      />
+                      <QuotaRing
+                        icon={GalleryHorizontal}
+                        remaining={active ? carouselRemaining : 0}
+                        quota={membership?.carousel_requests_quota ?? 0}
+                        colorHex="#10b981"
+                        label={t("Carrusel", "Carousel")}
+                        locked={!membership || membership.carousel_requests_quota === 0}
+                        onLockedClick={() => setUpgradeTeaser("carrusel")}
+                      />
+                    </div>
+                    {membership && membership.bonus_requests_quota > 0 ? (
+                      <p className="text-center text-[11px] font-semibold text-wit-blue">
+                        {t(
+                          `+${membership.bonus_requests_quota} de paquetes comprados`,
+                          `+${membership.bonus_requests_quota} from purchased packs`,
+                        )}
+                      </p>
+                    ) : null}
+                  </div>
+                  {active && membership?.plan !== "scale" ? (
+                    <Link
+                      to="/upgrade"
+                      className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10"
+                    >
+                      <ArrowUpCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
+                      {t("Upgrade", "Upgrade")}
+                    </Link>
+                  ) : null}
+                  {active ? (
+                    <button
+                      type="button"
+                      onClick={() => setPacksOpen(true)}
+                      className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/25 bg-white px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/5"
+                    >
+                      <PackagePlus className="h-3.5 w-3.5" strokeWidth={2.4} />
+                      {t("Comprar paquete de imágenes", "Buy an image pack")}
+                    </button>
+                  ) : null}
+                </div>
 
                 {campaignsLaunched > 0 || totalReach > 0 || totalResultsImpact > 0 ? (
                   // Their own history read back as an achievement, and the
