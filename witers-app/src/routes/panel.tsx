@@ -1003,9 +1003,9 @@ function PanelContent() {
                   // it (0 campañas/0 alcance/0 resultados would read as
                   // failure, not motivation), and all three still jump
                   // straight to Campañas when tapped.
-                  <div className="mt-6 rounded-2xl border border-wit-ink/8 bg-white p-5">
+                  <div className="wit-glass mt-6 rounded-2xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
                     <p className="text-sm font-bold text-wit-ink">
-                      {t("Tus campañas han generado", "Your campaigns have generated")}
+                      {t("Resultados de campañas", "Campaign results")}
                     </p>
                     {/* grid-cols-3 (not flex-wrap) so the three points always
                         sit on one line, even on a narrow phone — a vertical
