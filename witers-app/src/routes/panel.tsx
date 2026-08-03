@@ -1645,7 +1645,7 @@ function HablaConWitScreen({ onStart }: { onStart: () => void }) {
         onClick={onStart}
         className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
       >
-        ✨ {t("Habla con Wit", "Talk to Wit")} ✨
+        ✨ {t("Creemos tu pieza", "Let's create your piece")} ✨
       </button>
     </div>
   );
