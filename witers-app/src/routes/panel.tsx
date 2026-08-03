@@ -496,11 +496,6 @@ function PanelContent() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const [justSent, setJustSent] = useState(false);
-  // "Paquetes de imágenes" — a one-time top-up on solicitudes, available on
-  // any active plan, stacking on top of the monthly quota with no
-  // expiration. A modal (not a page) since it's a quick add-on purchase,
-  // not a whole new flow like activating a membership.
-  const [packsOpen, setPacksOpen] = useState(false);
   // Which locked quota ring (if any) the client just tapped — drives the
   // upgrade teaser popover. null = closed.
   const [upgradeTeaser, setUpgradeTeaser] = useState<"video" | "carrusel" | null>(null);
@@ -943,80 +938,58 @@ function PanelContent() {
                   </div>
                 ) : null}
 
-                <div className="mt-8 flex flex-col items-stretch gap-2 sm:max-w-xs">
-                  <div className="wit-glass flex flex-col gap-3 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
-                        {t("Tu cupo este mes", "Your quota this month")}
-                      </p>
-                      <span
-                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
-                      >
-                        {active
-                          ? t(
-                              `${getPlan(membership?.plan).nombre} activa`,
-                              `${getPlan(membership?.plan).nombre} active`,
-                            )
-                          : t("Sin membresía", "No membership")}
-                      </span>
-                    </div>
-                    <div className="flex items-start justify-center gap-9">
-                      <QuotaRing
-                        icon={ImageIcon}
-                        remaining={active ? remaining : 0}
-                        quota={
-                          (membership?.requests_quota ?? 20) +
-                          (membership?.bonus_requests_quota ?? 0)
-                        }
-                        colorHex="#0047ff"
-                        label={t("Imágenes", "Images")}
-                      />
-                      <QuotaRing
-                        icon={VideoIcon}
-                        remaining={active ? videoRemaining : 0}
-                        quota={membership?.video_requests_quota ?? 0}
-                        colorHex="#ff3fb0"
-                        label={t("Video", "Video")}
-                        locked={!membership || membership.video_requests_quota === 0}
-                        onLockedClick={() => setUpgradeTeaser("video")}
-                      />
-                      <QuotaRing
-                        icon={GalleryHorizontal}
-                        remaining={active ? carouselRemaining : 0}
-                        quota={membership?.carousel_requests_quota ?? 0}
-                        colorHex="#10b981"
-                        label={t("Carrusel", "Carousel")}
-                        locked={!membership || membership.carousel_requests_quota === 0}
-                        onLockedClick={() => setUpgradeTeaser("carrusel")}
-                      />
-                    </div>
-                    {membership && membership.bonus_requests_quota > 0 ? (
-                      <p className="text-center text-[11px] font-semibold text-wit-blue">
-                        {t(
-                          `+${membership.bonus_requests_quota} de paquetes comprados`,
-                          `+${membership.bonus_requests_quota} from purchased packs`,
-                        )}
-                      </p>
-                    ) : null}
+                <div className="wit-glass mt-8 flex flex-col gap-3 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)] sm:max-w-xs">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
+                      {t("Tu cupo este mes", "Your quota this month")}
+                    </p>
+                    <span
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                    >
+                      {active
+                        ? t(
+                            `${getPlan(membership?.plan).nombre} activa`,
+                            `${getPlan(membership?.plan).nombre} active`,
+                          )
+                        : t("Sin membresía", "No membership")}
+                    </span>
                   </div>
-                  {active && membership?.plan !== "scale" ? (
-                    <Link
-                      to="/upgrade"
-                      className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10"
-                    >
-                      <ArrowUpCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
-                      {t("Upgrade", "Upgrade")}
-                    </Link>
-                  ) : null}
-                  {active ? (
-                    <button
-                      type="button"
-                      onClick={() => setPacksOpen(true)}
-                      className="flex items-center justify-center gap-1.5 rounded-full border border-wit-blue/25 bg-white px-4 py-2 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/5"
-                    >
-                      <PackagePlus className="h-3.5 w-3.5" strokeWidth={2.4} />
-                      {t("Comprar paquete de imágenes", "Buy an image pack")}
-                    </button>
+                  <div className="flex items-start justify-center gap-9">
+                    <QuotaRing
+                      icon={ImageIcon}
+                      remaining={active ? remaining : 0}
+                      quota={
+                        (membership?.requests_quota ?? 20) + (membership?.bonus_requests_quota ?? 0)
+                      }
+                      colorHex="#0047ff"
+                      label={t("Imágenes", "Images")}
+                    />
+                    <QuotaRing
+                      icon={VideoIcon}
+                      remaining={active ? videoRemaining : 0}
+                      quota={membership?.video_requests_quota ?? 0}
+                      colorHex="#ff3fb0"
+                      label={t("Video", "Video")}
+                      locked={!membership || membership.video_requests_quota === 0}
+                      onLockedClick={() => setUpgradeTeaser("video")}
+                    />
+                    <QuotaRing
+                      icon={GalleryHorizontal}
+                      remaining={active ? carouselRemaining : 0}
+                      quota={membership?.carousel_requests_quota ?? 0}
+                      colorHex="#10b981"
+                      label={t("Carrusel", "Carousel")}
+                      locked={!membership || membership.carousel_requests_quota === 0}
+                      onLockedClick={() => setUpgradeTeaser("carrusel")}
+                    />
+                  </div>
+                  {membership && membership.bonus_requests_quota > 0 ? (
+                    <p className="text-center text-[11px] font-semibold text-wit-blue">
+                      {t(
+                        `+${membership.bonus_requests_quota} de paquetes comprados`,
+                        `+${membership.bonus_requests_quota} from purchased packs`,
+                      )}
+                    </p>
                   ) : null}
                 </div>
 
@@ -1406,19 +1379,6 @@ function PanelContent() {
                 onClose={() => setChatOpen(false)}
               />
             </div>,
-            document.body,
-          )
-        : null}
-
-      {packsOpen
-        ? createPortal(
-            <ImagePacksModal
-              onClose={() => setPacksOpen(false)}
-              onPurchased={() => {
-                void qc.invalidateQueries({ queryKey: ["me"] });
-                setPacksOpen(false);
-              }}
-            />,
             document.body,
           )
         : null}
