@@ -996,28 +996,25 @@ function PanelContent() {
                 {campaignsLaunched > 0 || totalReach > 0 || totalResultsImpact > 0 ? (
                   // Their own history read back as an achievement, and the
                   // loop closed all the way to real results — not just a
-                  // request counter. One plain card instead of three bold
-                  // colored squares — a quieter "here's what's working" note
-                  // rather than a trio of badges competing for attention.
-                  // Each stat only shows once there's a real number behind
-                  // it (0 campañas/0 alcance/0 resultados would read as
-                  // failure, not motivation), and all three still jump
-                  // straight to Campañas when tapped.
-                  <div className="wit-glass mt-6 rounded-2xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
+                  // request counter. Each stat only shows once there's a
+                  // real number behind it (0 campañas/0 alcance/0
+                  // resultados would read as failure, not motivation). The
+                  // whole card is a single button (not three separate ones
+                  // around each number) — a client tapping the title or the
+                  // padding between numbers should still land on Campañas.
+                  <button
+                    type="button"
+                    onClick={() => setSection("campanas")}
+                    className="wit-glass mt-6 w-full rounded-2xl p-5 text-left shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform active:scale-[0.99]"
+                  >
                     <p className="text-sm font-bold text-wit-ink">
                       {t("Resultados de campañas", "Campaign results")}
                     </p>
                     {/* grid-cols-3 (not flex-wrap) so the three points always
-                        sit on one line, even on a narrow phone — a vertical
-                        icon-over-number stack per point keeps each column
-                        narrow enough for that to hold up. */}
+                        sit on one line, even on a narrow phone. */}
                     <div className="mt-4 grid grid-cols-3 gap-2">
                       {campaignsLaunched > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => setSection("campanas")}
-                          className="flex flex-col items-center gap-1 rounded-xl py-1 text-center transition-colors hover:bg-wit-mist/40"
-                        >
+                        <div className="flex flex-col items-center gap-1 text-center">
                           <Rocket className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
                           <span className="text-lg font-extrabold leading-none text-wit-ink">
                             {campaignsLaunched}
@@ -1028,14 +1025,10 @@ function PanelContent() {
                               campaignsLaunched === 1 ? "campaign launched" : "campaigns launched",
                             )}
                           </span>
-                        </button>
+                        </div>
                       ) : null}
                       {totalReach > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => setSection("campanas")}
-                          className="flex flex-col items-center gap-1 rounded-xl py-1 text-center transition-colors hover:bg-wit-mist/40"
-                        >
+                        <div className="flex flex-col items-center gap-1 text-center">
                           <Eye className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
                           <span className="text-lg font-extrabold leading-none text-wit-ink">
                             {totalReach.toLocaleString("es-MX")}
@@ -1043,14 +1036,10 @@ function PanelContent() {
                           <span className="text-[10px] leading-tight text-wit-gray">
                             {t("personas alcanzadas", "people reached")}
                           </span>
-                        </button>
+                        </div>
                       ) : null}
                       {totalResultsImpact > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => setSection("campanas")}
-                          className="flex flex-col items-center gap-1 rounded-xl py-1 text-center transition-colors hover:bg-wit-mist/40"
-                        >
+                        <div className="flex flex-col items-center gap-1 text-center">
                           <Target className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
                           <span className="text-lg font-extrabold leading-none text-wit-ink">
                             {totalResultsImpact.toLocaleString("es-MX")}
@@ -1058,10 +1047,10 @@ function PanelContent() {
                           <span className="text-[10px] leading-tight text-wit-gray">
                             {t("mensajes recibidos", "messages received")}
                           </span>
-                        </button>
+                        </div>
                       ) : null}
                     </div>
-                  </div>
+                  </button>
                 ) : null}
 
                 {!active ? (
