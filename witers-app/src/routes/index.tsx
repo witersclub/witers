@@ -591,10 +591,7 @@ function Membresia() {
       <div className="relative px-5 md:px-[110px]">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-[#5c85ff]/40 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-[#9db4ff]">
-            {t(
-              "Promoción Julio 2026 · Para nuevos suscriptores",
-              "July 2026 Promo · For new subscribers",
-            )}
+            {t("Promoción 2026 · Para nuevos suscriptores", "2026 Promo · For new subscribers")}
           </span>
           <h2 className="mt-5 text-4xl font-extrabold tracking-tighter text-white md:text-6xl">
             {t("Únete a la comunidad", "Join the community")}
