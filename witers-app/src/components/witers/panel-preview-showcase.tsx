@@ -1,131 +1,383 @@
-// Two iPhone mockups, facing each other, showing what the client's own
-// panel actually looks like — the "Creatividad" gallery on one side, a
-// campaign's live results on the other. Built with the site's own design
-// system and example data (never a real client's), same reasoning as
-// MetaAdsDashboardCard: a real screenshot would show someone's actual
-// numbers, go stale the moment the panel's design changes, and never look
-// as crisp on every screen size as a component does.
+// Three faithful mini-replicas of the real client panel — Inicio, Mi marca,
+// and a campaign's detail view — shown inside iPhone frames on the public
+// homepage, before anyone signs in. Earlier versions of this component were
+// loose approximations (icon grids, invented layouts); this one reuses the
+// exact classNames, component pieces, and copy the real authenticated
+// screens use (see panel.tsx's Inicio block, BrandShowcaseLogoCard/
+// BrandShowcaseColorsCard, and CampaignAdDetailModal) so it reads as an
+// actual screenshot, not a stylized stand-in. Data is a single fictional
+// example client ("Boutique Alma") reused across all three screens for a
+// consistent story — never a real client's numbers or logo.
 import type { ReactNode } from "react";
-import { ArrowRight } from "lucide-react";
+import {
+  BookOpen,
+  Calendar as CalendarIcon,
+  Eye,
+  FileDown,
+  GalleryHorizontal,
+  Home,
+  Image as ImageIcon,
+  type LucideIcon,
+  Megaphone,
+  Rocket,
+  Target,
+  User,
+  Video as VideoIcon,
+  X,
+} from "lucide-react";
 
 import { useLanguage } from "../../lib/i18n";
+import { WMark } from "./brand";
 
-function PhoneFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
+function PhoneFrame({ children }: { children: ReactNode }) {
   return (
-    <div className={`[perspective:1200px] ${className}`}>
-      <div className="w-[248px] rounded-[2.4rem] border-[7px] border-wit-ink bg-wit-ink shadow-[0_45px_90px_rgba(5,13,40,0.35)] transition-transform duration-500 hover:[transform:rotateY(0deg)_rotateX(0deg)] sm:w-[264px]">
-        <div className="relative h-[500px] overflow-hidden rounded-[1.8rem] bg-white sm:h-[530px]">
-          <div className="absolute left-1/2 top-0 z-20 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-wit-ink" />
-          {children}
-        </div>
+    <div className="w-[270px] rounded-[2.4rem] border-[8px] border-wit-ink bg-wit-ink shadow-[0_35px_80px_rgba(5,13,40,0.3)] sm:w-[288px]">
+      <div className="relative h-[560px] overflow-hidden rounded-[1.7rem] bg-white sm:h-[590px]">
+        <div className="absolute left-1/2 top-0 z-30 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-wit-ink" />
+        {children}
       </div>
     </div>
   );
 }
 
-function StatPill({ label, value }: { label: string; value: string }) {
+// Same two-glass-pills-plus-orb shape as the real PanelBottomNav
+// (panel.tsx), reusing the actual .wit-glass and .wit-orb CSS instead of
+// approximating them — the whole point of this rebuild was to stop
+// inventing a look-alike and just show the real one, scaled down.
+function MiniBottomNav({ active }: { active: "inicio" | "marca" }) {
   return (
-    <div className="rounded-xl bg-wit-ice/70 px-2.5 py-2">
-      <p className="text-[8px] font-bold uppercase leading-tight tracking-wide text-wit-gray">
+    <div className="absolute inset-x-2.5 bottom-2.5 z-20 flex items-center gap-1.5">
+      <div className="wit-glass flex flex-1 items-center justify-around rounded-full px-1 py-1.5">
+        <MiniNavIcon icon={Home} isActive={active === "inicio"} />
+        <MiniNavIcon icon={BookOpen} isActive={active === "marca"} />
+      </div>
+      <span className="wit-orb flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+        <span style={{ filter: "brightness(0) invert(1)" }}>
+          <WMark size={15} />
+        </span>
+      </span>
+      <div className="wit-glass flex flex-1 items-center justify-around rounded-full px-1 py-1.5">
+        <MiniNavIcon icon={Megaphone} isActive={false} />
+        <MiniNavIcon icon={User} isActive={false} />
+      </div>
+    </div>
+  );
+}
+
+function MiniNavIcon({ icon: Icon, isActive }: { icon: LucideIcon; isActive: boolean }) {
+  return (
+    <span
+      className={`flex h-6 w-6 items-center justify-center rounded-lg ${isActive ? "bg-wit-blue/10" : ""}`}
+    >
+      <Icon
+        className={`h-3.5 w-3.5 ${isActive ? "text-wit-blue" : "text-wit-gray"}`}
+        strokeWidth={2.2}
+      />
+    </span>
+  );
+}
+
+// Scaled-down QuotaRing (panel.tsx) — same SVG ring construction, smaller
+// radius/stroke, static percentages since this is a fixed example, not
+// live data.
+function MiniQuotaRing({
+  icon: Icon,
+  colorHex,
+  pct,
+  label,
+}: {
+  icon: LucideIcon;
+  colorHex: string;
+  pct: number;
+  label: string;
+}) {
+  const radius = 15;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - pct);
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center">
+        <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90">
+          <circle cx="18" cy="18" r={radius} fill="none" stroke="#E4E9F7" strokeWidth="3.5" />
+          <circle
+            cx="18"
+            cy="18"
+            r={radius}
+            fill="none"
+            stroke={colorHex}
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+          />
+        </svg>
+        <Icon className="h-3.5 w-3.5" style={{ color: colorHex }} strokeWidth={2.2} />
+      </div>
+      <span className="text-center text-[6.5px] font-semibold leading-none text-wit-gray">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function MiniResultStat({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: LucideIcon;
+  value: string;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1 text-center">
+      <Icon className="h-3.5 w-3.5 text-wit-blue" strokeWidth={1.9} />
+      <span className="text-xs font-extrabold leading-none text-wit-ink">{value}</span>
+      <span className="text-[6.5px] leading-tight text-wit-gray">{label}</span>
+    </div>
+  );
+}
+
+function MiniAdStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-[44px] shrink-0 rounded-lg bg-wit-ice/60 px-1.5 py-1">
+      <p className="text-[6px] font-bold uppercase leading-tight tracking-wide text-wit-gray">
         {label}
       </p>
-      <p className="mt-0.5 text-xs font-extrabold text-wit-ink">{value}</p>
+      <p className="text-[9px] font-bold text-wit-ink">{value}</p>
     </div>
   );
 }
 
-const CREATIVE_EXAMPLES = [
-  "/assets/brand-example-alma.webp",
-  "/assets/brand-example-hygge.webp",
-  "/assets/brand-example-fitzone.webp",
-  "/assets/brand-example-belle.webp",
-  "/assets/brand-example-lumina.webp",
-  "/assets/brand-example-noa.webp",
-];
-
-function CreativityScreen() {
+// Mirrors panel.tsx's real mobile Inicio block: greeting, "Mis solicitudes"
+// strip (real pieces sit at their own aspect ratio, not force-cropped),
+// "Tu cupo este mes" quota card, and the "Resultados de campañas" card —
+// same order, same wit-glass treatment, same copy.
+function InicioScreen() {
   const { t } = useLanguage();
   return (
-    <div className="flex h-full flex-col pt-9">
-      <div className="flex items-center justify-between px-4 pb-3 pt-2">
+    <div className="flex h-full flex-col pt-8">
+      <div className="flex-1 space-y-4 overflow-hidden px-4 pb-16">
         <div>
-          <p className="text-[9px] font-bold uppercase tracking-wide text-wit-gray">WITERS</p>
-          <p className="text-base font-extrabold leading-tight text-wit-ink">
-            {t("Creatividad", "Creative")}
+          <p className="text-lg font-extrabold tracking-tight text-wit-ink">
+            {t("Hola,", "Hi,")} <span className="text-wit-blue">María</span>
+          </p>
+          <p className="mt-1 text-[9.5px] leading-snug text-wit-gray">
+            {t(
+              "Pide creatividades y da seguimiento a cada solicitud desde aquí.",
+              "Request creatives and track every request from here.",
+            )}
           </p>
         </div>
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-wit-blue text-[10px] font-bold text-white">
-          {CREATIVE_EXAMPLES.length}
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-2 px-4 pb-4">
-        {CREATIVE_EXAMPLES.map((src, i) => (
-          <div
-            key={src}
-            className="relative aspect-square overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40"
-          >
-            <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
-            {i === 0 ? (
-              <span className="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[8px] font-bold text-wit-ink shadow-sm">
-                {t("Nueva", "New")}
-              </span>
-            ) : null}
+
+        <div>
+          <p className="text-xs font-bold text-wit-ink">{t("Mis solicitudes", "My requests")}</p>
+          <div className="mt-2 flex gap-2">
+            <div
+              className="h-20 shrink-0 overflow-hidden rounded-xl border border-wit-ink/10 shadow-sm"
+              style={{
+                aspectRatio: "3 / 4",
+                background: "linear-gradient(135deg,#C97B84,#8a4f57)",
+              }}
+            />
+            <div
+              className="h-20 shrink-0 overflow-hidden rounded-xl border border-wit-ink/10 shadow-sm"
+              style={{
+                aspectRatio: "1 / 1",
+                background: "linear-gradient(135deg,#B08D57,#6e5730)",
+              }}
+            />
+            <div
+              className="h-20 shrink-0 overflow-hidden rounded-xl border border-wit-ink/10 shadow-sm"
+              style={{
+                aspectRatio: "9 / 16",
+                background: "linear-gradient(135deg,#2B2320,#544738)",
+              }}
+            />
           </div>
-        ))}
+        </div>
+
+        <div className="wit-glass rounded-2xl px-3.5 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[7.5px] font-bold uppercase tracking-wide text-wit-gray">
+              {t("Tu cupo este mes", "Your quota this month")}
+            </p>
+            <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[7px] font-bold text-emerald-700">
+              {t("Grow activa", "Grow active")}
+            </span>
+          </div>
+          <div className="mt-2.5 flex items-center justify-center gap-3">
+            <MiniQuotaRing
+              icon={ImageIcon}
+              colorHex="#0047ff"
+              pct={0.65}
+              label={t("Imágenes", "Images")}
+            />
+            <MiniQuotaRing
+              icon={VideoIcon}
+              colorHex="#ff3fb0"
+              pct={0.4}
+              label={t("Video", "Video")}
+            />
+            <MiniQuotaRing
+              icon={GalleryHorizontal}
+              colorHex="#10b981"
+              pct={0.8}
+              label={t("Carrusel", "Carousel")}
+            />
+          </div>
+        </div>
+
+        <div className="wit-glass rounded-2xl p-3.5">
+          <p className="text-xs font-bold text-wit-ink">
+            {t("Resultados de campañas", "Campaign results")}
+          </p>
+          <div className="mt-2.5 grid grid-cols-3 gap-1">
+            <MiniResultStat
+              icon={Rocket}
+              value="2"
+              label={t("campañas lanzadas", "campaigns launched")}
+            />
+            <MiniResultStat
+              icon={Eye}
+              value="6,539"
+              label={t("personas alcanzadas", "people reached")}
+            />
+            <MiniResultStat
+              icon={Target}
+              value="76"
+              label={t("mensajes recibidos", "messages received")}
+            />
+          </div>
+        </div>
       </div>
+      <MiniBottomNav active="inicio" />
     </div>
   );
 }
 
-function CampaignResultsScreen() {
+// Mirrors "Mi marca" (BrandShowcaseLogoCard + BrandShowcaseColorsCard,
+// panel.tsx) — same wit-glass aspect-[4/3] logo card and colors grid, with
+// the same swipe-carousel dot indicator underneath the logo card the real
+// mobile view shows. The logo itself is a plain placeholder mark (never a
+// real or invented brand's actual logo file) for the same fictional
+// "Boutique Alma" example used across all three screens.
+function MiMarcaScreen() {
   const { t } = useLanguage();
   return (
-    <div className="flex h-full flex-col bg-wit-ice/50 pt-9">
-      <div className="px-4 pb-3 pt-2">
-        <p className="text-[9px] font-bold uppercase tracking-wide text-wit-gray">WITERS</p>
-        <p className="text-base font-extrabold leading-tight text-wit-ink">
-          {t("Campañas", "Campaigns")}
+    <div className="flex h-full flex-col pt-8">
+      <div className="flex-1 space-y-3 overflow-hidden px-4 pb-16">
+        <p className="text-lg font-extrabold tracking-tight text-wit-ink">
+          {t("Mi marca", "My brand")}
         </p>
-      </div>
-      <div className="space-y-3 px-4 pb-4">
-        <div className="rounded-2xl bg-white p-3.5 shadow-[0_10px_30px_rgba(5,13,40,0.07)]">
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-xs font-bold text-wit-ink">
-              {t("Boutique Alma", "Alma Boutique")}
-            </p>
-            <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
-              {t("Activa", "Active")}
-            </span>
-          </div>
-          <p className="mt-1 text-[9px] text-wit-gray">
-            {t("Presupuesto: $150 MXN/día", "Budget: $150 MXN/day")}
+
+        <div className="wit-glass flex aspect-[4/3] flex-col items-center justify-center gap-2.5 rounded-3xl p-5">
+          <span
+            className="flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-extrabold text-white shadow-[0_12px_28px_rgba(201,123,132,0.4)]"
+            style={{ background: "linear-gradient(135deg,#C97B84,#8a4f57)" }}
+          >
+            A
+          </span>
+          <p className="text-[8px] font-bold uppercase tracking-[0.18em] text-wit-gray">
+            {t("Logotipo", "Logo")}
           </p>
-          <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-            <StatPill label={t("Gastado", "Spent")} value="$4,280" />
-            <StatPill label={t("Alcance", "Reach")} value="12,640" />
-            <StatPill label={t("Resultados", "Results")} value="184" />
-            <StatPill label={t("Costo/res.", "Cost/res.")} value="$23.26" />
-          </div>
-          <svg viewBox="0 0 200 40" className="mt-2.5 h-8 w-full" aria-hidden="true">
-            <polyline
-              fill="none"
-              stroke="#0047FF"
-              strokeOpacity="0.85"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              points="0,34 30,28 60,30 90,18 120,20 150,8 180,6 200,2"
-            />
-          </svg>
         </div>
-        <div className="rounded-2xl bg-white/70 p-3.5 opacity-60 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-xs font-bold text-wit-ink">
-              {t("Rebajas de invierno", "Winter sale")}
+
+        <div className="flex justify-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-wit-ink/15" />
+          <span className="h-1.5 w-4 rounded-full bg-wit-blue" />
+          <span className="h-1.5 w-1.5 rounded-full bg-wit-ink/15" />
+          <span className="h-1.5 w-1.5 rounded-full bg-wit-ink/15" />
+        </div>
+
+        <div className="wit-glass rounded-2xl p-3.5">
+          <div className="grid grid-cols-4 gap-1.5">
+            {["#C97B84", "#2B2320", "#F3E7DA", "#B08D57"].map((c) => (
+              <div key={c} className="aspect-square rounded-lg" style={{ background: c }} />
+            ))}
+          </div>
+          <p className="mt-2.5 text-[7px] font-bold uppercase tracking-[0.18em] text-wit-gray">
+            {t("Colores de marca", "Brand colors")}
+          </p>
+        </div>
+      </div>
+      <MiniBottomNav active="marca" />
+    </div>
+  );
+}
+
+// Mirrors CampaignAdDetailModal (campaign-ad-detail-modal.tsx) — same
+// header (title + campaign name + close), same date-range pill + "Hacer
+// reporte" button, same per-ad card shape with status badge and stat
+// pills. Rendered as a plain full screen inside the phone rather than a
+// backdrop-blurred overlay — the modal chrome doesn't read at this scale,
+// the content is the part worth showing.
+function CampaignDetailScreen() {
+  const { t } = useLanguage();
+  return (
+    <div className="flex h-full flex-col bg-white pt-8">
+      <div className="flex-1 overflow-hidden px-4 pb-5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[13px] font-bold text-wit-ink">
+              {t("Anuncios de la campaña", "Campaign ads")}
             </p>
-            <span className="shrink-0 rounded-full bg-wit-mist/60 px-2 py-0.5 text-[9px] font-bold text-wit-gray">
-              {t("Pausada", "Paused")}
-            </span>
+            <p className="mt-0.5 truncate text-[10px] text-wit-gray">
+              {t("Boutique Alma — Rebajas", "Alma Boutique — Sale")}
+            </p>
+          </div>
+          <X className="h-4 w-4 shrink-0 text-wit-gray" strokeWidth={2.4} />
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className="flex items-center gap-1 rounded-full border border-wit-ink/10 px-2.5 py-1.5 text-[9px] font-bold text-wit-ink">
+            <CalendarIcon className="h-2.5 w-2.5" strokeWidth={2.2} />
+            {t("Últimos 7 días", "Last 7 days")}
+          </span>
+          <span className="flex items-center gap-1 rounded-full bg-wit-blue px-2.5 py-1.5 text-[9px] font-bold text-white">
+            <FileDown className="h-2.5 w-2.5" strokeWidth={2.2} />
+            {t("Hacer reporte", "Generate report")}
+          </span>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          <div className="rounded-2xl border border-wit-ink/10 p-2.5">
+            <div className="flex items-center gap-2">
+              <div
+                className="h-9 w-9 shrink-0 rounded-lg"
+                style={{ background: "linear-gradient(135deg,#C97B84,#2B2320)" }}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[10px] font-bold text-wit-ink">
+                  {t("Anuncio — Vestidos nuevos", "Ad — New dresses")}
+                </p>
+                <span className="mt-0.5 inline-block rounded-full bg-emerald-50 px-1.5 py-0.5 text-[7px] font-bold text-emerald-700">
+                  {t("Activa", "Active")}
+                </span>
+              </div>
+            </div>
+            <div className="mt-2 flex gap-1.5 overflow-hidden">
+              <MiniAdStat label={t("Gastado", "Spent")} value="$2,140" />
+              <MiniAdStat label={t("Alcance", "Reach")} value="6,320" />
+              <MiniAdStat label={t("Result.", "Results")} value="41" />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-wit-ink/10 p-2.5 opacity-60">
+            <div className="flex items-center gap-2">
+              <div
+                className="h-9 w-9 shrink-0 rounded-lg"
+                style={{ background: "linear-gradient(135deg,#B08D57,#2B2320)" }}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[10px] font-bold text-wit-ink">
+                  {t("Anuncio — Accesorios", "Ad — Accessories")}
+                </p>
+                <span className="mt-0.5 inline-block rounded-full bg-amber-50 px-1.5 py-0.5 text-[7px] font-bold text-amber-700">
+                  {t("Pausada", "Paused")}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -133,22 +385,25 @@ function CampaignResultsScreen() {
   );
 }
 
-// The pairing used on the homepage: "de tus piezas" on the left, "a
-// resultados medibles" on the right, an arrow tying the two together —
-// mirrors the same "de la pieza a la campaña" story CampanasTeaser already
-// tells, but as a direct look at the actual panel instead of a concept.
 export function PanelPreviewShowcase() {
+  const { t } = useLanguage();
+  const screens: { key: string; label: string; node: ReactNode }[] = [
+    { key: "inicio", label: t("Inicio", "Home"), node: <InicioScreen /> },
+    { key: "marca", label: t("Mi marca", "My brand"), node: <MiMarcaScreen /> },
+    {
+      key: "campana",
+      label: t("Detalle de campaña", "Campaign detail"),
+      node: <CampaignDetailScreen />,
+    },
+  ];
   return (
-    <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-center sm:justify-center sm:gap-0">
-      <PhoneFrame className="[transform:rotateY(8deg)_rotateX(2deg)] sm:z-0 sm:mr-[-14px] sm:[transform:rotateY(16deg)_rotateX(3deg)]">
-        <CreativityScreen />
-      </PhoneFrame>
-      <span className="z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-wit-blue text-white shadow-[0_12px_30px_rgba(0,71,255,0.38)]">
-        <ArrowRight className="h-5 w-5 rotate-90 sm:rotate-0" strokeWidth={2.5} />
-      </span>
-      <PhoneFrame className="[transform:rotateY(-8deg)_rotateX(2deg)] sm:z-0 sm:ml-[-14px] sm:[transform:rotateY(-16deg)_rotateX(3deg)]">
-        <CampaignResultsScreen />
-      </PhoneFrame>
+    <div className="flex flex-wrap items-start justify-center gap-x-10 gap-y-12">
+      {screens.map((s) => (
+        <div key={s.key} className="flex flex-col items-center gap-3">
+          <PhoneFrame>{s.node}</PhoneFrame>
+          <p className="text-sm font-bold text-wit-ink">{s.label}</p>
+        </div>
+      ))}
     </div>
   );
 }
