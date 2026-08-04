@@ -32,6 +32,7 @@ import {
   Flame,
   GalleryHorizontal,
   Globe,
+  Heart,
   Home,
   Image as ImageIcon,
   Images,
@@ -459,6 +460,98 @@ function Panel() {
 function cssAspectRatio(aspectRatio: string | undefined): string {
   const [w, h] = (aspectRatio ?? "1:1").split(":").map(Number);
   return w > 0 && h > 0 ? `${w} / ${h}` : "1 / 1";
+}
+
+// Flavor copy for the desktop "Mis solicitudes" feed's Instagram-style
+// cards — not real engagement data (a delivered piece doesn't get likes
+// anywhere), just generic captions to sell the "this is a real feed"
+// feeling the client asked for. Both the like count and which caption
+// shows are derived deterministically from the piece's own id, so a given
+// card looks the same on every reload instead of re-randomizing.
+const FEED_CAPTIONS: [string, string][] = [
+  ["Nueva pieza lista para brillar ✨", "New piece ready to shine ✨"],
+  ["Directo del estudio a tu feed 🎨", "Straight from the studio to your feed 🎨"],
+  ["Otra creatividad para tu campaña 🚀", "Another creative for your campaign 🚀"],
+  ["Diseñada para conectar con tu audiencia 💬", "Designed to connect with your audience 💬"],
+  ["Contenido fresco, resultados frescos 🔥", "Fresh content, fresh results 🔥"],
+  ["Lista para publicar cuando tú digas 📅", "Ready to post whenever you say 📅"],
+];
+
+function hashStringToInt(value: string): number {
+  let h = 0;
+  for (let i = 0; i < value.length; i++) h = (h * 31 + value.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function feedLikeCount(id: string): number {
+  return 40 + (hashStringToInt(id) % 180);
+}
+
+function feedCaption(id: string, t: (es: string, en: string) => string): string {
+  const [es, en] = FEED_CAPTIONS[hashStringToInt(id) % FEED_CAPTIONS.length];
+  return t(es, en);
+}
+
+// One "post" in the desktop Inicio phone feed — styled like a real social
+// post (header with the brand's own initial, image, heart/comment row,
+// like count, caption) instead of a bare thumbnail, per the client's
+// request to make it feel like an actual, interactive feed. loading="lazy"
+// is the actual fix for the feed feeling "heavy": every image used to
+// fetch at once the moment the phone mounted, saturating the connection —
+// now only images near the visible scroll area load, same as a real app.
+function InstagramFeedCard({
+  creative,
+  companyName,
+  accentColor,
+  onOpen,
+}: {
+  creative: { id: string; title: string; thumbHref: string; aspectRatio: string | undefined };
+  companyName: string;
+  accentColor: string;
+  onOpen: () => void;
+}) {
+  const { t } = useLanguage();
+  const initial = companyName.trim().charAt(0).toUpperCase() || "W";
+  return (
+    <div className="overflow-hidden rounded-2xl border border-wit-ink/10 bg-white">
+      <div className="flex items-center gap-2 px-2.5 py-2">
+        <span
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+          style={{ background: accentColor }}
+        >
+          {initial}
+        </span>
+        <p className="truncate text-xs font-bold text-wit-ink">{companyName}</p>
+      </div>
+      <button
+        type="button"
+        title={creative.title}
+        onClick={onOpen}
+        style={{ aspectRatio: cssAspectRatio(creative.aspectRatio) }}
+        className="block w-full overflow-hidden bg-wit-mist/40 transition-transform active:scale-[0.99]"
+      >
+        <img
+          src={creative.thumbHref}
+          alt={creative.title}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
+      </button>
+      <div className="px-2.5 py-2">
+        <div className="flex items-center gap-3 text-wit-ink">
+          <Heart className="h-4 w-4" strokeWidth={2} />
+          <MessageCircle className="h-4 w-4" strokeWidth={2} />
+        </div>
+        <p className="mt-1 text-[11px] font-bold text-wit-ink">
+          {feedLikeCount(creative.id).toLocaleString("es-MX")} {t("me gusta", "likes")}
+        </p>
+        <p className="mt-0.5 truncate text-[11px] text-wit-ink">
+          <span className="font-bold">{companyName}</span> {feedCaption(creative.id, t)}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function PanelContent() {
@@ -1052,25 +1145,22 @@ function PanelContent() {
                           {/* Continuous vertical scroll, several pieces
                               visible at once — an Instagram-feed feel
                               (explicitly asked for), not a one-at-a-time
-                              Reels/Stories snap. */}
+                              Reels/Stories snap. Each card lazy-loads its
+                              own image (see InstagramFeedCard) instead of
+                              every piece fetching at once on mount, which
+                              is what was making the feed feel "heavy" and
+                              stuck. */}
                           <div className="h-full space-y-3 overflow-y-auto px-3 pb-4 pt-9 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             {allRecentCreatives.map((c) => (
-                              <button
+                              <InstagramFeedCard
                                 key={c.id}
-                                type="button"
-                                title={c.title}
-                                onClick={() =>
+                                creative={c}
+                                companyName={brandProfile?.company_name || "WITERS"}
+                                accentColor={brandColorList[0] ?? "#0047FF"}
+                                onOpen={() =>
                                   setLightboxCreative({ thumbHref: c.thumbHref, title: c.title })
                                 }
-                                style={{ aspectRatio: cssAspectRatio(c.aspectRatio) }}
-                                className="block w-full overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 transition-transform active:scale-[0.98]"
-                              >
-                                <img
-                                  src={c.thumbHref}
-                                  alt={c.title}
-                                  className="h-full w-full object-cover"
-                                />
-                              </button>
+                              />
                             ))}
                           </div>
                         </div>
