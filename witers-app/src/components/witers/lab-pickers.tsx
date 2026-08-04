@@ -1,6 +1,49 @@
 import { useEffect, useRef, useState } from "react";
+import { Info } from "lucide-react";
 
 import { useLanguage } from "../../lib/i18n";
+
+// A small "(i)" button that reveals a short explanation on tap — built for
+// ColorsPicker's onboarding-only `showInfo` mode (a client asked for help
+// right at the moment someone unfamiliar with the chat has to pick brand
+// colors), kept generic enough to reuse anywhere else a step could use a
+// one-line hint without permanently cluttering the screen with it.
+function InfoTooltip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Info"
+        aria-expanded={open}
+        className="flex h-4 w-4 items-center justify-center rounded-full text-wit-gray hover:text-wit-blue"
+      >
+        <Info className="h-3.5 w-3.5" strokeWidth={2} />
+      </button>
+      {open ? (
+        <div className="wit-rise absolute left-1/2 top-full z-10 mt-2 w-56 -translate-x-1/2 rounded-xl bg-wit-ink px-3 py-2 text-left text-[11px] font-normal leading-snug text-white shadow-[0_10px_30px_rgba(5,13,40,0.25)]">
+          {text}
+          <span
+            aria-hidden="true"
+            className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-wit-ink"
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 // Shared between the admin AI-lab chat (admin-lab.tsx) and the public
 // homepage teaser (routes/index.tsx) — these four are the "quick tap,
@@ -153,7 +196,17 @@ export function AspectRatioPicker({ onPick }: { onPick: (value: string) => void 
 // Two steps (how many, then which) instead of one screen with three color
 // wells always visible — a client with one brand color shouldn't have to
 // stare at two empty pickers wondering what to do with them.
-export function ColorsPicker({ onPick }: { onPick: (value: string) => void }) {
+export function ColorsPicker({
+  onPick,
+  showInfo = false,
+}: {
+  onPick: (value: string) => void;
+  // Only turned on for the mandatory brand-onboarding chat (see
+  // panel.tsx's OnboardingGate) — the admin lab and homepage teaser using
+  // this same picker don't need it, so it defaults off rather than
+  // showing up everywhere ColorsPicker is reused.
+  showInfo?: boolean;
+}) {
   const { t } = useLanguage();
   const [count, setCount] = useState<number | null>(null);
   const [colors, setColors] = useState<string[]>([]);
@@ -161,9 +214,19 @@ export function ColorsPicker({ onPick }: { onPick: (value: string) => void }) {
   if (count === null) {
     return (
       <div className="wit-glass flex flex-col items-center gap-2.5 rounded-2xl px-4 py-3.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-        <p className="text-xs font-medium text-wit-gray">
-          {t("¿Cuántos colores de marca usas?", "How many brand colors do you use?")}
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs font-medium text-wit-gray">
+            {t("¿Cuántos colores de marca usas?", "How many brand colors do you use?")}
+          </p>
+          {showInfo ? (
+            <InfoTooltip
+              text={t(
+                "La mayoría de las marcas usan de 1 a 3 colores: uno principal y, si tienes, uno o dos de apoyo. Si no estás seguro, elige 1 — siempre puedes ajustarlo después.",
+                "Most brands use 1 to 3 colors: one main color and, if you have them, one or two supporting ones. If you're not sure, pick 1 — you can always adjust it later.",
+              )}
+            />
+          ) : null}
+        </div>
         <div className="flex gap-2.5">
           {[1, 2, 3].map((n) => (
             <button
@@ -185,12 +248,22 @@ export function ColorsPicker({ onPick }: { onPick: (value: string) => void }) {
 
   return (
     <div className="wit-glass flex flex-col items-center gap-3 rounded-2xl px-4 py-3.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-      <p className="text-xs font-medium text-wit-gray">
-        {t(
-          "👆 Toca cada círculo para elegir tu color — vienen en azul solo de ejemplo.",
-          "👆 Tap each circle to pick your color — they start blue just as an example.",
-        )}
-      </p>
+      <div className="flex items-center gap-1.5">
+        <p className="text-xs font-medium text-wit-gray">
+          {t(
+            "👆 Toca cada círculo para elegir tu color — vienen en azul solo de ejemplo.",
+            "👆 Tap each circle to pick your color — they start blue just as an example.",
+          )}
+        </p>
+        {showInfo ? (
+          <InfoTooltip
+            text={t(
+              "Al tocar un círculo se abre el selector de color de tu navegador o teléfono. El código (por ejemplo #0047FF) aparece debajo — si ya lo conoces, puedes escribirlo ahí directamente. El primer círculo suele ser el color principal de tu marca.",
+              "Tapping a circle opens your browser or phone's color picker. The code (like #0047FF) shows underneath — if you already know it, you can type it in directly. The first circle is usually your brand's main color.",
+            )}
+          />
+        ) : null}
+      </div>
       <div className="flex gap-3">
         {colors.map((c, i) => (
           <label key={i} className="flex flex-col items-center gap-1">
@@ -676,6 +749,112 @@ export function ProductPhotoUploadPicker({ onPick }: { onPick: (value: string) =
         className="self-center rounded-full bg-wit-blue px-6 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
       >
         {uploading ? t("Subiendo...", "Uploading...") : t("Subir", "Upload")}
+      </button>
+    </div>
+  );
+}
+
+const FONT_FILE_EXT = /\.(ttf|otf|woff2?)$/i;
+
+// Optional brand font files — onboarding-only (see panel.tsx's
+// OnboardingGate). Same "Omitir already handles skip, this only needs the
+// upload path" shape as ProductPhotoUploadPicker above, but supports
+// several files at once (a family usually needs at least a regular + bold
+// weight) instead of just one, staged locally and uploaded together on
+// "Continuar" rather than one request per file.
+export function FontUploadPicker({ onPick }: { onPick: (value: string) => void }) {
+  const { t } = useLanguage();
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function addFiles(list: FileList) {
+    const picked = Array.from(list);
+    const accepted = picked.filter((f) => FONT_FILE_EXT.test(f.name));
+    setFiles((prev) => [...prev, ...accepted]);
+    setError(
+      accepted.length < picked.length
+        ? t(
+            "Solo se aceptan archivos .ttf, .otf, .woff o .woff2.",
+            "Only .ttf, .otf, .woff, or .woff2 files are accepted.",
+          )
+        : null,
+    );
+  }
+
+  function removeFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleContinue() {
+    if (files.length === 0) return;
+    setError(null);
+    setUploading(true);
+    const keys: string[] = [];
+    for (const file of files) {
+      const key = await uploadReferenceFile(file);
+      if (key) keys.push(key);
+    }
+    setUploading(false);
+    if (keys.length === 0) {
+      setError(
+        t(
+          "No pudimos subir tus tipografías. Intenta de nuevo.",
+          "We couldn't upload your fonts. Try again.",
+        ),
+      );
+      return;
+    }
+    onPick(keys.join(","));
+  }
+
+  return (
+    <div className="wit-glass mx-auto flex max-w-[280px] flex-col gap-3 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <label className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-wit-ink/20 px-3 py-3 text-center text-xs text-wit-gray hover:border-wit-blue/40">
+        <span className="font-semibold text-wit-blue">{t("Elegir archivos", "Choose files")}</span>
+        <span>
+          {t(
+            ".ttf, .otf, .woff o .woff2 — puedes subir varios",
+            ".ttf, .otf, .woff, or .woff2 — you can add more than one",
+          )}
+        </span>
+        <input
+          type="file"
+          aria-label={t("Tus tipografías", "Your fonts")}
+          accept=".ttf,.otf,.woff,.woff2"
+          multiple
+          onChange={(ev) => ev.target.files && addFiles(ev.target.files)}
+          className="hidden"
+        />
+      </label>
+      {files.length > 0 ? (
+        <ul className="flex w-full flex-col gap-1.5">
+          {files.map((f, i) => (
+            <li
+              key={`${f.name}-${i}`}
+              className="flex items-center justify-between gap-2 rounded-lg bg-wit-mist/50 px-2.5 py-1.5 text-xs font-medium text-wit-ink"
+            >
+              <span className="truncate">{f.name}</span>
+              <button
+                type="button"
+                onClick={() => removeFile(i)}
+                aria-label={t("Quitar archivo", "Remove file")}
+                className="shrink-0 text-wit-gray hover:text-red-500"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      <button
+        type="button"
+        onClick={() => void handleContinue()}
+        disabled={files.length === 0 || uploading}
+        className="self-center rounded-full bg-wit-blue px-6 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
+      >
+        {uploading ? t("Subiendo...", "Uploading...") : t("Continuar", "Continue")}
       </button>
     </div>
   );

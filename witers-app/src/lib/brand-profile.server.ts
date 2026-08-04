@@ -14,6 +14,11 @@ export type BrandProfile = {
   business_type: string | null;
   logo_key: string | null;
   brand_manual_key: string | null;
+  // Comma-joined R2 keys for optional font files collected during
+  // onboarding (see completeOnboarding) — null if the client skipped that
+  // step. Never locked like logo_key: nothing else depends on it staying
+  // fixed once set.
+  font_keys: string | null;
   // Facebook Page this client's ads publish from — set only by an admin
   // (see /api/admin/update-brand-profile), never by the client. Null blocks
   // "Quiero pautar" for them; there's no shared/default Page fallback.
@@ -71,6 +76,7 @@ export async function resolveBrandProfile(
       business_type: submitted.businessType,
       logo_key: submitted.logoKey,
       brand_manual_key: null,
+      font_keys: null,
       meta_page_id: null,
       meta_ad_account_id: null,
     };
@@ -132,6 +138,7 @@ export async function completeOnboarding(
     brandColors: string | null;
     businessType: string | null;
     logoKey: string | null;
+    fontKeys: string | null;
   },
 ): Promise<BrandProfile> {
   const existing = await getBrandProfile(userId);
@@ -141,10 +148,17 @@ export async function completeOnboarding(
   }
   await db()
     .prepare(
-      `INSERT INTO brand_profiles (user_id, company_name, brand_colors, business_type, logo_key)
-       VALUES (?1, ?2, ?3, ?4, ?5)`,
+      `INSERT INTO brand_profiles (user_id, company_name, brand_colors, business_type, logo_key, font_keys)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
     )
-    .bind(userId, data.companyName, data.brandColors, data.businessType, data.logoKey)
+    .bind(
+      userId,
+      data.companyName,
+      data.brandColors,
+      data.businessType,
+      data.logoKey,
+      data.fontKeys,
+    )
     .run();
   await clearOnboardingDraft(userId);
   return {
@@ -154,6 +168,7 @@ export async function completeOnboarding(
     business_type: data.businessType,
     logo_key: data.logoKey,
     brand_manual_key: null,
+    font_keys: data.fontKeys,
     meta_page_id: null,
     meta_ad_account_id: null,
   };

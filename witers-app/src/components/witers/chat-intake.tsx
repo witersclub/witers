@@ -87,6 +87,37 @@ export function ChatBubble({
   );
 }
 
+// Same idea as ColorsAnswerBubble below, for WitConversation's reference-
+// photo attachments (panel.tsx) — before this, an uploaded photo collapsed
+// into a plain confirmation line ("Adjunté 2 fotos...") with no visual
+// trace of what was actually attached, so scrolling back gave no way to
+// confirm it really went through. Now the thumbnails stay pinned to the
+// message permanently instead of only living in the temporary staging
+// strip above the composer while it's being typed.
+export function PhotosAnswerBubble({
+  photoKeys,
+  caption,
+}: {
+  photoKeys: string[];
+  caption: string;
+}) {
+  return (
+    <div className="max-w-[230px] self-end rounded-2xl rounded-br-sm bg-wit-blue px-3 py-2.5 text-sm text-white">
+      <p className="px-0.5 pb-2 leading-relaxed">{caption}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {photoKeys.map((key) => (
+          <img
+            key={key}
+            src={`/api/file?key=${encodeURIComponent(key)}`}
+            alt=""
+            className="h-16 w-16 rounded-xl border border-white/20 object-cover"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Mirrors ChatBubble's user-bubble shape, but swaps the text for the actual
 // swatches the client picked — the point of the color picker was to keep
 // the colors visible, not to collapse them back into a hex string.
@@ -660,6 +691,17 @@ export function ChatIntakeFlow({
                   >
                     {e.field === "colors" && e.answer !== "Omitido" ? (
                       <ColorsAnswerBubble value={e.answer} />
+                    ) : e.field === "fontKeys" && e.answer !== "Omitido" ? (
+                      // The raw comma-joined R2 keys aren't something a
+                      // client should ever have to read — a plain count
+                      // reads as a real confirmation instead.
+                      <ChatBubble
+                        role="user"
+                        text={t(
+                          `${e.answer.split(",").filter(Boolean).length} archivo(s) de tipografía subidos.`,
+                          `${e.answer.split(",").filter(Boolean).length} font file(s) uploaded.`,
+                        )}
+                      />
                     ) : (
                       <ChatBubble role="user" text={e.answer} />
                     )}

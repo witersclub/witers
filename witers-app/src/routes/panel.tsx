@@ -69,13 +69,14 @@ import {
 } from "lucide-react";
 
 import { WitersLogo, WMark } from "../components/witers/brand";
-import { ChatBubble, ChatIntakeFlow } from "../components/witers/chat-intake";
+import { ChatBubble, ChatIntakeFlow, PhotosAnswerBubble } from "../components/witers/chat-intake";
 import { MicButton } from "../components/witers/mic-button";
 import { PasswordInput } from "../components/witers/password-input";
 import {
   AspectRatioPicker,
   BusinessTypeWheel,
   ColorsPicker,
+  FontUploadPicker,
   LogoUploadPicker,
   uploadReferenceFile,
 } from "../components/witers/lab-pickers";
@@ -1704,6 +1705,14 @@ function buildOnboardingQuestions(
       required: true,
     },
     { field: "logoKey", text: t("Sube tu logotipo.", "Upload your logo."), required: true },
+    {
+      field: "fontKeys",
+      text: t(
+        "¿Tienes las tipografías de tu marca? Es opcional — si no las tienes a la mano, puedes omitir este paso.",
+        "Do you have your brand's font files? This is optional — if you don't have them handy, you can skip this step.",
+      ),
+      required: false,
+    },
   ];
 }
 
@@ -1738,11 +1747,13 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
   function pickerFor(field: string, onPick: (value: string) => void) {
     switch (field) {
       case "colors":
-        return <ColorsPicker onPick={onPick} />;
+        return <ColorsPicker onPick={onPick} showInfo />;
       case "businessType":
         return <BusinessTypeWheel onPick={onPick} />;
       case "logoKey":
         return <LogoUploadPicker onPick={onPick} />;
+      case "fontKeys":
+        return <FontUploadPicker onPick={onPick} />;
       default:
         return null;
     }
@@ -1763,6 +1774,7 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
           businessType: answers.businessType || undefined,
           logoKey: noLogo ? undefined : answers.logoKey || undefined,
           noLogo,
+          fontKeys: answers.fontKeys || undefined,
         }),
       });
       const data = (await res.json()) as { ok: boolean; message?: string };
@@ -4120,7 +4132,17 @@ type WitPieceFields = {
   requiredText: string;
 };
 
-type WitMessage = { role: "user" | "assistant"; content: string; widget?: "aspectRatio" };
+type WitMessage = {
+  role: "user" | "assistant";
+  content: string;
+  widget?: "aspectRatio";
+  // Reference photo keys attached to this message, if any — rendered as
+  // permanent thumbnails (PhotosAnswerBubble) instead of the plain
+  // confirmation text alone. Never sent to Wit itself: askWit only maps
+  // role/content when building apiMessages, so this is purely a client-
+  // side display concern.
+  photoKeys?: string[];
+};
 
 const ASPECT_RATIO_PROMPT = {
   es: "¿Qué forma te imaginas para tu pieza?",
@@ -4350,6 +4372,10 @@ function WitConversation({
                     "Adjunté una foto de referencia del producto.",
                     "I attached a reference photo of the product.",
                   ),
+            // Kept on the message itself (not just the temporary staging
+            // strip above the composer) so scrolling back up still shows
+            // exactly what got attached, not just a text count.
+            photoKeys: uploaded,
           },
         ]);
       }
@@ -4497,7 +4523,11 @@ function WitConversation({
         <div className="flex flex-col gap-3 py-4">
           {messages.map((m, i) => (
             <div key={i} className="flex flex-col gap-3">
-              <ChatBubble role={m.role} text={m.content} />
+              {m.photoKeys && m.photoKeys.length > 0 ? (
+                <PhotosAnswerBubble photoKeys={m.photoKeys} caption={m.content} />
+              ) : (
+                <ChatBubble role={m.role} text={m.content} />
+              )}
               {m.widget === "aspectRatio" && awaitingAspectRatio ? (
                 <AspectRatioPicker onPick={pickAspectRatio} />
               ) : null}

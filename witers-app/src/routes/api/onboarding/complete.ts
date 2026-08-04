@@ -11,6 +11,11 @@ const schema = z
     businessType: z.string().max(100).optional(),
     logoKey: z.string().max(300).optional(),
     noLogo: z.boolean().default(false),
+    // Optional brand font files — comma-joined R2 keys, same shape as
+    // design_requests.product_photo_keys. No "required unless skipped"
+    // refine like logoKey below, since this step is genuinely optional
+    // with no escape-hatch sentinel needed.
+    fontKeys: z.string().max(2000).optional(),
   })
   .refine((data) => data.noLogo || Boolean(data.logoKey), {
     message: "Sube el logotipo o marca 'No tengo logotipo'.",
@@ -36,6 +41,7 @@ export const Route = createFileRoute("/api/onboarding/complete")({
           brandColors: parsed.data.brandColors ?? null,
           businessType: parsed.data.businessType?.trim() || null,
           logoKey: parsed.data.noLogo ? null : (parsed.data.logoKey ?? null),
+          fontKeys: parsed.data.fontKeys ?? null,
         });
 
         return json({ ok: true, profile });
