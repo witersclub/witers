@@ -54,6 +54,7 @@ import {
   Rocket,
   Route as RouteIcon,
   Search,
+  Send,
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
@@ -493,34 +494,70 @@ function feedCaption(id: string, t: (es: string, en: string) => string): string 
 }
 
 // One "post" in the desktop Inicio phone feed — styled like a real social
-// post (header with the brand's own initial, image, heart/comment row,
-// like count, caption) instead of a bare thumbnail, per the client's
-// request to make it feel like an actual, interactive feed. loading="lazy"
-// is the actual fix for the feed feeling "heavy": every image used to
-// fetch at once the moment the phone mounted, saturating the connection —
-// now only images near the visible scroll area load, same as a real app.
+// post (header with the brand's own logo, image, heart/comment row, like
+// count, caption) instead of a bare thumbnail, per the client's request to
+// make it feel like an actual, interactive feed.
+//
+// The image itself only mounts (gets a real src, so only then does the
+// browser start fetching it) once its card scrolls within `rootMargin` of
+// the phone's own scroll viewport, via IntersectionObserver — plain
+// `loading="lazy"` wasn't enough here: browsers size their lazy-load
+// prefetch distance generously (several viewport-heights), so inside a
+// short 600px-tall nested scroller most cards already counted as "near
+// enough" and fetched together anyway. This is a hard gate instead of a
+// hint, so at most a couple of images are ever in flight at once.
 function InstagramFeedCard({
   creative,
   companyName,
+  logoKey,
   accentColor,
   onOpen,
 }: {
   creative: { id: string; title: string; thumbHref: string; aspectRatio: string | undefined };
   companyName: string;
+  logoKey: string | null;
   accentColor: string;
   onOpen: () => void;
 }) {
   const { t } = useLanguage();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
   const initial = companyName.trim().charAt(0).toUpperCase() || "W";
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-wit-ink/10 bg-white">
+    <div ref={rootRef} className="overflow-hidden rounded-2xl border border-wit-ink/10 bg-white">
       <div className="flex items-center gap-2 px-2.5 py-2">
-        <span
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-          style={{ background: accentColor }}
-        >
-          {initial}
-        </span>
+        {logoKey ? (
+          <img
+            src={`/api/file?key=${encodeURIComponent(logoKey)}`}
+            alt={companyName}
+            loading="lazy"
+            className="h-6 w-6 shrink-0 rounded-full border border-wit-ink/10 object-cover"
+          />
+        ) : (
+          <span
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+            style={{ background: accentColor }}
+          >
+            {initial}
+          </span>
+        )}
         <p className="truncate text-xs font-bold text-wit-ink">{companyName}</p>
       </div>
       <button
@@ -530,13 +567,14 @@ function InstagramFeedCard({
         style={{ aspectRatio: cssAspectRatio(creative.aspectRatio) }}
         className="block w-full overflow-hidden bg-wit-mist/40 transition-transform active:scale-[0.99]"
       >
-        <img
-          src={creative.thumbHref}
-          alt={creative.title}
-          loading="lazy"
-          decoding="async"
-          className="h-full w-full object-cover"
-        />
+        {inView ? (
+          <img
+            src={creative.thumbHref}
+            alt={creative.title}
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
+        ) : null}
       </button>
       <div className="px-2.5 py-2">
         <div className="flex items-center gap-3 text-wit-ink">
@@ -1150,18 +1188,28 @@ function PanelContent() {
                               every piece fetching at once on mount, which
                               is what was making the feed feel "heavy" and
                               stuck. */}
-                          <div className="h-full space-y-3 overflow-y-auto px-3 pb-4 pt-9 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                          <div className="h-full space-y-3 overflow-y-auto px-3 pb-16 pt-9 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             {allRecentCreatives.map((c) => (
                               <InstagramFeedCard
                                 key={c.id}
                                 creative={c}
                                 companyName={brandProfile?.company_name || "WITERS"}
+                                logoKey={brandProfile?.logo_key ?? null}
                                 accentColor={brandColorList[0] ?? "#0047FF"}
                                 onOpen={() =>
                                   setLightboxCreative({ thumbHref: c.thumbHref, title: c.title })
                                 }
                               />
                             ))}
+                          </div>
+                          {/* Bottom tab bar, same spot/feel as Instagram's
+                              own — explicitly asked for, home + send
+                              (messages) — kept white/light regardless of
+                              the device's own dark mode, matching the rest
+                              of this mockup. */}
+                          <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-between border-t border-wit-ink/10 bg-white px-9 py-3">
+                            <Home className="h-5 w-5 text-wit-ink" strokeWidth={2.2} />
+                            <Send className="h-5 w-5 text-wit-ink" strokeWidth={2.2} />
                           </div>
                         </div>
                       </div>
