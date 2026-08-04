@@ -214,6 +214,14 @@ function Registro() {
                   >
                     {t("términos y condiciones", "terms and conditions")}
                   </Link>{" "}
+                  {t("y el", "and the")}{" "}
+                  <Link
+                    to="/privacidad"
+                    target="_blank"
+                    className="font-semibold text-wit-blue underline hover:text-wit-blue-deep"
+                  >
+                    {t("aviso de privacidad", "privacy notice")}
+                  </Link>{" "}
                   {t("de WITERS.", "of WITERS.")}
                 </span>
               </label>

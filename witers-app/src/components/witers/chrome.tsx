@@ -186,6 +186,12 @@ export function SiteFooter() {
               <Link to="/ingresar" className="hover:text-white">
                 {t("Ingresar", "Log in")}
               </Link>
+              <Link to="/terminos" className="hover:text-white">
+                {t("Términos", "Terms")}
+              </Link>
+              <Link to="/privacidad" className="hover:text-white">
+                {t("Privacidad", "Privacy")}
+              </Link>
               <a href="mailto:hola@witers.com" className="hover:text-white">
                 hola@witers.com
               </a>

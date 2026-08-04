@@ -16,12 +16,14 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RestablecerContrasenaRouteImport } from './routes/restablecer-contrasena'
 import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as PautaRouteImport } from './routes/pauta'
 import { Route as PanelRouteImport } from './routes/panel'
 import { Route as OlvideContrasenaRouteImport } from './routes/olvide-contrasena'
 import { Route as NuestraHistoriaRouteImport } from './routes/nuestra-historia'
 import { Route as MarcaRouteImport } from './routes/marca'
 import { Route as IngresarRouteImport } from './routes/ingresar'
+import { Route as EliminarDatosRouteImport } from './routes/eliminar-datos'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as AdminLabRouteImport } from './routes/admin-lab'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -145,6 +147,11 @@ const RegistroRoute = RegistroRouteImport.update({
   path: '/registro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PautaRoute = PautaRouteImport.update({
   id: '/pauta',
   path: '/pauta',
@@ -173,6 +180,11 @@ const MarcaRoute = MarcaRouteImport.update({
 const IngresarRoute = IngresarRouteImport.update({
   id: '/ingresar',
   path: '/ingresar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EliminarDatosRoute = EliminarDatosRouteImport.update({
+  id: '/eliminar-datos',
+  path: '/eliminar-datos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutRoute = CheckoutRouteImport.update({
@@ -632,12 +644,14 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
+  '/eliminar-datos': typeof EliminarDatosRoute
   '/ingresar': typeof IngresarRoute
   '/marca': typeof MarcaRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
   '/olvide-contrasena': typeof OlvideContrasenaRoute
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
+  '/privacidad': typeof PrivacidadRoute
   '/registro': typeof RegistroRoute
   '/restablecer-contrasena': typeof RestablecerContrasenaRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -734,12 +748,14 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
+  '/eliminar-datos': typeof EliminarDatosRoute
   '/ingresar': typeof IngresarRoute
   '/marca': typeof MarcaRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
   '/olvide-contrasena': typeof OlvideContrasenaRoute
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
+  '/privacidad': typeof PrivacidadRoute
   '/registro': typeof RegistroRoute
   '/restablecer-contrasena': typeof RestablecerContrasenaRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -837,12 +853,14 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/admin-lab': typeof AdminLabRoute
   '/checkout': typeof CheckoutRoute
+  '/eliminar-datos': typeof EliminarDatosRoute
   '/ingresar': typeof IngresarRoute
   '/marca': typeof MarcaRoute
   '/nuestra-historia': typeof NuestraHistoriaRoute
   '/olvide-contrasena': typeof OlvideContrasenaRoute
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
+  '/privacidad': typeof PrivacidadRoute
   '/registro': typeof RegistroRoute
   '/restablecer-contrasena': typeof RestablecerContrasenaRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -941,12 +959,14 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin-lab'
     | '/checkout'
+    | '/eliminar-datos'
     | '/ingresar'
     | '/marca'
     | '/nuestra-historia'
     | '/olvide-contrasena'
     | '/panel'
     | '/pauta'
+    | '/privacidad'
     | '/registro'
     | '/restablecer-contrasena'
     | '/robots.txt'
@@ -1043,12 +1063,14 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin-lab'
     | '/checkout'
+    | '/eliminar-datos'
     | '/ingresar'
     | '/marca'
     | '/nuestra-historia'
     | '/olvide-contrasena'
     | '/panel'
     | '/pauta'
+    | '/privacidad'
     | '/registro'
     | '/restablecer-contrasena'
     | '/robots.txt'
@@ -1145,12 +1167,14 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin-lab'
     | '/checkout'
+    | '/eliminar-datos'
     | '/ingresar'
     | '/marca'
     | '/nuestra-historia'
     | '/olvide-contrasena'
     | '/panel'
     | '/pauta'
+    | '/privacidad'
     | '/registro'
     | '/restablecer-contrasena'
     | '/robots.txt'
@@ -1248,12 +1272,14 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AdminLabRoute: typeof AdminLabRoute
   CheckoutRoute: typeof CheckoutRoute
+  EliminarDatosRoute: typeof EliminarDatosRoute
   IngresarRoute: typeof IngresarRoute
   MarcaRoute: typeof MarcaRoute
   NuestraHistoriaRoute: typeof NuestraHistoriaRoute
   OlvideContrasenaRoute: typeof OlvideContrasenaRoute
   PanelRoute: typeof PanelRoute
   PautaRoute: typeof PautaRoute
+  PrivacidadRoute: typeof PrivacidadRoute
   RegistroRoute: typeof RegistroRoute
   RestablecerContrasenaRoute: typeof RestablecerContrasenaRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -1397,6 +1423,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegistroRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pauta': {
       id: '/pauta'
       path: '/pauta'
@@ -1437,6 +1470,13 @@ declare module '@tanstack/react-router' {
       path: '/ingresar'
       fullPath: '/ingresar'
       preLoaderRoute: typeof IngresarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/eliminar-datos': {
+      id: '/eliminar-datos'
+      path: '/eliminar-datos'
+      fullPath: '/eliminar-datos'
+      preLoaderRoute: typeof EliminarDatosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout': {
@@ -2056,12 +2096,14 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AdminLabRoute: AdminLabRoute,
   CheckoutRoute: CheckoutRoute,
+  EliminarDatosRoute: EliminarDatosRoute,
   IngresarRoute: IngresarRoute,
   MarcaRoute: MarcaRoute,
   NuestraHistoriaRoute: NuestraHistoriaRoute,
   OlvideContrasenaRoute: OlvideContrasenaRoute,
   PanelRoute: PanelRoute,
   PautaRoute: PautaRoute,
+  PrivacidadRoute: PrivacidadRoute,
   RegistroRoute: RegistroRoute,
   RestablecerContrasenaRoute: RestablecerContrasenaRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
