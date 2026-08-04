@@ -48,6 +48,7 @@ import { Route as ApiCarouselRequestChangeRouteImport } from './routes/api/carou
 import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ApiCampaignAdsRouteImport } from './routes/api/campaign-ads'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
+import { Route as ApiBrandProfileFontRouteImport } from './routes/api/brand-profile-font'
 import { Route as ApiBrandProfileColorsRouteImport } from './routes/api/brand-profile-colors'
 import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
 import { Route as ApiWitChatRouteImport } from './routes/api/wit/chat'
@@ -303,6 +304,11 @@ const ApiCampaignAdsRoute = ApiCampaignAdsRouteImport.update({
 const ApiBrandProfileManualRoute = ApiBrandProfileManualRouteImport.update({
   id: '/api/brand-profile-manual',
   path: '/api/brand-profile-manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBrandProfileFontRoute = ApiBrandProfileFontRouteImport.update({
+  id: '/api/brand-profile-font',
+  path: '/api/brand-profile-font',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBrandProfileColorsRoute = ApiBrandProfileColorsRouteImport.update({
@@ -641,6 +647,7 @@ export interface FileRoutesByFullPath {
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
+  '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
@@ -742,6 +749,7 @@ export interface FileRoutesByTo {
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
+  '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
@@ -844,6 +852,7 @@ export interface FileRoutesById {
   '/witer': typeof WiterRoute
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
+  '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
@@ -947,6 +956,7 @@ export interface FileRouteTypes {
     | '/witer'
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
+    | '/api/brand-profile-font'
     | '/api/brand-profile-manual'
     | '/api/campaign-ads'
     | '/api/campaigns'
@@ -1048,6 +1058,7 @@ export interface FileRouteTypes {
     | '/witer'
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
+    | '/api/brand-profile-font'
     | '/api/brand-profile-manual'
     | '/api/campaign-ads'
     | '/api/campaigns'
@@ -1149,6 +1160,7 @@ export interface FileRouteTypes {
     | '/witer'
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
+    | '/api/brand-profile-font'
     | '/api/brand-profile-manual'
     | '/api/campaign-ads'
     | '/api/campaigns'
@@ -1251,6 +1263,7 @@ export interface RootRouteChildren {
   WiterRoute: typeof WiterRoute
   ApiBrandProfileRoute: typeof ApiBrandProfileRoute
   ApiBrandProfileColorsRoute: typeof ApiBrandProfileColorsRoute
+  ApiBrandProfileFontRoute: typeof ApiBrandProfileFontRoute
   ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
   ApiCampaignAdsRoute: typeof ApiCampaignAdsRoute
   ApiCampaignsRoute: typeof ApiCampaignsRoute
@@ -1606,6 +1619,13 @@ declare module '@tanstack/react-router' {
       path: '/api/brand-profile-manual'
       fullPath: '/api/brand-profile-manual'
       preLoaderRoute: typeof ApiBrandProfileManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/brand-profile-font': {
+      id: '/api/brand-profile-font'
+      path: '/api/brand-profile-font'
+      fullPath: '/api/brand-profile-font'
+      preLoaderRoute: typeof ApiBrandProfileFontRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/brand-profile-colors': {
@@ -2051,6 +2071,7 @@ const rootRouteChildren: RootRouteChildren = {
   WiterRoute: WiterRoute,
   ApiBrandProfileRoute: ApiBrandProfileRoute,
   ApiBrandProfileColorsRoute: ApiBrandProfileColorsRoute,
+  ApiBrandProfileFontRoute: ApiBrandProfileFontRoute,
   ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
   ApiCampaignAdsRoute: ApiCampaignAdsRoute,
   ApiCampaignsRoute: ApiCampaignsRoute,

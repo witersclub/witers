@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useLanguage } from "../../lib/i18n";
 import { WMark } from "./brand";
+import { ensureGoogleFontLoaded } from "./google-font-picker";
 
 // The full conversational "intake" engine shared by the admin lab
 // (admin-lab.tsx) and the real member-facing chat (panel.tsx) — mic
@@ -141,6 +142,23 @@ export function ColorsAnswerBubble({ value }: { value: string }) {
           style={{ backgroundColor: c }}
         />
       ))}
+    </div>
+  );
+}
+
+// Same idea as ColorsAnswerBubble — for a client who picked a Google Fonts
+// library font (FontChoicePicker's "library:<family>" tag) instead of
+// uploading their own files, the bubble renders the family name in that
+// actual font rather than a plain confirmation line.
+function FontAnswerBubble({ family }: { family: string }) {
+  useEffect(() => {
+    ensureGoogleFontLoaded(family);
+  }, [family]);
+  return (
+    <div className="flex flex-col gap-0.5 self-end rounded-2xl rounded-br-sm border-2 border-wit-blue bg-white px-4 py-2.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <span className="text-lg text-wit-ink" style={{ fontFamily: `"${family}", sans-serif` }}>
+        {family}
+      </span>
     </div>
   );
 }
@@ -691,15 +709,34 @@ export function ChatIntakeFlow({
                   >
                     {e.field === "colors" && e.answer !== "Omitido" ? (
                       <ColorsAnswerBubble value={e.answer} />
+                    ) : e.field === "fontKeys" &&
+                      e.answer !== "Omitido" &&
+                      e.answer.startsWith("library:") ? (
+                      // FontChoicePicker tags a Google Fonts pick as
+                      // "library:<family>" — shown in that actual font
+                      // instead of a plain confirmation line.
+                      <FontAnswerBubble family={e.answer.slice("library:".length)} />
                     ) : e.field === "fontKeys" && e.answer !== "Omitido" ? (
-                      // The raw comma-joined R2 keys aren't something a
-                      // client should ever have to read — a plain count
-                      // reads as a real confirmation instead.
+                      // The raw comma-joined R2 keys ("upload:<keys>", or
+                      // bare keys from before FontChoicePicker tagged
+                      // things) aren't something a client should ever have
+                      // to read — a plain count reads as a real
+                      // confirmation instead.
                       <ChatBubble
                         role="user"
                         text={t(
-                          `${e.answer.split(",").filter(Boolean).length} archivo(s) de tipografía subidos.`,
-                          `${e.answer.split(",").filter(Boolean).length} font file(s) uploaded.`,
+                          `${
+                            e.answer
+                              .replace(/^upload:/, "")
+                              .split(",")
+                              .filter(Boolean).length
+                          } archivo(s) de tipografía subidos.`,
+                          `${
+                            e.answer
+                              .replace(/^upload:/, "")
+                              .split(",")
+                              .filter(Boolean).length
+                          } font file(s) uploaded.`,
                         )}
                       />
                     ) : (

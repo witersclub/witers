@@ -16,6 +16,10 @@ const schema = z
     // refine like logoKey below, since this step is genuinely optional
     // with no escape-hatch sentinel needed.
     fontKeys: z.string().max(2000).optional(),
+    // Or, instead of uploaded files, a Google Fonts family name picked from
+    // the built-in library (see FontChoicePicker) — mutually exclusive with
+    // fontKeys in the UI, but not enforced here since both are optional.
+    libraryFont: z.string().max(120).optional(),
   })
   .refine((data) => data.noLogo || Boolean(data.logoKey), {
     message: "Sube el logotipo o marca 'No tengo logotipo'.",
@@ -42,6 +46,7 @@ export const Route = createFileRoute("/api/onboarding/complete")({
           businessType: parsed.data.businessType?.trim() || null,
           logoKey: parsed.data.noLogo ? null : (parsed.data.logoKey ?? null),
           fontKeys: parsed.data.fontKeys ?? null,
+          libraryFont: parsed.data.libraryFont ?? null,
         });
 
         return json({ ok: true, profile });

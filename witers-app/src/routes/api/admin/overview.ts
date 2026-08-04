@@ -17,6 +17,7 @@ export const Route = createFileRoute("/api/admin/overview")({
                     (SELECT COALESCE(SUM(p.amount_mxn), 0) FROM payments p WHERE p.user_id = u.id AND p.status = 'paid') AS total_paid_mxn,
                     bp.company_name AS brand_company_name, bp.brand_colors AS brand_colors,
                     bp.business_type AS brand_business_type, bp.logo_key AS brand_logo_key,
+                    bp.font_keys AS brand_font_keys, bp.library_font AS brand_library_font,
                     bp.meta_page_id AS brand_meta_page_id, bp.meta_ad_account_id AS brand_meta_ad_account_id
              FROM users u
              LEFT JOIN memberships m ON m.user_id = u.id

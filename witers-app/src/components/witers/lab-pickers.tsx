@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Info } from "lucide-react";
 
 import { useLanguage } from "../../lib/i18n";
+import { GoogleFontPicker } from "./google-font-picker";
 
 // A small "(i)" button that reveals a short explanation on tap — built for
 // ColorsPicker's onboarding-only `showInfo` mode (a client asked for help
@@ -809,7 +810,7 @@ export function FontUploadPicker({ onPick }: { onPick: (value: string) => void }
   }
 
   return (
-    <div className="wit-glass mx-auto flex max-w-[280px] flex-col gap-3 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+    <div className="mx-auto flex w-full max-w-[280px] flex-col gap-3 rounded-2xl p-4">
       <label className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed border-wit-ink/20 px-3 py-3 text-center text-xs text-wit-gray hover:border-wit-blue/40">
         <span className="font-semibold text-wit-blue">{t("Elegir archivos", "Choose files")}</span>
         <span>
@@ -856,6 +857,59 @@ export function FontUploadPicker({ onPick }: { onPick: (value: string) => void }
       >
         {uploading ? t("Subiendo...", "Uploading...") : t("Continuar", "Continue")}
       </button>
+    </div>
+  );
+}
+
+// Wraps FontUploadPicker (files) and GoogleFontPicker (library) behind two
+// tabs, tagging whichever one the client finishes with a "upload:"/
+// "library:" prefix so the single onPick(value) callback the surrounding
+// chat/edit-card flow expects can still tell them apart — see
+// panel.tsx's OnboardingGate.finish() and BrandFontCard, which both split
+// on that prefix before saving. previewText is the client's own
+// company/brand name when it's already known (onboarding asks for it
+// first), so a library font actually shows what their brand looks like in
+// it instead of a generic sample.
+export function FontChoicePicker({
+  onPick,
+  previewText,
+}: {
+  onPick: (value: string) => void;
+  previewText: string;
+}) {
+  const { t } = useLanguage();
+  const [tab, setTab] = useState<"upload" | "library">("upload");
+
+  return (
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-3">
+      <div className="mx-auto flex gap-1 rounded-full bg-wit-mist/60 p-1">
+        <button
+          type="button"
+          onClick={() => setTab("upload")}
+          className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+            tab === "upload" ? "bg-white text-wit-ink shadow-sm" : "text-wit-gray"
+          }`}
+        >
+          {t("Subir archivo", "Upload file")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("library")}
+          className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+            tab === "library" ? "bg-white text-wit-ink shadow-sm" : "text-wit-gray"
+          }`}
+        >
+          {t("Elegir de Google Fonts", "Pick from Google Fonts")}
+        </button>
+      </div>
+      {tab === "upload" ? (
+        <FontUploadPicker onPick={(value) => onPick(`upload:${value}`)} />
+      ) : (
+        <GoogleFontPicker
+          previewText={previewText}
+          onPick={(family) => onPick(`library:${family}`)}
+        />
+      )}
     </div>
   );
 }

@@ -72,11 +72,13 @@ import { WitersLogo, WMark } from "../components/witers/brand";
 import { ChatBubble, ChatIntakeFlow, PhotosAnswerBubble } from "../components/witers/chat-intake";
 import { MicButton } from "../components/witers/mic-button";
 import { PasswordInput } from "../components/witers/password-input";
+import { CustomFontPreview } from "../components/witers/font-preview";
+import { ensureGoogleFontLoaded } from "../components/witers/google-font-picker";
 import {
   AspectRatioPicker,
   BusinessTypeWheel,
   ColorsPicker,
-  FontUploadPicker,
+  FontChoicePicker,
   LogoUploadPicker,
   uploadReferenceFile,
 } from "../components/witers/lab-pickers";
@@ -171,6 +173,14 @@ type BrandProfile = {
   business_type: string | null;
   logo_key: string | null;
   brand_manual_key: string | null;
+  // Comma-joined R2 keys for uploaded brand font files, or null if the
+  // client picked from the Google Fonts library (library_font) instead, or
+  // hasn't set a font at all.
+  font_keys: string | null;
+  // A Google Fonts family name, or null if the client uploaded their own
+  // files (font_keys) instead. Mutually exclusive with font_keys — see
+  // brand-profile.server.ts's setBrandFont.
+  library_font: string | null;
   // Facebook Page this client pautas from — set only by an admin. Null
   // means "Quiero pautar" stays blocked for them (see PautarButton).
   meta_page_id: string | null;
@@ -1708,8 +1718,8 @@ function buildOnboardingQuestions(
     {
       field: "fontKeys",
       text: t(
-        "¿Tienes las tipografías de tu marca? Es opcional — si no las tienes a la mano, puedes omitir este paso.",
-        "Do you have your brand's font files? This is optional — if you don't have them handy, you can skip this step.",
+        "¿Tienes las tipografías de tu marca? Puedes subir tus archivos o elegir una de nuestra librería de Google Fonts. Es opcional — si no quieres, puedes omitir este paso.",
+        "Do you have your brand's font files? You can upload your own files or pick one from our Google Fonts library. This is optional — if you'd rather not, you can skip this step.",
       ),
       required: false,
     },
@@ -1743,6 +1753,11 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
   // the component only resets its own internal state (answers, step) on
   // mount, there's no other way to force that from outside.
   const [resetKey, setResetKey] = useState(0);
+  // Mirrors ChatIntakeFlow's own answers-so-far, updated on every step via
+  // onAnswer below — used only to hand the fontKeys step the company name
+  // already answered a few questions earlier, so a library font preview
+  // shows the client's actual brand name instead of a generic sample.
+  const [liveAnswers, setLiveAnswers] = useState<Record<string, string>>({});
 
   function pickerFor(field: string, onPick: (value: string) => void) {
     switch (field) {
@@ -1753,7 +1768,12 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
       case "logoKey":
         return <LogoUploadPicker onPick={onPick} />;
       case "fontKeys":
-        return <FontUploadPicker onPick={onPick} />;
+        return (
+          <FontChoicePicker
+            onPick={onPick}
+            previewText={liveAnswers.companyName ?? draftQuery.data?.answers?.companyName ?? ""}
+          />
+        );
       default:
         return null;
     }
@@ -1765,6 +1785,13 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
     setSending(true);
     try {
       const noLogo = answers.logoKey === "Sin logotipo";
+      // FontChoicePicker tags its answer as "upload:<keys>" or
+      // "library:<family>" so this single chat field can carry either kind
+      // of pick — see lab-pickers.tsx.
+      const fontAnswer = answers.fontKeys ?? "";
+      const isLibraryFont = fontAnswer.startsWith("library:");
+      const fontKeys = isLibraryFont ? undefined : fontAnswer.replace(/^upload:/, "") || undefined;
+      const libraryFont = isLibraryFont ? fontAnswer.slice("library:".length) : undefined;
       const res = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -1774,7 +1801,8 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
           businessType: answers.businessType || undefined,
           logoKey: noLogo ? undefined : answers.logoKey || undefined,
           noLogo,
-          fontKeys: answers.fontKeys || undefined,
+          fontKeys,
+          libraryFont,
         }),
       });
       const data = (await res.json()) as { ok: boolean; message?: string };
@@ -1835,6 +1863,7 @@ function OnboardingGate({ onDone }: { onDone: () => void }) {
         initialAnswers={draftQuery.data?.answers}
         eyebrow={t("Conozcamos tu marca", "Let's get to know your brand")}
         onAnswer={(answers) => {
+          setLiveAnswers(answers);
           void fetch("/api/onboarding/draft", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -3655,6 +3684,131 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
   );
 }
 
+// Mirrors BrandColorsCard exactly — freely editable any time, same
+// FontChoicePicker every chat flow's fontKeys step already uses, so
+// picking/editing typography here looks and works the same as answering
+// that step anywhere else.
+function BrandFontCard({ brandProfile }: { brandProfile: BrandProfile | null }) {
+  const { t } = useLanguage();
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fontKeys = (brandProfile?.font_keys ?? "")
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+  const libraryFont = brandProfile?.library_font ?? null;
+  const previewText = brandProfile?.company_name || t("Tu marca", "Your brand");
+  const hasFont = fontKeys.length > 0 || Boolean(libraryFont);
+
+  useEffect(() => {
+    if (libraryFont) ensureGoogleFontLoaded(libraryFont);
+  }, [libraryFont]);
+
+  async function save(value: string) {
+    setError(null);
+    setSaving(true);
+    try {
+      const isLibrary = value.startsWith("library:");
+      const body = isLibrary
+        ? { libraryFont: value.slice("library:".length) }
+        : { fontKeys: value.replace(/^upload:/, "") };
+      const res = await fetch("/api/brand-profile-font", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) {
+        setError(
+          t(
+            "No pudimos guardar tu tipografía. Intenta de nuevo.",
+            "We couldn't save your font. Try again.",
+          ),
+        );
+        return;
+      }
+      setEditing(false);
+      void qc.invalidateQueries({ queryKey: ["brand-profile"] });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
+      <p className="text-lg font-bold text-wit-ink">
+        {t("Tipografía de marca", "Brand typography")}
+      </p>
+      <p className="mt-1 text-sm text-wit-gray">
+        {t(
+          "La tipografía que usamos en cada pieza que creamos para ti.",
+          "The typeface we use on every piece we create for you.",
+        )}
+      </p>
+
+      {editing ? (
+        <div className="mt-5">
+          <FontChoicePicker onPick={(v) => void save(v)} previewText={previewText} />
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="mx-auto mt-3 block text-xs font-semibold text-wit-gray hover:text-wit-ink"
+          >
+            {t("Cancelar", "Cancel")}
+          </button>
+        </div>
+      ) : libraryFont ? (
+        <div className="mt-5 rounded-2xl border border-wit-ink/10 p-4">
+          <p
+            className="truncate text-2xl font-bold text-wit-ink"
+            style={{ fontFamily: `"${libraryFont}", sans-serif` }}
+          >
+            {previewText}
+          </p>
+          <p className="mt-2 text-xs font-semibold text-wit-blue">{libraryFont}</p>
+        </div>
+      ) : fontKeys.length > 0 ? (
+        <div className="mt-5 rounded-2xl border border-wit-ink/10 p-4">
+          <CustomFontPreview fontKeys={fontKeys} previewText={previewText} />
+          <ul className="mt-3 flex flex-wrap gap-1.5">
+            {fontKeys.map((k) => (
+              <li
+                key={k}
+                className="rounded-full bg-wit-mist/60 px-2.5 py-1 text-[10px] font-semibold text-wit-gray"
+              >
+                {k.split("/").pop()}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
+          {t("Aún no tienes tipografía guardada.", "You don't have a saved font yet.")}
+        </p>
+      )}
+
+      {!editing ? (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="mt-4 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
+        >
+          {hasFont
+            ? t("Editar tipografía", "Edit typography")
+            : t("Elegir tipografía", "Choose typography")}
+        </button>
+      ) : null}
+      {saving ? (
+        <p className="mt-2 text-xs font-semibold text-wit-blue">{t("Guardando...", "Saving...")}</p>
+      ) : null}
+      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
 // Near-white brand colors (plenty of brands have one) would otherwise
 // pick as an atmosphere blob and render as an invisible smear against
 // the page's already-light background — most visibly right behind the
@@ -3728,6 +3882,19 @@ function BrandShowcaseCarousel({ brandProfile }: { brandProfile: BrandProfile | 
     },
     { id: "logo", content: <BrandShowcaseLogoCard fileKey={brandProfile?.logo_key ?? null} /> },
     { id: "colores", content: <BrandShowcaseColorsCard colors={colors} /> },
+    {
+      id: "tipografia",
+      content: (
+        <BrandShowcaseFontCard
+          fontKeys={(brandProfile?.font_keys ?? "")
+            .split(",")
+            .map((k) => k.trim())
+            .filter(Boolean)}
+          libraryFont={brandProfile?.library_font ?? null}
+          previewText={brandProfile?.company_name ?? t("Tu marca", "Your brand")}
+        />
+      ),
+    },
     {
       id: "manual",
       content: <BrandShowcaseManualCard hasManual={Boolean(brandProfile?.brand_manual_key)} />,
@@ -3923,6 +4090,48 @@ function BrandShowcaseColorsCard({ colors }: { colors: string[] }) {
   );
 }
 
+function BrandShowcaseFontCard({
+  fontKeys,
+  libraryFont,
+  previewText,
+}: {
+  fontKeys: string[];
+  libraryFont: string | null;
+  previewText: string;
+}) {
+  const { t } = useLanguage();
+
+  useEffect(() => {
+    if (libraryFont) ensureGoogleFontLoaded(libraryFont);
+  }, [libraryFont]);
+
+  return (
+    <div className="wit-glass flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-3xl p-6">
+      {libraryFont ? (
+        <p
+          className="max-w-full truncate text-3xl font-bold text-wit-ink"
+          style={{ fontFamily: `"${libraryFont}", sans-serif` }}
+        >
+          {previewText}
+        </p>
+      ) : fontKeys.length > 0 ? (
+        <CustomFontPreview
+          fontKeys={fontKeys}
+          previewText={previewText}
+          className="max-w-full truncate text-center text-3xl font-bold text-wit-ink"
+        />
+      ) : (
+        <p className="text-center text-sm text-wit-gray">
+          {t("Aún no tienes tipografía guardada.", "You don't have a saved font yet.")}
+        </p>
+      )}
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">
+        {t("Tipografía", "Typography")}
+      </p>
+    </div>
+  );
+}
+
 function BrandShowcaseManualCard({ hasManual }: { hasManual: boolean }) {
   const { t } = useLanguage();
   return (
@@ -3954,6 +4163,7 @@ function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null })
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       <BrandColorsCard brandProfile={brandProfile} />
       <LogoCard fileKey={brandProfile?.logo_key ?? null} />
+      <BrandFontCard brandProfile={brandProfile} />
       <BrandAssetCard
         title={t("Manual de marca", "Brand manual")}
         description={t(

@@ -19,7 +19,7 @@ import {
   Video,
   Wallet,
 } from "lucide-react";
-import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Area,
@@ -37,6 +37,8 @@ import {
 } from "recharts";
 
 import { WitersLogo, WMark } from "../components/witers/brand";
+import { CustomFontPreview } from "../components/witers/font-preview";
+import { ensureGoogleFontLoaded } from "../components/witers/google-font-picker";
 import { StaffCarouselRequestsPanel } from "../components/witers/staff-carousel-requests";
 import {
   CompactRequestCard,
@@ -76,6 +78,11 @@ type AdminUser = {
   brand_colors: string | null;
   brand_business_type: string | null;
   brand_logo_key: string | null;
+  // Read-only here — set by the client themselves from "Mi marca" (upload
+  // or Google Fonts library pick), never by an admin. See
+  // brand-profile.server.ts's setBrandFont.
+  brand_font_keys: string | null;
+  brand_library_font: string | null;
   // Facebook Page this client pautas from — null blocks "Quiero pautar"
   // for them (see panel.tsx's PautarButton), no shared/default fallback.
   brand_meta_page_id: string | null;
@@ -2002,6 +2009,56 @@ function GrantRequestsButton({ userId, onGranted }: { userId: string; onGranted:
   );
 }
 
+// Read-only — a client's font is their own choice from "Mi marca" (upload
+// or Google Fonts library), not part of the "one membership, one business"
+// identity lock this modal otherwise edits, so there's no save control
+// here at all.
+function FontReadOnlyPreview({
+  fontKeys,
+  libraryFont,
+  previewText,
+}: {
+  fontKeys: string | null;
+  libraryFont: string | null;
+  previewText: string;
+}) {
+  useEffect(() => {
+    if (libraryFont) ensureGoogleFontLoaded(libraryFont);
+  }, [libraryFont]);
+
+  const keys = (fontKeys ?? "")
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+
+  return (
+    <div className="rounded-xl border border-wit-ink/10 p-3">
+      {libraryFont ? (
+        <>
+          <p
+            className="truncate text-lg font-bold text-wit-ink"
+            style={{ fontFamily: `"${libraryFont}", sans-serif` }}
+          >
+            {previewText}
+          </p>
+          <p className="mt-1 text-xs font-semibold text-wit-blue">{libraryFont}</p>
+        </>
+      ) : keys.length > 0 ? (
+        <>
+          <CustomFontPreview
+            fontKeys={keys}
+            previewText={previewText}
+            className="truncate text-lg font-bold text-wit-ink"
+          />
+          <p className="mt-1 text-xs text-wit-gray">
+            {keys.map((k) => k.split("/").pop()).join(", ")}
+          </p>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 // One membership, one business: this is the only way to correct a
 // member's locked brand identity (company name, colors, category, logo)
 // once they've submitted their first request — see /api/requests and
@@ -2348,6 +2405,19 @@ function EditUserModal({
               </p>
             ) : null}
           </div>
+
+          {user.brand_library_font || user.brand_font_keys ? (
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-wit-gray">
+                Tipografía <span className="font-normal">(la elige el cliente desde Mi marca)</span>
+              </label>
+              <FontReadOnlyPreview
+                fontKeys={user.brand_font_keys}
+                libraryFont={user.brand_library_font}
+                previewText={user.brand_company_name ?? user.name}
+              />
+            </div>
+          ) : null}
 
           {msg ? (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{msg}</p>

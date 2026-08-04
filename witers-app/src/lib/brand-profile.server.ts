@@ -19,6 +19,11 @@ export type BrandProfile = {
   // step. Never locked like logo_key: nothing else depends on it staying
   // fixed once set.
   font_keys: string | null;
+  // A Google Fonts family name (e.g. "Playfair Display"), chosen from the
+  // built-in library instead of an uploaded file — see GoogleFontPicker.
+  // Mutually exclusive with font_keys in practice (setBrandFont clears
+  // whichever one isn't being set), never both populated by the UI.
+  library_font: string | null;
   // Facebook Page this client's ads publish from — set only by an admin
   // (see /api/admin/update-brand-profile), never by the client. Null blocks
   // "Quiero pautar" for them; there's no shared/default Page fallback.
@@ -77,6 +82,7 @@ export async function resolveBrandProfile(
       logo_key: submitted.logoKey,
       brand_manual_key: null,
       font_keys: null,
+      library_font: null,
       meta_page_id: null,
       meta_ad_account_id: null,
     };
@@ -139,6 +145,7 @@ export async function completeOnboarding(
     businessType: string | null;
     logoKey: string | null;
     fontKeys: string | null;
+    libraryFont: string | null;
   },
 ): Promise<BrandProfile> {
   const existing = await getBrandProfile(userId);
@@ -148,8 +155,8 @@ export async function completeOnboarding(
   }
   await db()
     .prepare(
-      `INSERT INTO brand_profiles (user_id, company_name, brand_colors, business_type, logo_key, font_keys)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+      `INSERT INTO brand_profiles (user_id, company_name, brand_colors, business_type, logo_key, font_keys, library_font)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
     )
     .bind(
       userId,
@@ -158,6 +165,7 @@ export async function completeOnboarding(
       data.businessType,
       data.logoKey,
       data.fontKeys,
+      data.libraryFont,
     )
     .run();
   await clearOnboardingDraft(userId);
@@ -169,6 +177,7 @@ export async function completeOnboarding(
     logo_key: data.logoKey,
     brand_manual_key: null,
     font_keys: data.fontKeys,
+    library_font: data.libraryFont,
     meta_page_id: null,
     meta_ad_account_id: null,
   };
@@ -197,5 +206,22 @@ export async function setBrandColors(userId: string, colors: string): Promise<vo
       "UPDATE brand_profiles SET brand_colors = ?2, updated_at = datetime('now') WHERE user_id = ?1",
     )
     .bind(userId, colors)
+    .run();
+}
+
+// Same "freely editable any time" rule as colors — set from the panel's
+// "Activos de marca" section (BrandFontCard) after onboarding too, not just
+// during it. Uploading a file clears any previously-chosen library font and
+// vice versa: the UI only ever offers one or the other, never both at once.
+export async function setBrandFont(
+  userId: string,
+  font: { fontKeys: string | null; libraryFont: string | null },
+): Promise<void> {
+  await db()
+    .prepare(
+      `UPDATE brand_profiles SET font_keys = ?2, library_font = ?3, updated_at = datetime('now')
+       WHERE user_id = ?1`,
+    )
+    .bind(userId, font.fontKeys, font.libraryFont)
     .run();
 }
