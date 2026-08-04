@@ -49,6 +49,7 @@ import {
   PawPrint,
   Pencil,
   Plane,
+  Play,
   Plus,
   RefreshCw,
   Rocket,
@@ -1202,14 +1203,32 @@ function PanelContent() {
                               />
                             ))}
                           </div>
-                          {/* Bottom tab bar, same spot/feel as Instagram's
-                              own — explicitly asked for, home + send
-                              (messages) — kept white/light regardless of
-                              the device's own dark mode, matching the rest
-                              of this mockup. */}
-                          <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-between border-t border-wit-ink/10 bg-white px-9 py-3">
-                            <Home className="h-5 w-5 text-wit-ink" strokeWidth={2.2} />
-                            <Send className="h-5 w-5 text-wit-ink" strokeWidth={2.2} />
+                          {/* Floating pill tab bar, matching Instagram's own
+                              (home/reels/direct/search/profile, active home
+                              in a rounded highlight) — kept white/light
+                              regardless of the device's own dark mode,
+                              matching the rest of this mockup. */}
+                          <div className="absolute inset-x-3 bottom-3 z-20 flex items-center justify-between rounded-full border border-wit-ink/10 bg-white/95 px-3.5 py-2 shadow-[0_10px_30px_rgba(5,13,40,0.14)] backdrop-blur-sm">
+                            <span className="flex h-7 w-9 items-center justify-center rounded-full bg-wit-mist/70">
+                              <Home className="h-4 w-4 text-wit-ink" strokeWidth={2.4} />
+                            </span>
+                            <Play className="h-4 w-4 text-wit-ink" strokeWidth={2.2} />
+                            <Send className="h-4 w-4 text-wit-ink" strokeWidth={2.2} />
+                            <Search className="h-4 w-4 text-wit-ink" strokeWidth={2.2} />
+                            {brandProfile?.logo_key ? (
+                              <img
+                                src={`/api/file?key=${encodeURIComponent(brandProfile.logo_key)}`}
+                                alt={brandProfile.company_name}
+                                className="h-6 w-6 shrink-0 rounded-full border border-wit-ink/10 object-cover"
+                              />
+                            ) : (
+                              <span
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                                style={{ background: brandColorList[0] ?? "#0047FF" }}
+                              >
+                                {(brandProfile?.company_name || "W").trim().charAt(0).toUpperCase()}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
