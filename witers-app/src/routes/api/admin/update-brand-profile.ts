@@ -16,9 +16,12 @@ const schema = z.object({
   // The Facebook Page this client pautas from — null/omitted means they
   // can't create Meta campaigns yet.
   metaPageId: z.string().max(60).nullable().optional(),
-  // The client's own Meta ad account id (WITERS is a partner on it, set up
-  // manually outside the app) — null/omitted means staff can't pull live
-  // campaigns for their Campañas dashboard yet (see /api/admin/meta-campaigns).
+  // The client's own Meta ad account id — never a shared WITERS account.
+  // Set here by staff after the client adds WITERS as a Business Manager
+  // partner and the account shows up in WITERS's own Business Manager list
+  // (see meta-ads.server.ts for the full procedure); null/omitted means
+  // staff can't pull live campaigns for their Campañas dashboard yet (see
+  // /api/admin/meta-campaigns).
   metaAdAccountId: z.string().max(60).nullable().optional(),
   // undefined = leave the current logo alone, null = clear it (reopens the
   // logo question for that member), a string = set/replace it.

@@ -1,13 +1,26 @@
 // Talks to Meta's Marketing API (Graph API) to show a client's real Meta ad
 // campaigns inside their WITERS panel — read-only. Campaigns themselves are
 // created by WITERS staff directly in Meta Ads Manager (a phone call with
-// the client, not a self-serve wizard), inside the CLIENT'S OWN ad account:
-// the client adds WITERS's Business Portfolio as a partner (Analyst access
-// is enough) from their own Business Manager, and from then on the same
-// System User token (META_ACCESS_TOKEN) can read that account too — only
-// the ad account id varies per client, never the token. Which of a client's
-// real campaigns actually show up in their dashboard is a staff choice (see
-// /api/admin/meta-campaigns + /api/admin/link-campaign), not "all of them."
+// the client, not a self-serve wizard), inside the CLIENT'S OWN ad account,
+// never a shared/WITERS-owned one — there is no such thing here.
+//
+// The connection procedure, always the same for every client:
+//   1. The client adds WITERS's Business Portfolio as a partner (Analyst
+//      access is enough) from their own Meta Business Manager.
+//   2. Once accepted, that ad account shows up in WITERS's own Business
+//      Manager account list — staff copies its id from there.
+//   3. Staff pastes that id into the client's brand profile from the admin
+//      panel (see /api/admin/update-brand-profile), which is what actually
+//      turns on their Campañas dashboard.
+// The same System User token (META_ACCESS_TOKEN) reads every client's
+// account this way — only the ad account id varies per client, never the
+// token. Nothing here is per-client Meta OAuth, so it doesn't request
+// ads_management/ads_read from anyone via login — no client-facing
+// permission screen, no App Review trigger from this flow.
+//
+// Which of a client's real campaigns actually show up in their dashboard is
+// a separate staff choice (see /api/admin/meta-campaigns +
+// /api/admin/link-campaign), not "all of them."
 
 import process from "node:process";
 

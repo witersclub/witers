@@ -26,27 +26,30 @@
     "not_found_handling": "none"
   },
 
-  // META_AD_ACCOUNT_ID lives here (not as a dashboard-only var) because
+  // There is no shared/default Meta ad account — every client pautas from
+  // THEIR OWN ad account. The client adds WITERS's Business Portfolio as a
+  // partner (Analyst access) from their own Business Manager; once
+  // accepted, that ad account shows up in WITERS's own Business Manager
+  // account list, staff copies its id from there, and pastes it into that
+  // client's brand profile via the admin panel (see
+  // /api/admin/update-brand-profile). The same META_ACCESS_TOKEN (a
+  // Secret, not a var — see meta-ads.server.ts) then reads that account
+  // too; only the ad account id varies per client, never the token. No
+  // per-client Meta OAuth/App Review is involved in this flow.
+  //
+  // STRIPE_PUBLISHABLE_KEY is here (not a dashboard-only var) because
   // `wrangler deploy` overwrites a Worker's plain-text vars with exactly
   // this object on every deploy — anything added by hand in the Cloudflare
   // dashboard but missing from this list gets silently wiped on the next
-  // push. It's not sensitive (just an ad account number, not a
-  // credential), so it's safe to commit; META_ACCESS_TOKEN stays a
-  // dashboard/CLI Secret instead, since those persist across deploys and
-  // this one actually is sensitive. This is WITERS's own shared ad
-  // account — every client's campaign is created here (see
-  // meta-ads.server.ts); it is NOT per-client.
-  //
-  // STRIPE_PUBLISHABLE_KEY is here for the same reason — it's meant to be
-  // public (ships to the browser), and living in code keeps it from being
-  // wiped by a deploy. It MUST stay paired with whatever mode (test vs
-  // live) STRIPE_SECRET_KEY is in — a live pk with a test sk (or vice
-  // versa) makes every checkout fail. Local dev overrides this with the
-  // test key from .dev.vars, so `wrangler dev` never touches live Stripe.
+  // push. It's meant to be public (ships to the browser) and safe to
+  // commit, unlike STRIPE_SECRET_KEY, which stays a dashboard/CLI Secret.
+  // It MUST stay paired with whatever mode (test vs live) STRIPE_SECRET_KEY
+  // is in — a live pk with a test sk (or vice versa) makes every checkout
+  // fail. Local dev overrides this with the test key from .dev.vars, so
+  // `wrangler dev` never touches live Stripe.
   "vars": {
     "HF_ENV": "prod",
     "APP_SLUG": "witers",
-    "META_AD_ACCOUNT_ID": "1528358221731960",
     "STRIPE_PUBLISHABLE_KEY": "pk_live_51TwAPHFJxTCgIYcaf7mdWiLQ8gMow4H3cWHV5v7rccOGunKwz6l8XMjaIa7IWsPvnUlgwTXY7ioKrzA3pEsAhV2a00mAMn6hqP"
   },
 
