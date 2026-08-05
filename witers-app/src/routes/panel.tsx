@@ -594,6 +594,48 @@ function InstagramFeedCard({
   );
 }
 
+// Shared by both the mobile and desktop quick-create rows (see
+// renderQuickCreateCard in PanelContent) — one source of truth for the
+// icon/color/label per creative mode instead of three near-duplicate
+// buttons drifting apart over time.
+const QUICK_CREATE_ITEMS: {
+  mode: "imagenes" | "videos" | "carruseles";
+  icon: typeof ImageIcon;
+  iconBg: string;
+  iconColor: string;
+  activeBorder: string;
+  activeShadow: string;
+  label: [string, string];
+}[] = [
+  {
+    mode: "imagenes",
+    icon: ImageIcon,
+    iconBg: "bg-wit-blue/10",
+    iconColor: "text-wit-blue",
+    activeBorder: "border-wit-blue",
+    activeShadow: "shadow-[0_10px_30px_rgba(37,99,255,0.12)]",
+    label: ["Crear imagen", "Create image"],
+  },
+  {
+    mode: "videos",
+    icon: VideoIcon,
+    iconBg: "bg-wit-pink/10",
+    iconColor: "text-wit-pink",
+    activeBorder: "border-wit-pink",
+    activeShadow: "shadow-[0_10px_30px_rgba(255,63,176,0.12)]",
+    label: ["Crear video", "Create video"],
+  },
+  {
+    mode: "carruseles",
+    icon: GalleryHorizontal,
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-600",
+    activeBorder: "border-emerald-500",
+    activeShadow: "shadow-[0_10px_30px_rgba(16,185,129,0.12)]",
+    label: ["Crear carrusel", "Create carousel"],
+  },
+];
+
 function PanelContent() {
   const me = useMe();
   const { t } = useLanguage();
@@ -731,6 +773,51 @@ function PanelContent() {
   function openChat() {
     setChatKey((k) => k + 1);
     setChatOpen(true);
+  }
+
+  // Shared by both the mobile quick-create row and the desktop one (see
+  // QUICK_CREATE_ITEMS) — true accordion per mode: tapping the already-open
+  // card closes it, tapping another opens that one and jumps its own tab to
+  // "nueva" so the card opens straight into starting a request.
+  function selectCreativeMode(mode: "imagenes" | "videos" | "carruseles") {
+    if (creativeMode === mode) {
+      setCreativeMode(null);
+      return;
+    }
+    setCreativeMode(mode);
+    if (mode === "imagenes") setTab("nueva");
+    else if (mode === "videos") setVideoTab("nueva");
+    else setCarouselTab("nueva");
+  }
+
+  function renderQuickCreateCard(item: (typeof QUICK_CREATE_ITEMS)[number]) {
+    const active = creativeMode === item.mode;
+    const Icon = item.icon;
+    return (
+      <button
+        key={item.mode}
+        type="button"
+        onClick={() => selectCreativeMode(item.mode)}
+        className={`flex flex-col items-center gap-2 rounded-2xl border-2 bg-white px-2 py-4 text-center transition-all active:scale-[0.98] sm:rounded-3xl ${
+          active
+            ? `${item.activeBorder} ${item.activeShadow}`
+            : "border-transparent shadow-[0_10px_30px_rgba(5,13,40,0.06)] hover:-translate-y-0.5"
+        }`}
+      >
+        <span
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${item.iconBg}`}
+        >
+          <Icon className={`h-5 w-5 ${item.iconColor}`} strokeWidth={2} />
+        </span>
+        <span className="text-xs font-bold text-wit-ink sm:text-sm">{t(...item.label)}</span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 transition-transform ${
+            active ? `rotate-0 ${item.iconColor}` : "-rotate-90 text-wit-gray"
+          }`}
+          strokeWidth={2.6}
+        />
+      </button>
+    );
   }
 
   async function logout() {
@@ -1149,6 +1236,14 @@ function PanelContent() {
                       </button>
                     ) : null}
 
+                    {/* Same three entry points as the mobile row below, just
+                        capped to the same width as the campaign-results card
+                        above so all three sit in one straight line instead
+                        of getting lost under the tall phone mockup. */}
+                    <div className="mt-6 grid max-w-sm grid-cols-3 gap-3">
+                      {QUICK_CREATE_ITEMS.map(renderQuickCreateCard)}
+                    </div>
+
                     {!active ? (
                       <div className="mt-6 flex max-w-sm flex-col items-start gap-4 rounded-3xl bg-wit-navy p-6 text-white">
                         <div>
@@ -1173,6 +1268,30 @@ function PanelContent() {
                         </Link>
                       </div>
                     ) : null}
+                  </div>
+
+                  {/* The mobile bottom nav's central "talk to Wit" orb has
+                      no desktop equivalent otherwise — this floats it in
+                      the gap between the two columns, roughly level with
+                      the quick-create row above, so starting a piece is
+                      just as reachable here as on mobile. */}
+                  <div className="flex shrink-0 flex-col items-center justify-center gap-2 self-center">
+                    <button
+                      type="button"
+                      onClick={openChat}
+                      aria-label={t("Hablar con Wit", "Talk to Wit")}
+                      className="wit-orb flex h-20 w-20 items-center justify-center overflow-hidden rounded-full active:scale-95"
+                    >
+                      <span
+                        className="wit-float-soft flex items-center justify-center"
+                        style={{ filter: "brightness(0) invert(1)" }}
+                      >
+                        <WMark size={32} />
+                      </span>
+                    </button>
+                    <span className="text-xs font-bold text-wit-ink">
+                      {t("Hablar con Wit", "Talk to Wit")}
+                    </span>
                   </div>
 
                   {allRecentCreatives.length > 0 ? (
@@ -1480,103 +1599,13 @@ function PanelContent() {
                     closes it back — true accordion, not just a switch
                     between three permanently-open states. The panel below
                     re-plays a rise-in (key={creativeMode}) so opening reads
-                    as that card unfolding, not a random content swap. */}
-                <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (creativeMode === "imagenes") {
-                        setCreativeMode(null);
-                        return;
-                      }
-                      setCreativeMode("imagenes");
-                      setTab("nueva");
-                    }}
-                    className={`flex flex-col items-center gap-2 rounded-2xl border-2 bg-white px-2 py-4 text-center transition-all active:scale-[0.98] sm:rounded-3xl ${
-                      creativeMode === "imagenes"
-                        ? "border-wit-blue shadow-[0_10px_30px_rgba(37,99,255,0.12)]"
-                        : "border-transparent shadow-[0_10px_30px_rgba(5,13,40,0.06)] hover:-translate-y-0.5"
-                    }`}
-                  >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-wit-blue/10">
-                      <ImageIcon className="h-5 w-5 text-wit-blue" strokeWidth={2} />
-                    </span>
-                    <span className="text-xs font-bold text-wit-ink sm:text-sm">
-                      {t("Crear imagen", "Create image")}
-                    </span>
-                    <ChevronDown
-                      className={`h-3.5 w-3.5 transition-transform ${
-                        creativeMode === "imagenes"
-                          ? "rotate-0 text-wit-blue"
-                          : "-rotate-90 text-wit-gray"
-                      }`}
-                      strokeWidth={2.6}
-                    />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (creativeMode === "videos") {
-                        setCreativeMode(null);
-                        return;
-                      }
-                      setCreativeMode("videos");
-                      setVideoTab("nueva");
-                    }}
-                    className={`flex flex-col items-center gap-2 rounded-2xl border-2 bg-white px-2 py-4 text-center transition-all active:scale-[0.98] sm:rounded-3xl ${
-                      creativeMode === "videos"
-                        ? "border-wit-pink shadow-[0_10px_30px_rgba(255,63,176,0.12)]"
-                        : "border-transparent shadow-[0_10px_30px_rgba(5,13,40,0.06)] hover:-translate-y-0.5"
-                    }`}
-                  >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-wit-pink/10">
-                      <VideoIcon className="h-5 w-5 text-wit-pink" strokeWidth={2} />
-                    </span>
-                    <span className="text-xs font-bold text-wit-ink sm:text-sm">
-                      {t("Crear video", "Create video")}
-                    </span>
-                    <ChevronDown
-                      className={`h-3.5 w-3.5 transition-transform ${
-                        creativeMode === "videos"
-                          ? "rotate-0 text-wit-pink"
-                          : "-rotate-90 text-wit-gray"
-                      }`}
-                      strokeWidth={2.6}
-                    />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (creativeMode === "carruseles") {
-                        setCreativeMode(null);
-                        return;
-                      }
-                      setCreativeMode("carruseles");
-                      setCarouselTab("nueva");
-                    }}
-                    className={`flex flex-col items-center gap-2 rounded-2xl border-2 bg-white px-2 py-4 text-center transition-all active:scale-[0.98] sm:rounded-3xl ${
-                      creativeMode === "carruseles"
-                        ? "border-emerald-500 shadow-[0_10px_30px_rgba(16,185,129,0.12)]"
-                        : "border-transparent shadow-[0_10px_30px_rgba(5,13,40,0.06)] hover:-translate-y-0.5"
-                    }`}
-                  >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50">
-                      <GalleryHorizontal className="h-5 w-5 text-emerald-600" strokeWidth={2} />
-                    </span>
-                    <span className="text-xs font-bold text-wit-ink sm:text-sm">
-                      {t("Crear carrusel", "Create carousel")}
-                    </span>
-                    <ChevronDown
-                      className={`h-3.5 w-3.5 transition-transform ${
-                        creativeMode === "carruseles"
-                          ? "rotate-0 text-emerald-600"
-                          : "-rotate-90 text-wit-gray"
-                      }`}
-                      strokeWidth={2.6}
-                    />
-                  </button>
+                    as that card unfolding, not a random content swap.
+                    lg:hidden because desktop has its own copy of this same
+                    row right under the campaign-results card up above (see
+                    the lg:flex header block) — showing both here would just
+                    duplicate it. */}
+                <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3 lg:hidden">
+                  {QUICK_CREATE_ITEMS.map(renderQuickCreateCard)}
                 </div>
 
                 {creativeMode ? (
