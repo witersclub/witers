@@ -682,6 +682,10 @@ function PanelContent() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const [justSent, setJustSent] = useState(false);
+  // The request just created via the chat, if any — RequestList uses this
+  // to auto-open that one card in "Mis solicitudes" instead of leaving the
+  // client to scan the list and find it themselves.
+  const [newRequestId, setNewRequestId] = useState<string | null>(null);
   // Which locked quota ring (if any) the client just tapped — drives the
   // upgrade teaser popover. null = closed.
   const [upgradeTeaser, setUpgradeTeaser] = useState<"video" | "carrusel" | null>(null);
@@ -1636,6 +1640,7 @@ function PanelContent() {
                               rows={rows}
                               loading={requests.isLoading}
                               onNew={() => setTab("nueva")}
+                              highlightId={newRequestId}
                             />
                           )}
                         </div>
@@ -1772,13 +1777,21 @@ function PanelContent() {
                   .map((r) => r.title)
                   .filter((t): t is string => Boolean(t))
                   .slice(0, 5)}
-                onCreated={() => {
+                onCreated={(id) => {
                   void qc.invalidateQueries({ queryKey: ["requests"] });
                   void qc.invalidateQueries({ queryKey: ["me"] });
                   void qc.invalidateQueries({ queryKey: ["brand-profile"] });
                   setChatOpen(false);
                   setChatKey((k) => k + 1);
+                  // Land back exactly where the new request now lives —
+                  // opening "Crear imagen" and jumping to "Mis solicitudes"
+                  // instead of leaving the client on a plain Inicio with no
+                  // sign of what they just sent (see WhatsApp/orb entry
+                  // point below: the chat can open from outside the
+                  // "Crear imagen" card, so creativeMode isn't already set).
+                  setCreativeMode("imagenes");
                   setTab("solicitudes");
+                  setNewRequestId(id);
                   setJustSent(true);
                   window.setTimeout(() => setJustSent(false), 3000);
                 }}
@@ -4597,7 +4610,7 @@ function WitConversation({
   recentRequestTitles,
 }: {
   disabledReason: string | null;
-  onCreated: () => void;
+  onCreated: (id: string | null) => void;
   onClose: () => void;
   brandProfile: BrandProfile | null;
   initialAnswers?: Record<string, string>;
@@ -4840,7 +4853,12 @@ function WitConversation({
           brandColors: brandProfile?.brand_colors || undefined,
         }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string; message?: string };
+      const data = (await res.json()) as {
+        ok: boolean;
+        id?: string;
+        error?: string;
+        message?: string;
+      };
       if (!data.ok) {
         setSendError(
           data.error === "sin_saldo"
@@ -4861,7 +4879,7 @@ function WitConversation({
         );
         return;
       }
-      onCreated();
+      onCreated(data.id ?? null);
     } catch {
       setSendError(
         t(
@@ -6039,10 +6057,12 @@ function RequestList({
   rows,
   loading,
   onNew,
+  highlightId,
 }: {
   rows: RequestRow[];
   loading: boolean;
   onNew: () => void;
+  highlightId?: string | null;
 }) {
   const { t } = useLanguage();
   return (
@@ -6075,7 +6095,7 @@ function RequestList({
       ) : (
         <div className="space-y-4">
           {rows.map((r) => (
-            <RequestEntry key={r.id} row={r} />
+            <RequestEntry key={r.id} row={r} highlight={r.id === highlightId} />
           ))}
         </div>
       )}
@@ -6088,10 +6108,22 @@ function RequestList({
 // worked on, or already closed out — collapses to a simple row, same
 // declutter pattern as the designer/admin panels. Only "en_proceso" gets
 // the rotating border: it's the one nobody's finished yet.
-function RequestEntry({ row: r }: { row: RequestRow }) {
+function RequestEntry({ row: r, highlight }: { row: RequestRow; highlight?: boolean }) {
   const { t } = useLanguage();
   const qc = useQueryClient();
-  const [expanded, setExpanded] = useState(false);
+  // Starts pre-expanded for the request the client just submitted — see
+  // highlightId in RequestList. A plain boolean is fine here (not a lazy
+  // initializer): React only reads it on mount, so a later re-render with
+  // the same highlight prop can't re-collapse a card the client closed
+  // themselves.
+  const [expanded, setExpanded] = useState(Boolean(highlight));
+  const highlightRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (highlight) highlightRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Only ever run once, right after landing here from a fresh submit —
+    // not on every re-render this row happens to get.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Owned here, not inside HistoryCard: closing the request flips its
   // status away from "completada", and that swap is exactly what unmounts
   // HistoryCard below (in favor of the collapsed row). If the survey lived
@@ -6122,7 +6154,7 @@ function RequestEntry({ row: r }: { row: RequestRow }) {
 
   if (expanded) {
     return (
-      <div>
+      <div ref={highlightRef}>
         <button
           type="button"
           onClick={() => setExpanded(false)}
