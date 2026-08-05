@@ -157,12 +157,12 @@ function HelpChatModal({ onClose }: { onClose: () => void }) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-wit-navy/50 p-0 sm:items-center sm:p-5"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-wit-navy/50 p-5"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex h-[85svh] w-full max-w-sm flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:h-[75vh] sm:rounded-3xl"
+        className="flex h-[80svh] w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
       >
         <div className="flex shrink-0 items-center justify-between border-b border-wit-ink/10 px-5 py-4">
           <div className="flex items-center gap-2.5">
