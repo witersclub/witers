@@ -24,6 +24,7 @@ function isStaleChunkError(error: Error | undefined | null): boolean {
 
 import { IosInstallHint } from "../components/witers/ios-install-hint";
 import { LiveVisitorHeartbeat } from "../components/witers/live-visitor-heartbeat";
+import { WhatsAppFloatButton } from "../components/witers/whatsapp-button";
 import { LanguageProvider } from "../lib/i18n";
 
 import appCss from "../styles.css?url";
@@ -191,6 +192,7 @@ function RootComponent() {
         <Outlet />
         <IosInstallHint />
         <LiveVisitorHeartbeat />
+        <WhatsAppFloatButton />
       </LanguageProvider>
     </QueryClientProvider>
   );
