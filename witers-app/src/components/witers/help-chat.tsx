@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageCircleQuestion, Send, UserRound, X } from "lucide-react";
 
@@ -154,7 +155,7 @@ function HelpChatModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-wit-navy/50 p-0 sm:items-center sm:p-5"
       onClick={onClose}
@@ -259,6 +260,7 @@ function HelpChatModal({ onClose }: { onClose: () => void }) {
           </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
