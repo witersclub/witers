@@ -28,11 +28,23 @@ export function WhatsAppFloatButton() {
   // at sm: and up, so the extra offset only applies below that breakpoint.
   const isPanelRoute = pathname.startsWith("/panel");
 
+  // Fire-and-forget — logged for the admin "Indicadores" tab. Never
+  // awaited and never blocks/delays the link from opening WhatsApp.
+  function trackClick() {
+    fetch("/api/track-event", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "whatsapp_click", path: pathname }),
+      keepalive: true,
+    }).catch(() => {});
+  }
+
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={trackClick}
       aria-label={t("Escríbenos por WhatsApp", "Message us on WhatsApp")}
       title={t("Escríbenos por WhatsApp", "Message us on WhatsApp")}
       className="fixed right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_8px_20px_rgba(0,0,0,0.22)] transition hover:brightness-105 active:scale-95 sm:right-6 sm:h-14 sm:w-14"

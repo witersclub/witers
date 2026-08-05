@@ -34,6 +34,7 @@ import { Route as ApiVideoRequestsRouteImport } from './routes/api/video-request
 import { Route as ApiUserRouteImport } from './routes/api/user'
 import { Route as ApiUploadVideoRawRouteImport } from './routes/api/upload-video-raw'
 import { Route as ApiUploadReferenceRouteImport } from './routes/api/upload-reference'
+import { Route as ApiTrackEventRouteImport } from './routes/api/track-event'
 import { Route as ApiSubmitSatisfactionRouteImport } from './routes/api/submit-satisfaction'
 import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
@@ -87,6 +88,7 @@ import { Route as ApiAdminUpdateDesignerRouteImport } from './routes/api/admin/u
 import { Route as ApiAdminUpdateBrandProfileRouteImport } from './routes/api/admin/update-brand-profile'
 import { Route as ApiAdminUnlinkCampaignRouteImport } from './routes/api/admin/unlink-campaign'
 import { Route as ApiAdminToggleLogoVisibilityRouteImport } from './routes/api/admin/toggle-logo-visibility'
+import { Route as ApiAdminSiteEventsSummaryRouteImport } from './routes/api/admin/site-events-summary'
 import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overview'
 import { Route as ApiAdminMetaCampaignsRouteImport } from './routes/api/admin/meta-campaigns'
 import { Route as ApiAdminLiveVisitorsRouteImport } from './routes/api/admin/live-visitors'
@@ -238,6 +240,11 @@ const ApiUploadVideoRawRoute = ApiUploadVideoRawRouteImport.update({
 const ApiUploadReferenceRoute = ApiUploadReferenceRouteImport.update({
   id: '/api/upload-reference',
   path: '/api/upload-reference',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTrackEventRoute = ApiTrackEventRouteImport.update({
+  id: '/api/track-event',
+  path: '/api/track-event',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSubmitSatisfactionRoute = ApiSubmitSatisfactionRouteImport.update({
@@ -514,6 +521,12 @@ const ApiAdminToggleLogoVisibilityRoute =
     path: '/api/admin/toggle-logo-visibility',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAdminSiteEventsSummaryRoute =
+  ApiAdminSiteEventsSummaryRouteImport.update({
+    id: '/api/admin/site-events-summary',
+    path: '/api/admin/site-events-summary',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminOverviewRoute = ApiAdminOverviewRouteImport.update({
   id: '/api/admin/overview',
   path: '/api/admin/overview',
@@ -699,6 +712,7 @@ export interface FileRoutesByFullPath {
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
+  '/api/track-event': typeof ApiTrackEventRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
@@ -728,6 +742,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/site-events-summary': typeof ApiAdminSiteEventsSummaryRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/unlink-campaign': typeof ApiAdminUnlinkCampaignRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
@@ -806,6 +821,7 @@ export interface FileRoutesByTo {
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
+  '/api/track-event': typeof ApiTrackEventRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
@@ -835,6 +851,7 @@ export interface FileRoutesByTo {
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/site-events-summary': typeof ApiAdminSiteEventsSummaryRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/unlink-campaign': typeof ApiAdminUnlinkCampaignRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
@@ -914,6 +931,7 @@ export interface FileRoutesById {
   '/api/request-revision': typeof ApiRequestRevisionRoute
   '/api/requests': typeof ApiRequestsRoute
   '/api/submit-satisfaction': typeof ApiSubmitSatisfactionRoute
+  '/api/track-event': typeof ApiTrackEventRoute
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
@@ -943,6 +961,7 @@ export interface FileRoutesById {
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/site-events-summary': typeof ApiAdminSiteEventsSummaryRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/unlink-campaign': typeof ApiAdminUnlinkCampaignRoute
   '/api/admin/update-brand-profile': typeof ApiAdminUpdateBrandProfileRoute
@@ -1023,6 +1042,7 @@ export interface FileRouteTypes {
     | '/api/request-revision'
     | '/api/requests'
     | '/api/submit-satisfaction'
+    | '/api/track-event'
     | '/api/upload-reference'
     | '/api/upload-video-raw'
     | '/api/user'
@@ -1052,6 +1072,7 @@ export interface FileRouteTypes {
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
+    | '/api/admin/site-events-summary'
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/unlink-campaign'
     | '/api/admin/update-brand-profile'
@@ -1130,6 +1151,7 @@ export interface FileRouteTypes {
     | '/api/request-revision'
     | '/api/requests'
     | '/api/submit-satisfaction'
+    | '/api/track-event'
     | '/api/upload-reference'
     | '/api/upload-video-raw'
     | '/api/user'
@@ -1159,6 +1181,7 @@ export interface FileRouteTypes {
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
+    | '/api/admin/site-events-summary'
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/unlink-campaign'
     | '/api/admin/update-brand-profile'
@@ -1237,6 +1260,7 @@ export interface FileRouteTypes {
     | '/api/request-revision'
     | '/api/requests'
     | '/api/submit-satisfaction'
+    | '/api/track-event'
     | '/api/upload-reference'
     | '/api/upload-video-raw'
     | '/api/user'
@@ -1266,6 +1290,7 @@ export interface FileRouteTypes {
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
+    | '/api/admin/site-events-summary'
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/unlink-campaign'
     | '/api/admin/update-brand-profile'
@@ -1345,6 +1370,7 @@ export interface RootRouteChildren {
   ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
   ApiRequestsRoute: typeof ApiRequestsRoute
   ApiSubmitSatisfactionRoute: typeof ApiSubmitSatisfactionRoute
+  ApiTrackEventRoute: typeof ApiTrackEventRoute
   ApiUploadReferenceRoute: typeof ApiUploadReferenceRoute
   ApiUploadVideoRawRoute: typeof ApiUploadVideoRawRoute
   ApiUserRoute: typeof ApiUserRoute
@@ -1374,6 +1400,7 @@ export interface RootRouteChildren {
   ApiAdminLiveVisitorsRoute: typeof ApiAdminLiveVisitorsRoute
   ApiAdminMetaCampaignsRoute: typeof ApiAdminMetaCampaignsRoute
   ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
+  ApiAdminSiteEventsSummaryRoute: typeof ApiAdminSiteEventsSummaryRoute
   ApiAdminToggleLogoVisibilityRoute: typeof ApiAdminToggleLogoVisibilityRoute
   ApiAdminUnlinkCampaignRoute: typeof ApiAdminUnlinkCampaignRoute
   ApiAdminUpdateBrandProfileRoute: typeof ApiAdminUpdateBrandProfileRoute
@@ -1588,6 +1615,13 @@ declare module '@tanstack/react-router' {
       path: '/api/upload-reference'
       fullPath: '/api/upload-reference'
       preLoaderRoute: typeof ApiUploadReferenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/track-event': {
+      id: '/api/track-event'
+      path: '/api/track-event'
+      fullPath: '/api/track-event'
+      preLoaderRoute: typeof ApiTrackEventRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/submit-satisfaction': {
@@ -1961,6 +1995,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminToggleLogoVisibilityRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/site-events-summary': {
+      id: '/api/admin/site-events-summary'
+      path: '/api/admin/site-events-summary'
+      fullPath: '/api/admin/site-events-summary'
+      preLoaderRoute: typeof ApiAdminSiteEventsSummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/overview': {
       id: '/api/admin/overview'
       path: '/api/admin/overview'
@@ -2193,6 +2234,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiRequestRevisionRoute: ApiRequestRevisionRoute,
   ApiRequestsRoute: ApiRequestsRoute,
   ApiSubmitSatisfactionRoute: ApiSubmitSatisfactionRoute,
+  ApiTrackEventRoute: ApiTrackEventRoute,
   ApiUploadReferenceRoute: ApiUploadReferenceRoute,
   ApiUploadVideoRawRoute: ApiUploadVideoRawRoute,
   ApiUserRoute: ApiUserRoute,
@@ -2222,6 +2264,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminLiveVisitorsRoute: ApiAdminLiveVisitorsRoute,
   ApiAdminMetaCampaignsRoute: ApiAdminMetaCampaignsRoute,
   ApiAdminOverviewRoute: ApiAdminOverviewRoute,
+  ApiAdminSiteEventsSummaryRoute: ApiAdminSiteEventsSummaryRoute,
   ApiAdminToggleLogoVisibilityRoute: ApiAdminToggleLogoVisibilityRoute,
   ApiAdminUnlinkCampaignRoute: ApiAdminUnlinkCampaignRoute,
   ApiAdminUpdateBrandProfileRoute: ApiAdminUpdateBrandProfileRoute,

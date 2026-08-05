@@ -11,6 +11,7 @@ import {
   Link2Off,
   LogOut,
   Megaphone,
+  MessageCircle,
   MessageCircleQuestion,
   Palette,
   Plus,
@@ -584,7 +585,7 @@ type AdminTab =
   | "campanas"
   | "pagos"
   | "ayuda"
-  | "visitantes";
+  | "indicadores";
 
 const NAV_ITEMS: { key: AdminTab; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -594,7 +595,7 @@ const NAV_ITEMS: { key: AdminTab; label: string; icon: typeof LayoutDashboard }[
   { key: "campanas", label: "Campañas", icon: Megaphone },
   { key: "pagos", label: "Pagos", icon: CreditCard },
   { key: "ayuda", label: "Ayuda", icon: MessageCircleQuestion },
-  { key: "visitantes", label: "En vivo", icon: Radar },
+  { key: "indicadores", label: "Indicadores", icon: Radar },
 ];
 
 function Admin() {
@@ -683,7 +684,7 @@ function Admin() {
     campanas: "Campañas",
     pagos: "Pagos",
     ayuda: "Ayuda",
-    visitantes: "En vivo",
+    indicadores: "Indicadores",
   };
 
   return (
@@ -834,7 +835,7 @@ function Admin() {
           ) : tab === "ayuda" ? (
             <AdminHelpPanel conversations={helpConversations} onSent={showToast} />
           ) : (
-            <LiveVisitorsPanel />
+            <IndicadoresPanel />
           )}
         </main>
       </div>
@@ -2708,12 +2709,15 @@ function secondsAgo(lastSeen: string): number {
   return Math.max(0, Math.round((Date.now() - new Date(`${lastSeen}Z`).getTime()) / 1000));
 }
 
-// Wix-style "who's browsing right now" — public site or the client/designer
-// panels, logged in or not. Polls every 4s (see /api/admin/live-visitors,
-// which only returns heartbeats from the last 45s) rather than a live
-// socket connection — same pattern the rest of admin already uses for
-// near-real-time data (e.g. the dashboard's 30s overview poll).
-function LiveVisitorsPanel() {
+type WhatsappClickStats = { today: number; last7Days: number; total: number };
+
+// "Indicadores" (formerly just "En vivo") — Wix-style "who's browsing
+// right now" plus click counts for things worth watching while running
+// ads (currently just WhatsApp). Polls every 4s for live sessions (see
+// /api/admin/live-visitors, which only returns heartbeats from the last
+// 45s) and every 30s for the click counts, same near-real-time pattern
+// the dashboard's overview poll already uses.
+function IndicadoresPanel() {
   const { data, isLoading } = useQuery({
     queryKey: ["live-visitors"],
     queryFn: async () => {
@@ -2723,13 +2727,44 @@ function LiveVisitorsPanel() {
     },
     refetchInterval: 4_000,
   });
+  const eventsQuery = useQuery({
+    queryKey: ["site-events-summary"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/site-events-summary", { credentials: "include" });
+      if (!res.ok) return null;
+      return (await res.json()) as { ok: boolean; whatsappClicks: WhatsappClickStats };
+    },
+    refetchInterval: 30_000,
+  });
 
   const visitors = data?.visitors ?? [];
+  const clicks = eventsQuery.data?.whatsappClicks;
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-extrabold tracking-tight text-wit-ink">En vivo</h1>
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <KpiCard
+          label="Clics a WhatsApp hoy"
+          value={String(clicks?.today ?? 0)}
+          icon={MessageCircle}
+          accent="emerald"
+        />
+        <KpiCard
+          label="Últimos 7 días"
+          value={String(clicks?.last7Days ?? 0)}
+          icon={MessageCircle}
+          accent="emerald"
+        />
+        <KpiCard
+          label="Total histórico"
+          value={String(clicks?.total ?? 0)}
+          icon={MessageCircle}
+          accent="emerald"
+        />
+      </div>
+
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        <h2 className="text-xl font-extrabold tracking-tight text-wit-ink">En vivo</h2>
         <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-700">
           <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
           {visitors.length} {visitors.length === 1 ? "persona ahora" : "personas ahora"}
