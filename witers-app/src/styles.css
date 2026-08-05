@@ -126,21 +126,6 @@
   color: var(--color-wit-ink);
   color-scheme: light;
   position: relative;
-  /* Forces a real stacking context — position:relative alone doesn't,
-     without an explicit z-index. Without this, a -z-10 descendant like
-     BrandAtmosphere/GrowthAtmosphere resolves its z-index against the
-     root context instead of this page, where it'd have to out-stack
-     .wit-bg-fixed *and* the <html>/<body> canvas background (var(
-     --background), set in the @layer base rule below) — and no z-index,
-     however negative, paints behind that canvas layer. Isolating here
-     keeps the atmosphere's negative z-index scoped to this page, where it
-     only has to sit behind this page's own (transparent) content, then
-     the whole page — painted as one unit, after .wit-bg-fixed in DOM
-     order — shows it above the fixed white backdrop. Every full-screen
-     modal in this file is already createPortal'd to document.body (see
-     the .wit-glass note above), so none of them live inside .wit-page and
-     none are affected by giving it its own stacking context. */
-  isolation: isolate;
 }
 
 /* Rendered once, fixed to the viewport, as the very first element in

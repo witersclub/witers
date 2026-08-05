@@ -909,15 +909,6 @@ function PanelContent() {
   // WhatsApp chat, a lead, a sale...) isn't the win this badge is meant to
   // celebrate. See countResults in meta-ads.server.ts for what "counts."
   const totalResultsImpact = activatedCampaigns.reduce((sum, c) => sum + Number(c.results ?? 0), 0);
-  // Drives the underwater→surface→sky ambiance on Inicio (see
-  // GrowthAtmosphere) — built only from what's actually verifiable (plan
-  // tier + real campaign results), never self-reported revenue.
-  const growth = growthProgress({
-    active,
-    plan: membership?.plan,
-    campaignsLaunched,
-    totalReach,
-  });
 
   // "Creatividades recientes" — imágenes and carruseles only, not video:
   // a delivered video has no stored still frame, and rendering a <video>
@@ -1022,8 +1013,6 @@ function PanelContent() {
     <div className="wit-page min-h-svh">
       {section === "activos" ? (
         <BrandAtmosphere colors={brandColorList} key={brandProfile?.company_name ?? "none"} />
-      ) : section === "creatividad" ? (
-        <GrowthAtmosphere progress={growth} />
       ) : null}
       {justSent ? (
         <div className="wit-rise fixed inset-x-0 top-5 z-50 flex justify-center px-5">
@@ -4048,95 +4037,6 @@ function BrandAtmosphere({ colors }: { colors: string[] }) {
           style={{ background: palette[2] }}
         />
       ) : null}
-    </div>
-  );
-}
-
-// How far "up" a brand has climbed — deliberately built only from what
-// WITERS can actually verify (the membership tier is the clearest signal;
-// real campaign results are a smaller bonus on top), never self-reported
-// revenue, which nobody could vouch for. An inactive membership still gets
-// a faint glow rather than 0 — "no estás solo/a hundido/a", not a dead
-// screen. See GrowthAtmosphere for what this drives.
-function growthProgress({
-  active,
-  plan,
-  campaignsLaunched,
-  totalReach,
-}: {
-  active: boolean;
-  plan: string | null | undefined;
-  campaignsLaunched: number;
-  totalReach: number;
-}): number {
-  if (!active) return 0.06;
-  const planBase = plan === "scale" ? 0.7 : plan === "grow" ? 0.45 : 0.18;
-  const campaignBonus = Math.min(campaignsLaunched / 5, 1) * 0.15;
-  const reachBonus = Math.min(totalReach / 5000, 1) * 0.15;
-  return Math.min(planBase + campaignBonus + reachBonus, 1);
-}
-
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const n = parseInt(hex.replace("#", ""), 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-}
-
-function lerpColor(fromHex: string, toHex: string, t: number): string {
-  const a = hexToRgb(fromHex);
-  const b = hexToRgb(toHex);
-  const r = Math.round(a.r + (b.r - a.r) * t);
-  const g = Math.round(a.g + (b.g - a.g) * t);
-  const bl = Math.round(a.b + (b.b - a.b) * t);
-  return `rgb(${r}, ${g}, ${bl})`;
-}
-
-// Three "eras" of the same underwater→surface→sky idea from the concept
-// chat: deep ocean (dim, closed-in) → breaking the surface (aqua, brighter)
-// → open sky (warm, gold). `top`/`bottom` interpolate independently so the
-// gradient always keeps a sense of depth (darker low, lighter high) at
-// every point along the climb, not just three fixed snapshots.
-const GROWTH_ATMOSPHERE_STOPS = [
-  { top: "#0a2a52", bottom: "#020c1f" },
-  { top: "#3fb6c9", bottom: "#0b3d66" },
-  { top: "#ffe9b8", bottom: "#2f6fa8" },
-] as const;
-
-function growthAtmosphereColors(progress: number): { top: string; bottom: string } {
-  const clamped = Math.max(0, Math.min(1, progress));
-  const segment = clamped < 0.5 ? 0 : 1;
-  const localT = segment === 0 ? clamped / 0.5 : (clamped - 0.5) / 0.5;
-  const from = GROWTH_ATMOSPHERE_STOPS[segment];
-  const to = GROWTH_ATMOSPHERE_STOPS[segment + 1];
-  return {
-    top: lerpColor(from.top, to.top, localT),
-    bottom: lerpColor(from.bottom, to.bottom, localT),
-  };
-}
-
-// Inicio's ambiance — "no te ahogues con tu marca" made visual. A slow
-// vertical wash behind everything (never interactive, cards stay opaque on
-// top) that shifts from dim deep-ocean tones for a brand just starting out
-// toward open, warm sky tones as it climbs — see growthProgress for what
-// actually drives the climb. Deliberately just mood/color for this first
-// pass — no lifebuoy, no rescue animation yet (see the concept chat: that's
-// a later phase once this base ambiance feels right on its own).
-//
-// opacity-40 on the whole layer (not just the blobs, unlike BrandAtmosphere)
-// is load-bearing, not decorative — Inicio's greeting text sits directly on
-// this background with no card behind it, in text-wit-ink (#0a1230, nearly
-// black). At full opacity the darkest stop (a brand just starting out) is
-// close enough to that same near-black that the heading would disappear
-// into it; letting the white page base show through keeps it readable at
-// every step of the climb, confirmed against the darkest stop.
-function GrowthAtmosphere({ progress }: { progress: number }) {
-  const { top, bottom } = growthAtmosphereColors(progress);
-  return (
-    <div
-      className="pointer-events-none fixed inset-0 -z-10 animate-in fade-in overflow-hidden opacity-40 duration-700"
-      style={{ background: `linear-gradient(180deg, ${top} 0%, ${bottom} 100%)` }}
-    >
-      <span className="wit-atmosphere-blob wit-atmosphere-blob-a" style={{ background: top }} />
-      <span className="wit-atmosphere-blob wit-atmosphere-blob-b" style={{ background: bottom }} />
     </div>
   );
 }
