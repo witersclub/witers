@@ -42,9 +42,10 @@ export function WhatsAppFloatButton() {
   // Desktop/web (sm: and up) uses the same fixed height in both places —
   // no mobile bottom nav to clear there, so both routes can just share one
   // value instead of the panel one needing its own offset like on mobile.
+  // Both breakpoints add the same 0.5cm nudge on top of their base offset.
   const mobileBottomClass = isPanelRoute
-    ? "bottom-[calc(6rem+env(safe-area-inset-bottom))]"
-    : "bottom-[max(1.25rem,calc(env(safe-area-inset-bottom)+1rem))]";
+    ? "bottom-[calc(6rem+env(safe-area-inset-bottom)+0.5cm)]"
+    : "bottom-[calc(max(1.25rem,calc(env(safe-area-inset-bottom)+1rem))+0.5cm)]";
 
   return (
     <a
