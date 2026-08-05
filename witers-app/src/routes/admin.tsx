@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ArrowRight,
   ClipboardList,
+  Clock,
   CreditCard,
   GalleryHorizontal,
   Image,
@@ -2703,10 +2704,21 @@ type LiveVisitorRow = {
   path: string;
   country: string | null;
   last_seen: string;
+  duration_seconds: number;
 };
 
 function secondsAgo(lastSeen: string): number {
   return Math.max(0, Math.round((Date.now() - new Date(`${lastSeen}Z`).getTime()) / 1000));
+}
+
+// e.g. 45 -> "45s", 135 -> "2m 15s" — same short, no-decimals shape as
+// secondsAgo's "Xs" column right next to it.
+function formatDuration(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return `${minutes}m ${rest}s`;
 }
 
 type WhatsappClickStats = { today: number; last7Days: number; total: number };
@@ -2723,7 +2735,11 @@ function IndicadoresPanel() {
     queryFn: async () => {
       const res = await fetch("/api/admin/live-visitors", { credentials: "include" });
       if (!res.ok) return null;
-      return (await res.json()) as { ok: boolean; visitors: LiveVisitorRow[] };
+      return (await res.json()) as {
+        ok: boolean;
+        visitors: LiveVisitorRow[];
+        avgSessionSeconds: number | null;
+      };
     },
     refetchInterval: 4_000,
   });
@@ -2769,9 +2785,16 @@ function IndicadoresPanel() {
           <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
           {visitors.length} {visitors.length === 1 ? "persona ahora" : "personas ahora"}
         </span>
+        {data?.avgSessionSeconds != null ? (
+          <span className="flex items-center gap-1.5 rounded-full bg-wit-blue/10 px-3 py-1 text-sm font-bold text-wit-blue">
+            <Clock size={14} strokeWidth={2.3} />
+            {formatDuration(data.avgSessionSeconds)} en promedio
+          </span>
+        ) : null}
       </div>
       <p className="mt-1 text-sm text-wit-gray">
-        Quién está navegando el sitio o el panel en este momento.
+        Quién está navegando el sitio o el panel en este momento, y cuánto tiempo llevan (últimas
+        24h).
       </p>
 
       {isLoading ? (
@@ -2788,6 +2811,7 @@ function IndicadoresPanel() {
                 <th className="px-5 py-3.5">Quién</th>
                 <th className="px-5 py-3.5">Página</th>
                 <th className="px-5 py-3.5">País</th>
+                <th className="px-5 py-3.5">Tiempo en el sitio</th>
                 <th className="px-5 py-3.5">Hace</th>
               </tr>
             </thead>
@@ -2812,6 +2836,9 @@ function IndicadoresPanel() {
                   </td>
                   <td className="px-5 py-3.5 font-wit-mono text-xs">{v.path}</td>
                   <td className="px-5 py-3.5">{v.country ?? "—"}</td>
+                  <td className="px-5 py-3.5 font-wit-mono text-xs text-wit-ink">
+                    {formatDuration(v.duration_seconds)}
+                  </td>
                   <td className="px-5 py-3.5 text-wit-gray">{secondsAgo(v.last_seen)}s</td>
                 </tr>
               ))}

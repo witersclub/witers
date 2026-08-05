@@ -27,14 +27,22 @@ export const Route = createFileRoute("/api/visitor-heartbeat")({
 
         await db()
           .prepare(
-            `INSERT INTO visitor_heartbeats (id, user_id, user_name, user_role, path, country, last_seen)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))
+            `INSERT INTO visitor_heartbeats (id, user_id, user_name, user_role, path, country, last_seen, session_started_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'), datetime('now'))
              ON CONFLICT (id) DO UPDATE SET
                user_id = excluded.user_id,
                user_name = excluded.user_name,
                user_role = excluded.user_role,
                path = excluded.path,
                country = excluded.country,
+               -- A gap over 30 minutes since the last heartbeat counts as
+               -- a new session (same boundary Google Analytics uses) —
+               -- otherwise this keeps accumulating from the same start.
+               session_started_at = CASE
+                 WHEN visitor_heartbeats.last_seen < datetime('now', '-30 minutes')
+                   THEN datetime('now')
+                 ELSE visitor_heartbeats.session_started_at
+               END,
                last_seen = datetime('now')`,
           )
           .bind(
