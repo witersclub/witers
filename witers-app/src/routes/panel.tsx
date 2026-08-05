@@ -73,6 +73,7 @@ import {
 
 import { WitersLogo, WMark } from "../components/witers/brand";
 import { ChatBubble, ChatIntakeFlow, PhotosAnswerBubble } from "../components/witers/chat-intake";
+import { HelpChatButton } from "../components/witers/help-chat";
 import { MicButton } from "../components/witers/mic-button";
 import { PasswordInput } from "../components/witers/password-input";
 import { CustomFontPreview } from "../components/witers/font-preview";
@@ -951,6 +952,7 @@ function PanelContent() {
             <WitersLogo compact />
           </Link>
           <div className="flex items-center gap-1.5 sm:gap-3">
+            <HelpChatButton />
             <LanguageToggle />
             {/* Hidden on mobile — the bottom tab bar's avatar button covers
                 this same job there (direct to Mi perfil, no dropdown). */}

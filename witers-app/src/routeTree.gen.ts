@@ -39,6 +39,7 @@ import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
 import { Route as ApiRequestChangeRouteImport } from './routes/api/request-change'
 import { Route as ApiPurchasePackRouteImport } from './routes/api/purchase-pack'
+import { Route as ApiHelpChatRouteImport } from './routes/api/help-chat'
 import { Route as ApiGeocodeRouteImport } from './routes/api/geocode'
 import { Route as ApiGeoPriceRouteImport } from './routes/api/geo-price'
 import { Route as ApiGenerateAdCopyRouteImport } from './routes/api/generate-ad-copy'
@@ -90,6 +91,8 @@ import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overvie
 import { Route as ApiAdminMetaCampaignsRouteImport } from './routes/api/admin/meta-campaigns'
 import { Route as ApiAdminLiveVisitorsRouteImport } from './routes/api/admin/live-visitors'
 import { Route as ApiAdminLinkCampaignRouteImport } from './routes/api/admin/link-campaign'
+import { Route as ApiAdminHelpConversationsRouteImport } from './routes/api/admin/help-conversations'
+import { Route as ApiAdminHelpConversationRouteImport } from './routes/api/admin/help-conversation'
 import { Route as ApiAdminGrantRequestsRouteImport } from './routes/api/admin/grant-requests'
 import { Route as ApiAdminDiscardResultRouteImport } from './routes/api/admin/discard-result'
 import { Route as ApiAdminDeliverVideoRouteImport } from './routes/api/admin/deliver-video'
@@ -260,6 +263,11 @@ const ApiRequestChangeRoute = ApiRequestChangeRouteImport.update({
 const ApiPurchasePackRoute = ApiPurchasePackRouteImport.update({
   id: '/api/purchase-pack',
   path: '/api/purchase-pack',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHelpChatRoute = ApiHelpChatRouteImport.update({
+  id: '/api/help-chat',
+  path: '/api/help-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGeocodeRoute = ApiGeocodeRouteImport.update({
@@ -526,6 +534,18 @@ const ApiAdminLinkCampaignRoute = ApiAdminLinkCampaignRouteImport.update({
   path: '/api/admin/link-campaign',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminHelpConversationsRoute =
+  ApiAdminHelpConversationsRouteImport.update({
+    id: '/api/admin/help-conversations',
+    path: '/api/admin/help-conversations',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAdminHelpConversationRoute =
+  ApiAdminHelpConversationRouteImport.update({
+    id: '/api/admin/help-conversation',
+    path: '/api/admin/help-conversation',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminGrantRequestsRoute = ApiAdminGrantRequestsRouteImport.update({
   id: '/api/admin/grant-requests',
   path: '/api/admin/grant-requests',
@@ -673,6 +693,7 @@ export interface FileRoutesByFullPath {
   '/api/generate-ad-copy': typeof ApiGenerateAdCopyRoute
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
+  '/api/help-chat': typeof ApiHelpChatRoute
   '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -701,6 +722,8 @@ export interface FileRoutesByFullPath {
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
+  '/api/admin/help-conversation': typeof ApiAdminHelpConversationRoute
+  '/api/admin/help-conversations': typeof ApiAdminHelpConversationsRoute
   '/api/admin/link-campaign': typeof ApiAdminLinkCampaignRoute
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
@@ -777,6 +800,7 @@ export interface FileRoutesByTo {
   '/api/generate-ad-copy': typeof ApiGenerateAdCopyRoute
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
+  '/api/help-chat': typeof ApiHelpChatRoute
   '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -805,6 +829,8 @@ export interface FileRoutesByTo {
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
+  '/api/admin/help-conversation': typeof ApiAdminHelpConversationRoute
+  '/api/admin/help-conversations': typeof ApiAdminHelpConversationsRoute
   '/api/admin/link-campaign': typeof ApiAdminLinkCampaignRoute
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
@@ -882,6 +908,7 @@ export interface FileRoutesById {
   '/api/generate-ad-copy': typeof ApiGenerateAdCopyRoute
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
+  '/api/help-chat': typeof ApiHelpChatRoute
   '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -910,6 +937,8 @@ export interface FileRoutesById {
   '/api/admin/deliver-video': typeof ApiAdminDeliverVideoRoute
   '/api/admin/discard-result': typeof ApiAdminDiscardResultRoute
   '/api/admin/grant-requests': typeof ApiAdminGrantRequestsRoute
+  '/api/admin/help-conversation': typeof ApiAdminHelpConversationRoute
+  '/api/admin/help-conversations': typeof ApiAdminHelpConversationsRoute
   '/api/admin/link-campaign': typeof ApiAdminLinkCampaignRoute
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
@@ -988,6 +1017,7 @@ export interface FileRouteTypes {
     | '/api/generate-ad-copy'
     | '/api/geo-price'
     | '/api/geocode'
+    | '/api/help-chat'
     | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
@@ -1016,6 +1046,8 @@ export interface FileRouteTypes {
     | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
+    | '/api/admin/help-conversation'
+    | '/api/admin/help-conversations'
     | '/api/admin/link-campaign'
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
@@ -1092,6 +1124,7 @@ export interface FileRouteTypes {
     | '/api/generate-ad-copy'
     | '/api/geo-price'
     | '/api/geocode'
+    | '/api/help-chat'
     | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
@@ -1120,6 +1153,8 @@ export interface FileRouteTypes {
     | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
+    | '/api/admin/help-conversation'
+    | '/api/admin/help-conversations'
     | '/api/admin/link-campaign'
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
@@ -1196,6 +1231,7 @@ export interface FileRouteTypes {
     | '/api/generate-ad-copy'
     | '/api/geo-price'
     | '/api/geocode'
+    | '/api/help-chat'
     | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
@@ -1224,6 +1260,8 @@ export interface FileRouteTypes {
     | '/api/admin/deliver-video'
     | '/api/admin/discard-result'
     | '/api/admin/grant-requests'
+    | '/api/admin/help-conversation'
+    | '/api/admin/help-conversations'
     | '/api/admin/link-campaign'
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
@@ -1301,6 +1339,7 @@ export interface RootRouteChildren {
   ApiGenerateAdCopyRoute: typeof ApiGenerateAdCopyRoute
   ApiGeoPriceRoute: typeof ApiGeoPriceRoute
   ApiGeocodeRoute: typeof ApiGeocodeRoute
+  ApiHelpChatRoute: typeof ApiHelpChatRoute
   ApiPurchasePackRoute: typeof ApiPurchasePackRoute
   ApiRequestChangeRoute: typeof ApiRequestChangeRoute
   ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
@@ -1329,6 +1368,8 @@ export interface RootRouteChildren {
   ApiAdminDeliverVideoRoute: typeof ApiAdminDeliverVideoRoute
   ApiAdminDiscardResultRoute: typeof ApiAdminDiscardResultRoute
   ApiAdminGrantRequestsRoute: typeof ApiAdminGrantRequestsRoute
+  ApiAdminHelpConversationRoute: typeof ApiAdminHelpConversationRoute
+  ApiAdminHelpConversationsRoute: typeof ApiAdminHelpConversationsRoute
   ApiAdminLinkCampaignRoute: typeof ApiAdminLinkCampaignRoute
   ApiAdminLiveVisitorsRoute: typeof ApiAdminLiveVisitorsRoute
   ApiAdminMetaCampaignsRoute: typeof ApiAdminMetaCampaignsRoute
@@ -1582,6 +1623,13 @@ declare module '@tanstack/react-router' {
       path: '/api/purchase-pack'
       fullPath: '/api/purchase-pack'
       preLoaderRoute: typeof ApiPurchasePackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/help-chat': {
+      id: '/api/help-chat'
+      path: '/api/help-chat'
+      fullPath: '/api/help-chat'
+      preLoaderRoute: typeof ApiHelpChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/geocode': {
@@ -1941,6 +1989,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminLinkCampaignRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/help-conversations': {
+      id: '/api/admin/help-conversations'
+      path: '/api/admin/help-conversations'
+      fullPath: '/api/admin/help-conversations'
+      preLoaderRoute: typeof ApiAdminHelpConversationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/help-conversation': {
+      id: '/api/admin/help-conversation'
+      path: '/api/admin/help-conversation'
+      fullPath: '/api/admin/help-conversation'
+      preLoaderRoute: typeof ApiAdminHelpConversationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/grant-requests': {
       id: '/api/admin/grant-requests'
       path: '/api/admin/grant-requests'
@@ -2125,6 +2187,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGenerateAdCopyRoute: ApiGenerateAdCopyRoute,
   ApiGeoPriceRoute: ApiGeoPriceRoute,
   ApiGeocodeRoute: ApiGeocodeRoute,
+  ApiHelpChatRoute: ApiHelpChatRoute,
   ApiPurchasePackRoute: ApiPurchasePackRoute,
   ApiRequestChangeRoute: ApiRequestChangeRoute,
   ApiRequestRevisionRoute: ApiRequestRevisionRoute,
@@ -2153,6 +2216,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminDeliverVideoRoute: ApiAdminDeliverVideoRoute,
   ApiAdminDiscardResultRoute: ApiAdminDiscardResultRoute,
   ApiAdminGrantRequestsRoute: ApiAdminGrantRequestsRoute,
+  ApiAdminHelpConversationRoute: ApiAdminHelpConversationRoute,
+  ApiAdminHelpConversationsRoute: ApiAdminHelpConversationsRoute,
   ApiAdminLinkCampaignRoute: ApiAdminLinkCampaignRoute,
   ApiAdminLiveVisitorsRoute: ApiAdminLiveVisitorsRoute,
   ApiAdminMetaCampaignsRoute: ApiAdminMetaCampaignsRoute,

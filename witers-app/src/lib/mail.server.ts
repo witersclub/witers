@@ -283,6 +283,30 @@ export async function notifyStaffCarouselChangeRequested(opts: {
   });
 }
 
+export async function notifyStaffHelpEscalated(opts: {
+  clientName: string;
+  companyName: string;
+  lastMessage: string;
+  adminUrl: string;
+}): Promise<void> {
+  await sendMail({
+    to: STAFF_EMAIL,
+    subject: `Ayuda: ${opts.clientName} pidió hablar con una persona`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+        <h2 style="color: #1450ff;">Un cliente pidió hablar con una persona</h2>
+        <p><strong>${escapeHtml(opts.clientName)}</strong> (${escapeHtml(opts.companyName)}) escaló su chat de ayuda:</p>
+        <p style="background:#f2f5ff;border-radius:8px;padding:12px 16px;">${escapeHtml(opts.lastMessage)}</p>
+        <p style="margin: 24px 0;">
+          <a href="${opts.adminUrl}" style="background:#1450ff;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">
+            Responder
+          </a>
+        </p>
+      </div>
+    `,
+  });
+}
+
 export function passwordResetEmail(opts: { resetUrl: string }): {
   subject: string;
   html: string;

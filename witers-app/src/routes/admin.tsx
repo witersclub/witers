@@ -11,6 +11,7 @@ import {
   Link2Off,
   LogOut,
   Megaphone,
+  MessageCircleQuestion,
   Palette,
   Plus,
   Radar,
@@ -36,6 +37,10 @@ import {
   YAxis,
 } from "recharts";
 
+import {
+  AdminHelpPanel,
+  type HelpConversationListItem,
+} from "../components/witers/admin-help-panel";
 import { WitersLogo, WMark } from "../components/witers/brand";
 import { CustomFontPreview } from "../components/witers/font-preview";
 import { ensureGoogleFontLoaded } from "../components/witers/google-font-picker";
@@ -572,7 +577,14 @@ function DashboardView({
 }
 
 type AdminTab =
-  "dashboard" | "solicitudes" | "diseñadores" | "usuarios" | "campanas" | "pagos" | "visitantes";
+  | "dashboard"
+  | "solicitudes"
+  | "diseñadores"
+  | "usuarios"
+  | "campanas"
+  | "pagos"
+  | "ayuda"
+  | "visitantes";
 
 const NAV_ITEMS: { key: AdminTab; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -581,6 +593,7 @@ const NAV_ITEMS: { key: AdminTab; label: string; icon: typeof LayoutDashboard }[
   { key: "usuarios", label: "Usuarios", icon: Users },
   { key: "campanas", label: "Campañas", icon: Megaphone },
   { key: "pagos", label: "Pagos", icon: CreditCard },
+  { key: "ayuda", label: "Ayuda", icon: MessageCircleQuestion },
   { key: "visitantes", label: "En vivo", icon: Radar },
 ];
 
@@ -595,6 +608,16 @@ function Admin() {
     },
     enabled: Boolean(platform.data),
     refetchInterval: 30_000,
+  });
+  const helpQuery = useQuery({
+    queryKey: ["admin-help-conversations"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/help-conversations", { credentials: "include" });
+      if (!res.ok) return null;
+      return (await res.json()) as { ok: boolean; conversations: HelpConversationListItem[] };
+    },
+    enabled: Boolean(platform.data),
+    refetchInterval: 20_000,
   });
   const [tab, setTab] = useState<AdminTab>("dashboard");
   // Same lifted-toast pattern as witer.tsx's DesignerPanel — a card that
@@ -643,6 +666,8 @@ function Admin() {
     data?.requests.filter(
       (r) => (r.status === "en_proceso" && !r.claimed_by_name) || r.status === "cambio_solicitado",
     ).length ?? 0;
+  const helpConversations = helpQuery.data?.conversations ?? [];
+  const helpEscalatedCount = helpConversations.filter((c) => c.status === "escalada").length;
 
   function logout() {
     void fetch("/api/auth/logout", { method: "POST", credentials: "include" }).finally(() => {
@@ -657,6 +682,7 @@ function Admin() {
     usuarios: "Usuarios",
     campanas: "Campañas",
     pagos: "Pagos",
+    ayuda: "Ayuda",
     visitantes: "En vivo",
   };
 
@@ -677,7 +703,12 @@ function Admin() {
         <nav className="flex-1 space-y-1 px-3 py-6">
           {NAV_ITEMS.map((item) => {
             const active = tab === item.key;
-            const badge = item.key === "solicitudes" ? needsAttentionCount : 0;
+            const badge =
+              item.key === "solicitudes"
+                ? needsAttentionCount
+                : item.key === "ayuda"
+                  ? helpEscalatedCount
+                  : 0;
             return (
               <button
                 key={item.key}
@@ -738,7 +769,12 @@ function Admin() {
           <div className="flex gap-1.5 overflow-x-auto px-5 pb-3">
             {NAV_ITEMS.map((item) => {
               const active = tab === item.key;
-              const badge = item.key === "solicitudes" ? needsAttentionCount : 0;
+              const badge =
+                item.key === "solicitudes"
+                  ? needsAttentionCount
+                  : item.key === "ayuda"
+                    ? helpEscalatedCount
+                    : 0;
               return (
                 <button
                   key={item.key}
@@ -795,6 +831,8 @@ function Admin() {
             <CampaignsAdmin users={data.users} />
           ) : tab === "pagos" ? (
             <PagosPanel payments={data.payments} discountCodes={data.discountCodes} />
+          ) : tab === "ayuda" ? (
+            <AdminHelpPanel conversations={helpConversations} onSent={showToast} />
           ) : (
             <LiveVisitorsPanel />
           )}
