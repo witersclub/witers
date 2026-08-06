@@ -14,6 +14,7 @@ import {
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
 import { MetaAdsDashboardCard, WhatsAppPhoneMockup } from "../components/witers/meta-ads-card";
+import { CampaignJourneyScroller } from "../components/witers/campaign-journey-scroller";
 import { useMe } from "../lib/witers-client";
 import { useLanguage } from "../lib/i18n";
 
@@ -52,19 +53,20 @@ function Hero() {
   const signedIn = Boolean(me.data?.ok);
   const { t } = useLanguage();
   return (
-    <section className="relative overflow-hidden pb-16 pt-28 md:pb-24 md:pt-36">
+    <section className="relative pb-16 pt-28 md:pb-24 md:pt-36">
       <div className="relative mx-auto max-w-3xl px-5 text-center md:px-[110px]">
         <span className="wit-rise inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-white/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue backdrop-blur-sm">
           {t("Meta Ads · Campañas reales", "Meta Ads · Real Campaigns")}
         </span>
       </div>
 
-      <div className="wit-rise wit-rise-d1 relative mt-8 px-5">
+      <div className="wit-rise wit-rise-d1 relative mt-8 px-5 lg:hidden">
         <div className="relative mx-auto max-w-md pb-8 pl-8 pt-4 sm:pb-14 sm:pl-16">
           <MetaAdsDashboardCard />
           <WhatsAppPhoneMockup className="absolute -bottom-6 -left-2 z-10 sm:-bottom-10 sm:-left-6" />
         </div>
       </div>
+      <CampaignJourneyScroller />
 
       <div className="relative mx-auto mt-8 max-w-3xl px-5 text-center md:px-[110px]">
         <h1 className="wit-rise wit-rise-d2 mx-auto max-w-2xl text-5xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-7xl">
