@@ -343,12 +343,37 @@ const VALID_ASPECT_RATIOS = new Set(["1:1", "4:3", "3:4", "16:9", "9:16"]);
 
 function looksLikeAspectRatioAnnouncement(text: string): boolean {
   const t = text.toLowerCase();
-  const mentionsFormat = /\bformato\b|proporci[oó]n/.test(t);
+  // "shape"/"forma" included alongside "format"/"formato": the system
+  // prompt itself asks about "formato/proporción" but is written in
+  // Spanish and told to reply in the conversation's language — in English
+  // the model has translated that as "shape" in the wild (see the bug
+  // report screenshot: "What shape do you picture for your piece?"), not
+  // just "format", so anchoring only on "format" missed it.
+  const mentionsFormat =
+    /\bformato\b|\bforma\b|proporci[oó]n|\bformats?\b|\bshape\b|aspect ratio/.test(t);
   if (!mentionsFormat) return false;
   const promisesOrLists =
-    /(te muestro|aqu[ií] tienes|estas son las opciones|opciones:|qu[eé] formato)/.test(t);
-  const mentionsRatios = /(1:1|4:3|3:4|16:9|9:16|cuadrado|vertical|horizontal)/.test(t);
+    /(te muestro|aqu[ií] tienes|estas son las opciones|opciones:|qu[eé] formato|qu[eé] forma|here('| a)?re|these are the options|options:|what format|what shape)/.test(
+      t,
+    );
+  const mentionsRatios =
+    /(1:1|4:3|3:4|16:9|9:16|cuadrado|vertical|horizontal|square|landscape|portrait|story|feed)/.test(
+      t,
+    );
   return promisesOrLists || mentionsRatios;
+}
+
+// The client's confirmation message ("Elijo el formato: 3:4." / "I choose
+// the format: 3:4.") is what proves the visual picker was actually used —
+// recorded verbatim by panel.tsx's pickAspectRatio, in whichever language
+// the client is using. Matching only the Spanish literal left English
+// sessions looking exactly like "picker never used" forever: the tool
+// never left the offered list, so the model kept calling it (or announcing
+// it) again on every turn no matter how many times the client tapped a
+// format — the same stuck loop as if the picker had never been touched.
+const ASPECT_PICKER_CONFIRMATION_PREFIXES = ["Elijo el formato:", "I choose the format:"];
+function messageConfirmsAspectPicker(content: string): boolean {
+  return ASPECT_PICKER_CONFIRMATION_PREFIXES.some((prefix) => content.startsWith(prefix));
 }
 
 export async function runWitChat(
@@ -369,7 +394,7 @@ export async function runWitChat(
   // (not just describe it in text), which reopened the picker after every
   // answer and left the client stuck re-answering the same question forever.
   const pickerWasUsed = history.some(
-    (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
+    (m) => m.role === "user" && messageConfirmsAspectPicker(m.content),
   );
   const tools = pickerWasUsed
     ? TOOLS.filter((tool) => tool.function.name !== "show_aspect_ratio_picker")
@@ -475,7 +500,7 @@ export async function runWitCarouselChat(
   // than only filtering the response after the fact) is what actually
   // stops the model from calling it a second time.
   const pickerWasUsed = history.some(
-    (m) => m.role === "user" && m.content.startsWith("Elijo el formato:"),
+    (m) => m.role === "user" && messageConfirmsAspectPicker(m.content),
   );
   const tools = pickerWasUsed
     ? CAROUSEL_TOOLS.filter((tool) => tool.function.name !== "show_aspect_ratio_picker")
