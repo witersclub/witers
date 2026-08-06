@@ -4806,8 +4806,8 @@ function WitConversation({
       }
       if (uploaded.length > 0) {
         setProductPhotoKeys((prev) => [...prev, ...uploaded]);
-        setMessages((prev) => [
-          ...prev,
+        const next: WitMessage[] = [
+          ...messages,
           {
             role: "user",
             content:
@@ -4825,7 +4825,13 @@ function WitConversation({
             // exactly what got attached, not just a text count.
             photoKeys: uploaded,
           },
-        ]);
+        ];
+        setMessages(next);
+        // Attaching a photo is itself an answer — Wit needs to move on to
+        // its next question right away, same as picking a format does,
+        // instead of sitting idle until the client separately types
+        // something to nudge it forward.
+        void askWit(next);
       }
       if (uploaded.length < files.length) {
         setChatError(
