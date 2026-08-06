@@ -6303,6 +6303,18 @@ function HistoryCard({
   // clients could otherwise download every version and get 3 designs out
   // of the quota for 1. The first real download finalizes it, same as
   // clicking "finalizar solicitud".
+  //
+  // Fetches the file and saves it via a blob URL instead of navigating
+  // there with window.location.href — on iOS Safari (especially inside the
+  // installed home-screen PWA), a full-page navigation to a
+  // Content-Disposition: attachment URL doesn't just download quietly, it
+  // hands the whole screen to a native "Vista Previa" file viewer with no
+  // obvious way back into the app, wiping out the in-progress satisfaction
+  // survey a client landed on right after. A same-page <a download> click
+  // never navigates away, so that screen never appears. Falls back to the
+  // old navigation if the fetch fails (e.g. a cross-origin image_url,
+  // which a same-origin blob fetch can't reach) so a download never just
+  // silently does nothing.
   async function downloadAndFinalize(downloadHref: string) {
     setDownloading(true);
     const wasCompleted = r.status === "completada";
@@ -6315,7 +6327,23 @@ function HistoryCard({
         }).catch(() => null);
         await qc.invalidateQueries({ queryKey: ["requests"] });
       }
-      window.location.href = downloadHref;
+      try {
+        const res = await fetch(downloadHref, { credentials: "include" });
+        if (!res.ok) throw new Error("download_failed");
+        const blob = await res.blob();
+        const disposition = res.headers.get("content-disposition") ?? "";
+        const filename = /filename="?([^"]+)"?/.exec(disposition)?.[1] ?? "witers.png";
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+      } catch {
+        window.location.href = downloadHref;
+      }
     } finally {
       setLightbox(null);
       setDownloading(false);
