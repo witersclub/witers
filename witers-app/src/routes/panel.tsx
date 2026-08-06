@@ -1400,54 +1400,73 @@ function PanelContent() {
                     pointed at this same list one tab-click away. Showing
                     the whole strip right here made that shortcut
                     redundant. */}
-                  {recentCreatives.length > 0 ? (
+                  {recentCreatives.length > 0 || hasPendingImageRequest ? (
                     <div className="mt-6">
-                      <h2 className="text-lg font-bold text-wit-ink">
-                        {t("Mis solicitudes", "My requests")}
-                      </h2>
-                      <div className="relative mt-3">
-                        <div
-                          ref={recentScrollRef}
-                          className="flex snap-x snap-mandatory items-end gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                        >
-                          {/* Fixed height, auto width from each piece's own
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <h2 className="text-lg font-bold text-wit-ink">
+                          {t("Mis solicitudes", "My requests")}
+                        </h2>
+                        {hasPendingImageRequest ? (
+                          <div className="wit-pending-glow shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCreativeMode("imagenes");
+                                setTab("solicitudes");
+                              }}
+                              className="wit-pending-glow-shield flex items-center gap-1.5 rounded-2xl bg-white px-3 py-1 text-xs font-bold text-wit-blue"
+                            >
+                              <Spinner />
+                              {t("En proceso", "In progress")}
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                      {recentCreatives.length > 0 ? (
+                        <div className="relative mt-3">
+                          <div
+                            ref={recentScrollRef}
+                            className="flex snap-x snap-mandatory items-end gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                          >
+                            {/* Fixed height, auto width from each piece's own
                             aspect_ratio — a story-format piece and a square
                             one sit at the height, in their real shape,
                             instead of both getting force-cropped into the
                             same square. Tapping opens it full-size in a
                             lightbox rather than navigating away. */}
-                          {recentCreatives.map((c) => (
+                            {recentCreatives.map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                title={c.title}
+                                onClick={() =>
+                                  setLightboxCreative({ thumbHref: c.thumbHref, title: c.title })
+                                }
+                                style={{ aspectRatio: cssAspectRatio(c.aspectRatio) }}
+                                className="h-40 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 shadow-[0_10px_25px_rgba(5,13,40,0.08)] transition-transform active:scale-95 sm:h-48"
+                              >
+                                <img
+                                  src={c.thumbHref}
+                                  alt={c.title}
+                                  className="h-full w-full object-cover"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                          {recentCreatives.length > 3 ? (
                             <button
-                              key={c.id}
                               type="button"
-                              title={c.title}
                               onClick={() =>
-                                setLightboxCreative({ thumbHref: c.thumbHref, title: c.title })
+                                recentScrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })
                               }
-                              style={{ aspectRatio: cssAspectRatio(c.aspectRatio) }}
-                              className="h-40 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 shadow-[0_10px_25px_rgba(5,13,40,0.08)] transition-transform active:scale-95 sm:h-48"
+                              aria-label={t("Ver más solicitudes", "See more requests")}
+                              className="absolute -right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-wit-ink/10 bg-white shadow-[0_10px_30px_rgba(5,13,40,0.15)]"
                             >
-                              <img
-                                src={c.thumbHref}
-                                alt={c.title}
-                                className="h-full w-full object-cover"
-                              />
+                              <ChevronRight className="h-4 w-4 text-wit-ink" strokeWidth={2.4} />
                             </button>
-                          ))}
+                          ) : null}
                         </div>
-                        {recentCreatives.length > 3 ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              recentScrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })
-                            }
-                            aria-label={t("Ver más solicitudes", "See more requests")}
-                            className="absolute -right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-wit-ink/10 bg-white shadow-[0_10px_30px_rgba(5,13,40,0.15)]"
-                          >
-                            <ChevronRight className="h-4 w-4 text-wit-ink" strokeWidth={2.4} />
-                          </button>
-                        ) : null}
-                      </div>
+                      ) : null}
                     </div>
                   ) : null}
 
