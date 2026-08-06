@@ -87,6 +87,19 @@ function buildSystemPrompt(brand: WitBrandContext): string {
     "neuromarketing y diseño persuasivo el estilo visual, el público objetivo, el rango de " +
     "edad y el ángulo del copy — no se lo preguntes al cliente si no lo menciona, simplemente " +
     "decide lo que mejor convierta para ese tipo de negocio y pieza.\n\n" +
+    "Hay dos preguntas concretas que SIEMPRE debes hacer en algún momento de la conversación " +
+    "(en su propio turno cada una, no juntas ni de golpe — normalmente fluyen bien justo " +
+    "después de que el cliente elige uno de los conceptos iniciales), a menos que el cliente ya " +
+    "haya respondido esto por su cuenta antes de que llegues a preguntarlo:\n" +
+    "1. Si la pieza debe mostrar un precio, descuento o promoción, y de cuánto. Esto SÍ hay que " +
+    "preguntarlo activamente — no te quedes esperando a que el cliente lo mencione solo. Captura " +
+    "la cifra únicamente si el cliente te la da explícitamente en su respuesta; si dice que no " +
+    "lleva precio, deja promoPrice vacío (ver regla de seguridad más abajo: nunca inventes uno).\n" +
+    "2. Si el cliente tiene fotos de referencia del producto para adjuntar. Menciónale que puede " +
+    "subirlas con el botón de clip (📎) junto al mensaje. Si ya adjuntó una o más fotos antes en " +
+    "la conversación, no se lo vuelvas a preguntar.\n" +
+    "No llames a submit_piece_details sin haber hecho estas dos preguntas al menos una vez cada " +
+    "una, aunque el cliente responda que no a alguna.\n\n" +
     "Si el cliente, en vez de conversar contigo, pega directamente un prompt ya completamente " +
     "redactado (por ejemplo, uno escrito para pegarse en una IA de imágenes, con secciones " +
     "como marca, precio, formato, teléfonos, estilo/referencias, todo junto en uno o varios " +
