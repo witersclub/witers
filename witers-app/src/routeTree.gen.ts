@@ -16,6 +16,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as RestablecerContrasenaRouteImport } from './routes/restablecer-contrasena'
 import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as RedesRouteImport } from './routes/redes'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as PautaRouteImport } from './routes/pauta'
 import { Route as PanelRouteImport } from './routes/panel'
@@ -150,6 +151,11 @@ const RestablecerContrasenaRoute = RestablecerContrasenaRouteImport.update({
 const RegistroRoute = RegistroRouteImport.update({
   id: '/registro',
   path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedesRoute = RedesRouteImport.update({
+  id: '/redes',
+  path: '/redes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacidadRoute = PrivacidadRouteImport.update({
@@ -685,6 +691,7 @@ export interface FileRoutesByFullPath {
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
   '/privacidad': typeof PrivacidadRoute
+  '/redes': typeof RedesRoute
   '/registro': typeof RegistroRoute
   '/restablecer-contrasena': typeof RestablecerContrasenaRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -794,6 +801,7 @@ export interface FileRoutesByTo {
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
   '/privacidad': typeof PrivacidadRoute
+  '/redes': typeof RedesRoute
   '/registro': typeof RegistroRoute
   '/restablecer-contrasena': typeof RestablecerContrasenaRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -904,6 +912,7 @@ export interface FileRoutesById {
   '/panel': typeof PanelRoute
   '/pauta': typeof PautaRoute
   '/privacidad': typeof PrivacidadRoute
+  '/redes': typeof RedesRoute
   '/registro': typeof RegistroRoute
   '/restablecer-contrasena': typeof RestablecerContrasenaRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -1015,6 +1024,7 @@ export interface FileRouteTypes {
     | '/panel'
     | '/pauta'
     | '/privacidad'
+    | '/redes'
     | '/registro'
     | '/restablecer-contrasena'
     | '/robots.txt'
@@ -1124,6 +1134,7 @@ export interface FileRouteTypes {
     | '/panel'
     | '/pauta'
     | '/privacidad'
+    | '/redes'
     | '/registro'
     | '/restablecer-contrasena'
     | '/robots.txt'
@@ -1233,6 +1244,7 @@ export interface FileRouteTypes {
     | '/panel'
     | '/pauta'
     | '/privacidad'
+    | '/redes'
     | '/registro'
     | '/restablecer-contrasena'
     | '/robots.txt'
@@ -1343,6 +1355,7 @@ export interface RootRouteChildren {
   PanelRoute: typeof PanelRoute
   PautaRoute: typeof PautaRoute
   PrivacidadRoute: typeof PrivacidadRoute
+  RedesRoute: typeof RedesRoute
   RegistroRoute: typeof RegistroRoute
   RestablecerContrasenaRoute: typeof RestablecerContrasenaRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -1489,6 +1502,13 @@ declare module '@tanstack/react-router' {
       path: '/registro'
       fullPath: '/registro'
       preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redes': {
+      id: '/redes'
+      path: '/redes'
+      fullPath: '/redes'
+      preLoaderRoute: typeof RedesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacidad': {
@@ -2207,6 +2227,7 @@ const rootRouteChildren: RootRouteChildren = {
   PanelRoute: PanelRoute,
   PautaRoute: PautaRoute,
   PrivacidadRoute: PrivacidadRoute,
+  RedesRoute: RedesRoute,
   RegistroRoute: RegistroRoute,
   RestablecerContrasenaRoute: RestablecerContrasenaRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,

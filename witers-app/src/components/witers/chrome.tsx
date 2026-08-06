@@ -30,6 +30,7 @@ export function SiteHeader() {
 
   const links = [
     { href: "/marca", label: t("Branding", "Branding") },
+    { href: "/redes", label: t("Redes", "Social") },
     { href: "/pauta", label: t("Campañas de Meta", "Meta Campaigns") },
     { href: "/nuestra-historia", label: t("Nuestra historia", "Our story") },
     { href: "/nuestra-historia#valores", label: t("Comunidad", "Community") },
@@ -49,16 +50,20 @@ export function SiteHeader() {
           <WitersLogo />
         </Link>
 
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-4 md:flex 2xl:gap-8">
           {links.map((l) => (
-            <a key={l.href} href={l.href} className="wit-navlink text-sm font-medium text-wit-ink">
+            <a
+              key={l.href}
+              href={l.href}
+              className="wit-navlink text-[13px] font-medium text-wit-ink 2xl:text-sm"
+            >
               {l.label}
             </a>
           ))}
           {!signedIn ? (
             <Link
               to="/ingresar"
-              className="inline-flex items-center rounded-full border border-wit-blue px-5 py-2.5 text-sm font-semibold text-wit-ink transition-colors duration-200 hover:bg-wit-blue/5 hover:text-wit-blue"
+              className="inline-flex items-center whitespace-nowrap rounded-full border border-wit-blue px-4 py-2.5 text-[13px] font-semibold text-wit-ink transition-colors duration-200 hover:bg-wit-blue/5 hover:text-wit-blue 2xl:px-5 2xl:text-sm"
             >
               {t("Ingresar", "Log in")}
             </Link>
@@ -173,6 +178,9 @@ export function SiteFooter() {
             <nav className="flex flex-wrap gap-x-8 gap-y-3 text-sm text-white/70">
               <a href="/marca" className="hover:text-white">
                 Branding
+              </a>
+              <a href="/redes" className="hover:text-white">
+                {t("Manejo de redes", "Social Media")}
               </a>
               <a href="/pauta" className="hover:text-white">
                 {t("Campañas de Meta", "Meta Campaigns")}
