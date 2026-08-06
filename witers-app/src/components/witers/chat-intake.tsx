@@ -207,7 +207,7 @@ export function ChatIntakeFlow({
   // onto submitAnswer/saveEdit.
   onAnswer?: (answers: Record<string, string>) => void;
 }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const resolvedPendingLabel = pendingLabel ?? t("Un momento...", "One moment...");
   const resolvedDoneLabel = doneLabel ?? t("¡Listo!", "Done!");
   const resolvedEyebrow = eyebrow ?? t("Hagamos tu pieza juntos", "Let's make your piece together");
@@ -409,7 +409,9 @@ export function ChatIntakeFlow({
     }
     finalizedCountRef.current = 0;
     const recognition = new Ctor();
-    recognition.lang = "es-MX";
+    // Hardcoded "es-MX" here made English dictation silently produce
+    // nothing (see mic-button.tsx's identical fix for the same bug).
+    recognition.lang = lang === "en" ? "en-US" : "es-MX";
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.onresult = (event) => {

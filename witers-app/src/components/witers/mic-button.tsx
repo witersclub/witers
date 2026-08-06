@@ -40,7 +40,7 @@ export function MicButton({
   onChange: (next: string) => void;
   className?: string;
 }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const baseRef = useRef("");
@@ -115,7 +115,10 @@ export function MicButton({
     manualStopRef.current = false;
     finalizedCountRef.current = 0;
     const recognition = new Ctor();
-    recognition.lang = "es-MX";
+    // Hardcoded "es-MX" here made English dictation on an English-language
+    // session silently produce nothing — most speech engines don't error
+    // out on a language mismatch, they just return empty/junk transcripts.
+    recognition.lang = lang === "en" ? "en-US" : "es-MX";
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.onresult = (event) => {
