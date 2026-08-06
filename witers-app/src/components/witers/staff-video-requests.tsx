@@ -3,9 +3,36 @@
 // video-requests.tsx is on the client side, so witer.tsx only needs a mode
 // toggle + this import, not a rewrite.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
+
+import { downloadFileByKey } from "../../lib/download-file";
 
 type RawFile = { id: string; original_name: string; r2_key: string };
+
+// A plain same-tab <a href> to a Content-Disposition: attachment URL sends
+// an installed home-screen PWA (iOS) into a native file-preview viewer with
+// no way back — see download-file.ts. This click-through wrapper keeps the
+// same visual list item but downloads via a fetched blob instead.
+function DownloadLink({ fileKey, children }: { fileKey: string; children: ReactNode }) {
+  const [downloading, setDownloading] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={downloading}
+      onClick={async () => {
+        setDownloading(true);
+        try {
+          await downloadFileByKey(fileKey);
+        } finally {
+          setDownloading(false);
+        }
+      }}
+      className="flex w-full items-center justify-between gap-3 rounded-xl border border-wit-ink/10 bg-white px-3.5 py-2.5 text-xs font-semibold text-wit-blue hover:bg-wit-mist/40 disabled:opacity-60"
+    >
+      {children}
+    </button>
+  );
+}
 
 type StaffVideoRequest = {
   id: string;
@@ -273,14 +300,10 @@ function StaffVideoCard({ row, me }: { row: StaffVideoRequest; me: string }) {
           </p>
           <div className="mt-2 space-y-2">
             {rawFiles.map((f) => (
-              <a
-                key={f.id}
-                href={`/api/file?key=${encodeURIComponent(f.r2_key)}&download=1`}
-                className="flex items-center justify-between gap-3 rounded-xl border border-wit-ink/10 bg-white px-3.5 py-2.5 text-xs font-semibold text-wit-blue hover:bg-wit-mist/40"
-              >
+              <DownloadLink key={f.id} fileKey={f.r2_key}>
                 <span className="truncate text-wit-ink">{f.original_name}</span>
                 <span>Descargar</span>
-              </a>
+              </DownloadLink>
             ))}
           </div>
         </div>

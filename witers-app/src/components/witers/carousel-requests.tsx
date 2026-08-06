@@ -22,6 +22,7 @@ import { WMark } from "./brand";
 import { ChatBubble } from "./chat-intake";
 import { AspectRatioPicker } from "./lab-pickers";
 import { MicButton } from "./mic-button";
+import { downloadFileByKey } from "../../lib/download-file";
 import { useLanguage } from "../../lib/i18n";
 
 export type CarouselSlideInfo = {
@@ -321,6 +322,7 @@ function CarouselEntry({ row }: { row: CarouselRequestRow }) {
   // viewer, so "Descargar" always offers the one the client is actually
   // looking at instead of being permanently stuck on lámina 1.
   const [activeSlide, setActiveSlide] = useState<CarouselSlideInfo | null>(slides[0] ?? null);
+  const [downloading, setDownloading] = useState(false);
 
   async function sendChange() {
     if (message.trim().length < 5) {
@@ -393,16 +395,27 @@ function CarouselEntry({ row }: { row: CarouselRequestRow }) {
 
       {row.status === "completada" && activeSlide?.delivered_key ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <a
-            href={`/api/file?key=${encodeURIComponent(activeSlide.delivered_key)}&download=1`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-wit-ink/15 px-4 py-2 text-xs font-bold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+          <button
+            type="button"
+            disabled={downloading}
+            onClick={async () => {
+              setDownloading(true);
+              try {
+                await downloadFileByKey(activeSlide.delivered_key!);
+              } finally {
+                setDownloading(false);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full border border-wit-ink/15 px-4 py-2 text-xs font-bold text-wit-ink hover:border-wit-blue hover:text-wit-blue disabled:opacity-60"
           >
             <Download className="h-3.5 w-3.5" strokeWidth={2.3} />
-            {t(
-              `Descargar lámina ${activeSlide.slide_index}`,
-              `Download slide ${activeSlide.slide_index}`,
-            )}
-          </a>
+            {downloading
+              ? t("Descargando...", "Downloading...")
+              : t(
+                  `Descargar lámina ${activeSlide.slide_index}`,
+                  `Download slide ${activeSlide.slide_index}`,
+                )}
+          </button>
           <button
             type="button"
             onClick={() => {

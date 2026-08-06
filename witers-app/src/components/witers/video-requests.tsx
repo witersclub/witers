@@ -25,6 +25,7 @@ import {
 
 import { ChatBubble } from "./chat-intake";
 import { MicButton } from "./mic-button";
+import { downloadFileByKey } from "../../lib/download-file";
 import { useLanguage } from "../../lib/i18n";
 
 export type VideoRequestRow = {
@@ -188,6 +189,7 @@ function VideoEntry({ row }: { row: VideoRequestRow }) {
   const st = STATUS_LABEL[row.status] ?? STATUS_LABEL.nueva;
   const platform = PLATFORM_OPTIONS.find((p) => p.id === row.platform);
   const rawFiles = parseRawFiles(row);
+  const [downloading, setDownloading] = useState(false);
 
   return (
     <div className="wit-glass rounded-2xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
@@ -231,13 +233,24 @@ function VideoEntry({ row }: { row: VideoRequestRow }) {
             className="max-h-72 w-full bg-black"
             src={`/api/file?key=${encodeURIComponent(row.delivered_key)}`}
           />
-          <a
-            href={`/api/file?key=${encodeURIComponent(row.delivered_key)}&download=1`}
-            className="flex items-center justify-center gap-1.5 border-t border-wit-ink/10 bg-white py-2.5 text-xs font-bold text-wit-blue hover:bg-wit-mist/40"
+          <button
+            type="button"
+            disabled={downloading}
+            onClick={async () => {
+              setDownloading(true);
+              try {
+                await downloadFileByKey(row.delivered_key!);
+              } finally {
+                setDownloading(false);
+              }
+            }}
+            className="flex w-full items-center justify-center gap-1.5 border-t border-wit-ink/10 bg-white py-2.5 text-xs font-bold text-wit-blue hover:bg-wit-mist/40 disabled:opacity-60"
           >
             <Download className="h-3.5 w-3.5" strokeWidth={2.3} />
-            {t("Descargar video", "Download video")}
-          </a>
+            {downloading
+              ? t("Descargando...", "Downloading...")
+              : t("Descargar video", "Download video")}
+          </button>
         </div>
       ) : null}
     </div>

@@ -99,6 +99,7 @@ import {
   parseSlides,
   type CarouselRequestRow,
 } from "../components/witers/carousel-requests";
+import { downloadFileByKey } from "../lib/download-file";
 import { IMAGE_PACKS } from "../lib/image-packs";
 import { useLanguage, LanguageToggle } from "../lib/i18n";
 import { getPlan } from "../lib/membership-plans";
@@ -3640,6 +3641,7 @@ function BrandAssetCard({
   const { t } = useLanguage();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   async function handleFile(file: File | null) {
     if (!file) return;
@@ -3711,12 +3713,21 @@ function BrandAssetCard({
             <p className="truncate text-sm font-semibold text-wit-ink">
               {t("Archivo guardado", "File saved")}
             </p>
-            <a
-              href={`/api/file?key=${encodeURIComponent(fileKey)}&download=1`}
-              className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
+            <button
+              type="button"
+              disabled={downloading}
+              onClick={async () => {
+                setDownloading(true);
+                try {
+                  await downloadFileByKey(fileKey);
+                } finally {
+                  setDownloading(false);
+                }
+              }}
+              className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep disabled:opacity-60"
             >
-              {t("Descargar", "Download")}
-            </a>
+              {downloading ? t("Descargando...", "Downloading...") : t("Descargar", "Download")}
+            </button>
           </div>
         </div>
       ) : (
@@ -3761,6 +3772,7 @@ function BrandAssetCard({
 function LogoCard({ fileKey }: { fileKey: string | null }) {
   const { t } = useLanguage();
   const [requested, setRequested] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   return (
     <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
@@ -3783,12 +3795,21 @@ function LogoCard({ fileKey }: { fileKey: string | null }) {
             <p className="truncate text-sm font-semibold text-wit-ink">
               {t("Archivo guardado", "File saved")}
             </p>
-            <a
-              href={`/api/file?key=${encodeURIComponent(fileKey)}&download=1`}
-              className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep"
+            <button
+              type="button"
+              disabled={downloading}
+              onClick={async () => {
+                setDownloading(true);
+                try {
+                  await downloadFileByKey(fileKey);
+                } finally {
+                  setDownloading(false);
+                }
+              }}
+              className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep disabled:opacity-60"
             >
-              {t("Descargar", "Download")}
-            </a>
+              {downloading ? t("Descargando...", "Downloading...") : t("Descargar", "Download")}
+            </button>
           </div>
         </div>
       ) : (

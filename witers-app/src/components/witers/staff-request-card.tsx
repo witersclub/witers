@@ -11,6 +11,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
+import { downloadFileByKey } from "../../lib/download-file";
+
 export type ResultItem = {
   id: string;
   kind: string;
@@ -94,6 +96,7 @@ export function CopiedNotice() {
 }
 
 export function FilePreview({ label, fileKey }: { label: string; fileKey: string }) {
+  const [downloading, setDownloading] = useState(false);
   return (
     <div className="flex items-center gap-3 rounded-xl border border-wit-ink/10 bg-white p-3">
       <a href={`/api/file?key=${encodeURIComponent(fileKey)}`} target="_blank" rel="noreferrer">
@@ -106,12 +109,21 @@ export function FilePreview({ label, fileKey }: { label: string; fileKey: string
       </a>
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.12em] text-wit-gray">{label}</p>
-        <a
-          href={`/api/file?key=${encodeURIComponent(fileKey)}&download=1`}
-          className="mt-0.5 inline-block text-sm font-semibold text-wit-blue underline-offset-2 hover:underline"
+        <button
+          type="button"
+          disabled={downloading}
+          onClick={async () => {
+            setDownloading(true);
+            try {
+              await downloadFileByKey(fileKey);
+            } finally {
+              setDownloading(false);
+            }
+          }}
+          className="mt-0.5 inline-block text-sm font-semibold text-wit-blue underline-offset-2 hover:underline disabled:opacity-60"
         >
-          Descargar
-        </a>
+          {downloading ? "Descargando..." : "Descargar"}
+        </button>
       </div>
     </div>
   );
