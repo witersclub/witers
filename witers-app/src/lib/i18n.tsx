@@ -58,7 +58,18 @@ const LANGUAGE_OPTIONS: { value: Lang; label: string }[] = [
   { value: "en", label: "English" },
 ];
 
-export function LanguageToggle({ className = "" }: { className?: string }) {
+export function LanguageToggle({
+  className = "",
+  align = "right",
+}: {
+  className?: string;
+  // Desktop nav: the toggle sits at the far right, so the dropdown must
+  // hang off its right edge to stay under it. The mobile menu instead
+  // left-aligns the toggle near the screen edge — anchoring the dropdown
+  // to the right there pushed most of its width past the left edge of the
+  // viewport, clipping it almost entirely.
+  align?: "left" | "right";
+}) {
   const { lang, setLang, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -85,7 +96,11 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-full z-20 mt-2 w-40 overflow-hidden rounded-2xl border border-wit-ink/10 bg-white py-1.5 shadow-[0_20px_50px_rgba(5,13,40,0.15)]">
+        <div
+          className={`absolute top-full z-20 mt-2 w-40 overflow-hidden rounded-2xl border border-wit-ink/10 bg-white py-1.5 shadow-[0_20px_50px_rgba(5,13,40,0.15)] ${
+            align === "left" ? "left-0" : "right-0"
+          }`}
+        >
           {LANGUAGE_OPTIONS.map((opt) => (
             <button
               key={opt.value}

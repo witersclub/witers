@@ -122,7 +122,7 @@ export function SiteHeader() {
             <CtaPill to={signedIn ? "/panel" : "/registro"}>
               {signedIn ? t("Mi panel", "My panel") : t("Unirme a WITERS", "Join WITERS")}
             </CtaPill>
-            <LanguageToggle className="self-start" />
+            <LanguageToggle className="self-start" align="left" />
           </div>
         </div>
       ) : null}
