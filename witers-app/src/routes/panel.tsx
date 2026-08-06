@@ -892,6 +892,12 @@ function PanelContent() {
     ? membership.carousel_requests_quota - membership.carousel_requests_used
     : 0;
   const rows = requests.data?.requests ?? [];
+  // Same "still being worked on" condition as the rotating-border treatment
+  // on each individual request card (see RequestEntry) — drives the "En
+  // proceso" pill next to the "Mis solicitudes" tab.
+  const hasPendingImageRequest = rows.some(
+    (r) => r.status === "en_proceso" || r.status === "cambio_solicitado",
+  );
   const videoRows = videoRequests.data?.videoRequests ?? [];
   const carouselRows = carouselRequests.data?.carouselRequests ?? [];
   // "Impact panel" stats — closes the loop from pedir → pieza → campaña →
@@ -1630,6 +1636,18 @@ function PanelContent() {
                             label={t("Mis solicitudes", "My requests")}
                             count={rows.length}
                           />
+                          {hasPendingImageRequest ? (
+                            <div className="wit-pending-glow -mb-px shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setTab("solicitudes")}
+                                className="wit-pending-glow-shield flex items-center gap-1.5 rounded-2xl bg-white px-3 py-1 text-xs font-bold text-wit-blue"
+                              >
+                                <Spinner />
+                                {t("En proceso", "In progress")}
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
 
                         <div className="mt-8">
