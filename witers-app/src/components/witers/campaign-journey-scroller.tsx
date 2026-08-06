@@ -8,21 +8,31 @@
 // Desktop-only (lg+): a pinned-scroll rig like this fights mobile's address
 // bar collapse and momentum scrolling, so small screens keep the plain
 // centered mockup instead (see Hero() in pauta.tsx).
+import { Link } from "@tanstack/react-router";
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 import { MessageCircle, Rocket, Sparkles } from "lucide-react";
 
 import { useLanguage } from "../../lib/i18n";
+import { useMe } from "../../lib/witers-client";
 import { MetaAdsDashboardCard, WhatsAppPhoneMockup } from "./meta-ads-card";
 
-// The one visual that travels through all three phones — a rose/brown
-// gradient card standing in for a real delivered piece, same illustrated
-// treatment panel-preview-showcase.tsx uses for "Boutique Alma" elsewhere
-// on the site, never an actual client's photo.
-function PieceThumb({ className = "" }: { className?: string }) {
+// The three "Boutique Alma" piece gradients already established on the
+// homepage showcase (panel-preview-showcase.tsx's InicioScreen) — reusing
+// them here instead of inventing new colors keeps every mockup across the
+// site telling the same visual story. Index 0 (rose) is "the" piece that
+// the ad and WhatsApp screens feature; the gallery in the panel screen
+// shows a mix of all three, like a real client's past requests would.
+const PIECE_GRADIENTS = [
+  "linear-gradient(135deg,#C97B84,#8a4f57)",
+  "linear-gradient(135deg,#B08D57,#6e5730)",
+  "linear-gradient(135deg,#2B2320,#544738)",
+];
+
+function PieceThumb({ className = "", variant = 0 }: { className?: string; variant?: 0 | 1 | 2 }) {
   return (
     <div
       className={`shrink-0 rounded-lg ${className}`}
-      style={{ background: "linear-gradient(135deg,#C97B84,#8a4f57)" }}
+      style={{ background: PIECE_GRADIENTS[variant] }}
     />
   );
 }
@@ -55,9 +65,9 @@ function PanelScreen() {
           {t("Mis solicitudes", "My requests")}
         </p>
         <div className="mt-2 flex gap-2">
-          <PieceThumb className="h-[70px] w-[52px]" />
-          <div className="h-[70px] w-[52px] shrink-0 rounded-lg border border-wit-ink/10 bg-wit-mist/30" />
-          <div className="h-[70px] w-[52px] shrink-0 rounded-lg border border-wit-ink/10 bg-wit-mist/30" />
+          <PieceThumb className="h-[70px] w-[52px]" variant={0} />
+          <PieceThumb className="h-[70px] w-[52px]" variant={1} />
+          <PieceThumb className="h-[70px] w-[52px]" variant={2} />
         </div>
         <div className="mt-3 rounded-xl bg-wit-mist/30 px-2.5 py-2">
           <p className="text-[6.5px] font-bold uppercase tracking-wide text-wit-gray">
@@ -196,6 +206,8 @@ const smoothstep = (x: number) => x * x * (3 - 2 * x);
 
 export function CampaignJourneyScroller() {
   const { t } = useLanguage();
+  const me = useMe();
+  const signedIn = Boolean(me.data?.ok);
   const sectionRef = useRef<HTMLDivElement>(null);
   const progress = useScrollProgress(sectionRef);
 
@@ -209,14 +221,59 @@ export function CampaignJourneyScroller() {
           simply never at risk of being cropped. mt-10 on the wrapper (not
           the sticky offset) keeps a fixed gap under the badge above no
           matter how tall the viewport is. */}
-      <div className="sticky top-16 h-[720px]">
+      <div className="sticky top-12 h-[780px]">
+        {/* Anchored from the top, not vertically centered — with the
+            headline now stacked underneath it, this column got tall
+            enough that centering it pushed its top edge above the box
+            (and into the badge/header above). */}
         <div
-          className="absolute left-[16%] top-1/2 -translate-y-1/2"
-          style={{ transform: `translate(${comboShift}px,-50%)` }}
+          className="absolute left-[16%] top-10 w-[380px]"
+          style={{ transform: `translate(${comboShift}px,0)` }}
         >
-          <div className="relative w-[380px] pb-8 pl-8 pt-4">
+          <div className="relative pb-8 pl-8 pt-4">
             <MetaAdsDashboardCard />
             <WhatsAppPhoneMockup className="absolute -bottom-6 -left-2 z-10" />
+          </div>
+
+          {/* The headline lives right under its own mockup instead of
+              centered in its own full-width band below everything — the
+              hero reads as one horizontal composition (piece → campaign →
+              conversation) instead of "mockups on top, huge text block
+              wasting space underneath." Mobile keeps the original centered
+              block (see Hero() in pauta.tsx). */}
+          <div className="relative z-20 mt-16 pl-8">
+            <h1 className="text-3xl font-extrabold leading-[1.08] tracking-tighter text-wit-ink">
+              {t("De la pieza a la", "From creative to")}{" "}
+              <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
+                {t("campaña", "campaign")}
+              </span>
+              .
+            </h1>
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-wit-gray">
+              {t(
+                "El equipo de WITERS convierte tus creatividades en una campaña real de Meta Ads, configurada en minutos y en pausa hasta que tú decidas encenderla.",
+                "The WITERS team turns your creatives into a real Meta Ads campaign, set up in minutes and paused until you decide to switch it on.",
+              )}
+            </p>
+            <Link
+              to={signedIn ? "/panel" : "/registro"}
+              className="group mt-5 inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-6 py-3 text-sm font-bold uppercase tracking-[0.06em] text-white shadow-[0_18px_40px_rgba(0,71,255,0.38)] transition-all duration-200 hover:shadow-[0_22px_48px_rgba(0,71,255,0.48)] active:scale-[0.98]"
+            >
+              {t("Quiero pautar mis campañas", "I want to run my campaigns")}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1"
+              >
+                <path d="M3 13 13 3M13 3H6M13 3v7" />
+              </svg>
+            </Link>
           </div>
         </div>
 
