@@ -150,19 +150,22 @@ const NEW_PHONES = [
     key: "panel",
     screen: <PanelScreen />,
     endX: -270,
-    label: { es: "Pides la pieza", en: "You request the piece" },
+    label: { es: "Creamos tu pieza publicitaria", en: "We create your ad piece" },
   },
   {
     key: "anuncio",
     screen: <AdFeedScreen />,
     endX: 0,
-    label: { es: "Se vuelve anuncio", en: "It becomes an ad" },
+    label: { es: "Creamos tu campaña en Meta Ads", en: "We create your Meta Ads campaign" },
   },
   {
     key: "whatsapp",
     screen: <WhatsAppScreen />,
     endX: 270,
-    label: { es: "Llega el mensaje", en: "The message arrives" },
+    label: {
+      es: "Empiezas a recibir mensajes a tu WhatsApp",
+      en: "You start getting messages on your WhatsApp",
+    },
   },
 ];
 
@@ -283,6 +286,17 @@ export function CampaignJourneyScroller() {
             it, fading and growing in as they slide to their spot — no
             three-way ghost-overlap at rest. */}
         <div className="absolute inset-0">
+          {/* Timeline connecting the 3 steps — grows outward from the
+              center as the phones split, instead of three captions
+              floating independently under each phone. */}
+          <div
+            className="absolute h-0.5 -translate-y-1/2 bg-wit-blue/25"
+            style={{
+              top: "calc(50% + 234px)",
+              left: `calc(72% + ${NEW_PHONES[0].endX * splitT}px)`,
+              width: `${(NEW_PHONES[2].endX - NEW_PHONES[0].endX) * splitT}px`,
+            }}
+          />
           {NEW_PHONES.map((p, i) => {
             const isAnchor = i === 0;
             const revealT = isAnchor ? 1 : Math.min(1, splitT / 0.55);
@@ -298,16 +312,22 @@ export function CampaignJourneyScroller() {
                 >
                   {p.screen}
                 </MiniPhone>
-                <p
-                  className="absolute top-[calc(50%+228px)] text-center text-xs font-bold text-wit-ink"
+                <div
+                  className="absolute flex flex-col items-center"
                   style={{
+                    top: "calc(50% + 234px)",
                     left: `calc(72% + ${p.endX * splitT}px)`,
-                    transform: "translateX(-50%)",
+                    transform: "translate(-50%,-50%)",
                     opacity: revealT,
                   }}
                 >
-                  {t(p.label.es, p.label.en)}
-                </p>
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-wit-blue text-[11px] font-bold text-white shadow-[0_4px_10px_rgba(0,71,255,0.35)]">
+                    {i + 1}
+                  </span>
+                  <p className="mt-2.5 max-w-[190px] text-center text-xs font-bold leading-snug text-wit-ink">
+                    {t(p.label.es, p.label.en)}
+                  </p>
+                </div>
               </div>
             );
           })}
