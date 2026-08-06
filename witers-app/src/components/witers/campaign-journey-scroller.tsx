@@ -288,18 +288,25 @@ export function CampaignJourneyScroller() {
         <div className="absolute inset-0">
           {/* Timeline connecting the 3 steps — grows outward from the
               center as the phones split, instead of three captions
-              floating independently under each phone. */}
+              floating independently under each phone. Sits well clear of
+              the phones' bottom edge (top-[calc(50%+270px)], not +234) so
+              the markers don't crowd/hide behind the phone bezels. */}
           <div
             className="absolute h-0.5 -translate-y-1/2 bg-wit-blue/25"
             style={{
-              top: "calc(50% + 234px)",
+              top: "calc(50% + 270px)",
               left: `calc(72% + ${NEW_PHONES[0].endX * splitT}px)`,
               width: `${(NEW_PHONES[2].endX - NEW_PHONES[0].endX) * splitT}px`,
             }}
           />
           {NEW_PHONES.map((p, i) => {
             const isAnchor = i === 0;
-            const revealT = isAnchor ? 1 : Math.min(1, splitT / 0.55);
+            // Staggered, not simultaneous: step 2 reveals across the
+            // first ~55% of the split, step 3 only starts once step 2 is
+            // mostly in — so the timeline visibly builds 1 → 2 → 3 instead
+            // of 2 and 3 popping in together.
+            const revealStart = i === 2 ? 0.4 : 0;
+            const revealT = isAnchor ? 1 : Math.min(1, Math.max(0, (splitT - revealStart) / 0.5));
             return (
               <div key={p.key} className="absolute inset-0">
                 <MiniPhone
@@ -315,7 +322,7 @@ export function CampaignJourneyScroller() {
                 <div
                   className="absolute flex flex-col items-center"
                   style={{
-                    top: "calc(50% + 234px)",
+                    top: "calc(50% + 270px)",
                     left: `calc(72% + ${p.endX * splitT}px)`,
                     transform: "translate(-50%,-50%)",
                     opacity: revealT,
