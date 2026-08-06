@@ -363,6 +363,63 @@ function looksLikeAspectRatioAnnouncement(text: string): boolean {
   return promisesOrLists || mentionsRatios;
 }
 
+// Last-resort backstop for when looksLikeAspectRatioAnnouncement's regex
+// doesn't recognize the model's exact phrasing — which will always happen
+// sooner or later, in either language, because the model's wording is
+// genuinely unbounded (that's exactly why clients kept getting stuck
+// needing to type "ok": every regex expansion just covers the phrasings
+// already seen, never the next new one). Rather than guess with more
+// keywords, ask a fresh, cheap, structured call to read the model's own
+// draft reply and judge — in any language — whether it's actually
+// presenting/about to present the aspect-ratio question, as opposed to a
+// legitimate no-tool turn (pitching concepts, asking about photos or
+// price). Only reached when both the tool call and the regex already
+// missed it, so the added latency only hits the rare fallback path.
+async function confirmsAspectRatioAnnouncement(
+  apiKey: string,
+  draftText: string,
+): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: OPENAI_TEXT_MODEL,
+        temperature: 0,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Vas a analizar un mensaje escrito por un asistente de diseño gráfico, en " +
+              "cualquier idioma. Responde únicamente con la palabra SI si ese mensaje le está " +
+              "preguntando al cliente, anunciando, o a punto de mostrarle las opciones de " +
+              "formato/proporción/forma (aspect ratio, shape) para una pieza gráfica — por " +
+              "ejemplo cuadrado, vertical, horizontal, historia, feed, etc. Responde " +
+              "únicamente con la palabra NO si el mensaje trata de cualquier otro tema " +
+              "(propuestas de concepto, fotos de referencia, precio o promoción, saludos, " +
+              "cualquier otra cosa). Responde solo SI o NO, sin explicación ni puntuación.",
+          },
+          { role: "user", content: draftText },
+        ],
+      }),
+    });
+    if (!response.ok) return false;
+    const body = (await response.json()) as OpenAiChatResponse;
+    const answer = body.choices?.[0]?.message?.content?.trim().toUpperCase();
+    return answer?.startsWith("SI") ?? false;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // The client's confirmation message ("Elijo el formato: 3:4." / "I choose
 // the format: 3:4.") is what proves the visual picker was actually used —
 // recorded verbatim by panel.tsx's pickAspectRatio, in whichever language
@@ -482,8 +539,13 @@ export async function runWitChat(
 
   const text = message.content?.trim();
   if (!text) return { ok: false, error: "sin_resultado" };
-  if (!pickerWasUsed && looksLikeAspectRatioAnnouncement(text)) {
-    return { ok: true, kind: "ask_aspect_ratio" };
+  if (!pickerWasUsed) {
+    if (
+      looksLikeAspectRatioAnnouncement(text) ||
+      (await confirmsAspectRatioAnnouncement(apiKey, text))
+    ) {
+      return { ok: true, kind: "ask_aspect_ratio" };
+    }
   }
   return { ok: true, kind: "message", text };
 }
@@ -579,8 +641,13 @@ export async function runWitCarouselChat(
 
   const text = message.content?.trim();
   if (!text) return { ok: false, error: "sin_resultado" };
-  if (!pickerWasUsed && looksLikeAspectRatioAnnouncement(text)) {
-    return { ok: true, kind: "ask_aspect_ratio" };
+  if (!pickerWasUsed) {
+    if (
+      looksLikeAspectRatioAnnouncement(text) ||
+      (await confirmsAspectRatioAnnouncement(apiKey, text))
+    ) {
+      return { ok: true, kind: "ask_aspect_ratio" };
+    }
   }
   return { ok: true, kind: "message", text };
 }

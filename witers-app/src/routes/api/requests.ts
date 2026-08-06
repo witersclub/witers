@@ -28,6 +28,11 @@ const createSchema = z
     requiredText: z.string().max(500).optional(),
     brandColors: z.string().max(60).optional(),
     promoPrice: z.string().max(80).optional(),
+    // Language the client's Wit conversation happened in — not persisted,
+    // only used below to keep the staff-facing ai_prompt (and therefore the
+    // final piece's on-image copy) in the client's own language instead of
+    // always defaulting to Spanish.
+    lang: z.enum(["es", "en"]).default("es"),
   })
   .refine((data) => data.noLogo || Boolean(data.logoKey), {
     message: "Sube el logotipo o marca 'No tengo logotipo'.",
@@ -209,8 +214,9 @@ export const Route = createFileRoute("/api/requests")({
             hasLogo: Boolean(brand.logo_key),
             hasProductPhoto: Boolean(parsed.data.productPhotoKeys?.length),
             businessType: brand.business_type,
+            lang: parsed.data.lang,
           });
-          const result = await polishPromptWithAI(rawPrompt);
+          const result = await polishPromptWithAI(rawPrompt, parsed.data.lang);
           if (result.ok) {
             await db()
               .prepare("UPDATE design_requests SET ai_prompt = ?2 WHERE id = ?1")

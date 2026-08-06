@@ -4888,6 +4888,7 @@ function WitConversation({
           promoPrice: pieceFields.promoPrice || undefined,
           requiredText: pieceFields.requiredText || undefined,
           brandColors: brandProfile?.brand_colors || undefined,
+          lang,
         }),
       });
       const data = (await res.json()) as {
