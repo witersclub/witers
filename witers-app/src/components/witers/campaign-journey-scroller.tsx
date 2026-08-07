@@ -53,6 +53,20 @@ function MiniPhone({ children, style }: { children: ReactNode; style?: CSSProper
   );
 }
 
+// Same phone chrome as MiniPhone, but laid out in normal flow instead of
+// absolutely centered — for the mobile version of the journey, where the
+// three steps stack vertically instead of splitting apart on a pin.
+function StaticPhone({ children }: { children: ReactNode }) {
+  return (
+    <div className="w-[210px] shrink-0 rounded-[1.9rem] border-[7px] border-wit-ink bg-wit-ink shadow-[0_30px_65px_rgba(5,13,40,0.3)] sm:w-[230px]">
+      <div className="relative h-[406px] overflow-hidden rounded-[1.3rem] bg-white sm:h-[444px]">
+        <div className="absolute left-1/2 top-0 z-20 h-4 w-[72px] -translate-x-1/2 rounded-b-xl bg-wit-ink" />
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function PanelScreen() {
   const { t } = useLanguage();
   return (
@@ -350,6 +364,32 @@ export function CampaignJourneyScroller() {
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+// Mobile counterpart to CampaignJourneyScroller: the same three steps (piece
+// → Meta Ads campaign → WhatsApp inbox), just stacked in normal flow with a
+// connecting line instead of pinned/split by scroll — see the file banner
+// above for why mobile skips the pinned-scroll rig entirely.
+export function CampaignJourneyMobile() {
+  const { t } = useLanguage();
+  return (
+    <div className="relative mt-14 flex flex-col items-center lg:hidden">
+      {NEW_PHONES.map((p, i) => (
+        <div key={p.key} className="flex flex-col items-center">
+          {i > 0 ? <div className="h-8 w-0.5 bg-wit-blue/25" /> : null}
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-wit-blue text-[11px] font-bold text-white shadow-[0_4px_10px_rgba(0,71,255,0.35)]">
+            {i + 1}
+          </span>
+          <p className="mt-2.5 max-w-[220px] text-center text-xs font-bold leading-snug text-wit-ink">
+            {t(p.label.es, p.label.en)}
+          </p>
+          <div className="mt-4">
+            <StaticPhone>{p.screen}</StaticPhone>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -14,7 +14,10 @@ import {
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
 import { MetaAdsDashboardCard, WhatsAppPhoneMockup } from "../components/witers/meta-ads-card";
-import { CampaignJourneyScroller } from "../components/witers/campaign-journey-scroller";
+import {
+  CampaignJourneyMobile,
+  CampaignJourneyScroller,
+} from "../components/witers/campaign-journey-scroller";
 import { useMe } from "../lib/witers-client";
 import { useLanguage } from "../lib/i18n";
 
@@ -66,6 +69,7 @@ function Hero() {
           <WhatsAppPhoneMockup className="absolute -bottom-6 -left-2 z-10 sm:-bottom-10 sm:-left-6" />
         </div>
       </div>
+      <CampaignJourneyMobile />
       <CampaignJourneyScroller />
 
       {/* Desktop shows this same headline/CTA anchored under the left
