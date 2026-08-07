@@ -29,6 +29,7 @@ import {
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { useDraggableMarquee } from "../hooks/use-draggable-marquee";
 import { useLanguage } from "../lib/i18n";
+import { trackCtaClick } from "../lib/track-click";
 import { useMe } from "../lib/witers-client";
 
 export const Route = createFileRoute("/marca")({
@@ -259,6 +260,7 @@ function Hero() {
           <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <Link
               to={signedIn ? "/panel" : "/registro"}
+              onClick={() => trackCtaClick("Quiero mi identidad de marca (hero)")}
               className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-8 py-4 text-base font-bold uppercase tracking-[0.06em] text-white shadow-[0_18px_40px_rgba(0,71,255,0.38)] transition-all duration-200 hover:shadow-[0_22px_48px_rgba(0,71,255,0.48)] active:scale-[0.98]"
             >
               {t("Quiero mi identidad de marca", "I want my brand identity")}
@@ -658,6 +660,7 @@ function CtaFinal() {
         </div>
         <Link
           to={signedIn ? "/panel" : "/registro"}
+          onClick={() => trackCtaClick("Quiero mi identidad de marca (CTA final)")}
           className="group inline-flex shrink-0 items-center gap-2.5 rounded-full border border-wit-ink/15 bg-white px-7 py-3.5 text-sm font-bold uppercase tracking-[0.08em] text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.08)] transition-all duration-200 hover:bg-wit-ink hover:text-white active:scale-[0.98]"
         >
           {t("Quiero mi identidad de marca", "I want my brand identity")}

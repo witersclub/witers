@@ -25,6 +25,17 @@ export const Route = createFileRoute("/api/visitor-heartbeat")({
         const user = await getSessionUser(request);
         const country = (request as CfRequest).cf?.country ?? null;
 
+        // A heartbeat whose path differs from this visitor's last known
+        // path is a page view — piggybacking on the heartbeat (which
+        // already fires on mount and on every client-side route change,
+        // see LiveVisitorHeartbeat) instead of a separate tracker/request
+        // for the admin "Páginas principales" list.
+        const existingRow = await db()
+          .prepare(`SELECT path FROM visitor_heartbeats WHERE id = ?1`)
+          .bind(visitorId)
+          .first<{ path: string }>();
+        const isNewPageView = !existingRow || existingRow.path !== parsed.data.path;
+
         await db()
           .prepare(
             `INSERT INTO visitor_heartbeats (id, user_id, user_name, user_role, path, country, last_seen, session_started_at)
@@ -54,6 +65,25 @@ export const Route = createFileRoute("/api/visitor-heartbeat")({
             country,
           )
           .run();
+
+        // Only public-site views feed "Páginas principales" — /panel,
+        // /admin and /witer are internal, already-authenticated screens
+        // that would otherwise drown out the public pages an admin
+        // actually wants to see traffic for.
+        if (
+          isNewPageView &&
+          !parsed.data.path.startsWith("/panel") &&
+          !parsed.data.path.startsWith("/admin") &&
+          !parsed.data.path.startsWith("/witer")
+        ) {
+          await db()
+            .prepare(
+              `INSERT INTO site_events (id, type, path, visitor_id, user_id, country)
+               VALUES (?1, 'page_view', ?2, ?3, ?4, ?5)`,
+            )
+            .bind(crypto.randomUUID(), parsed.data.path, visitorId, user?.id ?? null, country)
+            .run();
+        }
 
         // No cron in this project — bound table growth lazily instead of
         // with a scheduled job: a small chance on every heartbeat to sweep

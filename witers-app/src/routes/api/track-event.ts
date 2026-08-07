@@ -5,8 +5,9 @@ import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 import { readVisitorId, visitorCookie } from "../../lib/visitor.server";
 
 const schema = z.object({
-  type: z.enum(["whatsapp_click"]),
+  type: z.enum(["whatsapp_click", "cta_click"]),
   path: z.string().max(300),
+  label: z.string().max(120).optional(),
 });
 
 // Cloudflare populates `cf` on every request at the edge — see
@@ -32,8 +33,8 @@ export const Route = createFileRoute("/api/track-event")({
 
         await db()
           .prepare(
-            `INSERT INTO site_events (id, type, path, visitor_id, user_id, country)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+            `INSERT INTO site_events (id, type, path, visitor_id, user_id, country, label)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
           )
           .bind(
             crypto.randomUUID(),
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/api/track-event")({
             visitorId,
             user?.id ?? null,
             country,
+            parsed.data.label ?? null,
           )
           .run();
 

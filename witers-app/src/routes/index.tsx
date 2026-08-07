@@ -18,6 +18,7 @@ import { useDraggableMarquee } from "../hooks/use-draggable-marquee";
 import { useLanguage } from "../lib/i18n";
 import { PROMO_MESES } from "../lib/membership-plans";
 import { saveTeaserAnswers } from "../lib/teaser-handoff";
+import { trackCtaClick } from "../lib/track-click";
 import { useMe } from "../lib/witers-client";
 
 export const Route = createFileRoute("/")({
@@ -155,6 +156,7 @@ function Hero() {
         <div className="wit-rise wit-rise-d2 mt-9 flex flex-col items-center gap-5">
           <Link
             to={signedIn ? "/panel" : "/registro"}
+            onClick={() => trackCtaClick("Unirme ahora (hero)")}
             className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-8 py-4 text-base font-bold uppercase tracking-[0.06em] text-white shadow-[0_18px_40px_rgba(0,71,255,0.38)] transition-all duration-200 hover:shadow-[0_22px_48px_rgba(0,71,255,0.48)] active:scale-[0.98]"
           >
             {t("Unirme ahora", "Join now")}
@@ -513,7 +515,10 @@ function PruebaInteractiva() {
               <div className="mt-2 flex w-full flex-col gap-2">
                 <Link
                   to="/registro"
-                  onClick={() => saveTeaserAnswers(answers)}
+                  onClick={() => {
+                    saveTeaserAnswers(answers);
+                    trackCtaClick("Crear cuenta gratis (Habla con Wit)");
+                  }}
                   className="rounded-full bg-wit-blue px-6 py-3 text-center text-sm font-bold text-white hover:bg-wit-blue-deep"
                 >
                   {t("Crear cuenta gratis", "Create free account")}
@@ -551,6 +556,7 @@ function CtaFinal() {
         </h2>
         <Link
           to={signedIn ? "/panel" : "/registro"}
+          onClick={() => trackCtaClick("Hablemos de tu proyecto (CTA final)")}
           className="group inline-flex shrink-0 items-center gap-2.5 rounded-full border border-wit-ink/15 bg-white px-7 py-3.5 text-sm font-bold uppercase tracking-[0.08em] text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.08)] transition-all duration-200 hover:bg-wit-ink hover:text-white active:scale-[0.98]"
         >
           {t("Hablemos de tu proyecto", "Let's talk about your project")}

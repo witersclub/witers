@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { useLanguage, LanguageToggle } from "../../lib/i18n";
+import { trackCtaClick } from "../../lib/track-click";
 import { useMe } from "../../lib/witers-client";
 import {
   CtaPill,
@@ -68,7 +69,12 @@ export function SiteHeader() {
               {t("Ingresar", "Log in")}
             </Link>
           ) : null}
-          <CtaPill to={signedIn ? "/panel" : "/registro"}>
+          <CtaPill
+            to={signedIn ? "/panel" : "/registro"}
+            onClick={() =>
+              trackCtaClick(signedIn ? "Mi panel (header)" : "Unirme a WITERS (header)")
+            }
+          >
             {signedIn ? t("Mi panel", "My panel") : t("Unirme a WITERS", "Join WITERS")}
           </CtaPill>
           <LanguageToggle />
@@ -119,7 +125,14 @@ export function SiteHeader() {
                 {l.label}
               </a>
             ))}
-            <CtaPill to={signedIn ? "/panel" : "/registro"}>
+            <CtaPill
+              to={signedIn ? "/panel" : "/registro"}
+              onClick={() =>
+                trackCtaClick(
+                  signedIn ? "Mi panel (header móvil)" : "Unirme a WITERS (header móvil)",
+                )
+              }
+            >
               {signedIn ? t("Mi panel", "My panel") : t("Unirme a WITERS", "Join WITERS")}
             </CtaPill>
             <LanguageToggle className="self-start" align="left" />

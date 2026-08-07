@@ -177,10 +177,19 @@ export function WitersLogo({
 // ---------- bespoke CTAs ----------
 
 // Header CTA: solid blue pill, arrow slides on hover.
-export function CtaPill({ to, children }: { to: string; children: ReactNode }) {
+export function CtaPill({
+  to,
+  children,
+  onClick,
+}: {
+  to: string;
+  children: ReactNode;
+  onClick?: () => void;
+}) {
   return (
     <Link
       to={to}
+      onClick={onClick}
       className="group inline-flex items-center gap-2 rounded-full bg-wit-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-wit-blue-deep active:scale-[0.98]"
     >
       {children}
@@ -200,5 +209,3 @@ export function CtaPill({ to, children }: { to: string; children: ReactNode }) {
     </Link>
   );
 }
-
-

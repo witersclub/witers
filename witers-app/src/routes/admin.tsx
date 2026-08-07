@@ -7,6 +7,7 @@ import {
   Clock,
   CreditCard,
   GalleryHorizontal,
+  Globe,
   Image,
   LayoutDashboard,
   Link2Off,
@@ -14,6 +15,7 @@ import {
   Megaphone,
   MessageCircle,
   MessageCircleQuestion,
+  MousePointerClick,
   Palette,
   Plus,
   Radar,
@@ -2722,6 +2724,8 @@ function formatDuration(totalSeconds: number): string {
 }
 
 type WhatsappClickStats = { today: number; last7Days: number; total: number };
+type TopPageRow = { path: string; n: number };
+type TopClickRow = { label: string; path: string; n: number };
 
 // "Indicadores" (formerly just "En vivo") — Wix-style "who's browsing
 // right now" plus click counts for things worth watching while running
@@ -2748,13 +2752,20 @@ function IndicadoresPanel() {
     queryFn: async () => {
       const res = await fetch("/api/admin/site-events-summary", { credentials: "include" });
       if (!res.ok) return null;
-      return (await res.json()) as { ok: boolean; whatsappClicks: WhatsappClickStats };
+      return (await res.json()) as {
+        ok: boolean;
+        whatsappClicks: WhatsappClickStats;
+        topPages: TopPageRow[];
+        topClicks: TopClickRow[];
+      };
     },
     refetchInterval: 30_000,
   });
 
   const visitors = data?.visitors ?? [];
   const clicks = eventsQuery.data?.whatsappClicks;
+  const topPages = eventsQuery.data?.topPages ?? [];
+  const topClicks = eventsQuery.data?.topClicks ?? [];
 
   return (
     <div>
@@ -2776,6 +2787,26 @@ function IndicadoresPanel() {
           value={String(clicks?.total ?? 0)}
           icon={MessageCircle}
           accent="emerald"
+        />
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <TopEventsList
+          title="Páginas principales"
+          icon={Globe}
+          empty="Todavía no hay suficientes visitas registradas."
+          rows={topPages.map((p) => ({ key: p.path, primary: p.path, count: p.n }))}
+        />
+        <TopEventsList
+          title="Clics principales"
+          icon={MousePointerClick}
+          empty="Todavía no hay clics registrados."
+          rows={topClicks.map((c) => ({
+            key: `${c.label}-${c.path}`,
+            primary: c.label,
+            secondary: c.path,
+            count: c.n,
+          }))}
         />
       </div>
 
@@ -2845,6 +2876,52 @@ function IndicadoresPanel() {
             </tbody>
           </table>
         </div>
+      )}
+    </div>
+  );
+}
+
+// Shared ranked-list card for "Páginas principales" / "Clics principales"
+// — same shape Wix's "Comportamiento" overview uses (a short top-N list
+// with a count on the right), backed by the same site_events log the
+// WhatsApp KPI cards above already read from.
+function TopEventsList({
+  title,
+  icon: Icon,
+  empty,
+  rows,
+}: {
+  title: string;
+  icon: typeof Wallet;
+  empty: string;
+  rows: { key: string; primary: string; secondary?: string; count: number }[];
+}) {
+  return (
+    <div className="wit-glass rounded-2xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+      <h3 className="flex items-center gap-2 text-sm font-extrabold text-wit-ink">
+        <Icon size={16} strokeWidth={2.3} className="text-wit-blue" />
+        {title}
+      </h3>
+      {rows.length === 0 ? (
+        <p className="mt-4 text-sm text-wit-gray">{empty}</p>
+      ) : (
+        <ul className="mt-3 divide-y divide-wit-ink/5">
+          {rows.map((r) => (
+            <li key={r.key} className="flex items-center justify-between gap-3 py-2.5">
+              <div className="min-w-0">
+                <p className="truncate font-wit-mono text-xs font-semibold text-wit-ink">
+                  {r.primary}
+                </p>
+                {r.secondary ? (
+                  <p className="truncate font-wit-mono text-[11px] text-wit-gray">{r.secondary}</p>
+                ) : null}
+              </div>
+              <span className="shrink-0 rounded-full bg-wit-mist/50 px-2.5 py-1 text-xs font-bold text-wit-ink">
+                {r.count}
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
