@@ -69,13 +69,14 @@ function Hero() {
           <WhatsAppPhoneMockup className="absolute -bottom-6 -left-2 z-10 sm:-bottom-10 sm:-left-6" />
         </div>
       </div>
-      <CampaignJourneyMobile />
-      <CampaignJourneyScroller />
 
       {/* Desktop shows this same headline/CTA anchored under the left
           mockup instead, inside CampaignJourneyScroller — keeps the hero
           one horizontal composition instead of stacking a big centered
-          text band underneath everything. */}
+          text band underneath everything. On mobile it sits between the
+          dashboard mockup above and the step-by-step phones below — it's
+          the sell, so it stays close to the top instead of trailing after
+          the phones. */}
       <div className="relative mx-auto mt-8 max-w-3xl px-5 text-center md:px-[110px] lg:hidden">
         <h1 className="wit-rise wit-rise-d2 mx-auto max-w-2xl text-5xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-7xl">
           {t("De la pieza a la", "From creative to")}{" "}
@@ -115,6 +116,9 @@ function Hero() {
           </a>
         </div>
       </div>
+
+      <CampaignJourneyMobile />
+      <CampaignJourneyScroller />
     </section>
   );
 }

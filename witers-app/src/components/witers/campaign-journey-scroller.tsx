@@ -376,9 +376,16 @@ export function CampaignJourneyMobile() {
   const { t } = useLanguage();
   return (
     <div className="relative mt-14 flex flex-col items-center lg:hidden">
+      {/* One continuous rail behind the whole stack — from step 1's badge
+          down to the last phone — instead of a short segment per gap, so
+          the three steps read as one connected line, not floating pieces. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-3 bottom-0 z-0 w-0.5 -translate-x-1/2 bg-wit-blue/25"
+      />
       {NEW_PHONES.map((p, i) => (
-        <div key={p.key} className="flex flex-col items-center">
-          {i > 0 ? <div className="h-8 w-0.5 bg-wit-blue/25" /> : null}
+        <div key={p.key} className="relative z-10 flex flex-col items-center">
+          {i > 0 ? <div className="h-8" /> : null}
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-wit-blue text-[11px] font-bold text-white shadow-[0_4px_10px_rgba(0,71,255,0.35)]">
             {i + 1}
           </span>
