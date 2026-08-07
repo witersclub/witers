@@ -363,7 +363,7 @@ export async function buildAllCampaignsReportPdf(input: {
   y += 24;
 
   if (input.campaigns.length === 0) {
-    page.text(MARGIN, y + 6, "Aún no tienes campañas.", "F1", 10, GRAY);
+    page.text(MARGIN, y + 6, "No hubo campañas con actividad en este periodo.", "F1", 10, GRAY);
     y += 26;
   } else {
     ensureSpace(22);

@@ -3430,11 +3430,27 @@ function CampanasPanel({ companyName }: { companyName: string | null }) {
   // selected range. The summary numbers come straight from `rows` (already
   // range-filtered by the query above); the per-campaign ad tables need
   // their own fetch each, same endpoint the per-campaign modal uses.
+  //
+  // `rows` lists every campaign ever linked to this account regardless of
+  // range — the date picker only changes which window each campaign's own
+  // spend/impressions/results are computed over (see /api/campaigns), it
+  // never drops a campaign from the list. So a campaign started in August
+  // still shows up (correctly, at $0) in a July-only report. Reports should
+  // only cover campaigns that actually ran in the selected window, so this
+  // filters to ones with real activity — spend, impressions, or results —
+  // in that window before building the PDF.
+  const reportRows = rows.filter(
+    (c) =>
+      Number(c.spend ?? "0") > 0 ||
+      Number(c.impressions ?? "0") > 0 ||
+      Number(c.results ?? "0") > 0,
+  );
+
   async function handleGlobalReport() {
     if (generatingReport || rows.length === 0) return;
     setGeneratingReport(true);
     try {
-      const summaries: ReportCampaignSummary[] = rows.map((c) => ({
+      const summaries: ReportCampaignSummary[] = reportRows.map((c) => ({
         name: c.name,
         status: c.metaStatus,
         spend: c.spend ?? "0",
@@ -3444,7 +3460,7 @@ function CampanasPanel({ companyName }: { companyName: string | null }) {
         costPerResult: c.costPerResult ?? "0",
       }));
       const sections: ReportCampaignSection[] = await Promise.all(
-        rows.map(async (c) => {
+        reportRows.map(async (c) => {
           const params = new URLSearchParams({ id: c.id });
           if (range) {
             params.set("since", range.since);
