@@ -368,6 +368,30 @@ export function CampaignJourneyScroller() {
   );
 }
 
+// A smooth S-curve, built from alternating cubic-bezier half-waves that
+// cross the centerline at each boundary — used for the mobile journey's
+// connecting line instead of a straight rail, so it reads as a winding
+// path rather than a ruler line. width/height are viewBox units; with
+// preserveAspectRatio="none" on the <svg>, height stretches to whatever
+// the real content height ends up being (label text wraps differently per
+// language) while the horizontal swing stays fixed.
+function wavyPath(width: number, height: number, waves: number) {
+  const cx = width / 2;
+  const amp = width / 2 - 4;
+  const step = height / waves;
+  let d = `M ${cx} 0`;
+  for (let i = 0; i < waves; i++) {
+    const y0 = i * step;
+    const y1 = y0 + step;
+    const x = i % 2 === 0 ? cx + amp : cx - amp;
+    d += ` C ${x} ${y0 + step * 0.15}, ${x} ${y1 - step * 0.15}, ${cx} ${y1}`;
+  }
+  return d;
+}
+
+const JOURNEY_LINE_WIDTH = 76;
+const JOURNEY_LINE_PATH = wavyPath(JOURNEY_LINE_WIDTH, 1000, 7);
+
 // Mobile counterpart to CampaignJourneyScroller: the same three steps (piece
 // → Meta Ads campaign → WhatsApp inbox), just stacked in normal flow with a
 // connecting line instead of pinned/split by scroll — see the file banner
@@ -376,13 +400,26 @@ export function CampaignJourneyMobile() {
   const { t } = useLanguage();
   return (
     <div className="relative mt-14 flex flex-col items-center lg:hidden">
-      {/* One continuous rail behind the whole stack — from step 1's badge
-          down to the last phone — instead of a short segment per gap, so
-          the three steps read as one connected line, not floating pieces. */}
-      <div
+      {/* One continuous winding line behind the whole stack — from step 1's
+          badge down to the last phone — instead of a short segment per gap,
+          so the three steps read as one connected path, not floating
+          pieces or a stiff ruler-straight line. */}
+      <svg
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-3 bottom-0 z-0 w-0.5 -translate-x-1/2 bg-wit-blue/25"
-      />
+        className="pointer-events-none absolute left-1/2 top-3 bottom-0 z-0 -translate-x-1/2"
+        style={{ width: JOURNEY_LINE_WIDTH }}
+        viewBox={`0 0 ${JOURNEY_LINE_WIDTH} 1000`}
+        preserveAspectRatio="none"
+      >
+        <path
+          d={JOURNEY_LINE_PATH}
+          fill="none"
+          stroke="#0047FF"
+          strokeOpacity={0.25}
+          strokeWidth={2}
+          strokeLinecap="round"
+        />
+      </svg>
       {NEW_PHONES.map((p, i) => (
         <div key={p.key} className="relative z-10 flex flex-col items-center">
           {i > 0 ? <div className="h-8" /> : null}
