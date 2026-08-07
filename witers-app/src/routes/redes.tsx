@@ -25,7 +25,7 @@ export const Route = createFileRoute("/redes")({
       {
         name: "description",
         content:
-          "El equipo de WITERS administra tus redes sociales para que tu marca se vea y se sienta igual en Instagram, TikTok y YouTube — contenido constante, diseñado para generar confianza y presencia digital.",
+          "El equipo de WITERS administra tus redes sociales para que tu marca se vea y se sienta igual en Instagram, Facebook, TikTok y YouTube — contenido constante, diseñado para generar confianza y presencia digital.",
       },
     ],
   }),
@@ -67,8 +67,8 @@ function Hero() {
         </h1>
         <p className="wit-rise wit-rise-d2 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-wit-gray">
           {t(
-            "WITERS administra tus redes sociales para que tu marca se vea y se sienta igual en Instagram, TikTok y YouTube — mismo estilo, mismo tono, el mismo reconocimiento en todos los canales donde tu cliente te encuentra.",
-            "WITERS manages your social media so your brand looks and feels the same on Instagram, TikTok and YouTube — same style, same tone, the same recognition on every channel where your customer finds you.",
+            "WITERS administra tus redes sociales para que tu marca se vea y se sienta igual en Instagram, Facebook, TikTok y YouTube — mismo estilo, mismo tono, el mismo reconocimiento en todos los canales donde tu cliente te encuentra.",
+            "WITERS manages your social media so your brand looks and feels the same on Instagram, Facebook, TikTok and YouTube — same style, same tone, the same recognition on every channel where your customer finds you.",
           )}
         </p>
         <div className="wit-rise wit-rise-d2 mt-9 flex flex-col items-center gap-5">

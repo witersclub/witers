@@ -1,11 +1,11 @@
-// Three faithful-feeling mockups of one brand's channels — Instagram, TikTok
-// and YouTube — all carrying the exact same visual identity (avatar mark,
-// color palette, tone of voice) so the "unicidad de marca" claim on /redes
-// is something you can see, not just read. Reuses the same fictional
+// Faithful-feeling mockups of one brand's channels — Instagram, Facebook,
+// TikTok and YouTube — all carrying the exact same visual identity (avatar
+// mark, color palette, tone of voice) so the "unicidad de marca" claim on
+// /redes is something you can see, not just read. Reuses the same fictional
 // example client ("Boutique Alma") and gradient palette already used in
 // panel-preview-showcase.tsx and campaign-journey-scroller.tsx, so the whole
-// site's mockups feel like one consistent story instead of three different
-// invented brands.
+// site's mockups feel like one consistent story instead of several
+// unrelated invented brands.
 import type { ReactNode } from "react";
 import {
   Bookmark,
@@ -145,6 +145,83 @@ function InstagramScreen() {
   );
 }
 
+/* ---------------- Facebook ---------------- */
+
+function FacebookScreen() {
+  const { t } = useLanguage();
+  return (
+    <div className="flex h-full flex-col bg-white text-wit-ink">
+      <div className="relative h-[88px]" style={{ background: BRAND_GRADIENTS[1] }}>
+        <span
+          className="absolute -bottom-6 left-3 flex h-14 w-14 items-center justify-center rounded-full border-[3px] border-white p-[2px]"
+          style={{ background: BRAND_GRADIENTS[0] }}
+        >
+          <span className="flex h-full w-full items-center justify-center rounded-full bg-white text-base font-extrabold text-[#8a4f57]">
+            A
+          </span>
+        </span>
+      </div>
+
+      <div className="px-3 pb-2 pt-8">
+        <p className="text-[13px] font-extrabold leading-tight">Boutique Alma</p>
+        <p className="text-[8px] text-wit-gray">
+          {t("Tienda de ropa · Página", "Clothing store · Page")}
+        </p>
+        <p className="mt-0.5 text-[8px] text-wit-gray">
+          {t("12.4K me gusta · 12.8K seguidores", "12.4K likes · 12.8K followers")}
+        </p>
+
+        <div className="mt-2.5 flex gap-1.5">
+          <span className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#1877F2] py-1.5 text-[9px] font-bold text-white">
+            <ThumbsUp className="h-3 w-3" strokeWidth={2.4} />
+            {t("Me gusta", "Like")}
+          </span>
+          <span className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-wit-mist/60 py-1.5 text-[9px] font-bold text-wit-ink">
+            <MessageCircle className="h-3 w-3" strokeWidth={2.4} />
+            {t("Mensaje", "Message")}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex gap-4 border-y border-wit-ink/10 px-3 py-2 text-[8.5px] font-bold text-wit-gray">
+        <span className="border-b-2 border-[#1877F2] pb-1.5 text-[#1877F2]">
+          {t("Publicaciones", "Posts")}
+        </span>
+        <span>{t("Info", "About")}</span>
+        <span>{t("Fotos", "Photos")}</span>
+      </div>
+
+      <div className="flex-1 overflow-hidden px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <BrandMark size={22} />
+          <div className="leading-tight">
+            <p className="text-[9px] font-bold">Boutique Alma</p>
+            <p className="text-[7px] text-wit-gray">{t("hace 2 h · 🌐", "2h · 🌐")}</p>
+          </div>
+        </div>
+        <p className="mt-1.5 text-[8.5px] leading-snug">
+          {t(
+            "Nueva colección de verano ya disponible ☀️👗",
+            "New summer collection now available ☀️👗",
+          )}
+        </p>
+        <div
+          className="mt-2 h-[108px] w-full rounded-lg"
+          style={{ background: BRAND_GRADIENTS[0] }}
+        />
+        <div className="mt-2 flex items-center justify-between text-[8px] text-wit-gray">
+          <span className="flex items-center gap-1">
+            <ThumbsUp className="h-3 w-3 text-[#1877F2]" strokeWidth={2.2} />
+            428
+          </span>
+          <span>86 {t("comentarios", "comments")}</span>
+          <span>32 {t("veces compartido", "shares")}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- TikTok ---------------- */
 
 function TikTokScreen() {
@@ -265,6 +342,12 @@ export function SocialChannelsShowcase() {
           <InstagramScreen />
         </PhoneFrame>
         <p className="text-sm font-bold text-wit-ink">Instagram</p>
+      </div>
+      <div className="flex flex-col items-center gap-3">
+        <PhoneFrame>
+          <FacebookScreen />
+        </PhoneFrame>
+        <p className="text-sm font-bold text-wit-ink">Facebook</p>
       </div>
       <div className="flex flex-col items-center gap-3">
         <PhoneFrame>
