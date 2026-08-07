@@ -1281,30 +1281,6 @@ function PanelContent() {
                     ) : null}
                   </div>
 
-                  {/* The mobile bottom nav's central "talk to Wit" orb has
-                      no desktop equivalent otherwise — this floats it in
-                      the gap between the two columns, roughly level with
-                      the quick-create row above, so starting a piece is
-                      just as reachable here as on mobile. */}
-                  <div className="flex shrink-0 flex-col items-center justify-center gap-2 self-center">
-                    <button
-                      type="button"
-                      onClick={openChat}
-                      aria-label={t("Hablar con Wit", "Talk to Wit")}
-                      className="wit-orb flex h-20 w-20 items-center justify-center overflow-hidden rounded-full active:scale-95"
-                    >
-                      <span
-                        className="wit-float-soft flex items-center justify-center"
-                        style={{ filter: "brightness(0) invert(1)" }}
-                      >
-                        <WMark size={32} />
-                      </span>
-                    </button>
-                    <span className="text-xs font-bold text-wit-ink">
-                      {t("Hablar con Wit", "Talk to Wit")}
-                    </span>
-                  </div>
-
                   {allRecentCreatives.length > 0 ? (
                     <div className="shrink-0 [perspective:1200px]">
                       <p className="mb-3 text-center text-sm font-bold text-wit-ink">
