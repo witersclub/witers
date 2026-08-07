@@ -90,6 +90,7 @@ import { Route as ApiAdminUpdateBrandProfileRouteImport } from './routes/api/adm
 import { Route as ApiAdminUnlinkCampaignRouteImport } from './routes/api/admin/unlink-campaign'
 import { Route as ApiAdminToggleLogoVisibilityRouteImport } from './routes/api/admin/toggle-logo-visibility'
 import { Route as ApiAdminSiteEventsSummaryRouteImport } from './routes/api/admin/site-events-summary'
+import { Route as ApiAdminSiteEventsFeedRouteImport } from './routes/api/admin/site-events-feed'
 import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overview'
 import { Route as ApiAdminMetaCampaignsRouteImport } from './routes/api/admin/meta-campaigns'
 import { Route as ApiAdminLiveVisitorsRouteImport } from './routes/api/admin/live-visitors'
@@ -533,6 +534,11 @@ const ApiAdminSiteEventsSummaryRoute =
     path: '/api/admin/site-events-summary',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAdminSiteEventsFeedRoute = ApiAdminSiteEventsFeedRouteImport.update({
+  id: '/api/admin/site-events-feed',
+  path: '/api/admin/site-events-feed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminOverviewRoute = ApiAdminOverviewRouteImport.update({
   id: '/api/admin/overview',
   path: '/api/admin/overview',
@@ -749,6 +755,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/site-events-feed': typeof ApiAdminSiteEventsFeedRoute
   '/api/admin/site-events-summary': typeof ApiAdminSiteEventsSummaryRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/unlink-campaign': typeof ApiAdminUnlinkCampaignRoute
@@ -859,6 +866,7 @@ export interface FileRoutesByTo {
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/site-events-feed': typeof ApiAdminSiteEventsFeedRoute
   '/api/admin/site-events-summary': typeof ApiAdminSiteEventsSummaryRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/unlink-campaign': typeof ApiAdminUnlinkCampaignRoute
@@ -970,6 +978,7 @@ export interface FileRoutesById {
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/site-events-feed': typeof ApiAdminSiteEventsFeedRoute
   '/api/admin/site-events-summary': typeof ApiAdminSiteEventsSummaryRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
   '/api/admin/unlink-campaign': typeof ApiAdminUnlinkCampaignRoute
@@ -1082,6 +1091,7 @@ export interface FileRouteTypes {
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
+    | '/api/admin/site-events-feed'
     | '/api/admin/site-events-summary'
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/unlink-campaign'
@@ -1192,6 +1202,7 @@ export interface FileRouteTypes {
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
+    | '/api/admin/site-events-feed'
     | '/api/admin/site-events-summary'
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/unlink-campaign'
@@ -1302,6 +1313,7 @@ export interface FileRouteTypes {
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
+    | '/api/admin/site-events-feed'
     | '/api/admin/site-events-summary'
     | '/api/admin/toggle-logo-visibility'
     | '/api/admin/unlink-campaign'
@@ -1413,6 +1425,7 @@ export interface RootRouteChildren {
   ApiAdminLiveVisitorsRoute: typeof ApiAdminLiveVisitorsRoute
   ApiAdminMetaCampaignsRoute: typeof ApiAdminMetaCampaignsRoute
   ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
+  ApiAdminSiteEventsFeedRoute: typeof ApiAdminSiteEventsFeedRoute
   ApiAdminSiteEventsSummaryRoute: typeof ApiAdminSiteEventsSummaryRoute
   ApiAdminToggleLogoVisibilityRoute: typeof ApiAdminToggleLogoVisibilityRoute
   ApiAdminUnlinkCampaignRoute: typeof ApiAdminUnlinkCampaignRoute
@@ -2022,6 +2035,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminSiteEventsSummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/site-events-feed': {
+      id: '/api/admin/site-events-feed'
+      path: '/api/admin/site-events-feed'
+      fullPath: '/api/admin/site-events-feed'
+      preLoaderRoute: typeof ApiAdminSiteEventsFeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/overview': {
       id: '/api/admin/overview'
       path: '/api/admin/overview'
@@ -2285,6 +2305,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminLiveVisitorsRoute: ApiAdminLiveVisitorsRoute,
   ApiAdminMetaCampaignsRoute: ApiAdminMetaCampaignsRoute,
   ApiAdminOverviewRoute: ApiAdminOverviewRoute,
+  ApiAdminSiteEventsFeedRoute: ApiAdminSiteEventsFeedRoute,
   ApiAdminSiteEventsSummaryRoute: ApiAdminSiteEventsSummaryRoute,
   ApiAdminToggleLogoVisibilityRoute: ApiAdminToggleLogoVisibilityRoute,
   ApiAdminUnlinkCampaignRoute: ApiAdminUnlinkCampaignRoute,

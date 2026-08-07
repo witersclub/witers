@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowRight,
   ClipboardList,
   Clock,
   CreditCard,
+  Eye,
   GalleryHorizontal,
   Globe,
+  History,
   Image,
   LayoutDashboard,
   Link2Off,
@@ -2727,6 +2729,189 @@ type WhatsappClickStats = { today: number; last7Days: number; total: number };
 type TopPageRow = { path: string; n: number };
 type TopClickRow = { label: string; path: string; n: number };
 
+// Longer-range relative time for the "Actividad" feed, where rows can be
+// minutes/hours/days old — secondsAgo/formatDuration above are for the
+// "En vivo" table, which never goes past ~a day.
+function timeAgo(iso: string): string {
+  const diffSeconds = Math.max(0, Math.round((Date.now() - new Date(`${iso}Z`).getTime()) / 1000));
+  if (diffSeconds < 60) return "justo ahora";
+  const minutes = Math.floor(diffSeconds / 60);
+  if (minutes < 60) return `hace ${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `hace ${days}d`;
+  return new Date(`${iso}Z`).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+}
+
+type SiteEventRow = {
+  id: string;
+  type: string;
+  path: string;
+  label: string | null;
+  country: string | null;
+  visitor_id: string | null;
+  user_name: string | null;
+  user_role: string | null;
+  created_at: string;
+};
+
+const ACTIVITY_FILTERS: { key: string; label: string }[] = [
+  { key: "all", label: "Todos" },
+  { key: "page_view", label: "Páginas vistas" },
+  { key: "whatsapp_click", label: "WhatsApp" },
+  { key: "cta_click", label: "Otros clics" },
+];
+
+function roleLabel(role: string | null): string {
+  if (role === "admin") return "Admin";
+  if (role === "designer") return "Diseñador";
+  if (role === "member") return "Miembro";
+  return "";
+}
+
+function eventDescription(e: SiteEventRow): string {
+  if (e.type === "whatsapp_click") return "Clic en WhatsApp";
+  if (e.type === "cta_click") return e.label ? `Clic: ${e.label}` : "Clic en botón";
+  return "Vio página";
+}
+
+function eventIcon(type: string) {
+  if (type === "whatsapp_click") return MessageCircle;
+  if (type === "cta_click") return MousePointerClick;
+  return Eye;
+}
+
+function eventBadgeClass(type: string): string {
+  if (type === "whatsapp_click") return "bg-emerald-50 text-emerald-700";
+  if (type === "cta_click") return "bg-wit-blue/10 text-wit-blue";
+  return "bg-wit-mist/50 text-wit-gray";
+}
+
+// Row-per-event history feed — the "who did what, where, when" detail
+// behind the aggregate cards/lists above it in Indicadores. Backed by
+// /api/admin/site-events-feed (paginated over the same site_events log).
+function ActivityFeed() {
+  const [filter, setFilter] = useState("all");
+
+  const query = useInfiniteQuery({
+    queryKey: ["site-events-feed", filter],
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams({ offset: String(pageParam) });
+      if (filter !== "all") params.set("type", filter);
+      const res = await fetch(`/api/admin/site-events-feed?${params}`, {
+        credentials: "include",
+      });
+      if (!res.ok) return { ok: false, events: [] as SiteEventRow[], hasMore: false };
+      return (await res.json()) as { ok: boolean; events: SiteEventRow[]; hasMore: boolean };
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.hasMore ? pages.reduce((n, p) => n + p.events.length, 0) : undefined,
+    refetchInterval: 30_000,
+  });
+
+  const events = query.data?.pages.flatMap((p) => p.events) ?? [];
+
+  return (
+    <div className="mt-10">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-wit-ink">
+          <History size={20} strokeWidth={2.3} className="text-wit-blue" />
+          Actividad
+        </h2>
+      </div>
+      <p className="mt-1 text-sm text-wit-gray">
+        Cada movimiento registrado: quién, qué hizo, en qué página y cuándo.
+      </p>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {ACTIVITY_FILTERS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setFilter(f.key)}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+              filter === f.key
+                ? "bg-wit-ink text-white"
+                : "wit-glass text-wit-gray hover:text-wit-ink"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {query.isLoading ? (
+        <div className="mt-4 h-40 animate-pulse rounded-2xl bg-white" />
+      ) : events.length === 0 ? (
+        <div className="wit-glass mt-4 rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
+          <p className="text-base font-semibold text-wit-ink">
+            Todavía no hay actividad registrada.
+          </p>
+        </div>
+      ) : (
+        <div className="wit-glass mt-4 overflow-x-auto rounded-2xl shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-wit-ink/10 text-xs uppercase tracking-wider text-wit-gray">
+                <th className="px-5 py-3.5">Quién</th>
+                <th className="px-5 py-3.5">Evento</th>
+                <th className="px-5 py-3.5">Página</th>
+                <th className="px-5 py-3.5">País</th>
+                <th className="px-5 py-3.5">Cuándo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((e) => {
+                const Icon = eventIcon(e.type);
+                const role = roleLabel(e.user_role);
+                return (
+                  <tr key={e.id} className="border-b border-wit-ink/5 last:border-0">
+                    <td className="px-5 py-3.5">
+                      {e.user_name ? (
+                        <>
+                          <p className="font-semibold text-wit-ink">{e.user_name}</p>
+                          {role ? <p className="text-xs text-wit-gray">{role}</p> : null}
+                        </>
+                      ) : (
+                        <p className="text-wit-gray">Visitante</p>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${eventBadgeClass(e.type)}`}
+                      >
+                        <Icon size={13} strokeWidth={2.3} />
+                        {eventDescription(e)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 font-wit-mono text-xs text-wit-ink">{e.path}</td>
+                    <td className="px-5 py-3.5">{e.country ?? "—"}</td>
+                    <td className="px-5 py-3.5 text-wit-gray">{timeAgo(e.created_at)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {query.hasNextPage ? (
+            <div className="border-t border-wit-ink/5 p-4 text-center">
+              <button
+                type="button"
+                onClick={() => query.fetchNextPage()}
+                disabled={query.isFetchingNextPage}
+                className="rounded-full bg-wit-mist/50 px-4 py-2 text-xs font-bold text-wit-ink transition hover:bg-wit-mist disabled:opacity-50"
+              >
+                {query.isFetchingNextPage ? "Cargando…" : "Cargar más"}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // "Indicadores" (formerly just "En vivo") — Wix-style "who's browsing
 // right now" plus click counts for things worth watching while running
 // ads (currently just WhatsApp). Polls every 4s for live sessions (see
@@ -2877,6 +3062,8 @@ function IndicadoresPanel() {
           </table>
         </div>
       )}
+
+      <ActivityFeed />
     </div>
   );
 }
