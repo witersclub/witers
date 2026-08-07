@@ -6,7 +6,7 @@
 // panel-preview-showcase.tsx and campaign-journey-scroller.tsx, so the whole
 // site's mockups feel like one consistent story instead of several
 // unrelated invented brands.
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import {
   Bookmark,
   Grid3x3,
@@ -19,10 +19,12 @@ import {
   PlusSquare,
   Search,
   Share2,
+  Sparkles,
   ThumbsUp,
   UserCircle2,
 } from "lucide-react";
 
+import { smoothstep, useScrollProgress } from "./campaign-journey-scroller";
 import { useLanguage } from "../../lib/i18n";
 
 const BRAND_GRADIENTS = [
@@ -334,32 +336,82 @@ function YouTubeScreen() {
 
 /* ---------------- Showcase row ---------------- */
 
+const CHANNELS: { key: string; label: string; node: ReactNode; tv?: boolean }[] = [
+  { key: "instagram", label: "Instagram", node: <InstagramScreen /> },
+  { key: "facebook", label: "Facebook", node: <FacebookScreen /> },
+  { key: "tiktok", label: "TikTok", node: <TikTokScreen /> },
+  { key: "youtube", label: "YouTube", node: <YouTubeScreen />, tv: true },
+];
+
+function ChannelMockup({ label, node, tv }: { label: string; node: ReactNode; tv?: boolean }) {
+  return (
+    <div className={`flex flex-col items-center gap-3 ${tv ? "self-center" : ""}`}>
+      {tv ? <TvFrame>{node}</TvFrame> : <PhoneFrame>{node}</PhoneFrame>}
+      <p className="text-sm font-bold text-wit-ink">{label}</p>
+    </div>
+  );
+}
+
 export function SocialChannelsShowcase() {
   return (
-    <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-12">
-      <div className="flex flex-col items-center gap-3">
-        <PhoneFrame>
-          <InstagramScreen />
-        </PhoneFrame>
-        <p className="text-sm font-bold text-wit-ink">Instagram</p>
+    <>
+      {/* Mobile/tablet: every mockup shown at once, no scroll-pin — same
+          reasoning as QueImplicaScroller (redes.tsx) and
+          CampaignJourneyScroller (/pauta): pinned-scroll fights mobile's
+          address-bar collapse and momentum scrolling. */}
+      <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-12 lg:hidden">
+        {CHANNELS.map((c) => (
+          <ChannelMockup key={c.key} label={c.label} node={c.node} tv={c.tv} />
+        ))}
       </div>
-      <div className="flex flex-col items-center gap-3">
-        <PhoneFrame>
-          <FacebookScreen />
-        </PhoneFrame>
-        <p className="text-sm font-bold text-wit-ink">Facebook</p>
+      <div className="hidden lg:block">
+        <SocialChannelsScroller />
       </div>
-      <div className="flex flex-col items-center gap-3">
-        <PhoneFrame>
-          <TikTokScreen />
-        </PhoneFrame>
-        <p className="text-sm font-bold text-wit-ink">TikTok</p>
-      </div>
-      <div className="flex flex-col items-center gap-3 self-center">
-        <TvFrame>
-          <YouTubeScreen />
-        </TvFrame>
-        <p className="text-sm font-bold text-wit-ink">YouTube</p>
+    </>
+  );
+}
+
+// Desktop-only: pins the four mockups in place and reveals them one at a
+// time, staggered, as the client scrolls — the same mechanic as
+// QueImplicaScroller further down /redes (see that component for why the
+// scroll-progress math lives in campaign-journey-scroller.tsx instead of
+// being re-derived per section).
+function SocialChannelsScroller() {
+  const { t } = useLanguage();
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const progress = useScrollProgress(sectionRef);
+
+  const REVEAL_STARTS = [0, 0.22, 0.44, 0.66];
+  const REVEAL_DURATION = 0.4;
+
+  return (
+    <div ref={sectionRef} className="relative" style={{ height: "240vh" }}>
+      <div className="sticky top-28 flex h-[70vh] min-h-[560px] flex-col items-center justify-center">
+        <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-12">
+          {CHANNELS.map((c, i) => {
+            const revealT = smoothstep(
+              Math.min(1, Math.max(0, (progress - REVEAL_STARTS[i]) / REVEAL_DURATION)),
+            );
+            return (
+              <div
+                key={c.key}
+                style={{
+                  opacity: revealT,
+                  transform: `translateY(${(1 - revealT) * 28}px)`,
+                }}
+              >
+                <ChannelMockup label={c.label} node={c.node} tv={c.tv} />
+              </div>
+            );
+          })}
+        </div>
+
+        {progress < 0.05 ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-wit-gray">
+            <Sparkles className="h-3.5 w-3.5" strokeWidth={2.2} />
+            {t("Sigue bajando", "Keep scrolling")}
+          </div>
+        ) : null}
       </div>
     </div>
   );
