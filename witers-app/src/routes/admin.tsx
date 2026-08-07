@@ -2744,23 +2744,37 @@ function timeAgo(iso: string): string {
   return new Date(`${iso}Z`).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
 }
 
-type SiteEventRow = {
-  id: string;
-  type: string;
-  path: string;
-  label: string | null;
-  country: string | null;
-  visitor_id: string | null;
-  user_name: string | null;
-  user_role: string | null;
-  created_at: string;
-};
+type ActivityEntry =
+  | {
+      kind: "session";
+      id: string;
+      userName: string | null;
+      userRole: string | null;
+      country: string | null;
+      pageCount: number;
+      lastPath: string;
+      startedAt: string;
+      endedAt: string;
+    }
+  | {
+      kind: "click";
+      id: string;
+      type: "whatsapp_click" | "cta_click";
+      label: string | null;
+      path: string;
+      country: string | null;
+      userName: string | null;
+      userRole: string | null;
+      createdAt: string;
+    };
 
-const ACTIVITY_FILTERS: { key: string; label: string }[] = [
+// "Clics" first — the actionable default, so the feed doesn't open buried
+// in page-view noise. "Todos" and "Páginas vistas" (grouped into sessions
+// server-side, see site-events-feed.ts) are one tap away for drilling in.
+const ACTIVITY_FILTERS: { key: "clicks" | "all" | "page_view"; label: string }[] = [
+  { key: "clicks", label: "Clics" },
   { key: "all", label: "Todos" },
   { key: "page_view", label: "Páginas vistas" },
-  { key: "whatsapp_click", label: "WhatsApp" },
-  { key: "cta_click", label: "Otros clics" },
 ];
 
 function roleLabel(role: string | null): string {
@@ -2770,48 +2784,31 @@ function roleLabel(role: string | null): string {
   return "";
 }
 
-function eventDescription(e: SiteEventRow): string {
-  if (e.type === "whatsapp_click") return "Clic en WhatsApp";
-  if (e.type === "cta_click") return e.label ? `Clic: ${e.label}` : "Clic en botón";
-  return "Vio página";
-}
-
-function eventIcon(type: string) {
-  if (type === "whatsapp_click") return MessageCircle;
-  if (type === "cta_click") return MousePointerClick;
-  return Eye;
-}
-
-function eventBadgeClass(type: string): string {
-  if (type === "whatsapp_click") return "bg-emerald-50 text-emerald-700";
-  if (type === "cta_click") return "bg-wit-blue/10 text-wit-blue";
-  return "bg-wit-mist/50 text-wit-gray";
-}
-
 // Row-per-event history feed — the "who did what, where, when" detail
 // behind the aggregate cards/lists above it in Indicadores. Backed by
-// /api/admin/site-events-feed (paginated over the same site_events log).
+// /api/admin/site-events-feed, which groups page views into one row per
+// visit (see that file) so this never turns into a wall of duplicate
+// "vio /" rows from the same person.
 function ActivityFeed() {
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<"clicks" | "all" | "page_view">("clicks");
 
   const query = useInfiniteQuery({
     queryKey: ["site-events-feed", filter],
     queryFn: async ({ pageParam }) => {
-      const params = new URLSearchParams({ offset: String(pageParam) });
-      if (filter !== "all") params.set("type", filter);
+      const params = new URLSearchParams({ offset: String(pageParam), filter });
       const res = await fetch(`/api/admin/site-events-feed?${params}`, {
         credentials: "include",
       });
-      if (!res.ok) return { ok: false, events: [] as SiteEventRow[], hasMore: false };
-      return (await res.json()) as { ok: boolean; events: SiteEventRow[]; hasMore: boolean };
+      if (!res.ok) return { ok: false, entries: [] as ActivityEntry[], hasMore: false };
+      return (await res.json()) as { ok: boolean; entries: ActivityEntry[]; hasMore: boolean };
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, pages) =>
-      lastPage.hasMore ? pages.reduce((n, p) => n + p.events.length, 0) : undefined,
+      lastPage.hasMore ? pages.reduce((n, p) => n + p.entries.length, 0) : undefined,
     refetchInterval: 30_000,
   });
 
-  const events = query.data?.pages.flatMap((p) => p.events) ?? [];
+  const entries = query.data?.pages.flatMap((p) => p.entries) ?? [];
 
   return (
     <div className="mt-10">
@@ -2844,7 +2841,7 @@ function ActivityFeed() {
 
       {query.isLoading ? (
         <div className="mt-4 h-40 animate-pulse rounded-2xl bg-white" />
-      ) : events.length === 0 ? (
+      ) : entries.length === 0 ? (
         <div className="wit-glass mt-4 rounded-3xl border border-dashed border-wit-ink/15 p-10 text-center">
           <p className="text-base font-semibold text-wit-ink">
             Todavía no hay actividad registrada.
@@ -2863,15 +2860,32 @@ function ActivityFeed() {
               </tr>
             </thead>
             <tbody>
-              {events.map((e) => {
-                const Icon = eventIcon(e.type);
-                const role = roleLabel(e.user_role);
+              {entries.map((e) => {
+                const role = roleLabel(e.userRole);
+                const isSession = e.kind === "session";
+                const Icon = isSession
+                  ? Eye
+                  : e.type === "whatsapp_click"
+                    ? MessageCircle
+                    : MousePointerClick;
+                const badgeClass = isSession
+                  ? "bg-wit-mist/50 text-wit-gray"
+                  : e.type === "whatsapp_click"
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-wit-blue/10 text-wit-blue";
+                const description = isSession
+                  ? `Navegó ${e.pageCount} ${e.pageCount === 1 ? "página" : "páginas"}`
+                  : e.type === "whatsapp_click"
+                    ? "Clic en WhatsApp"
+                    : e.label
+                      ? `Clic: ${e.label}`
+                      : "Clic en botón";
                 return (
                   <tr key={e.id} className="border-b border-wit-ink/5 last:border-0">
                     <td className="px-5 py-3.5">
-                      {e.user_name ? (
+                      {e.userName ? (
                         <>
-                          <p className="font-semibold text-wit-ink">{e.user_name}</p>
+                          <p className="font-semibold text-wit-ink">{e.userName}</p>
                           {role ? <p className="text-xs text-wit-gray">{role}</p> : null}
                         </>
                       ) : (
@@ -2880,15 +2894,19 @@ function ActivityFeed() {
                     </td>
                     <td className="px-5 py-3.5">
                       <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${eventBadgeClass(e.type)}`}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${badgeClass}`}
                       >
                         <Icon size={13} strokeWidth={2.3} />
-                        {eventDescription(e)}
+                        {description}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 font-wit-mono text-xs text-wit-ink">{e.path}</td>
+                    <td className="px-5 py-3.5 font-wit-mono text-xs text-wit-ink">
+                      {isSession ? e.lastPath : e.path}
+                    </td>
                     <td className="px-5 py-3.5">{e.country ?? "—"}</td>
-                    <td className="px-5 py-3.5 text-wit-gray">{timeAgo(e.created_at)}</td>
+                    <td className="px-5 py-3.5 text-wit-gray">
+                      {timeAgo(isSession ? e.endedAt : e.createdAt)}
+                    </td>
                   </tr>
                 );
               })}
