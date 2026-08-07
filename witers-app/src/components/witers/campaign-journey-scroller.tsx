@@ -169,8 +169,11 @@ const NEW_PHONES = [
   },
 ];
 
-// progress: 0 = everything stacked/centered as one, 1 = fully split out.
-function useScrollProgress(sectionRef: React.RefObject<HTMLDivElement | null>) {
+// progress: 0 = section just entered the pinned range, 1 = fully scrolled
+// through it. Shared with any other scroll-pinned reveal on the site (see
+// redes.tsx's step-by-step scroller) so the same scroll-tracking math isn't
+// duplicated per section.
+export function useScrollProgress(sectionRef: React.RefObject<HTMLDivElement | null>) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -205,7 +208,7 @@ function useScrollProgress(sectionRef: React.RefObject<HTMLDivElement | null>) {
 // Gentle smoothstep, not an aggressive ease-out — the split should track
 // the scroll wheel closely across the whole pinned range instead of
 // finishing in the first third and leaving a long "dead" scroll after.
-const smoothstep = (x: number) => x * x * (3 - 2 * x);
+export const smoothstep = (x: number) => x * x * (3 - 2 * x);
 
 export function CampaignJourneyScroller() {
   const { t } = useLanguage();

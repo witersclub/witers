@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useRef } from "react";
 import {
   Calendar,
   GalleryHorizontal,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
+import { smoothstep, useScrollProgress } from "../components/witers/campaign-journey-scroller";
 import { SocialChannelsShowcase } from "../components/witers/social-mockups";
 import { MEMBERSHIP_PLANS } from "../lib/membership-plans";
 import { useMe } from "../lib/witers-client";
@@ -159,7 +161,11 @@ function QueImplica() {
           </p>
         </div>
 
-        <ol className="mx-auto mt-16 grid max-w-5xl gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Mobile/tablet: plain static grid — a pinned-scroll reveal fights
+            mobile's address-bar collapse and momentum scrolling (same
+            reasoning as CampaignJourneyScroller on /pauta), so small
+            screens just see every step at once instead. */}
+        <ol className="mx-auto mt-16 grid max-w-5xl gap-10 sm:grid-cols-2 lg:hidden">
           {PASOS.map((p, i) => (
             <li key={p.title.es} className="relative">
               <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-mist/50 text-wit-blue">
@@ -175,8 +181,72 @@ function QueImplica() {
             </li>
           ))}
         </ol>
+
+        <div className="hidden lg:block">
+          <QueImplicaScroller />
+        </div>
       </div>
     </section>
+  );
+}
+
+// Desktop-only: pins the 4-step grid in place and reveals each step,
+// staggered, as the client scrolls through a tall spacer — instead of all
+// four just being visible at once. Reuses CampaignJourneyScroller's
+// scroll-progress math (see /pauta's hero) rather than re-deriving it.
+function QueImplicaScroller() {
+  const { t } = useLanguage();
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const progress = useScrollProgress(sectionRef);
+
+  // Each step's reveal window overlaps the next's start a little, so the
+  // grid visibly builds 1 → 2 → 3 → 4 instead of popping in all together
+  // or leaving long dead scroll between steps.
+  const REVEAL_STARTS = [0, 0.22, 0.44, 0.66];
+  const REVEAL_DURATION = 0.4;
+
+  return (
+    <div ref={sectionRef} className="relative mt-16" style={{ height: "260vh" }}>
+      <div className="sticky top-28 flex h-[70vh] min-h-[520px] flex-col justify-center">
+        <ol className="mx-auto grid w-full max-w-4xl grid-cols-2 gap-x-16 gap-y-14">
+          {PASOS.map((p, i) => {
+            const revealT = smoothstep(
+              Math.min(1, Math.max(0, (progress - REVEAL_STARTS[i]) / REVEAL_DURATION)),
+            );
+            return (
+              <li
+                key={p.title.es}
+                className="relative"
+                style={{
+                  opacity: revealT,
+                  transform: `translateY(${(1 - revealT) * 28}px)`,
+                }}
+              >
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-mist/50 text-wit-blue">
+                  <p.icon size={26} strokeWidth={1.75} />
+                </span>
+                <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-wit-blue">
+                  {t("Paso", "Step")} {String(i + 1).padStart(2, "0")}
+                </p>
+                <h3 className="mt-1.5 text-lg font-bold text-wit-ink">
+                  {t(p.title.es, p.title.en)}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-wit-gray">
+                  {t(p.text.es, p.text.en)}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+
+        {progress < 0.05 ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-wit-gray">
+            <Sparkles className="h-3.5 w-3.5" strokeWidth={2.2} />
+            {t("Sigue bajando", "Keep scrolling")}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
