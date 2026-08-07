@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useRef } from "react";
+import { type ReactNode, useRef } from "react";
 import {
   Calendar,
   GalleryHorizontal,
@@ -143,72 +143,86 @@ const PASOS = [
 
 function QueImplica() {
   const { t } = useLanguage();
+  const heading = (
+    <div className="mx-auto max-w-2xl text-center">
+      <p className="text-sm font-bold uppercase tracking-[0.3em] text-wit-gray">
+        {t("Qué implica", "What it means")}
+      </p>
+      <h2 className="wit-underline mt-1 text-4xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
+        {t("Un manejo completo de redes", "A complete social media service")}
+      </h2>
+      <p className="mt-6 text-lg leading-relaxed text-wit-gray">
+        {t(
+          "No es solo subir contenido — es que cada canal comunique lo que tu marca es, de forma constante y reconocible.",
+          "It's not just posting content — it's making sure every channel communicates exactly what your brand is, consistently and recognizably.",
+        )}
+      </p>
+    </div>
+  );
+
   return (
     <section id="que-implica" className="relative bg-white py-20 md:py-28">
       <div className="px-5 md:px-[110px]">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-bold uppercase tracking-[0.3em] text-wit-gray">
-            {t("Qué implica", "What it means")}
-          </p>
-          <h2 className="wit-underline mt-1 text-4xl font-extrabold tracking-tighter text-wit-ink md:text-5xl">
-            {t("Un manejo completo de redes", "A complete social media service")}
-          </h2>
-          <p className="mt-6 text-lg leading-relaxed text-wit-gray">
-            {t(
-              "No es solo subir contenido — es que cada canal comunique lo que tu marca es, de forma constante y reconocible.",
-              "It's not just posting content — it's making sure every channel communicates exactly what your brand is, consistently and recognizably.",
-            )}
-          </p>
+        {/* Mobile/tablet: heading + plain static grid, no scroll-pin — a
+            pinned-scroll reveal fights mobile's address-bar collapse and
+            momentum scrolling (same reasoning as CampaignJourneyScroller on
+            /pauta), so small screens just see everything at once. */}
+        <div className="lg:hidden">
+          {heading}
+          <ol className="mx-auto mt-16 grid max-w-5xl gap-10 sm:grid-cols-2">
+            {PASOS.map((p, i) => (
+              <li key={p.title.es} className="relative">
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-mist/50 text-wit-blue">
+                  <p.icon size={26} strokeWidth={1.75} />
+                </span>
+                <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-wit-blue">
+                  {t("Paso", "Step")} {String(i + 1).padStart(2, "0")}
+                </p>
+                <h3 className="mt-1.5 text-lg font-bold text-wit-ink">
+                  {t(p.title.es, p.title.en)}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-wit-gray">
+                  {t(p.text.es, p.text.en)}
+                </p>
+              </li>
+            ))}
+          </ol>
         </div>
 
-        {/* Mobile/tablet: plain static grid — a pinned-scroll reveal fights
-            mobile's address-bar collapse and momentum scrolling (same
-            reasoning as CampaignJourneyScroller on /pauta), so small
-            screens just see every step at once instead. */}
-        <ol className="mx-auto mt-16 grid max-w-5xl gap-10 sm:grid-cols-2 lg:hidden">
-          {PASOS.map((p, i) => (
-            <li key={p.title.es} className="relative">
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-mist/50 text-wit-blue">
-                <p.icon size={26} strokeWidth={1.75} />
-              </span>
-              <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-wit-blue">
-                {t("Paso", "Step")} {String(i + 1).padStart(2, "0")}
-              </p>
-              <h3 className="mt-1.5 text-lg font-bold text-wit-ink">{t(p.title.es, p.title.en)}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-wit-gray">
-                {t(p.text.es, p.text.en)}
-              </p>
-            </li>
-          ))}
-        </ol>
-
+        {/* Desktop: the heading stays pinned together with the steps as
+            they reveal — the client never scrolls the title away before
+            the steps show up, and it stays on screen for context the whole
+            time the row is building. */}
         <div className="hidden lg:block">
-          <QueImplicaScroller />
+          <QueImplicaScroller heading={heading} />
         </div>
       </div>
     </section>
   );
 }
 
-// Desktop-only: pins the 4-step grid in place and reveals each step,
-// staggered, as the client scrolls through a tall spacer — instead of all
-// four just being visible at once. Reuses CampaignJourneyScroller's
-// scroll-progress math (see /pauta's hero) rather than re-deriving it.
-function QueImplicaScroller() {
+// Desktop-only: pins the heading + a single row of 4 steps in place and
+// reveals each step, staggered, as the client scrolls through a tall
+// spacer — instead of all four just being visible at once, and instead of
+// the heading scrolling out of view before the row even starts. Reuses
+// CampaignJourneyScroller's scroll-progress math (see /pauta's hero)
+// rather than re-deriving it.
+function QueImplicaScroller({ heading }: { heading: ReactNode }) {
   const { t } = useLanguage();
   const sectionRef = useRef<HTMLDivElement>(null);
   const progress = useScrollProgress(sectionRef);
 
   // Each step's reveal window overlaps the next's start a little, so the
-  // grid visibly builds 1 → 2 → 3 → 4 instead of popping in all together
+  // row visibly builds 1 → 2 → 3 → 4 instead of popping in all together
   // or leaving long dead scroll between steps.
   const REVEAL_STARTS = [0, 0.22, 0.44, 0.66];
   const REVEAL_DURATION = 0.4;
 
   return (
-    <div ref={sectionRef} className="relative mt-16" style={{ height: "260vh" }}>
-      <div className="sticky top-28 flex h-[70vh] min-h-[520px] flex-col justify-center">
-        <ol className="mx-auto grid w-full max-w-4xl grid-cols-2 gap-x-16 gap-y-14">
+    <div ref={sectionRef} className="relative" style={{ height: "220vh" }}>
+      <div className="sticky top-24 flex min-h-[600px] flex-col items-center justify-center gap-14">
+        {heading}
+        <ol className="mx-auto grid w-full max-w-6xl grid-cols-4 gap-x-8">
           {PASOS.map((p, i) => {
             const revealT = smoothstep(
               Math.min(1, Math.max(0, (progress - REVEAL_STARTS[i]) / REVEAL_DURATION)),
@@ -222,13 +236,13 @@ function QueImplicaScroller() {
                   transform: `translateY(${(1 - revealT) * 28}px)`,
                 }}
               >
-                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-mist/50 text-wit-blue">
-                  <p.icon size={26} strokeWidth={1.75} />
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-wit-mist/50 text-wit-blue">
+                  <p.icon size={22} strokeWidth={1.75} />
                 </span>
-                <p className="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-wit-blue">
+                <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-wit-blue">
                   {t("Paso", "Step")} {String(i + 1).padStart(2, "0")}
                 </p>
-                <h3 className="mt-1.5 text-lg font-bold text-wit-ink">
+                <h3 className="mt-1.5 text-base font-bold text-wit-ink">
                   {t(p.title.es, p.title.en)}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-wit-gray">
