@@ -28,6 +28,7 @@ export const Route = createFileRoute("/api/public/reviews")({
              WHERE r.status = 'cerrada'
                AND r.satisfaction_rating IS NOT NULL
                AND res.id IS NOT NULL
+               AND u.email != 'agency@brandinghk.com'
              ORDER BY r.satisfaction_submitted_at DESC
              LIMIT 200`,
           )

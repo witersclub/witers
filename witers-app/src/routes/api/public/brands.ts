@@ -16,10 +16,12 @@ export const Route = createFileRoute("/api/public/brands")({
       GET: async () => {
         const baseQuery = `SELECT r.company_name AS company_name, r.logo_key AS logo_key, MAX(r.created_at) AS created_at
              FROM design_requests r
+             JOIN users u ON u.id = r.user_id
              WHERE r.status = 'cerrada'
                AND r.logo_key IS NOT NULL
                AND r.company_name IS NOT NULL
                AND trim(r.company_name) != ''
+               AND u.email != 'agency@brandinghk.com'
                {LOGO_PUBLIC_FILTER}
              GROUP BY lower(trim(r.company_name))
              ORDER BY created_at DESC
