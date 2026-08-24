@@ -100,6 +100,10 @@ type AdminUser = {
   // The client's own Meta ad account id — null means the Campañas admin tab
   // can't pull their live campaigns yet (see /api/admin/meta-campaigns).
   brand_meta_ad_account_id: string | null;
+  // 1/0 (SQLite has no real boolean) — whether this account's pieces/
+  // reviews/logo can show in the homepage's public showcases. See 0039
+  // migration and /api/admin/set-public-showcase.
+  public_showcase: number;
 };
 
 type AdminRequest = {
@@ -2133,6 +2137,32 @@ function EditUserModal({
   const [email, setEmail] = useState(user.email);
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
+  const [publicShowcase, setPublicShowcase] = useState(user.public_showcase === 1);
+  const [showcaseBusy, setShowcaseBusy] = useState(false);
+
+  // Saves immediately on toggle — same "no separate save step" pattern as
+  // activateMembership below, not bundled into the brand form's submit.
+  async function toggleShowcase(next: boolean) {
+    setPublicShowcase(next);
+    setShowcaseBusy(true);
+    try {
+      const res = await fetch("/api/admin/set-public-showcase", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: user.id, publicShowcase: next }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) {
+        setPublicShowcase(!next);
+        return;
+      }
+      onSaved();
+    } catch {
+      setPublicShowcase(!next);
+    } finally {
+      setShowcaseBusy(false);
+    }
+  }
 
   // Clients can't change their own email (see update-name.ts — it needs
   // re-verification we don't have yet), so this is the only way it ever
@@ -2330,6 +2360,24 @@ function EditUserModal({
           ) : null}
         </div>
         {activateMsg ? <p className="mt-2 text-xs text-red-600">{activateMsg}</p> : null}
+
+        <label className="mt-4 flex items-start gap-2.5 rounded-xl bg-wit-mist/40 px-4 py-3">
+          <input
+            type="checkbox"
+            checked={publicShowcase}
+            disabled={showcaseBusy}
+            onChange={(e) => void toggleShowcase(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-wit-blue disabled:opacity-50"
+          />
+          <span>
+            <span className="block text-sm font-semibold text-wit-ink">Mostrar en witers.com</span>
+            <span className="block text-[11px] text-wit-gray">
+              Sus piezas entregadas, reseña y logotipo pueden aparecer en la página pública
+              (carrusel de clientes, reseñas, muro de marcas). Desmarca para cuentas de prueba o
+              clientes que prefieren no salir.
+            </span>
+          </span>
+        </label>
 
         <p className="mt-5 text-xs font-bold uppercase tracking-wide text-wit-gray">Marca</p>
         <p className="mt-1 text-xs text-wit-gray">

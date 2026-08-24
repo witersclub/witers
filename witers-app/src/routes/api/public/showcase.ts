@@ -18,7 +18,7 @@ export const Route = createFileRoute("/api/public/showcase")({
              JOIN users u ON u.id = r.user_id
              WHERE r.status = 'cerrada'
                AND res.kind != 'draft'
-               AND u.email != 'agency@brandinghk.com'
+               AND u.public_showcase = 1
                AND res.id = (
                  SELECT id FROM request_results
                  WHERE request_id = r.id AND kind != 'draft'

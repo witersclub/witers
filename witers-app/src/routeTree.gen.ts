@@ -91,6 +91,7 @@ import { Route as ApiAdminUnlinkCampaignRouteImport } from './routes/api/admin/u
 import { Route as ApiAdminToggleLogoVisibilityRouteImport } from './routes/api/admin/toggle-logo-visibility'
 import { Route as ApiAdminSiteEventsSummaryRouteImport } from './routes/api/admin/site-events-summary'
 import { Route as ApiAdminSiteEventsFeedRouteImport } from './routes/api/admin/site-events-feed'
+import { Route as ApiAdminSetPublicShowcaseRouteImport } from './routes/api/admin/set-public-showcase'
 import { Route as ApiAdminOverviewRouteImport } from './routes/api/admin/overview'
 import { Route as ApiAdminMetaCampaignsRouteImport } from './routes/api/admin/meta-campaigns'
 import { Route as ApiAdminLiveVisitorsRouteImport } from './routes/api/admin/live-visitors'
@@ -539,6 +540,12 @@ const ApiAdminSiteEventsFeedRoute = ApiAdminSiteEventsFeedRouteImport.update({
   path: '/api/admin/site-events-feed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminSetPublicShowcaseRoute =
+  ApiAdminSetPublicShowcaseRouteImport.update({
+    id: '/api/admin/set-public-showcase',
+    path: '/api/admin/set-public-showcase',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdminOverviewRoute = ApiAdminOverviewRouteImport.update({
   id: '/api/admin/overview',
   path: '/api/admin/overview',
@@ -755,6 +762,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/set-public-showcase': typeof ApiAdminSetPublicShowcaseRoute
   '/api/admin/site-events-feed': typeof ApiAdminSiteEventsFeedRoute
   '/api/admin/site-events-summary': typeof ApiAdminSiteEventsSummaryRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
@@ -866,6 +874,7 @@ export interface FileRoutesByTo {
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/set-public-showcase': typeof ApiAdminSetPublicShowcaseRoute
   '/api/admin/site-events-feed': typeof ApiAdminSiteEventsFeedRoute
   '/api/admin/site-events-summary': typeof ApiAdminSiteEventsSummaryRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
@@ -978,6 +987,7 @@ export interface FileRoutesById {
   '/api/admin/live-visitors': typeof ApiAdminLiveVisitorsRoute
   '/api/admin/meta-campaigns': typeof ApiAdminMetaCampaignsRoute
   '/api/admin/overview': typeof ApiAdminOverviewRoute
+  '/api/admin/set-public-showcase': typeof ApiAdminSetPublicShowcaseRoute
   '/api/admin/site-events-feed': typeof ApiAdminSiteEventsFeedRoute
   '/api/admin/site-events-summary': typeof ApiAdminSiteEventsSummaryRoute
   '/api/admin/toggle-logo-visibility': typeof ApiAdminToggleLogoVisibilityRoute
@@ -1091,6 +1101,7 @@ export interface FileRouteTypes {
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
+    | '/api/admin/set-public-showcase'
     | '/api/admin/site-events-feed'
     | '/api/admin/site-events-summary'
     | '/api/admin/toggle-logo-visibility'
@@ -1202,6 +1213,7 @@ export interface FileRouteTypes {
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
+    | '/api/admin/set-public-showcase'
     | '/api/admin/site-events-feed'
     | '/api/admin/site-events-summary'
     | '/api/admin/toggle-logo-visibility'
@@ -1313,6 +1325,7 @@ export interface FileRouteTypes {
     | '/api/admin/live-visitors'
     | '/api/admin/meta-campaigns'
     | '/api/admin/overview'
+    | '/api/admin/set-public-showcase'
     | '/api/admin/site-events-feed'
     | '/api/admin/site-events-summary'
     | '/api/admin/toggle-logo-visibility'
@@ -1425,6 +1438,7 @@ export interface RootRouteChildren {
   ApiAdminLiveVisitorsRoute: typeof ApiAdminLiveVisitorsRoute
   ApiAdminMetaCampaignsRoute: typeof ApiAdminMetaCampaignsRoute
   ApiAdminOverviewRoute: typeof ApiAdminOverviewRoute
+  ApiAdminSetPublicShowcaseRoute: typeof ApiAdminSetPublicShowcaseRoute
   ApiAdminSiteEventsFeedRoute: typeof ApiAdminSiteEventsFeedRoute
   ApiAdminSiteEventsSummaryRoute: typeof ApiAdminSiteEventsSummaryRoute
   ApiAdminToggleLogoVisibilityRoute: typeof ApiAdminToggleLogoVisibilityRoute
@@ -2042,6 +2056,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminSiteEventsFeedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/set-public-showcase': {
+      id: '/api/admin/set-public-showcase'
+      path: '/api/admin/set-public-showcase'
+      fullPath: '/api/admin/set-public-showcase'
+      preLoaderRoute: typeof ApiAdminSetPublicShowcaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/overview': {
       id: '/api/admin/overview'
       path: '/api/admin/overview'
@@ -2305,6 +2326,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminLiveVisitorsRoute: ApiAdminLiveVisitorsRoute,
   ApiAdminMetaCampaignsRoute: ApiAdminMetaCampaignsRoute,
   ApiAdminOverviewRoute: ApiAdminOverviewRoute,
+  ApiAdminSetPublicShowcaseRoute: ApiAdminSetPublicShowcaseRoute,
   ApiAdminSiteEventsFeedRoute: ApiAdminSiteEventsFeedRoute,
   ApiAdminSiteEventsSummaryRoute: ApiAdminSiteEventsSummaryRoute,
   ApiAdminToggleLogoVisibilityRoute: ApiAdminToggleLogoVisibilityRoute,

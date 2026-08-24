@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/public/brands")({
                AND r.logo_key IS NOT NULL
                AND r.company_name IS NOT NULL
                AND trim(r.company_name) != ''
-               AND u.email != 'agency@brandinghk.com'
+               AND u.public_showcase = 1
                {LOGO_PUBLIC_FILTER}
              GROUP BY lower(trim(r.company_name))
              ORDER BY created_at DESC

@@ -11,7 +11,7 @@ export const Route = createFileRoute("/api/admin/overview")({
 
         const users = await db()
           .prepare(
-            `SELECT u.id, u.email, u.name, u.created_at,
+            `SELECT u.id, u.email, u.name, u.created_at, u.public_showcase,
                     m.status AS membership_status, m.plan AS membership_plan,
                     m.requests_quota, m.requests_used, m.bonus_requests_quota, m.activated_at,
                     (SELECT COALESCE(SUM(p.amount_mxn), 0) FROM payments p WHERE p.user_id = u.id AND p.status = 'paid') AS total_paid_mxn,
