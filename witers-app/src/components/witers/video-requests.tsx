@@ -429,7 +429,7 @@ export function VideoWizard({
 
   async function handleSubmit() {
     setError(null);
-    if (doneFiles.length === 0) {
+    if (doneFiles.length === 0 && !wantsAiScenes) {
       setError(
         t(
           "Sube al menos un video antes de enviar.",
@@ -756,13 +756,20 @@ export function VideoWizard({
           total={total}
           icon={Upload}
           question={t("Sube tu metraje", "Upload your footage")}
-          subtitle={t(
-            "Puedes subir varios clips. Formatos MP4, MOV o WebM.",
-            "You can upload several clips. MP4, MOV, or WebM formats.",
-          )}
+          subtitle={
+            wantsAiScenes
+              ? t(
+                  "Opcional — ya marcaste escenas con IA. Si tienes clips propios, súbelos; si no, seguimos con tu nota.",
+                  "Optional — you already opted into AI scenes. Upload clips if you have them, otherwise we'll go with your note.",
+                )
+              : t(
+                  "Puedes subir varios clips. Formatos MP4, MOV o WebM.",
+                  "You can upload several clips. MP4, MOV, or WebM formats.",
+                )
+          }
           onBack={() => setStep(3)}
           onNext={() => setStep(5)}
-          nextDisabled={doneFiles.length === 0 || uploading}
+          nextDisabled={(!wantsAiScenes && doneFiles.length === 0) || uploading}
           nextLabel={uploading ? t("Subiendo...", "Uploading...") : t("Siguiente", "Next")}
         >
           <div className="space-y-3">

@@ -10,8 +10,20 @@ type EntryRow = {
   format: CalendarFormat;
   title: string;
   brief: string;
+  slides_json: string | null;
   request_id: string | null;
 };
+
+type SlideDraft = { title?: string; brief: string };
+
+function parseSlides(json: string): SlideDraft[] | null {
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? (parsed as SlideDraft[]) : null;
+  } catch {
+    return null;
+  }
+}
 
 const REQUEST_TABLE: Record<CalendarFormat, string> = {
   imagen: "design_requests",
@@ -28,12 +40,22 @@ function statusBucket(requestStatus: string): "en_diseno" | "lista" {
   return requestStatus === "completada" || requestStatus === "cerrada" ? "lista" : "en_diseno";
 }
 
-const createEntrySchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  format: z.enum(["imagen", "video", "carrusel"]),
-  title: z.string().min(1).max(120),
-  brief: z.string().min(1).max(2000),
+const slideSchema = z.object({
+  title: z.string().max(120).optional(),
+  brief: z.string().min(5).max(2000),
 });
+const createEntrySchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    format: z.enum(["imagen", "video", "carrusel"]),
+    title: z.string().min(1).max(120),
+    brief: z.string().min(1).max(2000),
+    slides: z.array(slideSchema).length(4).optional(),
+  })
+  .refine((d) => d.format !== "carrusel" || d.slides?.length === 4, {
+    message: "carrusel_requiere_4_laminas",
+    path: ["slides"],
+  });
 const bulkCreateSchema = z.object({
   entries: z.array(createEntrySchema).min(1).max(60),
 });
@@ -60,7 +82,7 @@ export const Route = createFileRoute("/api/calendar-entries")({
 
         const rows = await db()
           .prepare(
-            `SELECT id, scheduled_date, format, title, brief, request_id
+            `SELECT id, scheduled_date, format, title, brief, slides_json, request_id
              FROM calendar_entries
              WHERE user_id = ?1 AND scheduled_date BETWEEN ?2 AND ?3
              ORDER BY scheduled_date ASC`,
@@ -93,6 +115,7 @@ export const Route = createFileRoute("/api/calendar-entries")({
           format: e.format,
           title: e.title,
           brief: e.brief,
+          slides: e.slides_json ? parseSlides(e.slides_json) : null,
           requestId: e.request_id,
           status: e.request_id
             ? statusBucket(statusById.get(e.request_id) ?? "en_proceso")
@@ -115,8 +138,8 @@ export const Route = createFileRoute("/api/calendar-entries")({
         for (const entry of parsed.data.entries) {
           await db()
             .prepare(
-              `INSERT INTO calendar_entries (id, user_id, scheduled_date, format, title, brief)
-               VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+              `INSERT INTO calendar_entries (id, user_id, scheduled_date, format, title, brief, slides_json)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
             )
             .bind(
               crypto.randomUUID(),
@@ -125,6 +148,7 @@ export const Route = createFileRoute("/api/calendar-entries")({
               entry.format,
               entry.title.trim(),
               entry.brief.trim(),
+              entry.format === "carrusel" ? JSON.stringify(entry.slides) : null,
             )
             .run();
         }

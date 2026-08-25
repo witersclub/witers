@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { recordBrandSignal } from "../../lib/brand-memory.server";
 import { notifyStaffChangeRequested } from "../../lib/mail.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
@@ -50,6 +51,11 @@ export const Route = createFileRoute("/api/request-change")({
           message: parsed.data.message.trim(),
           panelUrl: "https://witers.com/admin",
         });
+
+        await recordBrandSignal(
+          user.id,
+          `El cliente solicitó un cambio en la pieza "${row.title}" ya entregada. Motivo: ${parsed.data.message.trim()}.`,
+        );
 
         return json({ ok: true });
       },

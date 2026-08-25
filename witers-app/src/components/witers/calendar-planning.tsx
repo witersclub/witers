@@ -2,12 +2,11 @@
 // one conversation (see /api/wit/calendar-chat), which the client reviews
 // and confirms before it's saved (see /api/calendar-entries), same
 // "propose, then a review card the client explicitly confirms" shape as
-// CarouselWizard in carousel-requests.tsx. Tapping a day's piece either
-// creates the real request in one click (imagen — see
-// /api/calendar-entries-request) or, for video/carrusel, hands the client
-// off to Creatividad with the brief ready to paste — those two formats need
-// an uploaded file or 4 real slides a one-line calendar brief can't safely
-// fabricate (see the 0040 migration comment).
+// CarouselWizard in carousel-requests.tsx. Tapping a day's piece creates the
+// real request in one click for all three formats — carrusel arrives with
+// its 4 slides already structured by Wit at planning time, and video with
+// no uploaded file (the guion becomes the AI-scenes note) — see
+// /api/calendar-entries-request.
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,7 +28,14 @@ import { MicButton } from "./mic-button";
 import { useLanguage } from "../../lib/i18n";
 
 type CalendarFormat = "imagen" | "video" | "carrusel";
-type CalendarEntryDraft = { date: string; format: CalendarFormat; title: string; brief: string };
+type CalendarSlideDraft = { title: string; brief: string };
+type CalendarEntryDraft = {
+  date: string;
+  format: CalendarFormat;
+  title: string;
+  brief: string;
+  slides?: CalendarSlideDraft[]; // siempre 4, solo para format === "carrusel"
+};
 type CalendarEntry = CalendarEntryDraft & {
   id: string;
   requestId: string | null;
@@ -272,7 +278,20 @@ function CalendarWizard({
                           {formatDayLabel(entry.date, t)} · {formatLabel(entry.format, t)}
                         </div>
                         <p className="mt-1 text-sm font-semibold text-wit-ink">{entry.title}</p>
-                        <p className="mt-0.5 text-xs text-wit-gray">{entry.brief}</p>
+                        {entry.format === "carrusel" && entry.slides?.length ? (
+                          <ol className="mt-1.5 space-y-1">
+                            {entry.slides.map((slide, si) => (
+                              <li key={si} className="text-xs text-wit-gray">
+                                <span className="font-semibold text-wit-ink">
+                                  {si + 1}. {slide.title}
+                                </span>{" "}
+                                — {slide.brief}
+                              </li>
+                            ))}
+                          </ol>
+                        ) : (
+                          <p className="mt-0.5 text-xs text-wit-gray">{entry.brief}</p>
+                        )}
                       </div>
                     );
                   })}
@@ -351,20 +370,13 @@ function CalendarWizard({
 
 /* ---------- detail panel ---------- */
 
-function EntryDetail({
-  entry,
-  onGoToCreatividad,
-}: {
-  entry: CalendarEntry;
-  onGoToCreatividad: () => void;
-}) {
+function EntryDetail({ entry }: { entry: CalendarEntry }) {
   const { t } = useLanguage();
   const qc = useQueryClient();
   const Icon = FORMAT_ICON[entry.format];
   const meta = statusMeta(entry.status, t);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   async function requestNow() {
     setError(null);
@@ -408,17 +420,6 @@ function EntryDetail({
     }
   }
 
-  async function copyBrief() {
-    try {
-      await navigator.clipboard.writeText(entry.brief);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard permission denied or unavailable — the brief is still
-      // right there on screen to copy by hand, nothing else to do.
-    }
-  }
-
   return (
     <div className="wit-glass rounded-3xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)] lg:sticky lg:top-5">
       <p className="text-xs font-bold uppercase tracking-wider text-wit-gray">
@@ -441,9 +442,22 @@ function EntryDetail({
         </span>
       </div>
 
-      <p className="mt-3.5 text-sm leading-relaxed text-wit-gray">{entry.brief}</p>
+      {entry.format === "carrusel" && entry.slides?.length ? (
+        <ol className="mt-3.5 space-y-1.5">
+          {entry.slides.map((slide, si) => (
+            <li key={si} className="text-sm leading-relaxed text-wit-gray">
+              <span className="font-semibold text-wit-ink">
+                {si + 1}. {slide.title}
+              </span>{" "}
+              — {slide.brief}
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="mt-3.5 text-sm leading-relaxed text-wit-gray">{entry.brief}</p>
+      )}
 
-      {entry.status !== "por_planear" ? null : entry.format === "imagen" ? (
+      {entry.status !== "por_planear" ? null : (
         <button
           type="button"
           disabled={requesting}
@@ -454,36 +468,6 @@ function EntryDetail({
             ? t("Enviando...", "Sending...")
             : t("Pedir esta pieza a Wit", "Request this piece from Wit")}
         </button>
-      ) : (
-        <div className="mt-4 space-y-2">
-          <p className="text-xs text-wit-gray">
-            {entry.format === "video"
-              ? t(
-                  "El video necesita que subas tu propio material — ve a Creatividad y pega este brief.",
-                  "Video needs your own footage uploaded — go to Creatividad and paste this brief.",
-                )
-              : t(
-                  "El carrusel necesita 4 láminas — ve a Creatividad y pega este brief para que Wit las arme contigo.",
-                  "The carousel needs 4 slides — go to Creatividad and paste this brief so Wit builds them with you.",
-                )}
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={copyBrief}
-              className="flex-1 rounded-full border border-wit-ink/15 px-4 py-2.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30"
-            >
-              {copied ? t("Copiado", "Copied") : t("Copiar brief", "Copy brief")}
-            </button>
-            <button
-              type="button"
-              onClick={onGoToCreatividad}
-              className="flex-1 rounded-full bg-wit-blue px-4 py-2.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-            >
-              {t("Ir a Creatividad", "Go to Creatividad")}
-            </button>
-          </div>
-        </div>
       )}
       {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
     </div>
@@ -492,13 +476,7 @@ function EntryDetail({
 
 /* ---------- main panel ---------- */
 
-export function PlanificacionPanel({
-  streakWeeks,
-  onGoToCreatividad,
-}: {
-  streakWeeks: number;
-  onGoToCreatividad: () => void;
-}) {
+export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
   const { t } = useLanguage();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [monthOffset, setMonthOffset] = useState(0);
@@ -809,7 +787,7 @@ export function PlanificacionPanel({
             })}
           </div>
 
-          {selected ? <EntryDetail entry={selected} onGoToCreatividad={onGoToCreatividad} /> : null}
+          {selected ? <EntryDetail entry={selected} /> : null}
         </div>
       )}
 

@@ -1795,10 +1795,7 @@ function PanelContent() {
               </div>
             ) : (
               <div className="mt-8">
-                <PlanificacionPanel
-                  streakWeeks={streakWeeks}
-                  onGoToCreatividad={() => setSection("creatividad")}
-                />
+                <PlanificacionPanel streakWeeks={streakWeeks} />
               </div>
             )}
           </>

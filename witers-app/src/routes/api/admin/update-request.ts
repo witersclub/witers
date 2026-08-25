@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { recordBrandSignal } from "../../../lib/brand-memory.server";
 import { requestCompletedEmail, sendMail } from "../../../lib/mail.server";
 import { db, json, requireStaffUser } from "../../../lib/witers-auth.server";
 
@@ -58,9 +59,23 @@ export const Route = createFileRoute("/api/admin/update-request")({
           }
         }
 
+        if (parsed.data.status === "rechazada") {
+          const rejectedRow = await db()
+            .prepare("SELECT title, user_id FROM design_requests WHERE id = ?1")
+            .bind(parsed.data.requestId)
+            .first<{ title: string; user_id: string }>();
+          if (rejectedRow) {
+            await recordBrandSignal(
+              rejectedRow.user_id,
+              `Solicitud de diseño "${rejectedRow.title}" fue rechazada por el equipo. Motivo: ${
+                parsed.data.adminNote?.trim() || "sin motivo especificado"
+              }.`,
+            );
+          }
+        }
+
         return json({ ok: true });
       },
     },
   },
 });
-

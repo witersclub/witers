@@ -13,6 +13,12 @@ export type WitBrandContext = {
   brandColors: string | null;
   businessType: string | null;
   hasLogo: boolean;
+  // "Memoria inferida" — a compact, evolving summary of what Wit has
+  // learned about this specific brand from real signals (a rejected
+  // design, a change request), never asked directly. See
+  // brand-memory.server.ts. Null until the brand has generated at least
+  // one signal.
+  brandMemory: string | null;
 };
 
 export type WitChatMessage = { role: "user" | "assistant"; content: string };
@@ -54,7 +60,8 @@ export type CalendarEntryDraft = {
   date: string; // YYYY-MM-DD
   format: CalendarFormat;
   title: string;
-  brief: string;
+  brief: string; // imagen/video: brief completo. carrusel: resumen corto — el contenido real vive en slides.
+  slides?: CarouselSlideDraft[]; // siempre 4, solo presente cuando format === "carrusel"
 };
 
 export type WitCalendarChatResult =
@@ -75,6 +82,13 @@ function buildSystemPrompt(brand: WitBrandContext): string {
       ? "El cliente ya tiene un logotipo oficial registrado — no lo pidas ni preguntes por él."
       : "El cliente no tiene logotipo registrado — no lo pidas ni preguntes por él en esta conversación.",
   ];
+  if (brand.brandMemory) {
+    brandLines.push(
+      `Aprendizajes previos sobre esta marca, inferidos de piezas rechazadas o cambios ` +
+        `solicitados — tenlos en cuenta con criterio profesional, pero nunca los menciones ` +
+        `explícitamente al cliente ni le preguntes por ellos: ${brand.brandMemory}`,
+    );
+  }
 
   return (
     "Eres Wit, el director creativo de IA de WITERS, una agencia de branding por membresía. " +
@@ -173,6 +187,13 @@ function buildCarouselSystemPrompt(brand: WitBrandContext): string {
       ? "El cliente ya tiene un logotipo oficial registrado — no lo pidas ni preguntes por él."
       : "El cliente no tiene logotipo registrado — no lo pidas ni preguntes por él en esta conversación.",
   ];
+  if (brand.brandMemory) {
+    brandLines.push(
+      `Aprendizajes previos sobre esta marca, inferidos de piezas rechazadas o cambios ` +
+        `solicitados — tenlos en cuenta con criterio profesional, pero nunca los menciones ` +
+        `explícitamente al cliente ni le preguntes por ellos: ${brand.brandMemory}`,
+    );
+  }
 
   return (
     "Eres Wit, el director creativo de IA de WITERS, una agencia de branding por membresía. " +
@@ -251,6 +272,13 @@ function buildCalendarSystemPrompt(
       ? `Categoría de negocio: ${brand.businessType}.`
       : "No se especificó categoría de negocio.",
   ];
+  if (brand.brandMemory) {
+    brandLines.push(
+      `Aprendizajes previos sobre esta marca, inferidos de piezas rechazadas o cambios ` +
+        `solicitados — tenlos en cuenta con criterio profesional, pero nunca los menciones ` +
+        `explícitamente al cliente ni le preguntes por ellos: ${brand.brandMemory}`,
+    );
+  }
 
   return (
     "Eres Wit, el director creativo de IA de WITERS, una agencia de branding por membresía. " +
@@ -280,24 +308,29 @@ function buildCalendarSystemPrompt(
     "repetir el mismo formato todos los días. Usa video con moderación (como mucho una vez por " +
     "semana): el cliente tiene que subir su propio material de video para esa pieza, así que no " +
     "conviene saturar el mes de video.\n\n" +
-    "MUY IMPORTANTE — cada brief debe ser un brief PROFESIONAL, con contenido real y completo, " +
-    "nunca solo el tema o el ángulo. Esto aplica a los tres formatos, cada uno con su propio " +
-    "nivel de profundidad esperado:\n" +
-    "- Imagen: el brief describe exactamente qué debe mostrar la pieza — el mensaje principal, " +
-    "cualquier texto que deba aparecer en la imagen redactado tal cual (no 'un texto llamativo', " +
-    "sino el texto real), y el contexto necesario para que el diseñador no tenga que inventar el " +
-    "contenido por su cuenta.\n" +
-    "- Carrusel: si es una lista (ej. '5 tips de marketing', '3 errores comunes'), redacta CADA " +
-    "punto con su contenido específico dentro del brief — una frase por punto basta, pero deben " +
-    "ser puntos reales y concretos para ese negocio, nunca un título genérico como 'carrusel de " +
-    "5 tips de marketing' sin desarrollarlos. En WITERS un carrusel siempre son exactamente 4 " +
-    "láminas (gancho, 2 de desarrollo, cierre) — usa como máximo 3 o 4 puntos para que quepan con " +
-    "justicia; nunca prometas una lista más larga de la que ese formato puede desarrollar.\n" +
-    "- Video: el brief debe incluir un GUION real, no solo la idea del video — divídelo en " +
+    "MUY IMPORTANTE — cada pieza debe quedar PROFESIONAL, con contenido real y completo, nunca " +
+    "solo el tema o el ángulo — tan completa que se pueda enviar a producción tal cual, sin otra " +
+    "conversación. Esto aplica a los tres formatos, cada uno con su propio nivel de profundidad " +
+    "esperado:\n" +
+    "- Imagen: el campo brief describe exactamente qué debe mostrar la pieza — el mensaje " +
+    "principal, cualquier texto que deba aparecer en la imagen redactado tal cual (no 'un texto " +
+    "llamativo', sino el texto real), y el contexto necesario para que el diseñador no tenga que " +
+    "inventar el contenido por su cuenta.\n" +
+    "- Carrusel: NO metas el contenido de las láminas dentro de brief — usa el campo slides. " +
+    "brief queda como un resumen corto de una frase (para la tarjeta del calendario); slides " +
+    "lleva exactamente 4 objetos {title, brief}, uno por lámina, con la misma estructura y nivel " +
+    "de detalle que usarías si estuvieras armando el carrusel en una conversación aparte: lámina " +
+    "1 = gancho, láminas 2 y 3 = desarrollo (cada una con su propio punto real y concreto para " +
+    "ese negocio, nunca un título genérico como 'tip 1' sin desarrollarlo), lámina 4 = cierre con " +
+    "llamado a la acción. Cada brief de lámina debe ser autosuficiente para un diseñador que solo " +
+    "vea esa lámina.\n" +
+    "- Video: el campo brief debe incluir un GUION real, no solo la idea del video — divídelo en " +
     "escenas o tomas numeradas, y para cada una describe qué se ve y qué se dice (diálogo, " +
     "narración en off, o texto en pantalla, según aplique), en el orden en que aparecen. Un video " +
     "de 20-40 segundos normalmente son 3-5 escenas — sé así de concreto, nunca dejes el brief como " +
-    "'un video mostrando el proceso de trabajo' sin guion.\n\n" +
+    "'un video mostrando el proceso de trabajo' sin guion. El cliente no siempre tendrá metraje " +
+    "propio — el equipo puede resolver con stock o IA usando exactamente este guion, así que debe " +
+    "quedar completo por su cuenta.\n\n" +
     "En los tres casos, quien reciba la pieza (un diseñador, o Wit en una conversación aparte) " +
     "debe poder trabajarla directo, sin tener que volver a preguntar de qué trata o inventar el " +
     "contenido por su cuenta.\n\n" +
@@ -450,7 +483,26 @@ const CALENDAR_TOOLS = [
                 brief: {
                   type: "string",
                   description:
-                    "Brief profesional y completo, nunca solo el tema — suficiente para trabajar la pieza sin más contexto ni otra conversación. Imagen: mensaje principal y cualquier texto en pantalla redactado tal cual. Carrusel: si es una lista, cada punto con su contenido específico (máx. 3-4 puntos, un carrusel siempre son 4 láminas). Video: un guion real dividido en escenas/tomas numeradas, con qué se ve y qué se dice en cada una.",
+                    "Imagen: brief profesional y completo — mensaje principal y cualquier texto en pantalla redactado tal cual, nunca solo el tema. Video: un guion real dividido en escenas/tomas numeradas, con qué se ve y qué se dice en cada una. Carrusel: solo un resumen corto de una frase para la tarjeta del calendario — el contenido real de las 4 láminas va en el campo slides, no aquí.",
+                },
+                slides: {
+                  type: "array",
+                  minItems: 4,
+                  maxItems: 4,
+                  items: {
+                    type: "object",
+                    properties: {
+                      title: { type: "string", description: "Título corto de esta lámina." },
+                      brief: {
+                        type: "string",
+                        description:
+                          "Qué debe mostrar/decir esta lámina específica — autosuficiente para un diseñador que solo vea esta lámina, pero coherente con la narrativa de las otras 3.",
+                      },
+                    },
+                    required: ["title", "brief"],
+                  },
+                  description:
+                    "Solo para format:'carrusel' — las 4 láminas del carrusel, en orden (lámina 1 primero: gancho, 2-3 desarrollo, 4 cierre). Omitir para imagen/video.",
                 },
               },
               required: ["date", "format", "title", "brief"],
@@ -847,22 +899,44 @@ export async function runWitCalendarChat(
   if (toolCall?.function.name === "submit_content_calendar") {
     try {
       const args = JSON.parse(toolCall.function.arguments) as {
-        entries?: Array<Partial<CalendarEntryDraft>>;
+        entries?: Array<
+          Partial<CalendarEntryDraft> & { slides?: Array<Partial<CarouselSlideDraft>> }
+        >;
       };
-      const entries = (args.entries ?? [])
-        .map((e) => ({
+      type RawCalendarEntry = {
+        date: string;
+        format?: CalendarFormat;
+        title: string;
+        brief: string;
+        slides?: CarouselSlideDraft[];
+      };
+      const mapped: RawCalendarEntry[] = (args.entries ?? []).map((e) => {
+        const raw: RawCalendarEntry = {
           date: e.date?.trim() ?? "",
           format: e.format,
           title: e.title?.trim() || "",
           brief: e.brief?.trim() || "",
-        }))
-        .filter(
-          (e): e is CalendarEntryDraft =>
-            CALENDAR_DATE_RE.test(e.date) &&
-            (e.format === "imagen" || e.format === "video" || e.format === "carrusel") &&
-            e.title.length > 0 &&
-            e.brief.length > 0,
-        );
+        };
+        if (e.format === "carrusel") {
+          raw.slides = (e.slides ?? [])
+            .map((s) => ({ title: s.title?.trim() || "", brief: s.brief?.trim() || "" }))
+            .filter((s) => s.brief);
+        }
+        return raw;
+      });
+      const entries = mapped.filter(
+        (e): e is CalendarEntryDraft =>
+          CALENDAR_DATE_RE.test(e.date) &&
+          (e.format === "imagen" || e.format === "video" || e.format === "carrusel") &&
+          e.title.length > 0 &&
+          e.brief.length > 0 &&
+          // A carrusel entry without its 4 real slides is exactly the
+          // "topic, not content" shallowness this whole system prompt
+          // exists to prevent — drop it rather than let a client review
+          // and confirm a plan that createCarouselRequest can't actually
+          // build from later.
+          (e.format !== "carrusel" || e.slides?.length === 4),
+      );
       if (entries.length === 0) return { ok: false, error: "respuesta_invalida" };
       return { ok: true, kind: "done", entries };
     } catch {

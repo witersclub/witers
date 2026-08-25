@@ -18,6 +18,77 @@ const createSchema = z.object({
     .length(4),
 });
 
+export type CreateCarouselRequestInput = {
+  title: string;
+  aspectRatio: "1:1" | "4:3" | "3:4" | "16:9" | "9:16";
+  slides: { title?: string | null; brief: string }[]; // exactamente 4
+};
+
+// Extraída del mismo modo que createImageRequest en requests.ts, para que
+// /api/calendar-entries-request pueda crear la solicitud real a partir de
+// una entrada ya planificada por el mismo camino que el POST normal de
+// abajo, sin duplicar el chequeo de cupo ni las columnas.
+export async function createCarouselRequest(
+  userId: string,
+  userName: string,
+  data: CreateCarouselRequestInput,
+): Promise<{ ok: true; id: string } | { ok: false; error: string; status: number }> {
+  const membership = await getMembership(userId);
+  if (!membership || membership.status !== "active") {
+    return { ok: false, error: "sin_membresia", status: 403 };
+  }
+  if (membership.carousel_requests_used >= membership.carousel_requests_quota) {
+    return { ok: false, error: "sin_saldo", status: 403 };
+  }
+
+  const brand = await getBrandProfile(userId);
+  if (!brand) return { ok: false, error: "falta_marca", status: 409 };
+
+  const id = crypto.randomUUID();
+  await db()
+    .prepare(
+      `INSERT INTO carousel_requests (id, user_id, title, aspect_ratio, company_name, brand_colors, logo_key)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+    )
+    .bind(
+      id,
+      userId,
+      data.title.trim(),
+      data.aspectRatio,
+      brand.company_name,
+      brand.brand_colors,
+      brand.logo_key,
+    )
+    .run();
+
+  for (let i = 0; i < 4; i++) {
+    const slide = data.slides[i];
+    await db()
+      .prepare(
+        `INSERT INTO carousel_slides (id, carousel_request_id, slide_index, title, brief)
+         VALUES (?1, ?2, ?3, ?4, ?5)`,
+      )
+      .bind(crypto.randomUUID(), id, i + 1, slide.title?.trim() || "", slide.brief.trim())
+      .run();
+  }
+
+  await db()
+    .prepare(
+      "UPDATE memberships SET carousel_requests_used = carousel_requests_used + 1 WHERE user_id = ?1",
+    )
+    .bind(userId)
+    .run();
+
+  await notifyStaffNewCarouselRequest({
+    title: data.title.trim(),
+    clientName: userName,
+    companyName: brand.company_name,
+    panelUrl: "https://witers.com/witer",
+  });
+
+  return { ok: true, id };
+}
+
 export const Route = createFileRoute("/api/carousel-requests")({
   server: {
     handlers: {
@@ -48,69 +119,14 @@ export const Route = createFileRoute("/api/carousel-requests")({
         const user = await getSessionUser(request);
         if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
 
-        const membership = await getMembership(user.id);
-        if (!membership || membership.status !== "active") {
-          return json({ ok: false, error: "sin_membresia" }, { status: 403 });
-        }
-        if (membership.carousel_requests_used >= membership.carousel_requests_quota) {
-          return json({ ok: false, error: "sin_saldo" }, { status: 403 });
-        }
-
         const parsed = createSchema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) {
           return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
         }
-        const data = parsed.data;
 
-        // Wit only ever runs a carousel conversation once a brand profile
-        // already exists (see /api/wit/carousel-chat) — this is a defensive
-        // re-check, not the primary gate.
-        const brand = await getBrandProfile(user.id);
-        if (!brand) return json({ ok: false, error: "falta_marca" }, { status: 409 });
-
-        const id = crypto.randomUUID();
-        await db()
-          .prepare(
-            `INSERT INTO carousel_requests (id, user_id, title, aspect_ratio, company_name, brand_colors, logo_key)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
-          )
-          .bind(
-            id,
-            user.id,
-            data.title.trim(),
-            data.aspectRatio,
-            brand.company_name,
-            brand.brand_colors,
-            brand.logo_key,
-          )
-          .run();
-
-        for (let i = 0; i < 4; i++) {
-          const slide = data.slides[i];
-          await db()
-            .prepare(
-              `INSERT INTO carousel_slides (id, carousel_request_id, slide_index, title, brief)
-               VALUES (?1, ?2, ?3, ?4, ?5)`,
-            )
-            .bind(crypto.randomUUID(), id, i + 1, slide.title?.trim() || "", slide.brief.trim())
-            .run();
-        }
-
-        await db()
-          .prepare(
-            "UPDATE memberships SET carousel_requests_used = carousel_requests_used + 1 WHERE user_id = ?1",
-          )
-          .bind(user.id)
-          .run();
-
-        await notifyStaffNewCarouselRequest({
-          title: data.title.trim(),
-          clientName: user.name,
-          companyName: brand.company_name,
-          panelUrl: "https://witers.com/witer",
-        });
-
-        return json({ ok: true, id });
+        const result = await createCarouselRequest(user.id, user.name, parsed.data);
+        if (!result.ok) return json({ ok: false, error: result.error }, { status: result.status });
+        return json({ ok: true, id: result.id });
       },
     },
   },

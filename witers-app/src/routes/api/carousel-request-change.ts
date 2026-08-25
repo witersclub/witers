@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { recordBrandSignal } from "../../lib/brand-memory.server";
 import { notifyStaffCarouselChangeRequested } from "../../lib/mail.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
@@ -69,6 +70,13 @@ export const Route = createFileRoute("/api/carousel-request-change")({
           message,
           panelUrl: "https://witers.com/witer",
         });
+
+        await recordBrandSignal(
+          user.id,
+          `El cliente solicitó un cambio en ${
+            slideIndex ? `la lámina ${slideIndex}` : "las 4 láminas"
+          } del carrusel "${row.title}". Motivo: ${message}.`,
+        );
 
         return json({ ok: true });
       },

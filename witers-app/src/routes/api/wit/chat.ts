@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { getBrandProfile } from "../../../lib/brand-profile.server";
+import { getBrandMemory } from "../../../lib/brand-memory.server";
 import { runWitChat } from "../../../lib/wit-chat.server";
 import { getSessionUser, json } from "../../../lib/witers-auth.server";
 
@@ -41,6 +42,7 @@ export const Route = createFileRoute("/api/wit/chat")({
           brandColors: profile.brand_colors,
           businessType: profile.business_type,
           hasLogo: Boolean(profile.logo_key),
+          brandMemory: await getBrandMemory(user.id),
         });
 
         if (!result.ok) return json(result, { status: 502 });
