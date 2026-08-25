@@ -38,6 +38,17 @@ const bulkCreateSchema = z.object({
   entries: z.array(createEntrySchema).min(1).max(60),
 });
 
+function monthRange(url: URL): { monthStart: string; monthEnd: string } {
+  const now = new Date();
+  const year = Number(url.searchParams.get("year")) || now.getUTCFullYear();
+  const month = Number(url.searchParams.get("month")) || now.getUTCMonth() + 1;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const monthStart = `${year}-${pad(month)}-01`;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const monthEnd = `${year}-${pad(month)}-${pad(lastDay)}`;
+  return { monthStart, monthEnd };
+}
+
 export const Route = createFileRoute("/api/calendar-entries")({
   server: {
     handlers: {
@@ -45,14 +56,7 @@ export const Route = createFileRoute("/api/calendar-entries")({
         const user = await getSessionUser(request);
         if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
 
-        const url = new URL(request.url);
-        const now = new Date();
-        const year = Number(url.searchParams.get("year")) || now.getUTCFullYear();
-        const month = Number(url.searchParams.get("month")) || now.getUTCMonth() + 1;
-        const pad = (n: number) => String(n).padStart(2, "0");
-        const monthStart = `${year}-${pad(month)}-01`;
-        const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-        const monthEnd = `${year}-${pad(month)}-${pad(lastDay)}`;
+        const { monthStart, monthEnd } = monthRange(new URL(request.url));
 
         const rows = await db()
           .prepare(
@@ -126,6 +130,30 @@ export const Route = createFileRoute("/api/calendar-entries")({
         }
 
         return json({ ok: true, count: parsed.data.entries.length });
+      },
+
+      // "Replanear mes" — clears only the entries the client never acted on
+      // (request_id IS NULL) for the given month, so a fresh Wit
+      // conversation can re-propose them. Entries already turned into a
+      // real request are never touched here: a designer may already be
+      // working on that piece, so silently dropping it from the calendar
+      // would orphan it from the client's view without actually undoing
+      // any real work.
+      DELETE: async ({ request }) => {
+        const user = await getSessionUser(request);
+        if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
+
+        const { monthStart, monthEnd } = monthRange(new URL(request.url));
+
+        const result = await db()
+          .prepare(
+            `DELETE FROM calendar_entries
+             WHERE user_id = ?1 AND scheduled_date BETWEEN ?2 AND ?3 AND request_id IS NULL`,
+          )
+          .bind(user.id, monthStart, monthEnd)
+          .run();
+
+        return json({ ok: true, deleted: result.meta.changes ?? 0 });
       },
     },
   },

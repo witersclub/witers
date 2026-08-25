@@ -18,6 +18,7 @@ import {
   Flame,
   GalleryHorizontal,
   Image as ImageIcon,
+  RefreshCw,
   Video as VideoIcon,
   X,
 } from "lucide-react";
@@ -502,6 +503,8 @@ export function PlanificacionPanel({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [confirmingReplan, setConfirmingReplan] = useState(false);
+  const [replanning, setReplanning] = useState(false);
   const qc = useQueryClient();
 
   const base = new Date();
@@ -547,8 +550,24 @@ export function PlanificacionPanel({
 
   const selected = entries.find((e) => e.id === selectedId) ?? null;
   const requestedCount = entries.filter((e) => e.status !== "por_planear").length;
+  const pendingCount = entries.length - requestedCount;
   const progressPct = entries.length > 0 ? Math.round((requestedCount / entries.length) * 100) : 0;
   const grid = buildMonthGrid(year, month);
+
+  async function replan() {
+    setReplanning(true);
+    try {
+      await fetch(`/api/calendar-entries?year=${year}&month=${month}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      await qc.invalidateQueries({ queryKey: ["calendar-entries", year, month] });
+      setConfirmingReplan(false);
+      setWizardOpen(true);
+    } finally {
+      setReplanning(false);
+    }
+  }
 
   return (
     <div>
@@ -569,6 +588,16 @@ export function PlanificacionPanel({
           ) : null}
         </h1>
         <div className="ml-auto flex items-center gap-2">
+          {entries.length > 0 && pendingCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setConfirmingReplan(true)}
+              className="flex items-center gap-1.5 rounded-full border border-wit-ink/12 bg-white px-3.5 py-2 text-xs font-bold text-wit-gray hover:border-wit-ink/25 hover:text-wit-ink"
+            >
+              <RefreshCw className="h-3.5 w-3.5" strokeWidth={2.2} />
+              {t("Replanear mes", "Re-plan month")}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setMonthOffset((m) => m - 1)}
@@ -593,6 +622,37 @@ export function PlanificacionPanel({
           "Organize what you'll publish this month — every square is a request ready to send.",
         )}
       </p>
+
+      {confirmingReplan ? (
+        <div className="wit-glass mt-4 flex flex-col gap-3 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-wit-ink">
+            {t(
+              `Se reemplazarán las ${pendingCount} piezas que aún no has pedido — lo que ya está en diseño o listo no se toca.`,
+              `This will replace the ${pendingCount} pieces you haven't requested yet — anything already in design or ready stays untouched.`,
+            )}
+          </p>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmingReplan(false)}
+              disabled={replanning}
+              className="rounded-full border border-wit-ink/15 px-4 py-2 text-xs font-bold text-wit-ink hover:border-wit-ink/30 disabled:opacity-50"
+            >
+              {t("Cancelar", "Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={replan}
+              disabled={replanning}
+              className="rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+            >
+              {replanning
+                ? t("Reemplazando...", "Replacing...")
+                : t("Sí, replanear", "Yes, re-plan")}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {entries.length > 0 ? (
         <div className="mt-4">
