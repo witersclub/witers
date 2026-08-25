@@ -15,18 +15,43 @@ const schema = z.object({
     )
     .min(1)
     .max(60),
+  // The month the client actually has open in Planificación (from the
+  // panel's month arrows) — optional, defaults to the server's real current
+  // month. Without this, Wit always planned "today's real month" no matter
+  // which month the client navigated to, so a client trying to plan ahead
+  // for next month kept getting this month's plan back instead.
+  year: z.number().int().min(2020).max(2100).optional(),
+  month: z.number().int().min(1).max(12).optional(),
 });
 
-function currentMonthContext(): { monthLabel: string; todayDate: string; monthEndDate: string } {
+function iso(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function monthContext(target?: { year: number; month: number }): {
+  monthLabel: string;
+  todayDate: string;
+  monthEndDate: string;
+} {
   const now = new Date();
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
-  const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
-  const monthLabel = now.toLocaleDateString("es-MX", {
+  const year = target?.year ?? now.getUTCFullYear();
+  const month = target?.month ?? now.getUTCMonth() + 1;
+  const monthStartDate = new Date(Date.UTC(year, month - 1, 1));
+  const monthEnd = new Date(Date.UTC(year, month, 0));
+  const monthLabel = monthStartDate.toLocaleDateString("es-MX", {
     month: "long",
     year: "numeric",
     timeZone: "UTC",
   });
-  return { monthLabel, todayDate: iso(now), monthEndDate: iso(monthEnd) };
+  const todayIso = iso(now);
+  const monthStartIso = iso(monthStartDate);
+  const monthEndIso = iso(monthEnd);
+  // Earliest date Wit is allowed to propose: today, but only when today
+  // actually falls inside the target month — a future month has no "today"
+  // constraint (starts from day 1), and a past month gets no constraint
+  // either (nothing left to plan going forward in it).
+  const lowerBound = todayIso < monthStartIso || todayIso > monthEndIso ? monthStartIso : todayIso;
+  return { monthLabel, todayDate: lowerBound, monthEndDate: monthEndIso };
 }
 
 // Same shape as /api/wit/chat and /api/wit/carousel-chat, but guides the
@@ -53,7 +78,11 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
             businessType: profile.business_type,
             hasLogo: Boolean(profile.logo_key),
           },
-          currentMonthContext(),
+          monthContext(
+            parsed.data.year && parsed.data.month
+              ? { year: parsed.data.year, month: parsed.data.month }
+              : undefined,
+          ),
         );
 
         if (!result.ok) return json(result, { status: 502 });

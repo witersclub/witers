@@ -97,14 +97,26 @@ function buildMonthGrid(year: number, month: number): { date: string; inMonth: b
 
 /* ---------- wizard (Wit chat) ---------- */
 
-function CalendarWizard({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function CalendarWizard({
+  targetYear,
+  targetMonth,
+  monthLabel,
+  onClose,
+  onCreated,
+}: {
+  targetYear: number;
+  targetMonth: number;
+  monthLabel: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const { t } = useLanguage();
   const [messages, setMessages] = useState<WitMessage[]>([
     {
       role: "assistant",
       content: t(
-        "¡Hola! Vamos a planificar tu mes. ¿Con qué frecuencia quieres publicar y de qué temas?",
-        "Hi! Let's plan your month. How often do you want to post, and about what topics?",
+        `¡Hola! Vamos a planificar ${monthLabel}. ¿Con qué frecuencia quieres publicar y de qué temas?`,
+        `Hi! Let's plan ${monthLabel}. How often do you want to post, and about what topics?`,
       ),
     },
   ]);
@@ -135,7 +147,7 @@ function CalendarWizard({ onClose, onCreated }: { onClose: () => void; onCreated
       const res = await fetch("/api/wit/calendar-chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({ messages: next, year: targetYear, month: targetMonth }),
       });
       const data = (await res.json()) as
         | { ok: true; kind: "message"; text: string }
@@ -224,7 +236,7 @@ function CalendarWizard({ onClose, onCreated }: { onClose: () => void; onCreated
           <WMark size={26} />
         </div>
         <p className="text-sm font-medium text-wit-ink">
-          {t("Planificando tu mes con Wit", "Planning your month with Wit")}
+          {t(`Planificando ${monthLabel} con Wit`, `Planning ${monthLabel} with Wit`)}
         </p>
       </div>
 
@@ -745,6 +757,9 @@ export function PlanificacionPanel({
         ? createPortal(
             <div className="fixed inset-0 z-50 bg-white">
               <CalendarWizard
+                targetYear={year}
+                targetMonth={month}
+                monthLabel={monthLabel}
                 onClose={() => setWizardOpen(false)}
                 onCreated={() => {
                   void qc.invalidateQueries({ queryKey: ["calendar-entries"] });
