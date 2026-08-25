@@ -400,10 +400,15 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
                   "Necesitas una membresía activa para pedir piezas.",
                   "You need an active membership to request pieces.",
                 )
-              : t(
-                  "No pudimos enviar la solicitud. Intenta de nuevo.",
-                  "We couldn't send the request. Try again.",
-                ),
+              : data.error === "faltan_laminas"
+                ? t(
+                    'Esta pieza se planificó antes de la última actualización y no tiene las 4 láminas listas. Usa "Replanear mes" para regenerarla.',
+                    'This piece was planned before the latest update and is missing its 4 slides. Use "Re-plan month" to regenerate it.',
+                  )
+                : t(
+                    "No pudimos enviar la solicitud. Intenta de nuevo.",
+                    "We couldn't send the request. Try again.",
+                  ),
         );
         return;
       }
