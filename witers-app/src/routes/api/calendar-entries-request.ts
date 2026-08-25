@@ -35,7 +35,19 @@ function parseSlides(json: string): SlideDraft[] | null {
 // cupo o columnas. Video no requiere metraje propio: el guion que Wit ya
 // escribió se manda como aiScenesNote para que el equipo resuelva con
 // stock/IA.
-const schema = z.object({ entryId: z.string().uuid() });
+//
+// El formato lo elige el cliente en el selector visual justo antes de
+// pedir la pieza (mismo AspectRatioPicker que ya usa el chat normal de
+// Wit) — aspectRatio llega opcional y se valida contra el enum real de
+// cada formato en el servidor, nunca se confía ciegamente en lo que mande
+// el cliente. Sin elección, cae al default de cada formato: 3:4 para
+// imagen/carrusel (feed vertical), 9:16 para video (reel/historia).
+const IMAGE_CAROUSEL_RATIOS = ["1:1", "4:3", "3:4", "16:9", "9:16"] as const;
+const VIDEO_RATIOS = ["9:16", "1:1", "16:9"] as const;
+const schema = z.object({
+  entryId: z.string().uuid(),
+  aspectRatio: z.string().optional(),
+});
 
 export const Route = createFileRoute("/api/calendar-entries-request")({
   server: {
@@ -61,11 +73,16 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
 
         let result: { ok: true; id: string } | { ok: false; error: string; status: number };
         if (entry.format === "imagen") {
+          const aspectRatio = IMAGE_CAROUSEL_RATIOS.includes(
+            parsed.data.aspectRatio as (typeof IMAGE_CAROUSEL_RATIOS)[number],
+          )
+            ? (parsed.data.aspectRatio as (typeof IMAGE_CAROUSEL_RATIOS)[number])
+            : "3:4";
           result = await createImageRequest(user.id, user.name, {
             title: entry.title,
             companyName: brand.company_name,
             pieceBrief: entry.brief,
-            aspectRatio: "1:1",
+            aspectRatio,
             lang: "es",
             brandColors: brand.brand_colors,
             businessType: brand.business_type,
@@ -77,12 +94,22 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
           if (!slides || slides.length !== 4) {
             return json({ ok: false, error: "faltan_laminas" }, { status: 409 });
           }
+          const aspectRatio = IMAGE_CAROUSEL_RATIOS.includes(
+            parsed.data.aspectRatio as (typeof IMAGE_CAROUSEL_RATIOS)[number],
+          )
+            ? (parsed.data.aspectRatio as (typeof IMAGE_CAROUSEL_RATIOS)[number])
+            : "3:4";
           result = await createCarouselRequest(user.id, user.name, {
             title: entry.title,
-            aspectRatio: "1:1",
+            aspectRatio,
             slides,
           });
         } else {
+          const aspectRatio = VIDEO_RATIOS.includes(
+            parsed.data.aspectRatio as (typeof VIDEO_RATIOS)[number],
+          )
+            ? (parsed.data.aspectRatio as (typeof VIDEO_RATIOS)[number])
+            : "9:16";
           // El cliente no tiene metraje propio al planear el mes — el guion
           // completo que Wit ya redactó se manda como aiScenesNote, sin
           // archivos, para que el equipo lo resuelva con stock/IA. Sigue
@@ -91,7 +118,7 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
             title: entry.title,
             purpose: entry.brief,
             platform: "instagram",
-            aspectRatio: "9:16",
+            aspectRatio,
             wantsAiScenes: true,
             aiScenesNote: entry.brief,
             rawFileKeys: [],

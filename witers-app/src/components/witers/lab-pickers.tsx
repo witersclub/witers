@@ -150,14 +150,22 @@ export function StylePicker({ onPick }: { onPick: (value: string) => void }) {
 // it, static, not bundled into one shared card the way the badges are.
 // Laid out in one horizontal, scrollable line so nothing ever wraps into a
 // grid.
-export function AspectRatioPicker({ onPick }: { onPick: (value: string) => void }) {
+export function AspectRatioPicker({
+  onPick,
+  options = ASPECT_OPTIONS,
+}: {
+  onPick: (value: string) => void;
+  // Defaults to every ratio — pass a filtered subset for a format that
+  // doesn't support the full set (e.g. video, which has no 4:3/3:4).
+  options?: typeof ASPECT_OPTIONS;
+}) {
   const { t } = useLanguage();
   return (
     // overflow-y-visible undoes the overflow-y:auto that overflow-x-auto
     // implies on its own — without it, the tallest badge's float bob got
     // clipped by this row's own box on every upswing.
     <div className="flex items-end justify-center gap-4 overflow-x-auto overflow-y-visible px-1 pb-2 pt-4">
-      {ASPECT_OPTIONS.map((opt) => (
+      {options.map((opt) => (
         <button
           key={opt.value}
           type="button"

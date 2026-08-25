@@ -24,8 +24,13 @@ import {
 
 import { WMark } from "./brand";
 import { ChatBubble } from "./chat-intake";
+import { ASPECT_OPTIONS, AspectRatioPicker } from "./lab-pickers";
 import { MicButton } from "./mic-button";
 import { useLanguage } from "../../lib/i18n";
+
+// video no soporta 4:3/3:4 (ver el enum real en video-requests.ts) — se le
+// muestra un subconjunto del mismo picker en vez de uno aparte.
+const VIDEO_ASPECT_VALUES = new Set(["1:1", "16:9", "9:16"]);
 
 type CalendarFormat = "imagen" | "video" | "carrusel";
 type CalendarSlideDraft = { title: string; brief: string };
@@ -377,15 +382,24 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
   const meta = statusMeta(entry.status, t);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pickingFormat, setPickingFormat] = useState(false);
 
-  async function requestNow() {
+  // Reset the picker whenever the client switches to a different day —
+  // otherwise it could stay open showing the wrong entry's options.
+  useEffect(() => {
+    setPickingFormat(false);
     setError(null);
+  }, [entry.id]);
+
+  async function requestNow(aspectRatio: string) {
+    setError(null);
+    setPickingFormat(false);
     setRequesting(true);
     try {
       const res = await fetch("/api/calendar-entries-request", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ entryId: entry.id }),
+        body: JSON.stringify({ entryId: entry.id, aspectRatio }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (!data.ok) {
@@ -462,11 +476,32 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
         <p className="mt-3.5 text-sm leading-relaxed text-wit-gray">{entry.brief}</p>
       )}
 
-      {entry.status !== "por_planear" ? null : (
+      {entry.status !== "por_planear" ? null : pickingFormat ? (
+        <div className="mt-4">
+          <p className="text-center text-xs font-bold text-wit-gray">
+            {t("Elige el formato de esta pieza", "Choose this piece's format")}
+          </p>
+          <AspectRatioPicker
+            options={
+              entry.format === "video"
+                ? ASPECT_OPTIONS.filter((opt) => VIDEO_ASPECT_VALUES.has(opt.value))
+                : undefined
+            }
+            onPick={requestNow}
+          />
+          <button
+            type="button"
+            onClick={() => setPickingFormat(false)}
+            className="mt-1 w-full text-center text-xs font-semibold text-wit-gray hover:text-wit-ink"
+          >
+            {t("Cancelar", "Cancel")}
+          </button>
+        </div>
+      ) : (
         <button
           type="button"
           disabled={requesting}
-          onClick={requestNow}
+          onClick={() => setPickingFormat(true)}
           className="wit-glow-button mt-4 w-full rounded-full px-6 py-3 text-sm font-bold text-white disabled:opacity-50"
         >
           {requesting
