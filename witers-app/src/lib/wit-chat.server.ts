@@ -194,12 +194,18 @@ function buildCarouselSystemPrompt(brand: WitBrandContext): string {
     "\n\n" +
     "Una vez el cliente elige un concepto, tu trabajo es reunir suficiente contexto para " +
     "redactar las 4 láminas de forma ACERTADA y coherente entre sí — no te conformes con lo " +
-    "mínimo. Si lo que el cliente dio es vago o genérico (por ejemplo 'un carrusel de tips' sin " +
-    "decir de qué, o 'promociona mi negocio' sin decir qué producto o oferta), HAZ preguntas de " +
-    "seguimiento concretas antes de redactar las láminas — nunca inventes datos específicos del " +
-    "negocio (productos, precios, cifras) que el cliente no te haya dado. Cuando el tema ya es " +
-    "claro y tienes lo esencial, decide tú mismo con criterio de neuromarketing y diseño " +
-    "persuasivo el estilo visual, el público objetivo y el ángulo de cada lámina.\n\n" +
+    "mínimo. Esto también aplica cuando el mensaje del cliente ya viene con un tema o un brief " +
+    "pegado (por ejemplo, copiado de un plan de contenido): si nombra una lista pero no dice " +
+    "cuáles son sus puntos concretos (ej. '5 tips de marketing para mi negocio' sin decir cuáles " +
+    "son esos 5 tips), sigue contando como vago — igual que 'un carrusel de tips' sin decir de " +
+    "qué, o 'promociona mi negocio' sin decir qué producto u oferta. En cualquiera de esos casos " +
+    "HAZ preguntas de seguimiento concretas antes de redactar las láminas (o, si tú mismo puedes " +
+    "proponer contenido real y específico con criterio profesional para ese negocio, ofrécelo y " +
+    "pide confirmación) — nunca redactes una lámina con un punto genérico y vacío tipo 'tip 1: " +
+    "mejora tu marketing' solo por llenar el hueco, y nunca inventes datos específicos del negocio " +
+    "(productos, precios, cifras) que el cliente no te haya dado. Cuando el tema ya es claro y " +
+    "tienes contenido real para cada punto, decide tú mismo con criterio de neuromarketing y " +
+    "diseño persuasivo el estilo visual, el público objetivo y el ángulo de cada lámina.\n\n" +
     "Estructura narrativa esperada de las 4 láminas (guíate por esto salvo que el concepto pida " +
     "algo distinto): lámina 1 = gancho que detiene el scroll y presenta el tema; láminas 2 y 3 = " +
     "desarrollo del contenido (cada una con su propio punto, no repetitivas entre sí); lámina 4 = " +
@@ -274,6 +280,16 @@ function buildCalendarSystemPrompt(
     "repetir el mismo formato todos los días. Usa video con moderación (como mucho una vez por " +
     "semana): el cliente tiene que subir su propio material de video para esa pieza, así que no " +
     "conviene saturar el mes de video.\n\n" +
+    "MUY IMPORTANTE — cada brief debe traer contenido real y completo, no solo el tema o el " +
+    "ángulo: si la pieza es una lista (ej. '5 tips de marketing', '3 errores comunes', 'pasos " +
+    "para...'), tú mismo debes redactar CADA punto de la lista con su contenido específico dentro " +
+    "del brief — una frase por punto basta, pero tienen que ser puntos reales y concretos para ese " +
+    "negocio, no un título genérico como 'brief: carrusel de 5 tips de marketing'. Quien reciba " +
+    "esta pieza (un diseñador, o Wit en una conversación aparte) debe poder trabajarla directo, sin " +
+    "tener que volver a preguntar de qué trata cada punto. Para carrusel en particular: en WITERS " +
+    "un carrusel siempre son exactamente 4 láminas (gancho, 2 de desarrollo, cierre) — si vas a " +
+    "listar puntos, usa como máximo 3 o 4 para que quepan con justicia; nunca prometas una lista " +
+    "más larga de la que ese formato puede desarrollar.\n\n" +
     "Reglas de seguridad, nunca las rompas:\n" +
     "- NUNCA inventes precios, descuentos o datos concretos del negocio que el cliente no haya " +
     "mencionado explícitamente.\n" +
@@ -423,7 +439,7 @@ const CALENDAR_TOOLS = [
                 brief: {
                   type: "string",
                   description:
-                    "Qué debe mostrar/decir esta pieza — suficiente para que un diseñador la haga sin más contexto.",
+                    "Qué debe mostrar/decir esta pieza, con contenido real y completo — suficiente para que un diseñador la haga sin más contexto ni otra conversación. Si es una lista (tips, pasos, razones, etc.), escribe cada punto con su contenido específico, nunca solo el título de la lista.",
                 },
               },
               required: ["date", "format", "title", "brief"],
