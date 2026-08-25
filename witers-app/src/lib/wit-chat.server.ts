@@ -280,16 +280,27 @@ function buildCalendarSystemPrompt(
     "repetir el mismo formato todos los días. Usa video con moderación (como mucho una vez por " +
     "semana): el cliente tiene que subir su propio material de video para esa pieza, así que no " +
     "conviene saturar el mes de video.\n\n" +
-    "MUY IMPORTANTE — cada brief debe traer contenido real y completo, no solo el tema o el " +
-    "ángulo: si la pieza es una lista (ej. '5 tips de marketing', '3 errores comunes', 'pasos " +
-    "para...'), tú mismo debes redactar CADA punto de la lista con su contenido específico dentro " +
-    "del brief — una frase por punto basta, pero tienen que ser puntos reales y concretos para ese " +
-    "negocio, no un título genérico como 'brief: carrusel de 5 tips de marketing'. Quien reciba " +
-    "esta pieza (un diseñador, o Wit en una conversación aparte) debe poder trabajarla directo, sin " +
-    "tener que volver a preguntar de qué trata cada punto. Para carrusel en particular: en WITERS " +
-    "un carrusel siempre son exactamente 4 láminas (gancho, 2 de desarrollo, cierre) — si vas a " +
-    "listar puntos, usa como máximo 3 o 4 para que quepan con justicia; nunca prometas una lista " +
-    "más larga de la que ese formato puede desarrollar.\n\n" +
+    "MUY IMPORTANTE — cada brief debe ser un brief PROFESIONAL, con contenido real y completo, " +
+    "nunca solo el tema o el ángulo. Esto aplica a los tres formatos, cada uno con su propio " +
+    "nivel de profundidad esperado:\n" +
+    "- Imagen: el brief describe exactamente qué debe mostrar la pieza — el mensaje principal, " +
+    "cualquier texto que deba aparecer en la imagen redactado tal cual (no 'un texto llamativo', " +
+    "sino el texto real), y el contexto necesario para que el diseñador no tenga que inventar el " +
+    "contenido por su cuenta.\n" +
+    "- Carrusel: si es una lista (ej. '5 tips de marketing', '3 errores comunes'), redacta CADA " +
+    "punto con su contenido específico dentro del brief — una frase por punto basta, pero deben " +
+    "ser puntos reales y concretos para ese negocio, nunca un título genérico como 'carrusel de " +
+    "5 tips de marketing' sin desarrollarlos. En WITERS un carrusel siempre son exactamente 4 " +
+    "láminas (gancho, 2 de desarrollo, cierre) — usa como máximo 3 o 4 puntos para que quepan con " +
+    "justicia; nunca prometas una lista más larga de la que ese formato puede desarrollar.\n" +
+    "- Video: el brief debe incluir un GUION real, no solo la idea del video — divídelo en " +
+    "escenas o tomas numeradas, y para cada una describe qué se ve y qué se dice (diálogo, " +
+    "narración en off, o texto en pantalla, según aplique), en el orden en que aparecen. Un video " +
+    "de 20-40 segundos normalmente son 3-5 escenas — sé así de concreto, nunca dejes el brief como " +
+    "'un video mostrando el proceso de trabajo' sin guion.\n\n" +
+    "En los tres casos, quien reciba la pieza (un diseñador, o Wit en una conversación aparte) " +
+    "debe poder trabajarla directo, sin tener que volver a preguntar de qué trata o inventar el " +
+    "contenido por su cuenta.\n\n" +
     "Reglas de seguridad, nunca las rompas:\n" +
     "- NUNCA inventes precios, descuentos o datos concretos del negocio que el cliente no haya " +
     "mencionado explícitamente.\n" +
@@ -439,7 +450,7 @@ const CALENDAR_TOOLS = [
                 brief: {
                   type: "string",
                   description:
-                    "Qué debe mostrar/decir esta pieza, con contenido real y completo — suficiente para que un diseñador la haga sin más contexto ni otra conversación. Si es una lista (tips, pasos, razones, etc.), escribe cada punto con su contenido específico, nunca solo el título de la lista.",
+                    "Brief profesional y completo, nunca solo el tema — suficiente para trabajar la pieza sin más contexto ni otra conversación. Imagen: mensaje principal y cualquier texto en pantalla redactado tal cual. Carrusel: si es una lista, cada punto con su contenido específico (máx. 3-4 puntos, un carrusel siempre son 4 láminas). Video: un guion real dividido en escenas/tomas numeradas, con qué se ve y qué se dice en cada una.",
                 },
               },
               required: ["date", "format", "title", "brief"],
