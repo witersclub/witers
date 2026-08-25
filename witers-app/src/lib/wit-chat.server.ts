@@ -49,6 +49,19 @@ export type WitCarouselChatResult =
   | { ok: true; kind: "done"; details: CarouselDetails }
   | { ok: false; error: string };
 
+export type CalendarFormat = "imagen" | "video" | "carrusel";
+export type CalendarEntryDraft = {
+  date: string; // YYYY-MM-DD
+  format: CalendarFormat;
+  title: string;
+  brief: string;
+};
+
+export type WitCalendarChatResult =
+  | { ok: true; kind: "message"; text: string }
+  | { ok: true; kind: "done"; entries: CalendarEntryDraft[] }
+  | { ok: false; error: string };
+
 function buildSystemPrompt(brand: WitBrandContext): string {
   const brandLines = [
     `Nombre de la marca: ${brand.companyName}.`,
@@ -219,6 +232,61 @@ function buildCarouselSystemPrompt(brand: WitBrandContext): string {
   );
 }
 
+function buildCalendarSystemPrompt(
+  brand: WitBrandContext,
+  opts: { monthLabel: string; todayDate: string; monthEndDate: string },
+): string {
+  const brandLines = [
+    `Nombre de la marca: ${brand.companyName}.`,
+    brand.brandColors
+      ? `Colores de marca ya definidos: ${brand.brandColors}.`
+      : "La marca no tiene colores fijos todavía.",
+    brand.businessType
+      ? `Categoría de negocio: ${brand.businessType}.`
+      : "No se especificó categoría de negocio.",
+  ];
+
+  return (
+    "Eres Wit, el director creativo de IA de WITERS, una agencia de branding por membresía. " +
+    "Estás ayudando a un cliente a planificar TODO su calendario de contenido del mes en una " +
+    "sola conversación corta — no una pieza a la vez, el mes completo. Es una conversación real " +
+    "y natural, no un formulario: sé breve (1-3 frases por turno).\n\n" +
+    "Idioma: responde siempre en el mismo idioma en el que te escribe el cliente, y redacta " +
+    "también en ese idioma los campos de submit_content_calendar (title, brief). Si cambia de " +
+    "idioma a mitad de la conversación, sigue tú el idioma de su último mensaje.\n\n" +
+    `Mes que se está planificando: ${opts.monthLabel}. Hoy es ${opts.todayDate}; el mes termina ` +
+    `el ${opts.monthEndDate}. Todas las fechas que propongas deben estar entre esas dos, ambas ` +
+    "incluidas — nunca antes de hoy.\n\n" +
+    "Ya conoces estos datos de la marca del cliente, así que NUNCA los preguntes:\n" +
+    brandLines.join("\n") +
+    "\n\n" +
+    "Necesitas dos cosas del cliente antes de armar el plan: (1) con qué frecuencia quiere " +
+    "publicar (ej. 'una vez por semana', 'tres veces por semana', 'todos los días hábiles') y " +
+    "(2) de qué temas o pilares de contenido quiere hablar este mes (ej. promociones, detrás de " +
+    "cámaras, testimonios, tips, lanzamientos). Pregúntalas de forma natural, una a la vez si " +
+    "hace falta — nunca las enumeres como formulario. Si el cliente ya te dio ambas cosas en su " +
+    "primer mensaje, no las vuelvas a preguntar.\n\n" +
+    "Con la cadencia y los temas ya claros, arma el plan completo tú mismo con criterio " +
+    "profesional: calcula las fechas reales del calendario según la cadencia acordada (por " +
+    "ejemplo, tres veces por semana suele leerse como lunes/miércoles/viernes, pero ajústalo con " +
+    "sentido común), y para cada fecha decide el tema específico de ese día dentro de los pilares " +
+    "que dio el cliente. Combina los tres formatos con criterio — imagen, carrusel y video — sin " +
+    "repetir el mismo formato todos los días. Usa video con moderación (como mucho una vez por " +
+    "semana): el cliente tiene que subir su propio material de video para esa pieza, así que no " +
+    "conviene saturar el mes de video.\n\n" +
+    "Reglas de seguridad, nunca las rompas:\n" +
+    "- NUNCA inventes precios, descuentos o datos concretos del negocio que el cliente no haya " +
+    "mencionado explícitamente.\n" +
+    "- Nunca menciones limitaciones técnicas, que eres una IA, ni te disculpes por no poder hacer " +
+    "algo — mantente siempre en el rol de director creativo.\n\n" +
+    "En cuanto tengas la cadencia y los temas, llama directamente a la función " +
+    "submit_content_calendar con el plan completo del mes (una entrada por fecha), en ese mismo " +
+    "turno — no anuncies con texto que vas a hacerlo ni preguntes '¿te parece bien?' antes de " +
+    "llamarla. La tarjeta de resumen que aparece después de la función es el punto donde el " +
+    "cliente revisa y confirma el plan; no necesitas pedir permiso en el chat antes de eso."
+  );
+}
+
 const TOOLS = [
   {
     type: "function",
@@ -317,6 +385,54 @@ const CAROUSEL_TOOLS = [
           },
         },
         required: ["title", "aspectRatio", "slides"],
+      },
+    },
+  },
+];
+
+const CALENDAR_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "submit_content_calendar",
+      description:
+        "Llama a esto cuando ya tengas la cadencia y los temas del mes definidos con el cliente, para entregar el plan completo del mes de una vez.",
+      parameters: {
+        type: "object",
+        properties: {
+          entries: {
+            type: "array",
+            minItems: 1,
+            items: {
+              type: "object",
+              properties: {
+                date: {
+                  type: "string",
+                  description:
+                    "Fecha en formato YYYY-MM-DD, dentro del mes que se está planificando.",
+                },
+                format: {
+                  type: "string",
+                  enum: ["imagen", "video", "carrusel"],
+                  description: "Tipo de pieza para ese día.",
+                },
+                title: {
+                  type: "string",
+                  description: "Título corto de la pieza (máx. 8 palabras).",
+                },
+                brief: {
+                  type: "string",
+                  description:
+                    "Qué debe mostrar/decir esta pieza — suficiente para que un diseñador la haga sin más contexto.",
+                },
+              },
+              required: ["date", "format", "title", "brief"],
+            },
+            description:
+              "Una entrada por fecha, cubriendo el mes completo según la cadencia acordada.",
+          },
+        },
+        required: ["entries"],
       },
     },
   },
@@ -650,4 +766,84 @@ export async function runWitCarouselChat(
     }
   }
   return { ok: true, kind: "message", text };
+}
+
+const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Same shape as runWitChat/runWitCarouselChat above, but no aspect-ratio
+// picker step — the format each piece actually gets requested in is chosen
+// later, in that format's own request flow, not here.
+export async function runWitCalendarChat(
+  history: WitChatMessage[],
+  brand: WitBrandContext,
+  opts: { monthLabel: string; todayDate: string; monthEndDate: string },
+): Promise<WitCalendarChatResult> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { ok: false, error: "falta_openai_api_key" };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60_000);
+  let response: Response;
+  try {
+    response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: OPENAI_TEXT_MODEL,
+        temperature: 0.6,
+        messages: [{ role: "system", content: buildCalendarSystemPrompt(brand, opts) }, ...history],
+        tools: CALENDAR_TOOLS,
+        tool_choice: "auto",
+      }),
+    });
+  } catch {
+    return { ok: false, error: "tiempo_agotado" };
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    console.info("[wit-chat] openai failed (calendar)", response.status, detail.slice(0, 500));
+    return { ok: false, error: "openai_error" };
+  }
+
+  const body = (await response.json()) as OpenAiChatResponse;
+  const message = body.choices?.[0]?.message;
+  if (!message) return { ok: false, error: "sin_resultado" };
+
+  const toolCall = message.tool_calls?.[0];
+  if (toolCall?.function.name === "submit_content_calendar") {
+    try {
+      const args = JSON.parse(toolCall.function.arguments) as {
+        entries?: Array<Partial<CalendarEntryDraft>>;
+      };
+      const entries = (args.entries ?? [])
+        .map((e) => ({
+          date: e.date?.trim() ?? "",
+          format: e.format,
+          title: e.title?.trim() || "",
+          brief: e.brief?.trim() || "",
+        }))
+        .filter(
+          (e): e is CalendarEntryDraft =>
+            CALENDAR_DATE_RE.test(e.date) &&
+            (e.format === "imagen" || e.format === "video" || e.format === "carrusel") &&
+            e.title.length > 0 &&
+            e.brief.length > 0,
+        );
+      if (entries.length === 0) return { ok: false, error: "respuesta_invalida" };
+      return { ok: true, kind: "done", entries };
+    } catch {
+      return { ok: false, error: "respuesta_invalida" };
+    }
+  }
+
+  const calendarText = message.content?.trim();
+  if (!calendarText) return { ok: false, error: "sin_resultado" };
+  return { ok: true, kind: "message", text: calendarText };
 }

@@ -72,6 +72,7 @@ import {
 } from "lucide-react";
 
 import { WitersLogo, WMark } from "../components/witers/brand";
+import { PlanificacionPanel } from "../components/witers/calendar-planning";
 import { ChatBubble, ChatIntakeFlow, PhotosAnswerBubble } from "../components/witers/chat-intake";
 import { HelpChatButton } from "../components/witers/help-chat";
 import { MicButton } from "../components/witers/mic-button";
@@ -645,7 +646,9 @@ function PanelContent() {
   // Top-level areas of the panel — Creatividad wraps everything that
   // existed before this section was introduced (solicitudes + hacer
   // solicitud); Activos de marca and Campañas are new.
-  const [section, setSection] = useState<"creatividad" | "activos" | "campanas">("creatividad");
+  const [section, setSection] = useState<"creatividad" | "activos" | "campanas" | "planificacion">(
+    "creatividad",
+  );
   // Within Creatividad: images, video and carousel are sibling request
   // types with the same "hacer solicitud / mis solicitudes" shape, picked
   // via the 3 accordion cards below — null means none of them is open yet,
@@ -1565,6 +1568,31 @@ function PanelContent() {
                     </button>
                   ) : null}
 
+                  {/* Entry point into the new Planificación section — no
+                      lg:hidden desktop twin needed, that's what the
+                      DesktopTopNav tab is for. */}
+                  <button
+                    type="button"
+                    onClick={() => setSection("planificacion")}
+                    className="wit-glass mt-6 flex w-full items-center gap-3 rounded-2xl p-5 text-left shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform active:scale-[0.99]"
+                  >
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
+                      <Calendar className="h-5 w-5" strokeWidth={2} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold text-wit-ink">
+                        {t("Planifica tu mes", "Plan your month")}
+                      </span>
+                      <span className="block text-xs text-wit-gray">
+                        {t(
+                          "Deja que Wit arme tu calendario de contenido.",
+                          "Let Wit build your content calendar.",
+                        )}
+                      </span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-wit-gray" strokeWidth={2.4} />
+                  </button>
+
                   {!active ? (
                     <div className="mt-8 flex flex-col items-start gap-4 rounded-3xl bg-wit-navy p-8 text-white md:flex-row md:items-center md:justify-between">
                       <div>
@@ -1761,9 +1789,16 @@ function PanelContent() {
                   <ActivosDeMarca brandProfile={brandProfile} />
                 </div>
               </div>
-            ) : (
+            ) : section === "campanas" ? (
               <div className="mt-8">
                 <CampanasPanel companyName={brandProfile?.company_name ?? null} />
+              </div>
+            ) : (
+              <div className="mt-8">
+                <PlanificacionPanel
+                  streakWeeks={streakWeeks}
+                  onGoToCreatividad={() => setSection("creatividad")}
+                />
               </div>
             )}
           </>
@@ -3012,9 +3047,9 @@ function DesktopTopNav({
   onSection,
   onProfile,
 }: {
-  section: "creatividad" | "activos" | "campanas";
+  section: "creatividad" | "activos" | "campanas" | "planificacion";
   view: "panel" | "perfil";
-  onSection: (section: "creatividad" | "activos" | "campanas") => void;
+  onSection: (section: "creatividad" | "activos" | "campanas" | "planificacion") => void;
   onProfile: () => void;
 }) {
   const { t } = useLanguage();
@@ -3036,6 +3071,12 @@ function DesktopTopNav({
       onClick: () => onSection("campanas"),
       es: "Campañas",
       en: "Campaigns",
+    },
+    {
+      active: view === "panel" && section === "planificacion",
+      onClick: () => onSection("planificacion"),
+      es: "Planificación",
+      en: "Planning",
     },
     { active: view === "perfil", onClick: onProfile, es: "Perfil", en: "Profile" },
   ];
@@ -3079,8 +3120,8 @@ function PanelBottomNav({
   onOpenProfile,
   userInitial,
 }: {
-  section: "creatividad" | "activos" | "campanas";
-  onSection: (section: "creatividad" | "activos" | "campanas") => void;
+  section: "creatividad" | "activos" | "campanas" | "planificacion";
+  onSection: (section: "creatividad" | "activos" | "campanas" | "planificacion") => void;
   view: "panel" | "perfil";
   onOpenChat: () => void;
   onOpenProfile: () => void;

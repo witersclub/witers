@@ -73,6 +73,126 @@ function describeValidationError(error: z.ZodError): string {
   return `${label}: ${issue.message}`;
 }
 
+export type CreateImageRequestInput = {
+  title: string;
+  companyName: string;
+  productName?: string | null;
+  pieceBrief: string;
+  style?: string | null;
+  businessType?: string | null;
+  aspectRatio: "1:1" | "4:3" | "3:4" | "16:9" | "9:16";
+  referenceKey?: string | null;
+  logoKey?: string | null;
+  noLogo?: boolean;
+  productPhotoKeys?: string[];
+  audience?: string | null;
+  ageRange?: string | null;
+  requiredText?: string | null;
+  brandColors?: string | null;
+  promoPrice?: string | null;
+  lang: "es" | "en";
+};
+
+// The full "create an image request" business logic (quota check, brand
+// lock/resolve, insert, quota increment, staff notification, best-effort AI
+// prompt polish) — extracted so /api/calendar-entries-request can create a
+// request from an already-planned calendar entry through the exact same
+// path as the normal POST handler below, instead of a second copy that
+// could drift out of sync on quota or columns.
+export async function createImageRequest(
+  userId: string,
+  userName: string,
+  data: CreateImageRequestInput,
+): Promise<{ ok: true; id: string } | { ok: false; error: string; status: number }> {
+  const membership = await getMembership(userId);
+  if (!membership || membership.status !== "active") {
+    return { ok: false, error: "sin_membresia", status: 403 };
+  }
+  if (membership.requests_used >= membership.requests_quota + membership.bonus_requests_quota) {
+    return { ok: false, error: "sin_saldo", status: 403 };
+  }
+
+  const brand = await resolveBrandProfile(userId, {
+    companyName: data.companyName.trim(),
+    brandColors: data.brandColors ?? null,
+    businessType: data.businessType?.trim() || null,
+    logoKey: data.noLogo ? null : (data.logoKey ?? null),
+  });
+
+  const id = crypto.randomUUID();
+  await db()
+    .prepare(
+      `INSERT INTO design_requests
+         (id, user_id, title, brief, style, aspect_ratio, reference_key, audience, age_range, required_text, brand_colors, promo_price,
+          company_name, product_name, piece_brief, logo_key, product_photo_keys)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)`,
+    )
+    .bind(
+      id,
+      userId,
+      data.title.trim(),
+      "",
+      data.style?.trim() ?? null,
+      data.aspectRatio,
+      data.referenceKey ?? null,
+      data.audience?.trim() ?? null,
+      data.ageRange ?? null,
+      data.requiredText?.trim() ?? null,
+      brand.brand_colors,
+      data.promoPrice?.trim() ?? null,
+      brand.company_name,
+      data.productName?.trim() ?? null,
+      data.pieceBrief.trim(),
+      brand.logo_key,
+      data.productPhotoKeys?.length ? JSON.stringify(data.productPhotoKeys) : null,
+    )
+    .run();
+
+  await db()
+    .prepare("UPDATE memberships SET requests_used = requests_used + 1 WHERE user_id = ?1")
+    .bind(userId)
+    .run();
+
+  await notifyStaffNewRequest({
+    title: data.title.trim(),
+    clientName: userName,
+    companyName: brand.company_name,
+    panelUrl: "https://witers.com/witer",
+  });
+
+  try {
+    const rawPrompt = buildDesignPrompt({
+      companyName: brand.company_name,
+      productName: data.productName?.trim() || null,
+      pieceBrief: data.pieceBrief.trim(),
+      style: data.style?.trim() || null,
+      audience: data.audience?.trim() || null,
+      ageRange: data.ageRange ?? null,
+      brandColors: brand.brand_colors,
+      promoPrice: data.promoPrice?.trim() || null,
+      requiredText: data.requiredText?.trim() || null,
+      aspectRatio: data.aspectRatio,
+      hasLogo: Boolean(brand.logo_key),
+      hasProductPhoto: Boolean(data.productPhotoKeys?.length),
+      businessType: brand.business_type,
+      lang: data.lang,
+    });
+    const result = await polishPromptWithAI(rawPrompt, data.lang);
+    if (result.ok) {
+      await db()
+        .prepare("UPDATE design_requests SET ai_prompt = ?2 WHERE id = ?1")
+        .bind(id, result.prompt)
+        .run();
+    } else {
+      console.info("[api/requests] prompt polish failed", result.error);
+    }
+  } catch (err) {
+    console.info("[api/requests] prompt polish threw", err);
+  }
+
+  return { ok: true, id };
+}
+
 export const Route = createFileRoute("/api/requests")({
   server: {
     handlers: {
@@ -115,17 +235,6 @@ export const Route = createFileRoute("/api/requests")({
         const user = await getSessionUser(request);
         if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
 
-        const membership = await getMembership(user.id);
-        if (!membership || membership.status !== "active") {
-          return json({ ok: false, error: "sin_membresia" }, { status: 403 });
-        }
-        if (
-          membership.requests_used >=
-          membership.requests_quota + membership.bonus_requests_quota
-        ) {
-          return json({ ok: false, error: "sin_saldo" }, { status: 403 });
-        }
-
         const parsed = createSchema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) {
           return json(
@@ -134,102 +243,9 @@ export const Route = createFileRoute("/api/requests")({
           );
         }
 
-        // One membership serves one business: company name, brand colors,
-        // and logo lock to whatever this member's first submission
-        // contains, so a later submission can't quietly swap them for a
-        // different business. This is enforced here — the one place every
-        // request-creation path (chat, classic form, or a raw API call)
-        // funnels through — not just hidden in a UI, and the *returned*
-        // values (not whatever the client just sent) are what actually get
-        // written below.
-        const brand = await resolveBrandProfile(user.id, {
-          companyName: parsed.data.companyName.trim(),
-          brandColors: parsed.data.brandColors ?? null,
-          businessType: parsed.data.businessType?.trim() || null,
-          logoKey: parsed.data.noLogo ? null : (parsed.data.logoKey ?? null),
-        });
-
-        const id = crypto.randomUUID();
-        await db()
-          .prepare(
-            `INSERT INTO design_requests
-               (id, user_id, title, brief, style, aspect_ratio, reference_key, audience, age_range, required_text, brand_colors, promo_price,
-                company_name, product_name, piece_brief, logo_key, product_photo_keys)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)`,
-          )
-          .bind(
-            id,
-            user.id,
-            parsed.data.title.trim(),
-            // design_requests.brief is still NOT NULL at the DB level — no
-            // longer collected from the client, so this is just satisfying
-            // that constraint, not a real value.
-            "",
-            parsed.data.style?.trim() ?? null,
-            parsed.data.aspectRatio,
-            parsed.data.referenceKey ?? null,
-            parsed.data.audience?.trim() ?? null,
-            parsed.data.ageRange ?? null,
-            parsed.data.requiredText?.trim() ?? null,
-            brand.brand_colors,
-            parsed.data.promoPrice?.trim() ?? null,
-            brand.company_name,
-            parsed.data.productName?.trim() ?? null,
-            parsed.data.pieceBrief.trim(),
-            brand.logo_key,
-            parsed.data.productPhotoKeys?.length
-              ? JSON.stringify(parsed.data.productPhotoKeys)
-              : null,
-          )
-          .run();
-
-        await db()
-          .prepare("UPDATE memberships SET requests_used = requests_used + 1 WHERE user_id = ?1")
-          .bind(user.id)
-          .run();
-
-        await notifyStaffNewRequest({
-          title: parsed.data.title.trim(),
-          clientName: user.name,
-          companyName: brand.company_name,
-          panelUrl: "https://witers.com/witer",
-        });
-
-        // Run the locally-built prompt through a real ChatGPT completion so
-        // staff get something professionally worded (spelling fixed, phrasing
-        // tightened) waiting for them instead of the raw templated version —
-        // never blocks the response above if it's slow or fails.
-        try {
-          const rawPrompt = buildDesignPrompt({
-            companyName: brand.company_name,
-            productName: parsed.data.productName?.trim() || null,
-            pieceBrief: parsed.data.pieceBrief.trim(),
-            style: parsed.data.style?.trim() || null,
-            audience: parsed.data.audience?.trim() || null,
-            ageRange: parsed.data.ageRange ?? null,
-            brandColors: brand.brand_colors,
-            promoPrice: parsed.data.promoPrice?.trim() || null,
-            requiredText: parsed.data.requiredText?.trim() || null,
-            aspectRatio: parsed.data.aspectRatio,
-            hasLogo: Boolean(brand.logo_key),
-            hasProductPhoto: Boolean(parsed.data.productPhotoKeys?.length),
-            businessType: brand.business_type,
-            lang: parsed.data.lang,
-          });
-          const result = await polishPromptWithAI(rawPrompt, parsed.data.lang);
-          if (result.ok) {
-            await db()
-              .prepare("UPDATE design_requests SET ai_prompt = ?2 WHERE id = ?1")
-              .bind(id, result.prompt)
-              .run();
-          } else {
-            console.info("[api/requests] prompt polish failed", result.error);
-          }
-        } catch (err) {
-          console.info("[api/requests] prompt polish threw", err);
-        }
-
-        return json({ ok: true, id });
+        const result = await createImageRequest(user.id, user.name, parsed.data);
+        if (!result.ok) return json({ ok: false, error: result.error }, { status: result.status });
+        return json({ ok: true, id: result.id });
       },
     },
   },

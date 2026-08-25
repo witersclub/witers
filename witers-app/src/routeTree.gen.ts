@@ -52,12 +52,15 @@ import { Route as ApiCarouselRequestsRouteImport } from './routes/api/carousel-r
 import { Route as ApiCarouselRequestChangeRouteImport } from './routes/api/carousel-request-change'
 import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ApiCampaignAdsRouteImport } from './routes/api/campaign-ads'
+import { Route as ApiCalendarEntriesRequestRouteImport } from './routes/api/calendar-entries-request'
+import { Route as ApiCalendarEntriesRouteImport } from './routes/api/calendar-entries'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
 import { Route as ApiBrandProfileFontRouteImport } from './routes/api/brand-profile-font'
 import { Route as ApiBrandProfileColorsRouteImport } from './routes/api/brand-profile-colors'
 import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
 import { Route as ApiWitChatRouteImport } from './routes/api/wit/chat'
 import { Route as ApiWitCarouselChatRouteImport } from './routes/api/wit/carousel-chat'
+import { Route as ApiWitCalendarChatRouteImport } from './routes/api/wit/calendar-chat'
 import { Route as ApiStripeCreatePaymentIntentRouteImport } from './routes/api/stripe/create-payment-intent'
 import { Route as ApiPublicShowcaseImageRouteImport } from './routes/api/public/showcase-image'
 import { Route as ApiPublicShowcaseRouteImport } from './routes/api/public/showcase'
@@ -336,6 +339,17 @@ const ApiCampaignAdsRoute = ApiCampaignAdsRouteImport.update({
   path: '/api/campaign-ads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCalendarEntriesRequestRoute =
+  ApiCalendarEntriesRequestRouteImport.update({
+    id: '/api/calendar-entries-request',
+    path: '/api/calendar-entries-request',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiCalendarEntriesRoute = ApiCalendarEntriesRouteImport.update({
+  id: '/api/calendar-entries',
+  path: '/api/calendar-entries',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBrandProfileManualRoute = ApiBrandProfileManualRouteImport.update({
   id: '/api/brand-profile-manual',
   path: '/api/brand-profile-manual',
@@ -364,6 +378,11 @@ const ApiWitChatRoute = ApiWitChatRouteImport.update({
 const ApiWitCarouselChatRoute = ApiWitCarouselChatRouteImport.update({
   id: '/api/wit/carousel-chat',
   path: '/api/wit/carousel-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWitCalendarChatRoute = ApiWitCalendarChatRouteImport.update({
+  id: '/api/wit/calendar-chat',
+  path: '/api/wit/calendar-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStripeCreatePaymentIntentRoute =
@@ -716,6 +735,8 @@ export interface FileRoutesByFullPath {
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
+  '/api/calendar-entries': typeof ApiCalendarEntriesRoute
+  '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
@@ -796,6 +817,7 @@ export interface FileRoutesByFullPath {
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
+  '/api/wit/calendar-chat': typeof ApiWitCalendarChatRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
   '/api/auth/facebook/callback': typeof ApiAuthFacebookCallbackRoute
@@ -828,6 +850,8 @@ export interface FileRoutesByTo {
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
+  '/api/calendar-entries': typeof ApiCalendarEntriesRoute
+  '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
@@ -908,6 +932,7 @@ export interface FileRoutesByTo {
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
+  '/api/wit/calendar-chat': typeof ApiWitCalendarChatRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
   '/api/auth/facebook/callback': typeof ApiAuthFacebookCallbackRoute
@@ -941,6 +966,8 @@ export interface FileRoutesById {
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
+  '/api/calendar-entries': typeof ApiCalendarEntriesRoute
+  '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
@@ -1021,6 +1048,7 @@ export interface FileRoutesById {
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
+  '/api/wit/calendar-chat': typeof ApiWitCalendarChatRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
   '/api/auth/facebook/callback': typeof ApiAuthFacebookCallbackRoute
@@ -1055,6 +1083,8 @@ export interface FileRouteTypes {
     | '/api/brand-profile-colors'
     | '/api/brand-profile-font'
     | '/api/brand-profile-manual'
+    | '/api/calendar-entries'
+    | '/api/calendar-entries-request'
     | '/api/campaign-ads'
     | '/api/campaigns'
     | '/api/carousel-request-change'
@@ -1135,6 +1165,7 @@ export interface FileRouteTypes {
     | '/api/public/showcase'
     | '/api/public/showcase-image'
     | '/api/stripe/create-payment-intent'
+    | '/api/wit/calendar-chat'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
     | '/api/auth/facebook/callback'
@@ -1167,6 +1198,8 @@ export interface FileRouteTypes {
     | '/api/brand-profile-colors'
     | '/api/brand-profile-font'
     | '/api/brand-profile-manual'
+    | '/api/calendar-entries'
+    | '/api/calendar-entries-request'
     | '/api/campaign-ads'
     | '/api/campaigns'
     | '/api/carousel-request-change'
@@ -1247,6 +1280,7 @@ export interface FileRouteTypes {
     | '/api/public/showcase'
     | '/api/public/showcase-image'
     | '/api/stripe/create-payment-intent'
+    | '/api/wit/calendar-chat'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
     | '/api/auth/facebook/callback'
@@ -1279,6 +1313,8 @@ export interface FileRouteTypes {
     | '/api/brand-profile-colors'
     | '/api/brand-profile-font'
     | '/api/brand-profile-manual'
+    | '/api/calendar-entries'
+    | '/api/calendar-entries-request'
     | '/api/campaign-ads'
     | '/api/campaigns'
     | '/api/carousel-request-change'
@@ -1359,6 +1395,7 @@ export interface FileRouteTypes {
     | '/api/public/showcase'
     | '/api/public/showcase-image'
     | '/api/stripe/create-payment-intent'
+    | '/api/wit/calendar-chat'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
     | '/api/auth/facebook/callback'
@@ -1392,6 +1429,8 @@ export interface RootRouteChildren {
   ApiBrandProfileColorsRoute: typeof ApiBrandProfileColorsRoute
   ApiBrandProfileFontRoute: typeof ApiBrandProfileFontRoute
   ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
+  ApiCalendarEntriesRoute: typeof ApiCalendarEntriesRoute
+  ApiCalendarEntriesRequestRoute: typeof ApiCalendarEntriesRequestRoute
   ApiCampaignAdsRoute: typeof ApiCampaignAdsRoute
   ApiCampaignsRoute: typeof ApiCampaignsRoute
   ApiCarouselRequestChangeRoute: typeof ApiCarouselRequestChangeRoute
@@ -1472,6 +1511,7 @@ export interface RootRouteChildren {
   ApiPublicShowcaseRoute: typeof ApiPublicShowcaseRoute
   ApiPublicShowcaseImageRoute: typeof ApiPublicShowcaseImageRoute
   ApiStripeCreatePaymentIntentRoute: typeof ApiStripeCreatePaymentIntentRoute
+  ApiWitCalendarChatRoute: typeof ApiWitCalendarChatRoute
   ApiWitCarouselChatRoute: typeof ApiWitCarouselChatRoute
   ApiWitChatRoute: typeof ApiWitChatRoute
   ApiAuthFacebookCallbackRoute: typeof ApiAuthFacebookCallbackRoute
@@ -1783,6 +1823,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCampaignAdsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/calendar-entries-request': {
+      id: '/api/calendar-entries-request'
+      path: '/api/calendar-entries-request'
+      fullPath: '/api/calendar-entries-request'
+      preLoaderRoute: typeof ApiCalendarEntriesRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar-entries': {
+      id: '/api/calendar-entries'
+      path: '/api/calendar-entries'
+      fullPath: '/api/calendar-entries'
+      preLoaderRoute: typeof ApiCalendarEntriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/brand-profile-manual': {
       id: '/api/brand-profile-manual'
       path: '/api/brand-profile-manual'
@@ -1823,6 +1877,13 @@ declare module '@tanstack/react-router' {
       path: '/api/wit/carousel-chat'
       fullPath: '/api/wit/carousel-chat'
       preLoaderRoute: typeof ApiWitCarouselChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/wit/calendar-chat': {
+      id: '/api/wit/calendar-chat'
+      path: '/api/wit/calendar-chat'
+      fullPath: '/api/wit/calendar-chat'
+      preLoaderRoute: typeof ApiWitCalendarChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/stripe/create-payment-intent': {
@@ -2280,6 +2341,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBrandProfileColorsRoute: ApiBrandProfileColorsRoute,
   ApiBrandProfileFontRoute: ApiBrandProfileFontRoute,
   ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
+  ApiCalendarEntriesRoute: ApiCalendarEntriesRoute,
+  ApiCalendarEntriesRequestRoute: ApiCalendarEntriesRequestRoute,
   ApiCampaignAdsRoute: ApiCampaignAdsRoute,
   ApiCampaignsRoute: ApiCampaignsRoute,
   ApiCarouselRequestChangeRoute: ApiCarouselRequestChangeRoute,
@@ -2360,6 +2423,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicShowcaseRoute: ApiPublicShowcaseRoute,
   ApiPublicShowcaseImageRoute: ApiPublicShowcaseImageRoute,
   ApiStripeCreatePaymentIntentRoute: ApiStripeCreatePaymentIntentRoute,
+  ApiWitCalendarChatRoute: ApiWitCalendarChatRoute,
   ApiWitCarouselChatRoute: ApiWitCarouselChatRoute,
   ApiWitChatRoute: ApiWitChatRoute,
   ApiAuthFacebookCallbackRoute: ApiAuthFacebookCallbackRoute,
