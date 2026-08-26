@@ -104,7 +104,15 @@ export const Route = createFileRoute("/api/calendar-entries")({
 
         // Resolve status for linked entries with one query per format
         // (never a polymorphic JOIN across three differently-shaped tables).
+        // Once a format's IDs resolve to "lista", one more query per format
+        // fetches the actual delivered content for just that subset — so a
+        // month still "en_diseno" never pays for a lookup that would come
+        // back empty anyway.
         const statusById = new Map<string, string>();
+        const thumbById = new Map<string, string>(); // requestId -> grid-cell thumbnail
+        const galleryById = new Map<string, string[]>(); // requestId -> full delivered gallery
+        const videoHrefById = new Map<string, string>(); // requestId -> delivered video src
+
         for (const format of Object.keys(REQUEST_TABLE) as CalendarFormat[]) {
           const ids = entries
             .filter((e) => e.format === format && e.request_id)
@@ -118,6 +126,71 @@ export const Route = createFileRoute("/api/calendar-entries")({
             .bind(...ids)
             .all<{ id: string; status: string }>();
           for (const row of statusRows.results ?? []) statusById.set(row.id, row.status);
+
+          const listaIds = ids.filter(
+            (id) => statusBucket(statusById.get(id) ?? "en_proceso") === "lista",
+          );
+          if (listaIds.length === 0) continue;
+          const listaPlaceholders = listaIds.map((_, i) => `?${i + 1}`).join(", ");
+
+          if (format === "imagen") {
+            // Same "latest non-draft result" correlated-subquery shape as
+            // requests.ts's own GET, scoped to just the delivered IDs.
+            const imgRows = await db()
+              .prepare(
+                `SELECT dr.id AS request_id,
+                   (SELECT rr.image_url FROM request_results rr
+                    WHERE rr.request_id = dr.id AND rr.kind != 'draft'
+                    ORDER BY rr.created_at DESC LIMIT 1) AS image_url,
+                   (SELECT rr.r2_key FROM request_results rr
+                    WHERE rr.request_id = dr.id AND rr.kind != 'draft'
+                    ORDER BY rr.created_at DESC LIMIT 1) AS r2_key
+                 FROM design_requests dr WHERE dr.id IN (${listaPlaceholders})`,
+              )
+              .bind(...listaIds)
+              .all<{ request_id: string; image_url: string | null; r2_key: string | null }>();
+            for (const row of imgRows.results ?? []) {
+              const href =
+                row.image_url ??
+                (row.r2_key ? `/api/file?key=${encodeURIComponent(row.r2_key)}` : null);
+              if (href) {
+                thumbById.set(row.request_id, href);
+                galleryById.set(row.request_id, [href]);
+              }
+            }
+          } else if (format === "carrusel") {
+            const slideRows = await db()
+              .prepare(
+                `SELECT carousel_request_id, delivered_key FROM carousel_slides
+                 WHERE carousel_request_id IN (${listaPlaceholders}) AND delivered_key IS NOT NULL
+                 ORDER BY slide_index ASC`,
+              )
+              .bind(...listaIds)
+              .all<{ carousel_request_id: string; delivered_key: string }>();
+            for (const row of slideRows.results ?? []) {
+              const href = `/api/file?key=${encodeURIComponent(row.delivered_key)}`;
+              const gallery = galleryById.get(row.carousel_request_id) ?? [];
+              gallery.push(href);
+              galleryById.set(row.carousel_request_id, gallery);
+              if (!thumbById.has(row.carousel_request_id)) {
+                thumbById.set(row.carousel_request_id, href);
+              }
+            }
+          } else {
+            // video: no stored still frame to use as a grid-cell thumbnail
+            // (same limitation as panel.tsx's "Mis solicitudes" strip) —
+            // only the full delivered file, for the detail panel's player.
+            const videoRows = await db()
+              .prepare(
+                `SELECT id, delivered_key FROM video_requests
+                 WHERE id IN (${listaPlaceholders}) AND delivered_key IS NOT NULL`,
+              )
+              .bind(...listaIds)
+              .all<{ id: string; delivered_key: string }>();
+            for (const row of videoRows.results ?? []) {
+              videoHrefById.set(row.id, `/api/file?key=${encodeURIComponent(row.delivered_key)}`);
+            }
+          }
         }
 
         const withStatus = entries.map((e) => ({
@@ -131,6 +204,9 @@ export const Route = createFileRoute("/api/calendar-entries")({
           status: e.request_id
             ? statusBucket(statusById.get(e.request_id) ?? "en_proceso")
             : ("por_planear" as const),
+          thumbHref: e.request_id ? (thumbById.get(e.request_id) ?? null) : null,
+          deliveredImages: e.request_id ? (galleryById.get(e.request_id) ?? null) : null,
+          deliveredVideoHref: e.request_id ? (videoHrefById.get(e.request_id) ?? null) : null,
         }));
 
         return json({ ok: true, entries: withStatus });

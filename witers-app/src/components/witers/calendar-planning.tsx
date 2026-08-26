@@ -26,6 +26,7 @@ import { WMark } from "./brand";
 import { ChatBubble } from "./chat-intake";
 import { ASPECT_OPTIONS, AspectRatioPicker } from "./lab-pickers";
 import { MicButton } from "./mic-button";
+import { SlideGallery } from "./slide-gallery";
 import { useLanguage } from "../../lib/i18n";
 
 // video no soporta 4:3/3:4 (ver el enum real en video-requests.ts) — se le
@@ -45,6 +46,14 @@ type CalendarEntry = CalendarEntryDraft & {
   id: string;
   requestId: string | null;
   status: "por_planear" | "en_diseno" | "lista";
+  // Solo presentes cuando status === "lista" — el contenido real ya
+  // entregado. thumbHref es la miniatura para la casilla del calendario
+  // (imagen o primera lámina de carrusel; null en video, que no tiene
+  // fotograma guardado). deliveredImages es la galería completa para el
+  // detalle. deliveredVideoHref es el src del reproductor, solo video.
+  thumbHref: string | null;
+  deliveredImages: string[] | null;
+  deliveredVideoHref: string | null;
 };
 type WitMessage = {
   role: "user" | "assistant";
@@ -590,9 +599,30 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
         {formatDayLabel(entry.date, t)}
       </p>
 
-      <div className="mt-3 flex aspect-square items-center justify-center rounded-2xl border border-wit-ink/5 bg-gradient-to-br from-wit-mist/80 to-white/40">
-        <Icon className="h-10 w-10 text-wit-blue/45" strokeWidth={1.6} />
-      </div>
+      {entry.status === "lista" && entry.format === "video" && entry.deliveredVideoHref ? (
+        <div className="mt-3 aspect-square overflow-hidden rounded-2xl border border-wit-ink/5 bg-black">
+          <video
+            controls
+            preload="metadata"
+            className="h-full w-full object-contain"
+            src={entry.deliveredVideoHref}
+          />
+        </div>
+      ) : entry.status === "lista" && entry.deliveredImages?.length ? (
+        <div className="mt-3 aspect-square overflow-hidden rounded-2xl border border-wit-ink/5">
+          <SlideGallery
+            key={entry.id}
+            images={entry.deliveredImages}
+            alt={entry.title}
+            className="relative h-full w-full"
+            imageClassName="h-full w-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="mt-3 flex aspect-square items-center justify-center rounded-2xl border border-wit-ink/5 bg-gradient-to-br from-wit-mist/80 to-white/40">
+          <Icon className="h-10 w-10 text-wit-blue/45" strokeWidth={1.6} />
+        </div>
+      )}
 
       {editing ? (
         <input
@@ -951,9 +981,11 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
-          {/* Desktop/tablet grid */}
-          <div className="wit-glass hidden rounded-3xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:block">
-            <div className="grid grid-cols-7 gap-2">
+          {/* Same grid at every size — only the density changes (smaller
+              cells/text on a phone) instead of swapping to a separate
+              agenda-list layout on mobile. */}
+          <div className="wit-glass rounded-3xl p-3 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:p-5">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
               {[
                 t("Lun", "Mon"),
                 t("Mar", "Tue"),
@@ -965,25 +997,26 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
               ].map((label) => (
                 <div
                   key={label}
-                  className="pl-1 text-[11px] font-bold uppercase tracking-wider text-wit-gray"
+                  className="truncate pl-0.5 text-[8px] font-bold uppercase tracking-wider text-wit-gray sm:pl-1 sm:text-[11px]"
                 >
                   {label}
                 </div>
               ))}
             </div>
-            <div className="mt-1.5 grid grid-cols-7 gap-2">
+            <div className="mt-1 grid grid-cols-7 gap-1 sm:mt-1.5 sm:gap-2">
               {grid.map((cell) => {
                 const entry = entryByDate.get(cell.date);
                 const Icon = entry ? FORMAT_ICON[entry.format] : null;
                 const isToday = cell.date === today;
                 const isSelected = entry && entry.id === selectedId;
+                const hasThumb = Boolean(entry && entry.status === "lista" && entry.thumbHref);
                 return (
                   <button
                     key={cell.date}
                     type="button"
                     disabled={!entry}
                     onClick={() => entry && setSelectedId(entry.id)}
-                    className={`flex min-h-[92px] flex-col gap-1.5 rounded-2xl border p-2 text-left transition-colors ${
+                    className={`relative flex min-h-[48px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-colors sm:min-h-[92px] sm:gap-1.5 sm:rounded-2xl sm:p-2 ${
                       isSelected
                         ? "border-2 border-wit-blue bg-white shadow-[0_6px_18px_rgba(0,71,255,0.14)]"
                         : cell.inMonth
@@ -991,26 +1024,41 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                           : "border-transparent bg-wit-mist/10"
                     } ${!entry ? "cursor-default" : "cursor-pointer"}`}
                   >
+                    {hasThumb ? (
+                      <img
+                        src={entry!.thumbHref!}
+                        alt={entry!.title}
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : null}
                     <span
-                      className={`font-wit-mono text-xs ${
-                        cell.inMonth
-                          ? isToday
-                            ? "font-bold text-wit-blue"
-                            : "text-wit-ink"
-                          : "text-wit-gray/40"
+                      className={`relative z-10 font-wit-mono text-[8px] sm:text-xs ${
+                        hasThumb
+                          ? "font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]"
+                          : cell.inMonth
+                            ? isToday
+                              ? "font-bold text-wit-blue"
+                              : "text-wit-ink"
+                            : "text-wit-gray/40"
                       }`}
                     >
                       {Number(cell.date.slice(8, 10))}
                     </span>
                     {entry && Icon ? (
-                      <span
-                        className={`flex items-center gap-1 truncate rounded-lg px-1.5 py-1 text-[10px] font-semibold ${statusMeta(entry.status, t).badgeClass}`}
-                      >
-                        <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={2.4} />
-                        <span className="truncate">{entry.title}</span>
-                      </span>
+                      hasThumb ? (
+                        <span className="absolute bottom-1 right-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-black/55 text-white sm:h-5 sm:w-5">
+                          <Icon className="h-2.5 w-2.5" strokeWidth={2.4} />
+                        </span>
+                      ) : (
+                        <span
+                          className={`relative z-10 mt-auto flex items-center gap-1 truncate rounded-md px-1 py-0.5 text-[9px] font-semibold sm:rounded-lg sm:px-1.5 sm:py-1 sm:text-[10px] ${statusMeta(entry.status, t).badgeClass}`}
+                        >
+                          <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={2.4} />
+                          <span className="hidden truncate sm:inline">{entry.title}</span>
+                        </span>
+                      )
                     ) : isToday ? (
-                      <span className="text-[9px] font-bold uppercase tracking-wide text-wit-blue">
+                      <span className="relative z-10 text-[7px] font-bold uppercase tracking-wide text-wit-blue sm:text-[9px]">
                         {t("Hoy", "Today")}
                       </span>
                     ) : null}
@@ -1018,41 +1066,6 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                 );
               })}
             </div>
-          </div>
-
-          {/* Mobile agenda list */}
-          <div className="flex flex-col gap-2.5 sm:hidden">
-            {entries.map((entry) => {
-              const Icon = FORMAT_ICON[entry.format];
-              const isSelected = entry.id === selectedId;
-              return (
-                <button
-                  key={entry.id}
-                  type="button"
-                  onClick={() => setSelectedId(entry.id)}
-                  className={`flex items-center gap-3 rounded-2xl border p-3 text-left ${
-                    isSelected ? "border-wit-blue bg-white" : "border-wit-ink/8 bg-white"
-                  }`}
-                >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-wit-mist/40 text-wit-blue">
-                    <Icon className="h-5 w-5" strokeWidth={1.9} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-bold text-wit-ink">
-                      {entry.title}
-                    </span>
-                    <span className="block font-wit-mono text-[11px] text-wit-gray">
-                      {formatDayLabel(entry.date, t)}
-                    </span>
-                  </span>
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${statusMeta(entry.status, t).badgeClass}`}
-                  >
-                    {statusMeta(entry.status, t).label}
-                  </span>
-                </button>
-              );
-            })}
           </div>
 
           {selected ? <EntryDetail entry={selected} /> : null}
