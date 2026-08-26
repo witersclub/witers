@@ -222,6 +222,29 @@ function StaffVideoCard({ row, me }: { row: StaffVideoRequest; me: string }) {
     }
   }
 
+  async function release() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/designer/release-video", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ videoRequestId: row.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      setMsg(
+        data.ok
+          ? "Soltaste la solicitud — ya está disponible de nuevo."
+          : "No pudimos soltarla. Intenta de nuevo.",
+      );
+      await qc.invalidateQueries({ queryKey: ["staff-video-requests"] });
+    } catch {
+      setMsg("No pudimos soltarla. Intenta de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function deliver() {
     if (!file) return;
     setBusy(true);
@@ -328,14 +351,24 @@ function StaffVideoCard({ row, me }: { row: StaffVideoRequest; me: string }) {
             placeholder="Nota para el cliente (opcional)"
             className="w-full rounded-xl border border-wit-ink/15 px-3.5 py-2.5 text-xs outline-none focus:border-wit-blue"
           />
-          <button
-            type="button"
-            disabled={!file || busy}
-            onClick={deliver}
-            className="rounded-full bg-wit-blue px-5 py-2.5 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
-          >
-            {busy ? "Subiendo..." : "Enviar video"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={!file || busy}
+              onClick={deliver}
+              className="rounded-full bg-wit-blue px-5 py-2.5 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+            >
+              {busy ? "Subiendo..." : "Enviar video"}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={release}
+              className="rounded-full border border-wit-ink/15 px-5 py-2.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30 disabled:opacity-50"
+            >
+              Soltar solicitud
+            </button>
+          </div>
         </div>
       ) : null}
 

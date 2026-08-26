@@ -356,6 +356,29 @@ export function StaffRequestCard({
     }
   }
 
+  async function release() {
+    setBusy("release");
+    setMsg(null);
+    try {
+      const res = await fetch("/api/designer/release", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestId: row.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      setMsg(
+        data.ok
+          ? "Soltaste la solicitud — ya está disponible de nuevo."
+          : "No pudimos soltarla. Intenta de nuevo.",
+      );
+      await refresh();
+    } catch {
+      setMsg("No pudimos soltarla. Intenta de nuevo.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function approve() {
     setBusy("approve");
     setMsg(null);
@@ -894,14 +917,24 @@ export function StaffRequestCard({
 
           <div className="mt-4">
             {!rejecting ? (
-              <button
-                type="button"
-                disabled={busy !== null}
-                onClick={() => setRejecting(true)}
-                className="rounded-full border border-red-300 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
-              >
-                Rechazar solicitud
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() => setRejecting(true)}
+                  className="rounded-full border border-red-300 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
+                >
+                  Rechazar solicitud
+                </button>
+                <button
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={release}
+                  className="rounded-full border border-wit-ink/15 px-4 py-2 text-xs font-bold text-wit-ink hover:border-wit-ink/30"
+                >
+                  {busy === "release" ? "Soltando..." : "Soltar solicitud"}
+                </button>
+              </div>
             ) : (
               <div className="rounded-xl border border-red-200 bg-red-50 p-4">
                 <label className="text-xs font-bold uppercase tracking-[0.12em] text-red-700">

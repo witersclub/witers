@@ -73,6 +73,9 @@ import { Route as ApiOnboardingCompleteRouteImport } from './routes/api/onboardi
 import { Route as ApiDesignerVideoRequestsRouteImport } from './routes/api/designer/video-requests'
 import { Route as ApiDesignerStatsRouteImport } from './routes/api/designer/stats'
 import { Route as ApiDesignerRequestsRouteImport } from './routes/api/designer/requests'
+import { Route as ApiDesignerReleaseVideoRouteImport } from './routes/api/designer/release-video'
+import { Route as ApiDesignerReleaseCarouselRouteImport } from './routes/api/designer/release-carousel'
+import { Route as ApiDesignerReleaseRouteImport } from './routes/api/designer/release'
 import { Route as ApiDesignerClaimVideoRouteImport } from './routes/api/designer/claim-video'
 import { Route as ApiDesignerClaimCarouselRouteImport } from './routes/api/designer/claim-carousel'
 import { Route as ApiDesignerClaimRouteImport } from './routes/api/designer/claim'
@@ -448,6 +451,22 @@ const ApiDesignerRequestsRoute = ApiDesignerRequestsRouteImport.update({
   path: '/api/designer/requests',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDesignerReleaseVideoRoute = ApiDesignerReleaseVideoRouteImport.update({
+  id: '/api/designer/release-video',
+  path: '/api/designer/release-video',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDesignerReleaseCarouselRoute =
+  ApiDesignerReleaseCarouselRouteImport.update({
+    id: '/api/designer/release-carousel',
+    path: '/api/designer/release-carousel',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiDesignerReleaseRoute = ApiDesignerReleaseRouteImport.update({
+  id: '/api/designer/release',
+  path: '/api/designer/release',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDesignerClaimVideoRoute = ApiDesignerClaimVideoRouteImport.update({
   id: '/api/designer/claim-video',
   path: '/api/designer/claim-video',
@@ -813,6 +832,9 @@ export interface FileRoutesByFullPath {
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
   '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
+  '/api/designer/release': typeof ApiDesignerReleaseRoute
+  '/api/designer/release-carousel': typeof ApiDesignerReleaseCarouselRoute
+  '/api/designer/release-video': typeof ApiDesignerReleaseVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
   '/api/designer/stats': typeof ApiDesignerStatsRoute
   '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
@@ -929,6 +951,9 @@ export interface FileRoutesByTo {
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
   '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
+  '/api/designer/release': typeof ApiDesignerReleaseRoute
+  '/api/designer/release-carousel': typeof ApiDesignerReleaseCarouselRoute
+  '/api/designer/release-video': typeof ApiDesignerReleaseVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
   '/api/designer/stats': typeof ApiDesignerStatsRoute
   '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
@@ -1046,6 +1071,9 @@ export interface FileRoutesById {
   '/api/designer/claim': typeof ApiDesignerClaimRoute
   '/api/designer/claim-carousel': typeof ApiDesignerClaimCarouselRoute
   '/api/designer/claim-video': typeof ApiDesignerClaimVideoRoute
+  '/api/designer/release': typeof ApiDesignerReleaseRoute
+  '/api/designer/release-carousel': typeof ApiDesignerReleaseCarouselRoute
+  '/api/designer/release-video': typeof ApiDesignerReleaseVideoRoute
   '/api/designer/requests': typeof ApiDesignerRequestsRoute
   '/api/designer/stats': typeof ApiDesignerStatsRoute
   '/api/designer/video-requests': typeof ApiDesignerVideoRequestsRoute
@@ -1164,6 +1192,9 @@ export interface FileRouteTypes {
     | '/api/designer/claim'
     | '/api/designer/claim-carousel'
     | '/api/designer/claim-video'
+    | '/api/designer/release'
+    | '/api/designer/release-carousel'
+    | '/api/designer/release-video'
     | '/api/designer/requests'
     | '/api/designer/stats'
     | '/api/designer/video-requests'
@@ -1280,6 +1311,9 @@ export interface FileRouteTypes {
     | '/api/designer/claim'
     | '/api/designer/claim-carousel'
     | '/api/designer/claim-video'
+    | '/api/designer/release'
+    | '/api/designer/release-carousel'
+    | '/api/designer/release-video'
     | '/api/designer/requests'
     | '/api/designer/stats'
     | '/api/designer/video-requests'
@@ -1396,6 +1430,9 @@ export interface FileRouteTypes {
     | '/api/designer/claim'
     | '/api/designer/claim-carousel'
     | '/api/designer/claim-video'
+    | '/api/designer/release'
+    | '/api/designer/release-carousel'
+    | '/api/designer/release-video'
     | '/api/designer/requests'
     | '/api/designer/stats'
     | '/api/designer/video-requests'
@@ -1513,6 +1550,9 @@ export interface RootRouteChildren {
   ApiDesignerClaimRoute: typeof ApiDesignerClaimRoute
   ApiDesignerClaimCarouselRoute: typeof ApiDesignerClaimCarouselRoute
   ApiDesignerClaimVideoRoute: typeof ApiDesignerClaimVideoRoute
+  ApiDesignerReleaseRoute: typeof ApiDesignerReleaseRoute
+  ApiDesignerReleaseCarouselRoute: typeof ApiDesignerReleaseCarouselRoute
+  ApiDesignerReleaseVideoRoute: typeof ApiDesignerReleaseVideoRoute
   ApiDesignerRequestsRoute: typeof ApiDesignerRequestsRoute
   ApiDesignerStatsRoute: typeof ApiDesignerStatsRoute
   ApiDesignerVideoRequestsRoute: typeof ApiDesignerVideoRequestsRoute
@@ -1983,6 +2023,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDesignerRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/designer/release-video': {
+      id: '/api/designer/release-video'
+      path: '/api/designer/release-video'
+      fullPath: '/api/designer/release-video'
+      preLoaderRoute: typeof ApiDesignerReleaseVideoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/designer/release-carousel': {
+      id: '/api/designer/release-carousel'
+      path: '/api/designer/release-carousel'
+      fullPath: '/api/designer/release-carousel'
+      preLoaderRoute: typeof ApiDesignerReleaseCarouselRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/designer/release': {
+      id: '/api/designer/release'
+      path: '/api/designer/release'
+      fullPath: '/api/designer/release'
+      preLoaderRoute: typeof ApiDesignerReleaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/designer/claim-video': {
       id: '/api/designer/claim-video'
       path: '/api/designer/claim-video'
@@ -2433,6 +2494,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDesignerClaimRoute: ApiDesignerClaimRoute,
   ApiDesignerClaimCarouselRoute: ApiDesignerClaimCarouselRoute,
   ApiDesignerClaimVideoRoute: ApiDesignerClaimVideoRoute,
+  ApiDesignerReleaseRoute: ApiDesignerReleaseRoute,
+  ApiDesignerReleaseCarouselRoute: ApiDesignerReleaseCarouselRoute,
+  ApiDesignerReleaseVideoRoute: ApiDesignerReleaseVideoRoute,
   ApiDesignerRequestsRoute: ApiDesignerRequestsRoute,
   ApiDesignerStatsRoute: ApiDesignerStatsRoute,
   ApiDesignerVideoRequestsRoute: ApiDesignerVideoRequestsRoute,

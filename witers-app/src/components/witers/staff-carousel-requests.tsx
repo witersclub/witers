@@ -203,6 +203,29 @@ function StaffCarouselCard({ row, me }: { row: StaffCarouselRequest; me: string 
     }
   }
 
+  async function release() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/designer/release-carousel", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ carouselRequestId: row.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      setMsg(
+        data.ok
+          ? "Soltaste el carrusel — ya está disponible de nuevo."
+          : "No pudimos soltarlo. Intenta de nuevo.",
+      );
+      await qc.invalidateQueries({ queryKey: ["staff-carousel-requests"] });
+    } catch {
+      setMsg("No pudimos soltarlo. Intenta de nuevo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <article className="wit-glass rounded-2xl p-6 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -243,6 +266,17 @@ function StaffCarouselCard({ row, me }: { row: StaffCarouselRequest; me: string 
           />
         ))}
       </div>
+
+      {mine && row.status === "en_proceso" ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={release}
+          className="mt-4 rounded-full border border-wit-ink/15 px-4 py-2 text-xs font-bold text-wit-ink hover:border-wit-ink/30 disabled:opacity-50"
+        >
+          Soltar solicitud
+        </button>
+      ) : null}
 
       {msg ? <p className="mt-2 text-xs text-red-600">{msg}</p> : null}
     </article>
