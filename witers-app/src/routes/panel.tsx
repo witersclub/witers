@@ -7094,6 +7094,16 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
     setStep("done");
   }
 
+  // "Ahora no" on the feedback step — the client already picked a rating,
+  // so that's still worth keeping, but they shouldn't have to write a
+  // comment (or click through the "gracias" screen) just to leave. Submits
+  // the rating alone and closes right away, instead of routing through
+  // "done" like sendFeedback does.
+  async function skipFeedback() {
+    await submit(rating);
+    onDone();
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-wit-navy/70 p-5">
       <div className="w-full max-w-sm rounded-3xl bg-white p-7 text-center shadow-2xl">
@@ -7165,6 +7175,14 @@ function SatisfactionSurvey({ requestId, onDone }: { requestId: string; onDone: 
               className="mt-4 w-full rounded-2xl bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-60"
             >
               {submitting ? t("Enviando...", "Sending...") : t("Enviar comentario", "Send comment")}
+            </button>
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={skipFeedback}
+              className="mt-3 text-sm font-semibold text-wit-gray hover:text-wit-ink disabled:opacity-60"
+            >
+              {t("Ahora no", "Not now")}
             </button>
           </>
         ) : (
