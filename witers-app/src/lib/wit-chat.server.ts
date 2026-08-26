@@ -343,7 +343,19 @@ function buildCalendarSystemPrompt(
     "submit_content_calendar con el plan completo del mes (una entrada por fecha), en ese mismo " +
     "turno — no anuncies con texto que vas a hacerlo ni preguntes '¿te parece bien?' antes de " +
     "llamarla. La tarjeta de resumen que aparece después de la función es el punto donde el " +
-    "cliente revisa y confirma el plan; no necesitas pedir permiso en el chat antes de eso."
+    "cliente revisa y confirma el plan; no necesitas pedir permiso en el chat antes de eso.\n\n" +
+    "Si en algún momento ves en la conversación un mensaje tuyo que empieza con 'Plan propuesto " +
+    "para el mes:' seguido de una lista de fechas, ya le habías propuesto un plan al cliente antes " +
+    "de este turno — trátalo como el plan actual vigente, no como algo nuevo. Si el cliente dice " +
+    "que no le gusta, que quiere ajustarlo, o pide un cambio puntual (de un día, de un tema, de la " +
+    "mezcla de formatos, etc.), NUNCA te disculpes ni repitas el plan tal cual: pregúntale, en tono " +
+    "conversacional y una cosa a la vez, qué específicamente no le convenció o qué prefiere " +
+    "distinto — no vuelvas a preguntar la cadencia ni los temas generales si ya te los dio, solo " +
+    "profundiza en el ajuste puntual. En cuanto tengas claro qué cambiar, vuelve a llamar a " +
+    "submit_content_calendar con el plan COMPLETO y actualizado del mes (repite tal cual las " +
+    "entradas que no cambiaron, actualiza solo las que el cliente pidió ajustar), con el mismo " +
+    "nivel de profundidad profesional de siempre — nunca solo las entradas nuevas ni un plan " +
+    "parcial."
   );
 }
 

@@ -46,7 +46,33 @@ type CalendarEntry = CalendarEntryDraft & {
   requestId: string | null;
   status: "por_planear" | "en_diseno" | "lista";
 };
-type WitMessage = { role: "user" | "assistant"; content: string };
+type WitMessage = {
+  role: "user" | "assistant";
+  content: string;
+  // Kept in the transcript sent to the backend (so Wit still "remembers"
+  // what it proposed on a later turn) but not rendered as a chat bubble —
+  // the plan review card below already shows that content nicely, so
+  // showing it again as a wall of text in the thread would be redundant.
+  hidden?: boolean;
+};
+
+// A compact plain-text recap of the proposed plan, injected into the
+// message history right when Wit proposes it (see askWit's "done" branch)
+// so that if the client later says they don't like it, Wit can read back
+// what it already proposed instead of starting from zero. Kept short
+// (date/format/title only, no full briefs) to stay well under the 2000-char
+// per-message cap even for a month full of entries.
+function buildPlanSummaryText(
+  entries: CalendarEntryDraft[],
+  t: (es: string, en: string) => string,
+): string {
+  const lines = entries.map((e) => `${e.date} · ${formatLabel(e.format, t)}: ${e.title}`);
+  const text = t(
+    `Plan propuesto para el mes:\n${lines.join("\n")}`,
+    `Proposed plan for the month:\n${lines.join("\n")}`,
+  );
+  return text.length > 1900 ? `${text.slice(0, 1900)}…` : text;
+}
 
 const FORMAT_ICON: Record<CalendarFormat, typeof ImageIcon> = {
   imagen: ImageIcon,
@@ -159,7 +185,11 @@ function CalendarWizard({
       const res = await fetch("/api/wit/calendar-chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: next, year: targetYear, month: targetMonth }),
+        body: JSON.stringify({
+          messages: next.map(({ role, content }) => ({ role, content })),
+          year: targetYear,
+          month: targetMonth,
+        }),
       });
       const data = (await res.json()) as
         | { ok: true; kind: "message"; text: string }
@@ -177,6 +207,10 @@ function CalendarWizard({
       if (data.kind === "message") {
         setMessages((prev) => [...prev, { role: "assistant", content: data.text }]);
       } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: buildPlanSummaryText(data.entries, t), hidden: true },
+        ]);
         setPlan(data.entries);
       }
     } catch {
@@ -197,6 +231,23 @@ function CalendarWizard({
     const next = [...messages, { role: "user" as const, content: trimmed }];
     setMessages(next);
     setInput("");
+    void askWit(next);
+  }
+
+  // "No me gusta, ajustemos" — reopens the conversation instead of just
+  // discarding the plan. The proposed plan is already in the transcript
+  // (see the hidden summary message above), so Wit can ask what to change
+  // instead of starting the whole conversation over.
+  function rejectPlan() {
+    if (!plan) return;
+    setPlan(null);
+    setSendError(null);
+    const feedback = t(
+      "No me gusta este plan, quiero ajustarlo.",
+      "I don't like this plan, I want to adjust it.",
+    );
+    const next = [...messages, { role: "user" as const, content: feedback }];
+    setMessages(next);
     void askWit(next);
   }
 
@@ -254,9 +305,9 @@ function CalendarWizard({
 
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-3 py-4">
-          {messages.map((m, i) => (
-            <ChatBubble key={i} role={m.role} text={m.content} />
-          ))}
+          {messages.map((m, i) =>
+            m.hidden ? null : <ChatBubble key={i} role={m.role} text={m.content} />,
+          )}
           {typing ? <ChatBubble role="assistant" typingDots /> : null}
           {chatError ? (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-600">
@@ -301,16 +352,26 @@ function CalendarWizard({
                     );
                   })}
                 </div>
-                <button
-                  type="button"
-                  disabled={sending}
-                  onClick={confirmPlan}
-                  className="mt-4 w-full rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
-                >
-                  {sending
-                    ? t("Guardando...", "Saving...")
-                    : t("Confirmar plan del mes", "Confirm month's plan")}
-                </button>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={rejectPlan}
+                    className="flex-1 rounded-full border border-wit-ink/15 px-4 py-3 text-sm font-bold text-wit-ink hover:border-wit-ink/30 disabled:opacity-50"
+                  >
+                    {t("No me gusta, ajustemos", "I don't like it, let's adjust")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={confirmPlan}
+                    className="flex-1 rounded-full bg-wit-blue px-4 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+                  >
+                    {sending
+                      ? t("Guardando...", "Saving...")
+                      : t("Confirmar plan del mes", "Confirm month's plan")}
+                  </button>
+                </div>
                 {sendError ? <p className="mt-2 text-sm text-red-600">{sendError}</p> : null}
               </div>
             </>
