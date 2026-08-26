@@ -12,6 +12,7 @@ type EntryRow = {
   brief: string;
   slides_json: string | null;
   request_id: string | null;
+  caption: string | null;
 };
 
 type SlideDraft = { title?: string; brief: string };
@@ -93,7 +94,7 @@ export const Route = createFileRoute("/api/calendar-entries")({
 
         const rows = await db()
           .prepare(
-            `SELECT id, scheduled_date, format, title, brief, slides_json, request_id
+            `SELECT id, scheduled_date, format, title, brief, slides_json, request_id, caption
              FROM calendar_entries
              WHERE user_id = ?1 AND scheduled_date BETWEEN ?2 AND ?3
              ORDER BY scheduled_date ASC`,
@@ -207,6 +208,7 @@ export const Route = createFileRoute("/api/calendar-entries")({
           thumbHref: e.request_id ? (thumbById.get(e.request_id) ?? null) : null,
           deliveredImages: e.request_id ? (galleryById.get(e.request_id) ?? null) : null,
           deliveredVideoHref: e.request_id ? (videoHrefById.get(e.request_id) ?? null) : null,
+          caption: e.caption,
         }));
 
         return json({ ok: true, entries: withStatus });

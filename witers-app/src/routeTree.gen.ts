@@ -54,6 +54,7 @@ import { Route as ApiCarouselRequestChangeRouteImport } from './routes/api/carou
 import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ApiCampaignAdsRouteImport } from './routes/api/campaign-ads'
 import { Route as ApiCalendarEntriesRequestRouteImport } from './routes/api/calendar-entries-request'
+import { Route as ApiCalendarEntriesCaptionRouteImport } from './routes/api/calendar-entries-caption'
 import { Route as ApiCalendarEntriesRouteImport } from './routes/api/calendar-entries'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
 import { Route as ApiBrandProfileFontRouteImport } from './routes/api/brand-profile-font'
@@ -352,6 +353,12 @@ const ApiCalendarEntriesRequestRoute =
   ApiCalendarEntriesRequestRouteImport.update({
     id: '/api/calendar-entries-request',
     path: '/api/calendar-entries-request',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiCalendarEntriesCaptionRoute =
+  ApiCalendarEntriesCaptionRouteImport.update({
+    id: '/api/calendar-entries-caption',
+    path: '/api/calendar-entries-caption',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiCalendarEntriesRoute = ApiCalendarEntriesRouteImport.update({
@@ -761,6 +768,7 @@ export interface FileRoutesByFullPath {
   '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
+  '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
@@ -880,6 +888,7 @@ export interface FileRoutesByTo {
   '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
+  '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
@@ -1000,6 +1009,7 @@ export interface FileRoutesById {
   '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
+  '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
@@ -1121,6 +1131,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile-font'
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
+    | '/api/calendar-entries-caption'
     | '/api/calendar-entries-request'
     | '/api/campaign-ads'
     | '/api/campaigns'
@@ -1240,6 +1251,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile-font'
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
+    | '/api/calendar-entries-caption'
     | '/api/calendar-entries-request'
     | '/api/campaign-ads'
     | '/api/campaigns'
@@ -1359,6 +1371,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile-font'
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
+    | '/api/calendar-entries-caption'
     | '/api/calendar-entries-request'
     | '/api/campaign-ads'
     | '/api/campaigns'
@@ -1479,6 +1492,7 @@ export interface RootRouteChildren {
   ApiBrandProfileFontRoute: typeof ApiBrandProfileFontRoute
   ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
   ApiCalendarEntriesRoute: typeof ApiCalendarEntriesRoute
+  ApiCalendarEntriesCaptionRoute: typeof ApiCalendarEntriesCaptionRoute
   ApiCalendarEntriesRequestRoute: typeof ApiCalendarEntriesRequestRoute
   ApiCampaignAdsRoute: typeof ApiCampaignAdsRoute
   ApiCampaignsRoute: typeof ApiCampaignsRoute
@@ -1888,6 +1902,13 @@ declare module '@tanstack/react-router' {
       path: '/api/calendar-entries-request'
       fullPath: '/api/calendar-entries-request'
       preLoaderRoute: typeof ApiCalendarEntriesRequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar-entries-caption': {
+      id: '/api/calendar-entries-caption'
+      path: '/api/calendar-entries-caption'
+      fullPath: '/api/calendar-entries-caption'
+      preLoaderRoute: typeof ApiCalendarEntriesCaptionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/calendar-entries': {
@@ -2423,6 +2444,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBrandProfileFontRoute: ApiBrandProfileFontRoute,
   ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
   ApiCalendarEntriesRoute: ApiCalendarEntriesRoute,
+  ApiCalendarEntriesCaptionRoute: ApiCalendarEntriesCaptionRoute,
   ApiCalendarEntriesRequestRoute: ApiCalendarEntriesRequestRoute,
   ApiCampaignAdsRoute: ApiCampaignAdsRoute,
   ApiCampaignsRoute: ApiCampaignsRoute,

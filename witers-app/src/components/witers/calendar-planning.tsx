@@ -54,6 +54,9 @@ type CalendarEntry = CalendarEntryDraft & {
   thumbHref: string | null;
   deliveredImages: string[] | null;
   deliveredVideoHref: string | null;
+  // Copy sugerido para redes — null hasta que se genera la primera vez
+  // que se abre la pieza (ver /api/calendar-entries-caption).
+  caption: string | null;
 };
 type WitMessage = {
   role: "user" | "assistant";
@@ -466,10 +469,49 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
   const [editSlides, setEditSlides] = useState<CalendarSlideDraft[]>(entry.slides ?? EMPTY_SLIDES);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [captionText, setCaptionText] = useState(entry.caption);
+  const [generatingCaption, setGeneratingCaption] = useState(false);
+  const [captionError, setCaptionError] = useState<string | null>(null);
+  const [captionCopied, setCaptionCopied] = useState(false);
+
+  async function generateCaption() {
+    setGeneratingCaption(true);
+    setCaptionError(null);
+    try {
+      const res = await fetch("/api/calendar-entries-caption", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ entryId: entry.id }),
+      });
+      const data = (await res.json()) as { ok: boolean; caption?: string };
+      if (!data.ok || !data.caption) {
+        setCaptionError(
+          t(
+            "No pudimos generar el copy. Intenta de nuevo.",
+            "We couldn't generate the copy. Try again.",
+          ),
+        );
+        return;
+      }
+      setCaptionText(data.caption);
+      void qc.invalidateQueries({ queryKey: ["calendar-entries"] });
+    } catch {
+      setCaptionError(
+        t(
+          "No pudimos generar el copy. Intenta de nuevo.",
+          "We couldn't generate the copy. Try again.",
+        ),
+      );
+    } finally {
+      setGeneratingCaption(false);
+    }
+  }
 
   // Reset all per-entry UI state whenever the client switches to a
   // different day — otherwise the picker/editor could stay open showing
-  // the wrong entry's fields.
+  // the wrong entry's fields. Auto-generates the suggested copy right away
+  // if this entry doesn't have one cached yet, so it's ready by the time
+  // the client scrolls down to it instead of needing an extra click.
   useEffect(() => {
     setPickingFormat(false);
     setError(null);
@@ -478,10 +520,26 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
     setEditTitle(entry.title);
     setEditBrief(entry.brief);
     setEditSlides(entry.slides ?? EMPTY_SLIDES);
+    setCaptionText(entry.caption);
+    setCaptionError(null);
+    setCaptionCopied(false);
+    if (!entry.caption) void generateCaption();
     // Only re-run on a day switch, not on every refetch of the same entry —
     // that would blow away in-progress edits after an unrelated invalidation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id]);
+
+  async function copyCaption() {
+    if (!captionText) return;
+    try {
+      await navigator.clipboard.writeText(captionText);
+      setCaptionCopied(true);
+      setTimeout(() => setCaptionCopied(false), 2000);
+    } catch {
+      // Clipboard permission denied or unavailable — the text is still
+      // right there on screen to copy by hand, nothing else to do.
+    }
+  }
 
   async function saveEdit() {
     setSaveError(null);
@@ -701,6 +759,61 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
         </ol>
       ) : (
         <p className="mt-3.5 text-sm leading-relaxed text-wit-gray">{entry.brief}</p>
+      )}
+
+      {editing ? null : (
+        <div className="mt-3.5 rounded-2xl border border-wit-ink/5 bg-wit-mist/30 p-3.5">
+          <p className="text-xs font-bold uppercase tracking-wider text-wit-gray">
+            {t("Copy sugerido", "Suggested copy")}
+          </p>
+          {generatingCaption ? (
+            <p className="mt-2 text-sm text-wit-gray">
+              {t("Generando copy...", "Generating copy...")}
+            </p>
+          ) : captionText ? (
+            <>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-wit-ink">
+                {captionText}
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={copyCaption}
+                  className="rounded-full border border-wit-ink/15 bg-white px-3.5 py-1.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30"
+                >
+                  {captionCopied ? t("Copiado ✓", "Copied ✓") : t("Copiar", "Copy")}
+                </button>
+                <button
+                  type="button"
+                  disabled={generatingCaption}
+                  onClick={generateCaption}
+                  className="rounded-full border border-wit-ink/15 bg-white px-3.5 py-1.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30 disabled:opacity-50"
+                >
+                  {t("Regenerar", "Regenerate")}
+                </button>
+              </div>
+            </>
+          ) : captionError ? (
+            <div className="mt-2">
+              <p className="text-xs text-red-600">{captionError}</p>
+              <button
+                type="button"
+                onClick={generateCaption}
+                className="mt-1 text-sm font-semibold text-wit-blue hover:underline"
+              >
+                {t("Reintentar", "Try again")}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={generateCaption}
+              className="mt-2 text-sm font-semibold text-wit-blue hover:underline"
+            >
+              {t("Generar copy", "Generate copy")}
+            </button>
+          )}
+        </div>
       )}
 
       {entry.status !== "por_planear" ? null : editing ? (
