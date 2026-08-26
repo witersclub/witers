@@ -49,6 +49,7 @@ import { Route as ApiFileRouteImport } from './routes/api/file'
 import { Route as ApiCloseRequestRouteImport } from './routes/api/close-request'
 import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as ApiCarouselRequestsRouteImport } from './routes/api/carousel-requests'
+import { Route as ApiCarouselRequestCloseRouteImport } from './routes/api/carousel-request-close'
 import { Route as ApiCarouselRequestChangeRouteImport } from './routes/api/carousel-request-change'
 import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ApiCampaignAdsRouteImport } from './routes/api/campaign-ads'
@@ -321,6 +322,11 @@ const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
 const ApiCarouselRequestsRoute = ApiCarouselRequestsRouteImport.update({
   id: '/api/carousel-requests',
   path: '/api/carousel-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCarouselRequestCloseRoute = ApiCarouselRequestCloseRouteImport.update({
+  id: '/api/carousel-request-close',
+  path: '/api/carousel-request-close',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCarouselRequestChangeRoute =
@@ -740,6 +746,7 @@ export interface FileRoutesByFullPath {
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
+  '/api/carousel-request-close': typeof ApiCarouselRequestCloseRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
@@ -855,6 +862,7 @@ export interface FileRoutesByTo {
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
+  '/api/carousel-request-close': typeof ApiCarouselRequestCloseRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
@@ -971,6 +979,7 @@ export interface FileRoutesById {
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
+  '/api/carousel-request-close': typeof ApiCarouselRequestCloseRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/close-request': typeof ApiCloseRequestRoute
@@ -1088,6 +1097,7 @@ export interface FileRouteTypes {
     | '/api/campaign-ads'
     | '/api/campaigns'
     | '/api/carousel-request-change'
+    | '/api/carousel-request-close'
     | '/api/carousel-requests'
     | '/api/checkout'
     | '/api/close-request'
@@ -1203,6 +1213,7 @@ export interface FileRouteTypes {
     | '/api/campaign-ads'
     | '/api/campaigns'
     | '/api/carousel-request-change'
+    | '/api/carousel-request-close'
     | '/api/carousel-requests'
     | '/api/checkout'
     | '/api/close-request'
@@ -1318,6 +1329,7 @@ export interface FileRouteTypes {
     | '/api/campaign-ads'
     | '/api/campaigns'
     | '/api/carousel-request-change'
+    | '/api/carousel-request-close'
     | '/api/carousel-requests'
     | '/api/checkout'
     | '/api/close-request'
@@ -1434,6 +1446,7 @@ export interface RootRouteChildren {
   ApiCampaignAdsRoute: typeof ApiCampaignAdsRoute
   ApiCampaignsRoute: typeof ApiCampaignsRoute
   ApiCarouselRequestChangeRoute: typeof ApiCarouselRequestChangeRoute
+  ApiCarouselRequestCloseRoute: typeof ApiCarouselRequestCloseRoute
   ApiCarouselRequestsRoute: typeof ApiCarouselRequestsRoute
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiCloseRequestRoute: typeof ApiCloseRequestRoute
@@ -1800,6 +1813,13 @@ declare module '@tanstack/react-router' {
       path: '/api/carousel-requests'
       fullPath: '/api/carousel-requests'
       preLoaderRoute: typeof ApiCarouselRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/carousel-request-close': {
+      id: '/api/carousel-request-close'
+      path: '/api/carousel-request-close'
+      fullPath: '/api/carousel-request-close'
+      preLoaderRoute: typeof ApiCarouselRequestCloseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/carousel-request-change': {
@@ -2346,6 +2366,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCampaignAdsRoute: ApiCampaignAdsRoute,
   ApiCampaignsRoute: ApiCampaignsRoute,
   ApiCarouselRequestChangeRoute: ApiCarouselRequestChangeRoute,
+  ApiCarouselRequestCloseRoute: ApiCarouselRequestCloseRoute,
   ApiCarouselRequestsRoute: ApiCarouselRequestsRoute,
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiCloseRequestRoute: ApiCloseRequestRoute,

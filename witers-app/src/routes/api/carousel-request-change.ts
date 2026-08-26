@@ -14,11 +14,16 @@ const schema = z.object({
 });
 
 // Client-only: flag a lámina (or the whole carousel) for revision. Unlike
-// /api/request-change (plain images), this is always open — no "cerrada"
-// gate and no separate admin approval step. The designer's panel already
-// has an upload slot open for every lámina at all times, so simply
-// re-delivering that slide (deliver-carousel-slide.ts) is what clears this
-// note — the note just surfaces the ask in the meantime.
+// /api/request-change (plain images), there's no separate admin approval
+// step to reopen it — the designer's panel already has an upload slot open
+// for every lámina at all times, so simply re-delivering that slide
+// (deliver-carousel-slide.ts) is what clears this note — the note just
+// surfaces the ask in the meantime. What DOES need to happen here: if the
+// request was already "completada" or "cerrada" (the client accepted it via
+// /api/carousel-request-close), a new change request should knock it back
+// to "en_proceso" so it reappears in staff's active queue instead of
+// sitting silently inside "Finalizadas" — see staff-carousel-requests.tsx's
+// filters, which now exclude both those terminal states from "mías".
 export const Route = createFileRoute("/api/carousel-request-change")({
   server: {
     handlers: {
@@ -32,9 +37,9 @@ export const Route = createFileRoute("/api/carousel-request-change")({
         }
 
         const row = await db()
-          .prepare("SELECT title FROM carousel_requests WHERE id = ?1 AND user_id = ?2")
+          .prepare("SELECT title, status FROM carousel_requests WHERE id = ?1 AND user_id = ?2")
           .bind(parsed.data.carouselRequestId, user.id)
-          .first<{ title: string }>();
+          .first<{ title: string; status: string }>();
         if (!row) return json({ ok: false, error: "solicitud_no_existe" }, { status: 404 });
 
         const message = parsed.data.message.trim();
@@ -60,6 +65,15 @@ export const Route = createFileRoute("/api/carousel-request-change")({
                WHERE carousel_request_id = ?1 AND delivered_key IS NOT NULL`,
             )
             .bind(parsed.data.carouselRequestId, message)
+            .run();
+        }
+
+        if (row.status === "completada" || row.status === "cerrada") {
+          await db()
+            .prepare(
+              "UPDATE carousel_requests SET status = 'en_proceso', updated_at = datetime('now') WHERE id = ?1",
+            )
+            .bind(parsed.data.carouselRequestId)
             .run();
         }
 

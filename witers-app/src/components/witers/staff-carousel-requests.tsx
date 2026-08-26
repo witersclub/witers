@@ -103,13 +103,22 @@ export function StaffCarouselRequestsPanel({
 
   const rows = query.data?.carouselRequests ?? [];
   const pendientes = rows.filter((r) => !r.claimed_by);
+  // "completada" and "cerrada" (client explicitly accepted it, see
+  // /api/carousel-request-close) both mean staff has nothing left to do —
+  // a change request on either knocks the status back to "en_proceso"
+  // (see carousel-request-change.ts), which is what actually brings it
+  // back into "Mías".
   const mias = rows.filter(
-    (r) => r.status !== "completada" && (adminView ? Boolean(r.claimed_by) : r.claimed_by === me),
+    (r) =>
+      r.status !== "completada" &&
+      r.status !== "cerrada" &&
+      (adminView ? Boolean(r.claimed_by) : r.claimed_by === me),
   );
-  const finalizadas = rows.filter((r) => r.status === "completada");
-  // Even once "completada", a carousel with a pending change note on any
-  // lámina still needs the claimed designer's attention — surfaced inside
-  // "Mías"/"Finalizadas" via the badge on that slide, not a separate tab.
+  const finalizadas = rows.filter((r) => r.status === "completada" || r.status === "cerrada");
+  // Even once "completada"/"cerrada", a carousel with a pending change note
+  // on any lámina still needs the claimed designer's attention — surfaced
+  // inside "Mías"/"Finalizadas" via the badge on that slide, not a
+  // separate tab.
   const shown = tab === "pendientes" ? pendientes : tab === "mias" ? mias : finalizadas;
 
   return (

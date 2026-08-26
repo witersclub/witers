@@ -60,6 +60,7 @@ const STATUS_LABEL: Record<string, { es: string; en: string; cls: string }> = {
   nueva: { es: "En cola", en: "Queued", cls: "bg-amber-50 text-amber-700" },
   en_proceso: { es: "En diseño", en: "In design", cls: "bg-amber-50 text-amber-700" },
   completada: { es: "Listo", en: "Ready", cls: "bg-emerald-50 text-emerald-700" },
+  cerrada: { es: "✓ Finalizada", en: "✓ Finished", cls: "bg-wit-blue/10 text-wit-blue" },
   rechazada: { es: "Rechazada", en: "Rejected", cls: "bg-red-50 text-red-600" },
 };
 
@@ -323,6 +324,43 @@ function CarouselEntry({ row }: { row: CarouselRequestRow }) {
   // looking at instead of being permanently stuck on lámina 1.
   const [activeSlide, setActiveSlide] = useState<CarouselSlideInfo | null>(slides[0] ?? null);
   const [downloading, setDownloading] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
+
+  // "Aceptar y finalizar" — same explicit close design_requests already
+  // has (see /api/close-request); carousels never had it, so a "Listo"
+  // carousel just stayed that way forever with no acceptance step.
+  async function closeRequest() {
+    setClosing(true);
+    setCloseError(null);
+    try {
+      const res = await fetch("/api/carousel-request-close", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ carouselRequestId: row.id }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (data.ok) {
+        await qc.invalidateQueries({ queryKey: ["carousel-requests"] });
+      } else {
+        setCloseError(
+          t(
+            "No pudimos finalizar la solicitud. Intenta de nuevo.",
+            "We couldn't finalize the request. Try again.",
+          ),
+        );
+      }
+    } catch {
+      setCloseError(
+        t(
+          "No pudimos finalizar la solicitud. Intenta de nuevo.",
+          "We couldn't finalize the request. Try again.",
+        ),
+      );
+    } finally {
+      setClosing(false);
+    }
+  }
 
   async function sendChange() {
     if (message.trim().length < 5) {
@@ -426,8 +464,19 @@ function CarouselEntry({ row }: { row: CarouselRequestRow }) {
           >
             Pedir cambio en todo el carrusel
           </button>
+          <button
+            type="button"
+            disabled={closing}
+            onClick={closeRequest}
+            className="rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+          >
+            {closing
+              ? t("Finalizando...", "Finalizing...")
+              : t("✓ Aceptar y finalizar", "✓ Accept and finalize")}
+          </button>
         </div>
       ) : null}
+      {closeError ? <p className="mt-2 text-xs text-red-600">{closeError}</p> : null}
 
       {changeTarget !== null ? (
         <div className="mt-4 rounded-xl bg-wit-mist/40 p-4">
