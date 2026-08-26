@@ -23,6 +23,7 @@ import {
   Calendar,
   Car,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Crosshair,
   Dumbbell,
@@ -699,10 +700,14 @@ function PanelContent() {
   const recentScrollRef = useRef<HTMLDivElement>(null);
   // Which "Mis solicitudes" card is open full-size, if any — tapping a
   // card enlarges it right there instead of navigating away from Inicio.
+  // `images` is every delivered slide for a carrusel (just the one image
+  // for imagen) — the lightbox pages through all of them instead of only
+  // ever showing the cover.
   const [lightboxCreative, setLightboxCreative] = useState<{
-    thumbHref: string;
+    images: string[];
     title: string;
   } | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   // Read (and clear) once per mount — only the very first chat (chatKey
   // still at its initial value) should inherit these, not a later
   // conversation opened via the button.
@@ -942,6 +947,7 @@ function PanelContent() {
             id: r.id,
             title: r.title,
             thumbHref,
+            images: [thumbHref],
             createdAt: r.created_at,
             aspectRatio: r.aspect_ratio,
           }
@@ -949,15 +955,22 @@ function PanelContent() {
     })
     .filter((c) => c !== null);
   const recentCarouselCreatives = carouselRows
-    .filter((r) => r.status === "completada")
+    .filter((r) => r.status === "completada" || r.status === "cerrada")
     .map((r) => {
-      const cover = parseSlides(r)[0]?.delivered_key;
-      return cover
+      // Every delivered slide, in order — the lightbox pages through all
+      // of them, not just the cover (see the fix below). A slide still
+      // being redone (no delivered_key yet) is skipped rather than shown
+      // as a blank frame.
+      const deliveredSlides = parseSlides(r)
+        .filter((s) => s.delivered_key)
+        .map((s) => `/api/file?key=${encodeURIComponent(s.delivered_key!)}`);
+      return deliveredSlides.length > 0
         ? {
             kind: "carrusel" as const,
             id: r.id,
             title: r.title,
-            thumbHref: `/api/file?key=${encodeURIComponent(cover)}`,
+            thumbHref: deliveredSlides[0],
+            images: deliveredSlides,
             createdAt: r.created_at,
             aspectRatio: r.aspect_ratio,
           }
@@ -1308,9 +1321,10 @@ function PanelContent() {
                                 companyName={brandProfile?.company_name || "WITERS"}
                                 logoKey={brandProfile?.logo_key ?? null}
                                 accentColor={brandColorList[0] ?? "#0047FF"}
-                                onOpen={() =>
-                                  setLightboxCreative({ thumbHref: c.thumbHref, title: c.title })
-                                }
+                                onOpen={() => {
+                                  setLightboxIndex(0);
+                                  setLightboxCreative({ images: c.images, title: c.title });
+                                }}
                               />
                             ))}
                           </div>
@@ -1419,17 +1433,24 @@ function PanelContent() {
                                 key={c.id}
                                 type="button"
                                 title={c.title}
-                                onClick={() =>
-                                  setLightboxCreative({ thumbHref: c.thumbHref, title: c.title })
-                                }
+                                onClick={() => {
+                                  setLightboxIndex(0);
+                                  setLightboxCreative({ images: c.images, title: c.title });
+                                }}
                                 style={{ aspectRatio: cssAspectRatio(c.aspectRatio) }}
-                                className="h-40 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 shadow-[0_10px_25px_rgba(5,13,40,0.08)] transition-transform active:scale-95 sm:h-48"
+                                className="relative h-40 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 shadow-[0_10px_25px_rgba(5,13,40,0.08)] transition-transform active:scale-95 sm:h-48"
                               >
                                 <img
                                   src={c.thumbHref}
                                   alt={c.title}
                                   className="h-full w-full object-cover"
                                 />
+                                {c.images.length > 1 ? (
+                                  <span className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                                    <GalleryHorizontal className="h-2.5 w-2.5" strokeWidth={2.4} />
+                                    {c.images.length}
+                                  </span>
+                                ) : null}
                               </button>
                             ))}
                           </div>
@@ -1762,12 +1783,53 @@ function PanelContent() {
                         className="fixed inset-0 z-50 flex items-center justify-center bg-wit-ink/70 p-6 backdrop-blur-sm"
                         onClick={() => setLightboxCreative(null)}
                       >
-                        <div className="relative max-h-[85vh] max-w-lg">
+                        <div
+                          className="relative max-h-[85vh] max-w-lg"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <img
-                            src={lightboxCreative.thumbHref}
+                            src={lightboxCreative.images[lightboxIndex]}
                             alt={lightboxCreative.title}
                             className="max-h-[85vh] w-auto rounded-2xl object-contain shadow-[0_30px_80px_rgba(5,13,40,0.4)]"
                           />
+                          {lightboxCreative.images.length > 1 ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setLightboxIndex(
+                                    (i) =>
+                                      (i - 1 + lightboxCreative.images.length) %
+                                      lightboxCreative.images.length,
+                                  )
+                                }
+                                aria-label={t("Lámina anterior", "Previous slide")}
+                                className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.25)] hover:bg-white"
+                              >
+                                <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setLightboxIndex((i) => (i + 1) % lightboxCreative.images.length)
+                                }
+                                aria-label={t("Siguiente lámina", "Next slide")}
+                                className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.25)] hover:bg-white"
+                              >
+                                <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+                              </button>
+                              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1.5 backdrop-blur-sm">
+                                {lightboxCreative.images.map((_, i) => (
+                                  <span
+                                    key={i}
+                                    className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                                      i === lightboxIndex ? "bg-white" : "bg-white/40"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => setLightboxCreative(null)}
