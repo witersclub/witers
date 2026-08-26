@@ -54,6 +54,7 @@ import { Route as ApiCarouselRequestChangeRouteImport } from './routes/api/carou
 import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ApiCampaignAdsRouteImport } from './routes/api/campaign-ads'
 import { Route as ApiCalendarEntriesRequestRouteImport } from './routes/api/calendar-entries-request'
+import { Route as ApiCalendarEntriesPublishRouteImport } from './routes/api/calendar-entries-publish'
 import { Route as ApiCalendarEntriesCaptionRouteImport } from './routes/api/calendar-entries-caption'
 import { Route as ApiCalendarEntriesRouteImport } from './routes/api/calendar-entries'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
@@ -64,9 +65,11 @@ import { Route as ApiWitChatRouteImport } from './routes/api/wit/chat'
 import { Route as ApiWitCarouselChatRouteImport } from './routes/api/wit/carousel-chat'
 import { Route as ApiWitCalendarChatRouteImport } from './routes/api/wit/calendar-chat'
 import { Route as ApiStripeCreatePaymentIntentRouteImport } from './routes/api/stripe/create-payment-intent'
+import { Route as ApiSocialConnectionsRouteImport } from './routes/api/social/connections'
 import { Route as ApiPublicShowcaseImageRouteImport } from './routes/api/public/showcase-image'
 import { Route as ApiPublicShowcaseRouteImport } from './routes/api/public/showcase'
 import { Route as ApiPublicReviewsRouteImport } from './routes/api/public/reviews'
+import { Route as ApiPublicCalendarMediaRouteImport } from './routes/api/public/calendar-media'
 import { Route as ApiPublicBrandsRouteImport } from './routes/api/public/brands'
 import { Route as ApiPublicBrandLogoRouteImport } from './routes/api/public/brand-logo'
 import { Route as ApiOnboardingDraftRouteImport } from './routes/api/onboarding/draft'
@@ -123,6 +126,10 @@ import { Route as ApiAdminActivateMembershipRouteImport } from './routes/api/adm
 import { Route as ApiAdminActivateChangeRouteImport } from './routes/api/admin/activate-change'
 import { Route as ApiAccountUpdateNameRouteImport } from './routes/api/account/update-name'
 import { Route as ApiAccountChangePasswordRouteImport } from './routes/api/account/change-password'
+import { Route as ApiSocialConnectStartRouteImport } from './routes/api/social/connect/start'
+import { Route as ApiSocialConnectPendingRouteImport } from './routes/api/social/connect/pending'
+import { Route as ApiSocialConnectFinalizeRouteImport } from './routes/api/social/connect/finalize'
+import { Route as ApiSocialConnectCallbackRouteImport } from './routes/api/social/connect/callback'
 import { Route as ApiAuthGoogleStartRouteImport } from './routes/api/auth/google/start'
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
 import { Route as ApiAuthFacebookStartRouteImport } from './routes/api/auth/facebook/start'
@@ -355,6 +362,12 @@ const ApiCalendarEntriesRequestRoute =
     path: '/api/calendar-entries-request',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCalendarEntriesPublishRoute =
+  ApiCalendarEntriesPublishRouteImport.update({
+    id: '/api/calendar-entries-publish',
+    path: '/api/calendar-entries-publish',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiCalendarEntriesCaptionRoute =
   ApiCalendarEntriesCaptionRouteImport.update({
     id: '/api/calendar-entries-caption',
@@ -407,6 +420,11 @@ const ApiStripeCreatePaymentIntentRoute =
     path: '/api/stripe/create-payment-intent',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiSocialConnectionsRoute = ApiSocialConnectionsRouteImport.update({
+  id: '/api/social/connections',
+  path: '/api/social/connections',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicShowcaseImageRoute = ApiPublicShowcaseImageRouteImport.update({
   id: '/api/public/showcase-image',
   path: '/api/public/showcase-image',
@@ -420,6 +438,11 @@ const ApiPublicShowcaseRoute = ApiPublicShowcaseRouteImport.update({
 const ApiPublicReviewsRoute = ApiPublicReviewsRouteImport.update({
   id: '/api/public/reviews',
   path: '/api/public/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCalendarMediaRoute = ApiPublicCalendarMediaRouteImport.update({
+  id: '/api/public/calendar-media',
+  path: '/api/public/calendar-media',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicBrandsRoute = ApiPublicBrandsRouteImport.update({
@@ -721,6 +744,28 @@ const ApiAccountChangePasswordRoute =
     path: '/api/account/change-password',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiSocialConnectStartRoute = ApiSocialConnectStartRouteImport.update({
+  id: '/api/social/connect/start',
+  path: '/api/social/connect/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSocialConnectPendingRoute = ApiSocialConnectPendingRouteImport.update({
+  id: '/api/social/connect/pending',
+  path: '/api/social/connect/pending',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSocialConnectFinalizeRoute =
+  ApiSocialConnectFinalizeRouteImport.update({
+    id: '/api/social/connect/finalize',
+    path: '/api/social/connect/finalize',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSocialConnectCallbackRoute =
+  ApiSocialConnectCallbackRouteImport.update({
+    id: '/api/social/connect/callback',
+    path: '/api/social/connect/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAuthGoogleStartRoute = ApiAuthGoogleStartRouteImport.update({
   id: '/api/auth/google/start',
   path: '/api/auth/google/start',
@@ -769,6 +814,7 @@ export interface FileRoutesByFullPath {
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
+  '/api/calendar-entries-publish': typeof ApiCalendarEntriesPublishRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
@@ -850,9 +896,11 @@ export interface FileRoutesByFullPath {
   '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
   '/api/public/brands': typeof ApiPublicBrandsRoute
+  '/api/public/calendar-media': typeof ApiPublicCalendarMediaRoute
   '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
+  '/api/social/connections': typeof ApiSocialConnectionsRoute
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/calendar-chat': typeof ApiWitCalendarChatRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
@@ -861,6 +909,10 @@ export interface FileRoutesByFullPath {
   '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
+  '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
+  '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
+  '/api/social/connect/start': typeof ApiSocialConnectStartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -889,6 +941,7 @@ export interface FileRoutesByTo {
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
+  '/api/calendar-entries-publish': typeof ApiCalendarEntriesPublishRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
@@ -970,9 +1023,11 @@ export interface FileRoutesByTo {
   '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
   '/api/public/brands': typeof ApiPublicBrandsRoute
+  '/api/public/calendar-media': typeof ApiPublicCalendarMediaRoute
   '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
+  '/api/social/connections': typeof ApiSocialConnectionsRoute
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/calendar-chat': typeof ApiWitCalendarChatRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
@@ -981,6 +1036,10 @@ export interface FileRoutesByTo {
   '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
+  '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
+  '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
+  '/api/social/connect/start': typeof ApiSocialConnectStartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1010,6 +1069,7 @@ export interface FileRoutesById {
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
+  '/api/calendar-entries-publish': typeof ApiCalendarEntriesPublishRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
@@ -1091,9 +1151,11 @@ export interface FileRoutesById {
   '/api/onboarding/draft': typeof ApiOnboardingDraftRoute
   '/api/public/brand-logo': typeof ApiPublicBrandLogoRoute
   '/api/public/brands': typeof ApiPublicBrandsRoute
+  '/api/public/calendar-media': typeof ApiPublicCalendarMediaRoute
   '/api/public/reviews': typeof ApiPublicReviewsRoute
   '/api/public/showcase': typeof ApiPublicShowcaseRoute
   '/api/public/showcase-image': typeof ApiPublicShowcaseImageRoute
+  '/api/social/connections': typeof ApiSocialConnectionsRoute
   '/api/stripe/create-payment-intent': typeof ApiStripeCreatePaymentIntentRoute
   '/api/wit/calendar-chat': typeof ApiWitCalendarChatRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
@@ -1102,6 +1164,10 @@ export interface FileRoutesById {
   '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
+  '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
+  '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
+  '/api/social/connect/start': typeof ApiSocialConnectStartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1132,6 +1198,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
     | '/api/calendar-entries-caption'
+    | '/api/calendar-entries-publish'
     | '/api/calendar-entries-request'
     | '/api/campaign-ads'
     | '/api/campaigns'
@@ -1213,9 +1280,11 @@ export interface FileRouteTypes {
     | '/api/onboarding/draft'
     | '/api/public/brand-logo'
     | '/api/public/brands'
+    | '/api/public/calendar-media'
     | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
+    | '/api/social/connections'
     | '/api/stripe/create-payment-intent'
     | '/api/wit/calendar-chat'
     | '/api/wit/carousel-chat'
@@ -1224,6 +1293,10 @@ export interface FileRouteTypes {
     | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
     | '/api/auth/google/start'
+    | '/api/social/connect/callback'
+    | '/api/social/connect/finalize'
+    | '/api/social/connect/pending'
+    | '/api/social/connect/start'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1252,6 +1325,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
     | '/api/calendar-entries-caption'
+    | '/api/calendar-entries-publish'
     | '/api/calendar-entries-request'
     | '/api/campaign-ads'
     | '/api/campaigns'
@@ -1333,9 +1407,11 @@ export interface FileRouteTypes {
     | '/api/onboarding/draft'
     | '/api/public/brand-logo'
     | '/api/public/brands'
+    | '/api/public/calendar-media'
     | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
+    | '/api/social/connections'
     | '/api/stripe/create-payment-intent'
     | '/api/wit/calendar-chat'
     | '/api/wit/carousel-chat'
@@ -1344,6 +1420,10 @@ export interface FileRouteTypes {
     | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
     | '/api/auth/google/start'
+    | '/api/social/connect/callback'
+    | '/api/social/connect/finalize'
+    | '/api/social/connect/pending'
+    | '/api/social/connect/start'
   id:
     | '__root__'
     | '/'
@@ -1372,6 +1452,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
     | '/api/calendar-entries-caption'
+    | '/api/calendar-entries-publish'
     | '/api/calendar-entries-request'
     | '/api/campaign-ads'
     | '/api/campaigns'
@@ -1453,9 +1534,11 @@ export interface FileRouteTypes {
     | '/api/onboarding/draft'
     | '/api/public/brand-logo'
     | '/api/public/brands'
+    | '/api/public/calendar-media'
     | '/api/public/reviews'
     | '/api/public/showcase'
     | '/api/public/showcase-image'
+    | '/api/social/connections'
     | '/api/stripe/create-payment-intent'
     | '/api/wit/calendar-chat'
     | '/api/wit/carousel-chat'
@@ -1464,6 +1547,10 @@ export interface FileRouteTypes {
     | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
     | '/api/auth/google/start'
+    | '/api/social/connect/callback'
+    | '/api/social/connect/finalize'
+    | '/api/social/connect/pending'
+    | '/api/social/connect/start'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1493,6 +1580,7 @@ export interface RootRouteChildren {
   ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
   ApiCalendarEntriesRoute: typeof ApiCalendarEntriesRoute
   ApiCalendarEntriesCaptionRoute: typeof ApiCalendarEntriesCaptionRoute
+  ApiCalendarEntriesPublishRoute: typeof ApiCalendarEntriesPublishRoute
   ApiCalendarEntriesRequestRoute: typeof ApiCalendarEntriesRequestRoute
   ApiCampaignAdsRoute: typeof ApiCampaignAdsRoute
   ApiCampaignsRoute: typeof ApiCampaignsRoute
@@ -1574,9 +1662,11 @@ export interface RootRouteChildren {
   ApiOnboardingDraftRoute: typeof ApiOnboardingDraftRoute
   ApiPublicBrandLogoRoute: typeof ApiPublicBrandLogoRoute
   ApiPublicBrandsRoute: typeof ApiPublicBrandsRoute
+  ApiPublicCalendarMediaRoute: typeof ApiPublicCalendarMediaRoute
   ApiPublicReviewsRoute: typeof ApiPublicReviewsRoute
   ApiPublicShowcaseRoute: typeof ApiPublicShowcaseRoute
   ApiPublicShowcaseImageRoute: typeof ApiPublicShowcaseImageRoute
+  ApiSocialConnectionsRoute: typeof ApiSocialConnectionsRoute
   ApiStripeCreatePaymentIntentRoute: typeof ApiStripeCreatePaymentIntentRoute
   ApiWitCalendarChatRoute: typeof ApiWitCalendarChatRoute
   ApiWitCarouselChatRoute: typeof ApiWitCarouselChatRoute
@@ -1585,6 +1675,10 @@ export interface RootRouteChildren {
   ApiAuthFacebookStartRoute: typeof ApiAuthFacebookStartRoute
   ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
   ApiAuthGoogleStartRoute: typeof ApiAuthGoogleStartRoute
+  ApiSocialConnectCallbackRoute: typeof ApiSocialConnectCallbackRoute
+  ApiSocialConnectFinalizeRoute: typeof ApiSocialConnectFinalizeRoute
+  ApiSocialConnectPendingRoute: typeof ApiSocialConnectPendingRoute
+  ApiSocialConnectStartRoute: typeof ApiSocialConnectStartRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1904,6 +1998,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCalendarEntriesRequestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/calendar-entries-publish': {
+      id: '/api/calendar-entries-publish'
+      path: '/api/calendar-entries-publish'
+      fullPath: '/api/calendar-entries-publish'
+      preLoaderRoute: typeof ApiCalendarEntriesPublishRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/calendar-entries-caption': {
       id: '/api/calendar-entries-caption'
       path: '/api/calendar-entries-caption'
@@ -1974,6 +2075,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStripeCreatePaymentIntentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/social/connections': {
+      id: '/api/social/connections'
+      path: '/api/social/connections'
+      fullPath: '/api/social/connections'
+      preLoaderRoute: typeof ApiSocialConnectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/showcase-image': {
       id: '/api/public/showcase-image'
       path: '/api/public/showcase-image'
@@ -1993,6 +2101,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/reviews'
       fullPath: '/api/public/reviews'
       preLoaderRoute: typeof ApiPublicReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/calendar-media': {
+      id: '/api/public/calendar-media'
+      path: '/api/public/calendar-media'
+      fullPath: '/api/public/calendar-media'
+      preLoaderRoute: typeof ApiPublicCalendarMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/brands': {
@@ -2387,6 +2502,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAccountChangePasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/social/connect/start': {
+      id: '/api/social/connect/start'
+      path: '/api/social/connect/start'
+      fullPath: '/api/social/connect/start'
+      preLoaderRoute: typeof ApiSocialConnectStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/social/connect/pending': {
+      id: '/api/social/connect/pending'
+      path: '/api/social/connect/pending'
+      fullPath: '/api/social/connect/pending'
+      preLoaderRoute: typeof ApiSocialConnectPendingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/social/connect/finalize': {
+      id: '/api/social/connect/finalize'
+      path: '/api/social/connect/finalize'
+      fullPath: '/api/social/connect/finalize'
+      preLoaderRoute: typeof ApiSocialConnectFinalizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/social/connect/callback': {
+      id: '/api/social/connect/callback'
+      path: '/api/social/connect/callback'
+      fullPath: '/api/social/connect/callback'
+      preLoaderRoute: typeof ApiSocialConnectCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/google/start': {
       id: '/api/auth/google/start'
       path: '/api/auth/google/start'
@@ -2445,6 +2588,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
   ApiCalendarEntriesRoute: ApiCalendarEntriesRoute,
   ApiCalendarEntriesCaptionRoute: ApiCalendarEntriesCaptionRoute,
+  ApiCalendarEntriesPublishRoute: ApiCalendarEntriesPublishRoute,
   ApiCalendarEntriesRequestRoute: ApiCalendarEntriesRequestRoute,
   ApiCampaignAdsRoute: ApiCampaignAdsRoute,
   ApiCampaignsRoute: ApiCampaignsRoute,
@@ -2526,9 +2670,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOnboardingDraftRoute: ApiOnboardingDraftRoute,
   ApiPublicBrandLogoRoute: ApiPublicBrandLogoRoute,
   ApiPublicBrandsRoute: ApiPublicBrandsRoute,
+  ApiPublicCalendarMediaRoute: ApiPublicCalendarMediaRoute,
   ApiPublicReviewsRoute: ApiPublicReviewsRoute,
   ApiPublicShowcaseRoute: ApiPublicShowcaseRoute,
   ApiPublicShowcaseImageRoute: ApiPublicShowcaseImageRoute,
+  ApiSocialConnectionsRoute: ApiSocialConnectionsRoute,
   ApiStripeCreatePaymentIntentRoute: ApiStripeCreatePaymentIntentRoute,
   ApiWitCalendarChatRoute: ApiWitCalendarChatRoute,
   ApiWitCarouselChatRoute: ApiWitCarouselChatRoute,
@@ -2537,6 +2683,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthFacebookStartRoute: ApiAuthFacebookStartRoute,
   ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
   ApiAuthGoogleStartRoute: ApiAuthGoogleStartRoute,
+  ApiSocialConnectCallbackRoute: ApiSocialConnectCallbackRoute,
+  ApiSocialConnectFinalizeRoute: ApiSocialConnectFinalizeRoute,
+  ApiSocialConnectPendingRoute: ApiSocialConnectPendingRoute,
+  ApiSocialConnectStartRoute: ApiSocialConnectStartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -14,10 +14,14 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  Facebook,
   Flame,
   GalleryHorizontal,
   Image as ImageIcon,
+  Instagram,
+  Music2,
   RefreshCw,
+  Send,
   Video as VideoIcon,
   X,
 } from "lucide-react";
@@ -816,6 +820,8 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
         </div>
       )}
 
+      {editing ? null : <PublishSection entry={entry} />}
+
       {entry.status !== "por_planear" ? null : editing ? (
         <div className="mt-4">
           {saveError ? <p className="mb-2 text-xs text-red-600">{saveError}</p> : null}
@@ -881,6 +887,304 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
         </div>
       )}
       {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+    </div>
+  );
+}
+
+/* ---------- publicar a redes ---------- */
+
+type SocialPlatform = "facebook" | "instagram";
+type ConnectionsState = Record<SocialPlatform, { name: string | null } | null>;
+const EMPTY_CONNECTIONS: ConnectionsState = { facebook: null, instagram: null };
+
+async function fetchConnections(): Promise<ConnectionsState> {
+  const res = await fetch("/api/social/connections");
+  const data = (await res.json()) as { ok: boolean; connections?: ConnectionsState };
+  return data.ok && data.connections ? data.connections : EMPTY_CONNECTIONS;
+}
+
+// Tira de "Conexiones" arriba del calendario — tocar Instagram o Facebook
+// manda al mismo flujo de OAuth (/api/social/connect/start), que conecta
+// ambos a la vez cuando la Página elegida tiene Instagram vinculado.
+// TikTok no tiene integración todavía, se muestra deshabilitado.
+function ConnectionsStrip() {
+  const { t } = useLanguage();
+  const qc = useQueryClient();
+  const [notice, setNotice] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingPages, setPendingPages] = useState<
+    { id: string; name: string; instagramUserId: string | null }[]
+  >([]);
+
+  const { data: connections = EMPTY_CONNECTIONS } = useQuery({
+    queryKey: ["social-connections"],
+    queryFn: fetchConnections,
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("social_connected");
+    const pick = params.get("social_pick");
+    const err = params.get("social_error");
+    if (connected) {
+      setNotice(t("¡Cuenta conectada!", "Account connected!"));
+      void qc.invalidateQueries({ queryKey: ["social-connections"] });
+    } else if (pick) {
+      setPendingId(pick);
+      fetch(`/api/social/connect/pending?id=${encodeURIComponent(pick)}`)
+        .then((res) => res.json())
+        .then((data: { ok: boolean; pages?: typeof pendingPages }) => {
+          if (data.ok && data.pages) setPendingPages(data.pages);
+        })
+        .catch(() => {});
+    } else if (err) {
+      setNotice(
+        t(
+          "No pudimos conectar la cuenta. Intenta de nuevo.",
+          "We couldn't connect the account. Try again.",
+        ),
+      );
+    }
+    if (connected || pick || err) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("social_connected");
+      url.searchParams.delete("social_pick");
+      url.searchParams.delete("social_error");
+      window.history.replaceState({}, "", url.toString());
+    }
+    // Solo al montar — leemos los query params del round-trip de OAuth una vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function choosePage(pageId: string) {
+    if (!pendingId) return;
+    await fetch("/api/social/connect/finalize", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pendingId, pageId }),
+    });
+    setPendingId(null);
+    setPendingPages([]);
+    setNotice(t("¡Cuenta conectada!", "Account connected!"));
+    void qc.invalidateQueries({ queryKey: ["social-connections"] });
+  }
+
+  async function disconnect(platform: SocialPlatform) {
+    await fetch(`/api/social/connections?platform=${platform}`, { method: "DELETE" });
+    void qc.invalidateQueries({ queryKey: ["social-connections"] });
+  }
+
+  function Pill({
+    icon: PillIcon,
+    label,
+    platform,
+  }: {
+    icon: typeof Instagram;
+    label: string;
+    platform: SocialPlatform;
+  }) {
+    const connection = connections[platform];
+    if (connection) {
+      return (
+        <button
+          type="button"
+          onClick={() => disconnect(platform)}
+          title={t(`Desconectar ${label}`, `Disconnect ${label}`)}
+          className="flex items-center gap-1.5 rounded-full border border-wit-blue/25 bg-wit-blue/10 px-3 py-1.5 text-xs font-bold text-wit-blue"
+        >
+          <PillIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
+          {connection.name ?? label}
+        </button>
+      );
+    }
+    return (
+      <a
+        href="/api/social/connect/start"
+        className="flex items-center gap-1.5 rounded-full border border-wit-ink/12 bg-white px-3 py-1.5 text-xs font-bold text-wit-gray hover:border-wit-ink/25 hover:text-wit-ink"
+      >
+        <PillIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
+        {t(`Conectar ${label}`, `Connect ${label}`)}
+      </a>
+    );
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <Pill icon={Instagram} label="Instagram" platform="instagram" />
+      <Pill icon={Facebook} label="Facebook" platform="facebook" />
+      <span
+        title={t("Próximamente", "Coming soon")}
+        className="flex items-center gap-1.5 rounded-full border border-wit-ink/8 bg-wit-mist/40 px-3 py-1.5 text-xs font-bold text-wit-gray/60"
+      >
+        <Music2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+        TikTok · {t("Próximamente", "Coming soon")}
+      </span>
+      {notice ? <p className="text-xs font-semibold text-wit-gray">{notice}</p> : null}
+      {pendingId && pendingPages.length > 0 ? (
+        <div className="mt-1 w-full rounded-2xl border border-wit-ink/10 bg-white p-3">
+          <p className="text-xs font-bold text-wit-ink">
+            {t("¿Cuál página de Facebook conectamos?", "Which Facebook Page should we connect?")}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {pendingPages.map((page) => (
+              <button
+                key={page.id}
+                type="button"
+                onClick={() => choosePage(page.id)}
+                className="rounded-full border border-wit-ink/15 px-3 py-1.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30"
+              >
+                {page.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+type PublicationResult = {
+  platform: SocialPlatform;
+  status: "success" | "error";
+  external_post_id: string | null;
+  error: string | null;
+};
+
+// Botón "Publicar" junto al copy sugerido — solo aparece para piezas ya
+// "lista" (imagen o carrusel; video queda fuera de v1, ver el plan). Sube
+// directo a las redes conectadas en ConnectionsStrip vía
+// /api/calendar-entries-publish.
+function PublishSection({ entry }: { entry: CalendarEntry }) {
+  const { t } = useLanguage();
+  const qc = useQueryClient();
+  const [selected, setSelected] = useState<Set<SocialPlatform>>(new Set());
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  const { data: connections = EMPTY_CONNECTIONS } = useQuery({
+    queryKey: ["social-connections"],
+    queryFn: fetchConnections,
+  });
+
+  const { data: publications = [] } = useQuery({
+    queryKey: ["calendar-entry-publications", entry.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/calendar-entries-publish?entryId=${entry.id}`);
+      const data = (await res.json()) as { ok: boolean; publications?: PublicationResult[] };
+      return data.ok && data.publications ? data.publications : [];
+    },
+    enabled: entry.status === "lista" && entry.format !== "video",
+  });
+
+  if (entry.status !== "lista") return null;
+
+  if (entry.format === "video") {
+    return (
+      <p className="mt-3.5 text-xs text-wit-gray">
+        {t(
+          "Publicar video directo a redes estará disponible pronto.",
+          "Publishing video straight to your accounts is coming soon.",
+        )}
+      </p>
+    );
+  }
+
+  const connectedPlatforms = (["instagram", "facebook"] as SocialPlatform[]).filter(
+    (p) => connections[p],
+  );
+
+  function toggle(platform: SocialPlatform) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(platform)) next.delete(platform);
+      else next.add(platform);
+      return next;
+    });
+  }
+
+  async function publish() {
+    if (selected.size === 0) return;
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      const res = await fetch("/api/calendar-entries-publish", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ entryId: entry.id, platforms: Array.from(selected) }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setPublishError(
+          t("No pudimos publicar. Intenta de nuevo.", "We couldn't publish. Try again."),
+        );
+        return;
+      }
+      void qc.invalidateQueries({ queryKey: ["calendar-entry-publications", entry.id] });
+    } catch {
+      setPublishError(
+        t("No pudimos publicar. Intenta de nuevo.", "We couldn't publish. Try again."),
+      );
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  return (
+    <div className="mt-3.5 rounded-2xl border border-wit-ink/5 bg-wit-mist/30 p-3.5">
+      <p className="text-xs font-bold uppercase tracking-wider text-wit-gray">
+        {t("Publicar", "Publish")}
+      </p>
+      {connectedPlatforms.length === 0 ? (
+        <p className="mt-2 text-sm text-wit-gray">
+          {t(
+            "Conecta Instagram o Facebook arriba del calendario para publicar directo desde aquí.",
+            "Connect Instagram or Facebook above the calendar to publish straight from here.",
+          )}
+        </p>
+      ) : (
+        <>
+          <div className="mt-2 flex flex-wrap gap-3">
+            {connectedPlatforms.map((platform) => (
+              <label key={platform} className="flex items-center gap-1.5 text-sm text-wit-ink">
+                <input
+                  type="checkbox"
+                  checked={selected.has(platform)}
+                  onChange={() => toggle(platform)}
+                  className="h-4 w-4 rounded border-wit-ink/25"
+                />
+                {platform === "instagram" ? "Instagram" : "Facebook"}
+              </label>
+            ))}
+          </div>
+          <button
+            type="button"
+            disabled={selected.size === 0 || publishing}
+            onClick={publish}
+            className="wit-glow-button mt-3 flex items-center gap-1.5 rounded-full px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+          >
+            <Send className="h-3.5 w-3.5" strokeWidth={2.4} />
+            {publishing ? t("Publicando...", "Publishing...") : t("Publicar", "Publish")}
+          </button>
+          {publishError ? <p className="mt-2 text-xs text-red-600">{publishError}</p> : null}
+          {publications.length > 0 ? (
+            <ul className="mt-3 space-y-1">
+              {publications.map((pub, i) => (
+                <li key={i} className="text-xs text-wit-gray">
+                  {pub.status === "success"
+                    ? t(
+                        `✓ Publicado en ${pub.platform === "instagram" ? "Instagram" : "Facebook"}`,
+                        `✓ Published to ${pub.platform === "instagram" ? "Instagram" : "Facebook"}`,
+                      )
+                    : t(
+                        `✗ Error al publicar en ${pub.platform === "instagram" ? "Instagram" : "Facebook"}${pub.error ? `: ${pub.error}` : ""}`,
+                        `✗ Failed to publish to ${pub.platform === "instagram" ? "Instagram" : "Facebook"}${pub.error ? `: ${pub.error}` : ""}`,
+                      )}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
@@ -1012,6 +1316,8 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           "Organize what you'll publish this month — every square is a request ready to send.",
         )}
       </p>
+
+      <ConnectionsStrip />
 
       {confirmingReplan ? (
         <div className="wit-glass mt-4 flex flex-col gap-3 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:flex-row sm:items-center sm:justify-between">
