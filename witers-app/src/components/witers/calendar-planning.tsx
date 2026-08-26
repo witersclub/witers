@@ -848,7 +848,8 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="flex items-center gap-3 text-3xl font-extrabold tracking-tighter text-wit-ink sm:text-4xl">
+        <h1 className="flex flex-wrap items-center gap-3 text-3xl font-extrabold tracking-tighter text-wit-ink sm:text-4xl">
+          {t("Planificación", "Planning")}
           <span className="flex items-center gap-2 text-wit-blue">
             <Calendar className="h-6 w-6" strokeWidth={2.2} />
             {monthLabel}

@@ -20,7 +20,6 @@ import {
   Briefcase,
   Building2,
   Cake,
-  Calendar,
   Car,
   ChevronDown,
   ChevronRight,
@@ -29,10 +28,8 @@ import {
   Eye,
   FileDown,
   FileText,
-  Flame,
   GalleryHorizontal,
   Globe,
-  Heart,
   Home,
   Image as ImageIcon,
   Images,
@@ -44,18 +41,14 @@ import {
   Magnet,
   MapPin,
   Megaphone,
-  MessageCircle,
   PackagePlus,
   PawPrint,
   Pencil,
   Plane,
-  Play,
   Plus,
   RefreshCw,
   Rocket,
   Route as RouteIcon,
-  Search,
-  Send,
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
@@ -77,7 +70,6 @@ import { ChatBubble, ChatIntakeFlow, PhotosAnswerBubble } from "../components/wi
 import { HelpChatButton } from "../components/witers/help-chat";
 import { MicButton } from "../components/witers/mic-button";
 import { PasswordInput } from "../components/witers/password-input";
-import { SlideGallery } from "../components/witers/slide-gallery";
 import { CustomFontPreview } from "../components/witers/font-preview";
 import { ensureGoogleFontLoaded } from "../components/witers/google-font-picker";
 import {
@@ -98,7 +90,6 @@ import {
   CarouselLandingScreen,
   CarouselRequestList,
   CarouselWizard,
-  parseSlides,
   type CarouselRequestRow,
 } from "../components/witers/carousel-requests";
 import { downloadFileByKey } from "../lib/download-file";
@@ -459,144 +450,6 @@ function Panel() {
   );
 }
 
-// Converts a stored "w:h" aspect ratio (e.g. "9:16") into a CSS
-// aspect-ratio value — used to size a "Mis solicitudes" card as the piece's
-// real format instead of force-cropping everything into a square. Falls
-// back to square for anything missing or malformed rather than throwing.
-function cssAspectRatio(aspectRatio: string | undefined): string {
-  const [w, h] = (aspectRatio ?? "1:1").split(":").map(Number);
-  return w > 0 && h > 0 ? `${w} / ${h}` : "1 / 1";
-}
-
-// Flavor copy for the desktop "Mis solicitudes" feed's Instagram-style
-// cards — not real engagement data (a delivered piece doesn't get likes
-// anywhere), just generic captions to sell the "this is a real feed"
-// feeling the client asked for. Both the like count and which caption
-// shows are derived deterministically from the piece's own id, so a given
-// card looks the same on every reload instead of re-randomizing.
-const FEED_CAPTIONS: [string, string][] = [
-  ["Nueva pieza lista para brillar ✨", "New piece ready to shine ✨"],
-  ["Directo del estudio a tu feed 🎨", "Straight from the studio to your feed 🎨"],
-  ["Otra creatividad para tu campaña 🚀", "Another creative for your campaign 🚀"],
-  ["Diseñada para conectar con tu audiencia 💬", "Designed to connect with your audience 💬"],
-  ["Contenido fresco, resultados frescos 🔥", "Fresh content, fresh results 🔥"],
-  ["Lista para publicar cuando tú digas 📅", "Ready to post whenever you say 📅"],
-];
-
-function hashStringToInt(value: string): number {
-  let h = 0;
-  for (let i = 0; i < value.length; i++) h = (h * 31 + value.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-function feedLikeCount(id: string): number {
-  return 40 + (hashStringToInt(id) % 180);
-}
-
-function feedCaption(id: string, t: (es: string, en: string) => string): string {
-  const [es, en] = FEED_CAPTIONS[hashStringToInt(id) % FEED_CAPTIONS.length];
-  return t(es, en);
-}
-
-// One "post" in the desktop Inicio phone feed — styled like a real social
-// post (header with the brand's own logo, image, heart/comment row, like
-// count, caption) instead of a bare thumbnail, per the client's request to
-// make it feel like an actual, interactive feed.
-//
-// The image itself only mounts (gets a real src, so only then does the
-// browser start fetching it) once its card scrolls within `rootMargin` of
-// the phone's own scroll viewport, via IntersectionObserver — plain
-// `loading="lazy"` wasn't enough here: browsers size their lazy-load
-// prefetch distance generously (several viewport-heights), so inside a
-// short 600px-tall nested scroller most cards already counted as "near
-// enough" and fetched together anyway. This is a hard gate instead of a
-// hint, so at most a couple of images are ever in flight at once.
-function InstagramFeedCard({
-  creative,
-  companyName,
-  logoKey,
-  accentColor,
-  onOpen,
-}: {
-  creative: { id: string; title: string; thumbHref: string; aspectRatio: string | undefined };
-  companyName: string;
-  logoKey: string | null;
-  accentColor: string;
-  onOpen: () => void;
-}) {
-  const { t } = useLanguage();
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
-  const initial = companyName.trim().charAt(0).toUpperCase() || "W";
-
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setInView(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "200px 0px" },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div ref={rootRef} className="overflow-hidden rounded-2xl border border-wit-ink/10 bg-white">
-      <div className="flex items-center gap-2 px-2.5 py-2">
-        {logoKey ? (
-          <img
-            src={`/api/file?key=${encodeURIComponent(logoKey)}`}
-            alt={companyName}
-            loading="lazy"
-            className="h-6 w-6 shrink-0 rounded-full border border-wit-ink/10 object-cover"
-          />
-        ) : (
-          <span
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-            style={{ background: accentColor }}
-          >
-            {initial}
-          </span>
-        )}
-        <p className="truncate text-xs font-bold text-wit-ink">{companyName}</p>
-      </div>
-      <button
-        type="button"
-        title={creative.title}
-        onClick={onOpen}
-        style={{ aspectRatio: cssAspectRatio(creative.aspectRatio) }}
-        className="block w-full overflow-hidden bg-wit-mist/40 transition-transform active:scale-[0.99]"
-      >
-        {inView ? (
-          <img
-            src={creative.thumbHref}
-            alt={creative.title}
-            decoding="async"
-            className="h-full w-full object-cover"
-          />
-        ) : null}
-      </button>
-      <div className="px-2.5 py-2">
-        <div className="flex items-center gap-3 text-wit-ink">
-          <Heart className="h-4 w-4" strokeWidth={2} />
-          <MessageCircle className="h-4 w-4" strokeWidth={2} />
-        </div>
-        <p className="mt-1 text-[11px] font-bold text-wit-ink">
-          {feedLikeCount(creative.id).toLocaleString("es-MX")} {t("me gusta", "likes")}
-        </p>
-        <p className="mt-0.5 truncate text-[11px] text-wit-ink">
-          <span className="font-bold">{companyName}</span> {feedCaption(creative.id, t)}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 // Shared by both the mobile and desktop quick-create rows (see
 // renderQuickCreateCard in PanelContent) — one source of truth for the
 // icon/color/label per creative mode instead of three near-duplicate
@@ -694,21 +547,6 @@ function PanelContent() {
   // Which locked quota ring (if any) the client just tapped — drives the
   // upgrade teaser popover. null = closed.
   const [upgradeTeaser, setUpgradeTeaser] = useState<"video" | "carrusel" | null>(null);
-  // "Creatividades recientes" horizontal strip — scrolled with this ref
-  // (arrow button + native touch swipe both use it) instead of paging
-  // through state, since it's just a filmstrip, not a stepped carousel.
-  const recentScrollRef = useRef<HTMLDivElement>(null);
-  // Which "Mis solicitudes" card is open full-size, if any — tapping a
-  // card enlarges it right there instead of navigating away from Inicio.
-  // `images` is every delivered slide for a carrusel (just the one image
-  // for imagen) — SlideGallery (keyed by `id`) pages through all of them
-  // instead of only ever showing the cover, and remounts back to the first
-  // image whenever a different piece is opened.
-  const [lightboxCreative, setLightboxCreative] = useState<{
-    id: string;
-    images: string[];
-    title: string;
-  } | null>(null);
   // Read (and clear) once per mount — only the very first chat (chatKey
   // still at its initial value) should inherit these, not a later
   // conversation opened via the button.
@@ -930,64 +768,6 @@ function PanelContent() {
   // celebrate. See countResults in meta-ads.server.ts for what "counts."
   const totalResultsImpact = activatedCampaigns.reduce((sum, c) => sum + Number(c.results ?? 0), 0);
 
-  // "Creatividades recientes" — imágenes and carruseles only, not video:
-  // a delivered video has no stored still frame, and rendering a <video>
-  // tag just to fake a thumbnail (or building real poster generation) is
-  // more machinery than this strip is worth right now. Sorted by
-  // created_at across both types (not per-type), same as the reference.
-  const recentImageCreatives = rows
-    .filter((r) => r.status === "completada" || r.status === "cerrada")
-    .map((r) => {
-      const latest = parseResults(r).at(-1);
-      const thumbHref = latest
-        ? (latest.image_url ?? `/api/file?key=${encodeURIComponent(latest.r2_key ?? "")}`)
-        : null;
-      return thumbHref
-        ? {
-            kind: "imagen" as const,
-            id: r.id,
-            title: r.title,
-            thumbHref,
-            images: [thumbHref],
-            createdAt: r.created_at,
-            aspectRatio: r.aspect_ratio,
-          }
-        : null;
-    })
-    .filter((c) => c !== null);
-  const recentCarouselCreatives = carouselRows
-    .filter((r) => r.status === "completada" || r.status === "cerrada")
-    .map((r) => {
-      // Every delivered slide, in order — the lightbox pages through all
-      // of them, not just the cover (see the fix below). A slide still
-      // being redone (no delivered_key yet) is skipped rather than shown
-      // as a blank frame.
-      const deliveredSlides = parseSlides(r)
-        .filter((s) => s.delivered_key)
-        .map((s) => `/api/file?key=${encodeURIComponent(s.delivered_key!)}`);
-      return deliveredSlides.length > 0
-        ? {
-            kind: "carrusel" as const,
-            id: r.id,
-            title: r.title,
-            thumbHref: deliveredSlides[0],
-            images: deliveredSlides,
-            createdAt: r.created_at,
-            aspectRatio: r.aspect_ratio,
-          }
-        : null;
-    })
-    .filter((c) => c !== null);
-  const allRecentCreatives = [...recentImageCreatives, ...recentCarouselCreatives].sort((a, b) =>
-    a.createdAt < b.createdAt ? 1 : -1,
-  );
-  // The mobile horizontal strip caps at 10 (a sideways filmstrip past that
-  // is more scrolling than browsing) — the desktop "Mis solicitudes" phone
-  // feed further down is a continuous vertical scroll instead, so it uses
-  // the uncapped list: "todas las que yo vaya sacando" was explicit.
-  const RECENT_CREATIVES_MAX = 10;
-  const recentCreatives = allRecentCreatives.slice(0, RECENT_CREATIVES_MAX);
-
   // Rows come back newest-first, so the first one with a logo is the most
   // recent request that had one — offered as a shortcut on the new form.
   const previousLogoKey = rows.find((row) => row.logo_key)?.logo_key ?? null;
@@ -1121,33 +901,24 @@ function PanelContent() {
                 duplicated Inicio instead of feeling like a different place. */}
             {section === "creatividad" ? (
               <>
-                {/* Desktop-only (lg+) Inicio header — a client asked for
-                    this specific split: greeting + quota + campaign
-                    results in a left column, "Mis solicitudes" as a
-                    vertically-scrollable phone-style feed on the right,
-                    top-aligned with the greeting. This doesn't reflow
-                    cleanly from the mobile markup (different structure,
-                    not just different spacing), so it's a separate block
-                    rather than one responsive layout serving both — mobile
-                    stays exactly as it was, untouched, in the lg:hidden
-                    block right after this one. */}
-                <div className="hidden lg:flex lg:items-start lg:justify-between lg:gap-10">
-                  <div className="lg:max-w-xl lg:flex-1">
+                {/* Desktop-only (lg+) Inicio header. Planificación (the
+                    monthly content calendar) now leads — it's the most
+                    interactive, most complete-looking part of the app, so
+                    it gets the same top-of-Inicio spot the old "Mis
+                    solicitudes" phone-feed mockup used to have, just
+                    full-width instead of squeezed into a narrow side
+                    column (its 7-col grid needs the room). Quota/campaign/
+                    quick-create still follow right after, same content as
+                    always. Mobile stays a separate block right after this
+                    one — different structure, not just different
+                    spacing. */}
+                <div className="hidden lg:block">
+                  <div className="lg:max-w-xl">
                     <div className="flex flex-wrap items-center gap-3">
                       <h1 className="text-4xl font-extrabold tracking-tighter text-wit-ink">
                         {t("Hola,", "Hi,")}{" "}
                         <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
                       </h1>
-                      {streakWeeks > 0 ? (
-                        <span className="flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
-                          <Flame className="h-3.5 w-3.5" strokeWidth={2} />
-                          {streakWeeks}{" "}
-                          {t(
-                            streakWeeks === 1 ? "semana seguida" : "semanas seguidas",
-                            streakWeeks === 1 ? "week in a row" : "weeks in a row",
-                          )}
-                        </span>
-                      ) : null}
                     </div>
                     <p className="mt-2 text-base text-wit-gray">
                       {t(
@@ -1155,8 +926,14 @@ function PanelContent() {
                         "Request creatives and track every request from here.",
                       )}
                     </p>
+                  </div>
 
-                    <div className="wit-glass mt-6 max-w-xs rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
+                  <div className="mt-8">
+                    <PlanificacionPanel streakWeeks={streakWeeks} />
+                  </div>
+
+                  <div className="mt-8 lg:max-w-xl">
+                    <div className="wit-glass max-w-xs rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)]">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
                           {t("Tu cupo este mes", "Your quota this month")}
@@ -1297,75 +1074,10 @@ function PanelContent() {
                       </div>
                     ) : null}
                   </div>
-
-                  {allRecentCreatives.length > 0 ? (
-                    <div className="shrink-0 [perspective:1200px]">
-                      <p className="mb-3 text-center text-sm font-bold text-wit-ink">
-                        {t("Mis solicitudes", "My requests")}
-                      </p>
-                      <div className="w-[300px] rounded-[2.4rem] border-[8px] border-wit-ink bg-wit-ink shadow-[0_35px_80px_rgba(5,13,40,0.3)]">
-                        <div className="relative h-[600px] overflow-hidden rounded-[1.8rem] bg-white">
-                          <div className="absolute left-1/2 top-0 z-20 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-wit-ink" />
-                          {/* Continuous vertical scroll, several pieces
-                              visible at once — an Instagram-feed feel
-                              (explicitly asked for), not a one-at-a-time
-                              Reels/Stories snap. Each card lazy-loads its
-                              own image (see InstagramFeedCard) instead of
-                              every piece fetching at once on mount, which
-                              is what was making the feed feel "heavy" and
-                              stuck. */}
-                          <div className="h-full space-y-3 overflow-y-auto px-3 pb-16 pt-9 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                            {allRecentCreatives.map((c) => (
-                              <InstagramFeedCard
-                                key={c.id}
-                                creative={c}
-                                companyName={brandProfile?.company_name || "WITERS"}
-                                logoKey={brandProfile?.logo_key ?? null}
-                                accentColor={brandColorList[0] ?? "#0047FF"}
-                                onOpen={() =>
-                                  setLightboxCreative({
-                                    id: c.id,
-                                    images: c.images,
-                                    title: c.title,
-                                  })
-                                }
-                              />
-                            ))}
-                          </div>
-                          {/* Floating pill tab bar, matching Instagram's own
-                              (home/reels/direct/search/profile, active home
-                              in a rounded highlight) — kept white/light
-                              regardless of the device's own dark mode,
-                              matching the rest of this mockup. */}
-                          <div className="absolute inset-x-3 bottom-3 z-20 flex items-center justify-between rounded-full border border-wit-ink/10 bg-white/95 px-3.5 py-2 shadow-[0_10px_30px_rgba(5,13,40,0.14)] backdrop-blur-sm">
-                            <span className="flex h-7 w-9 items-center justify-center rounded-full bg-wit-mist/70">
-                              <Home className="h-4 w-4 text-wit-ink" strokeWidth={2.4} />
-                            </span>
-                            <Play className="h-4 w-4 text-wit-ink" strokeWidth={2.2} />
-                            <Send className="h-4 w-4 text-wit-ink" strokeWidth={2.2} />
-                            <Search className="h-4 w-4 text-wit-ink" strokeWidth={2.2} />
-                            {brandProfile?.logo_key ? (
-                              <img
-                                src={`/api/file?key=${encodeURIComponent(brandProfile.logo_key)}`}
-                                alt={brandProfile.company_name}
-                                className="h-6 w-6 shrink-0 rounded-full border border-wit-ink/10 object-cover"
-                              />
-                            ) : (
-                              <span
-                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                                style={{ background: brandColorList[0] ?? "#0047FF" }}
-                              >
-                                {(brandProfile?.company_name || "W").trim().charAt(0).toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
 
-                {/* Mobile/tablet (below lg) — unchanged from before. */}
+                {/* Mobile/tablet (below lg) — Planificación leads here too,
+                    same reasoning as the desktop block above. */}
                 <div className="lg:hidden">
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
@@ -1373,16 +1085,6 @@ function PanelContent() {
                         {t("Hola,", "Hi,")}{" "}
                         <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
                       </h1>
-                      {streakWeeks > 0 ? (
-                        <span className="flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
-                          <Flame className="h-3.5 w-3.5" strokeWidth={2} />
-                          {streakWeeks}{" "}
-                          {t(
-                            streakWeeks === 1 ? "semana seguida" : "semanas seguidas",
-                            streakWeeks === 1 ? "week in a row" : "weeks in a row",
-                          )}
-                        </span>
-                      ) : null}
                     </div>
                     <p className="mt-2 text-base text-wit-gray">
                       {t(
@@ -1392,91 +1094,9 @@ function PanelContent() {
                     </p>
                   </div>
 
-                  {/* "Mis solicitudes" — the very first thing after the
-                    greeting, above even the quota rings — replacing the old
-                    single-thumbnail RecentCreativeQuickAccess teaser that
-                    pointed at this same list one tab-click away. Showing
-                    the whole strip right here made that shortcut
-                    redundant. */}
-                  {recentCreatives.length > 0 || hasPendingImageRequest ? (
-                    <div className="mt-6">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <h2 className="text-lg font-bold text-wit-ink">
-                          {t("Mis solicitudes", "My requests")}
-                        </h2>
-                        {hasPendingImageRequest ? (
-                          <div className="wit-pending-glow shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCreativeMode("imagenes");
-                                setTab("solicitudes");
-                              }}
-                              className="wit-pending-glow-shield flex items-center gap-1.5 rounded-2xl bg-white px-3 py-1 text-xs font-bold text-wit-blue"
-                            >
-                              <Spinner />
-                              {t("En proceso", "In progress")}
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                      {recentCreatives.length > 0 ? (
-                        <div className="relative mt-3">
-                          <div
-                            ref={recentScrollRef}
-                            className="flex snap-x snap-mandatory items-end gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                          >
-                            {/* Fixed height, auto width from each piece's own
-                            aspect_ratio — a story-format piece and a square
-                            one sit at the height, in their real shape,
-                            instead of both getting force-cropped into the
-                            same square. Tapping opens it full-size in a
-                            lightbox rather than navigating away. */}
-                            {recentCreatives.map((c) => (
-                              <button
-                                key={c.id}
-                                type="button"
-                                title={c.title}
-                                onClick={() =>
-                                  setLightboxCreative({
-                                    id: c.id,
-                                    images: c.images,
-                                    title: c.title,
-                                  })
-                                }
-                                style={{ aspectRatio: cssAspectRatio(c.aspectRatio) }}
-                                className="relative h-40 shrink-0 snap-start overflow-hidden rounded-2xl border border-wit-ink/10 bg-wit-mist/40 shadow-[0_10px_25px_rgba(5,13,40,0.08)] transition-transform active:scale-95 sm:h-48"
-                              >
-                                <img
-                                  src={c.thumbHref}
-                                  alt={c.title}
-                                  className="h-full w-full object-cover"
-                                />
-                                {c.images.length > 1 ? (
-                                  <span className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
-                                    <GalleryHorizontal className="h-2.5 w-2.5" strokeWidth={2.4} />
-                                    {c.images.length}
-                                  </span>
-                                ) : null}
-                              </button>
-                            ))}
-                          </div>
-                          {recentCreatives.length > 3 ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                recentScrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })
-                              }
-                              aria-label={t("Ver más solicitudes", "See more requests")}
-                              className="absolute -right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-wit-ink/10 bg-white shadow-[0_10px_30px_rgba(5,13,40,0.15)]"
-                            >
-                              <ChevronRight className="h-4 w-4 text-wit-ink" strokeWidth={2.4} />
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
+                  <div className="mt-6">
+                    <PlanificacionPanel streakWeeks={streakWeeks} />
+                  </div>
 
                   <div className="wit-glass mt-8 flex flex-col gap-3 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)] sm:max-w-xs">
                     <div className="flex items-center justify-between gap-3">
@@ -1595,31 +1215,6 @@ function PanelContent() {
                       </div>
                     </button>
                   ) : null}
-
-                  {/* Entry point into the new Planificación section — no
-                      lg:hidden desktop twin needed, that's what the
-                      DesktopTopNav tab is for. */}
-                  <button
-                    type="button"
-                    onClick={() => setSection("planificacion")}
-                    className="wit-glass mt-6 flex w-full items-center gap-3 rounded-2xl p-5 text-left shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform active:scale-[0.99]"
-                  >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
-                      <Calendar className="h-5 w-5" strokeWidth={2} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-bold text-wit-ink">
-                        {t("Planifica tu mes", "Plan your month")}
-                      </span>
-                      <span className="block text-xs text-wit-gray">
-                        {t(
-                          "Deja que Wit arme tu calendario de contenido.",
-                          "Let Wit build your content calendar.",
-                        )}
-                      </span>
-                    </span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-wit-gray" strokeWidth={2.4} />
-                  </button>
 
                   {!active ? (
                     <div className="mt-8 flex flex-col items-start gap-4 rounded-3xl bg-wit-navy p-8 text-white md:flex-row md:items-center md:justify-between">
@@ -1783,36 +1378,6 @@ function PanelContent() {
                     )}
                   </div>
                 ) : null}
-
-                {lightboxCreative
-                  ? createPortal(
-                      <div
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-wit-ink/70 p-6 backdrop-blur-sm"
-                        onClick={() => setLightboxCreative(null)}
-                      >
-                        <div
-                          className="relative max-h-[85vh] max-w-lg"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <SlideGallery
-                            key={lightboxCreative.id}
-                            images={lightboxCreative.images}
-                            alt={lightboxCreative.title}
-                            imageClassName="max-h-[85vh] w-auto rounded-2xl object-contain shadow-[0_30px_80px_rgba(5,13,40,0.4)]"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setLightboxCreative(null)}
-                            aria-label={t("Cerrar", "Close")}
-                            className="absolute -right-3 -top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.25)]"
-                          >
-                            <X className="h-4 w-4" strokeWidth={2.5} />
-                          </button>
-                        </div>
-                      </div>,
-                      document.body,
-                    )
-                  : null}
               </>
             ) : section === "activos" ? (
               <div className="mt-8">
