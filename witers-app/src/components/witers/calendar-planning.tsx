@@ -436,6 +436,13 @@ function CalendarWizard({
 
 /* ---------- detail panel ---------- */
 
+const EMPTY_SLIDES: CalendarSlideDraft[] = [
+  { title: "", brief: "" },
+  { title: "", brief: "" },
+  { title: "", brief: "" },
+  { title: "", brief: "" },
+];
+
 function EntryDetail({ entry }: { entry: CalendarEntry }) {
   const { t } = useLanguage();
   const qc = useQueryClient();
@@ -444,13 +451,90 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pickingFormat, setPickingFormat] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(entry.title);
+  const [editBrief, setEditBrief] = useState(entry.brief);
+  const [editSlides, setEditSlides] = useState<CalendarSlideDraft[]>(entry.slides ?? EMPTY_SLIDES);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Reset the picker whenever the client switches to a different day —
-  // otherwise it could stay open showing the wrong entry's options.
+  // Reset all per-entry UI state whenever the client switches to a
+  // different day — otherwise the picker/editor could stay open showing
+  // the wrong entry's fields.
   useEffect(() => {
     setPickingFormat(false);
     setError(null);
+    setEditing(false);
+    setSaveError(null);
+    setEditTitle(entry.title);
+    setEditBrief(entry.brief);
+    setEditSlides(entry.slides ?? EMPTY_SLIDES);
+    // Only re-run on a day switch, not on every refetch of the same entry —
+    // that would blow away in-progress edits after an unrelated invalidation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id]);
+
+  async function saveEdit() {
+    setSaveError(null);
+    if (!editTitle.trim()) {
+      setSaveError(t("El título no puede quedar vacío.", "Title can't be empty."));
+      return;
+    }
+    if (entry.format === "carrusel") {
+      if (editSlides.some((s) => !s.brief.trim())) {
+        setSaveError(
+          t("Completa el contenido de las 4 láminas.", "Fill in all 4 slides' content."),
+        );
+        return;
+      }
+    } else if (!editBrief.trim()) {
+      setSaveError(t("El brief no puede quedar vacío.", "Brief can't be empty."));
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/calendar-entries", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          entryId: entry.id,
+          title: editTitle.trim(),
+          // Para carrusel, brief queda como el resumen corto original —
+          // el contenido real que se edita aquí vive en slides.
+          brief: entry.format === "carrusel" ? entry.brief : editBrief.trim(),
+          ...(entry.format === "carrusel"
+            ? { slides: editSlides.map((s) => ({ title: s.title.trim(), brief: s.brief.trim() })) }
+            : {}),
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setSaveError(
+          data.error === "ya_pedida"
+            ? t(
+                "Esta pieza ya fue pedida, no se puede editar.",
+                "This piece was already requested, it can't be edited.",
+              )
+            : t(
+                "No pudimos guardar los cambios. Intenta de nuevo.",
+                "We couldn't save the changes. Try again.",
+              ),
+        );
+        return;
+      }
+      setEditing(false);
+      void qc.invalidateQueries({ queryKey: ["calendar-entries"] });
+    } catch {
+      setSaveError(
+        t(
+          "No pudimos guardar los cambios. Intenta de nuevo.",
+          "We couldn't save the changes. Try again.",
+        ),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function requestNow(aspectRatio: string) {
     setError(null);
@@ -510,7 +594,16 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
         <Icon className="h-10 w-10 text-wit-blue/45" strokeWidth={1.6} />
       </div>
 
-      <h3 className="mt-3.5 text-lg font-extrabold tracking-tight text-wit-ink">{entry.title}</h3>
+      {editing ? (
+        <input
+          value={editTitle}
+          onChange={(e) => setEditTitle(e.target.value)}
+          maxLength={120}
+          className="mt-3.5 w-full rounded-xl border border-wit-ink/15 px-3 py-2 text-lg font-extrabold tracking-tight text-wit-ink outline-none focus:border-wit-blue"
+        />
+      ) : (
+        <h3 className="mt-3.5 text-lg font-extrabold tracking-tight text-wit-ink">{entry.title}</h3>
+      )}
 
       <div className="mt-2.5 flex flex-wrap gap-2">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-wit-mist/50 px-2.5 py-1 text-xs font-bold text-wit-gray">
@@ -522,7 +615,50 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
         </span>
       </div>
 
-      {entry.format === "carrusel" && entry.slides?.length ? (
+      {editing ? (
+        entry.format === "carrusel" ? (
+          <div className="mt-3.5 space-y-2.5">
+            {editSlides.map((slide, si) => (
+              <div key={si} className="rounded-xl bg-wit-mist/30 p-3">
+                <p className="text-xs font-bold text-wit-blue">
+                  {t(`Lámina ${si + 1}`, `Slide ${si + 1}`)}
+                </p>
+                <input
+                  value={slide.title}
+                  onChange={(e) =>
+                    setEditSlides((prev) =>
+                      prev.map((s, i) => (i === si ? { ...s, title: e.target.value } : s)),
+                    )
+                  }
+                  maxLength={120}
+                  placeholder={t("Título de la lámina", "Slide title")}
+                  className="mt-1.5 w-full rounded-lg border border-wit-ink/15 px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-wit-blue"
+                />
+                <textarea
+                  value={slide.brief}
+                  onChange={(e) =>
+                    setEditSlides((prev) =>
+                      prev.map((s, i) => (i === si ? { ...s, brief: e.target.value } : s)),
+                    )
+                  }
+                  rows={2}
+                  maxLength={2000}
+                  placeholder={t("Qué debe decir esta lámina", "What this slide should say")}
+                  className="mt-1.5 w-full resize-none rounded-lg border border-wit-ink/15 px-2.5 py-1.5 text-xs outline-none focus:border-wit-blue"
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <textarea
+            value={editBrief}
+            onChange={(e) => setEditBrief(e.target.value)}
+            rows={7}
+            maxLength={2000}
+            className="mt-3.5 w-full resize-none rounded-xl border border-wit-ink/15 px-3 py-2 text-sm leading-relaxed outline-none focus:border-wit-blue"
+          />
+        )
+      ) : entry.format === "carrusel" && entry.slides?.length ? (
         <ol className="mt-3.5 space-y-1.5">
           {entry.slides.map((slide, si) => (
             <li key={si} className="text-sm leading-relaxed text-wit-gray">
@@ -537,7 +673,29 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
         <p className="mt-3.5 text-sm leading-relaxed text-wit-gray">{entry.brief}</p>
       )}
 
-      {entry.status !== "por_planear" ? null : pickingFormat ? (
+      {entry.status !== "por_planear" ? null : editing ? (
+        <div className="mt-4">
+          {saveError ? <p className="mb-2 text-xs text-red-600">{saveError}</p> : null}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              disabled={saving}
+              className="flex-1 rounded-full border border-wit-ink/15 px-4 py-2.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30 disabled:opacity-50"
+            >
+              {t("Cancelar", "Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={saveEdit}
+              disabled={saving}
+              className="flex-1 rounded-full bg-wit-blue px-4 py-2.5 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+            >
+              {saving ? t("Guardando...", "Saving...") : t("Guardar cambios", "Save changes")}
+            </button>
+          </div>
+        </div>
+      ) : pickingFormat ? (
         <div className="mt-4">
           <p className="text-center text-xs font-bold text-wit-gray">
             {t("Elige el formato de esta pieza", "Choose this piece's format")}
@@ -559,16 +717,25 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
           </button>
         </div>
       ) : (
-        <button
-          type="button"
-          disabled={requesting}
-          onClick={() => setPickingFormat(true)}
-          className="wit-glow-button mt-4 w-full rounded-full px-6 py-3 text-sm font-bold text-white disabled:opacity-50"
-        >
-          {requesting
-            ? t("Enviando...", "Sending...")
-            : t("Pedir esta pieza a Wit", "Request this piece from Wit")}
-        </button>
+        <div className="mt-4 space-y-2">
+          <button
+            type="button"
+            disabled={requesting}
+            onClick={() => setPickingFormat(true)}
+            className="wit-glow-button w-full rounded-full px-6 py-3 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {requesting
+              ? t("Enviando...", "Sending...")
+              : t("Pedir esta pieza a Wit", "Request this piece from Wit")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="w-full rounded-full border border-wit-ink/15 px-4 py-2.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30"
+          >
+            {t("Editar", "Edit")}
+          </button>
+        </div>
       )}
       {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
     </div>

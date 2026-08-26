@@ -60,6 +60,17 @@ const bulkCreateSchema = z.object({
   entries: z.array(createEntrySchema).min(1).max(60),
 });
 
+// Solo título/brief/slides son editables directo — nunca fecha ni formato
+// (eso implicaría re-planear, ya cubierto por "Replanear mes"). slides es
+// opcional en el schema porque solo aplica a carrusel; se exige más abajo
+// en el handler según el formato real de la fila.
+const editEntrySchema = z.object({
+  entryId: z.string().uuid(),
+  title: z.string().min(1).max(120),
+  brief: z.string().min(1).max(2000),
+  slides: z.array(slideSchema).length(4).optional(),
+});
+
 function monthRange(url: URL): { monthStart: string; monthEnd: string } {
   const now = new Date();
   const year = Number(url.searchParams.get("year")) || now.getUTCFullYear();
@@ -154,6 +165,45 @@ export const Route = createFileRoute("/api/calendar-entries")({
         }
 
         return json({ ok: true, count: parsed.data.entries.length });
+      },
+
+      // Edición directa de una pieza — mientras siga "por planear" (sin
+      // request_id), el cliente puede corregir el título/brief (o las 4
+      // láminas si es carrusel) sin pasar por otra conversación con Wit ni
+      // por "Replanear mes". Una vez pedida, la pieza ya vive en el
+      // pipeline real de diseño y esto deja de aplicar — para eso están los
+      // flujos de "solicitar cambio" existentes en cada formato.
+      PATCH: async ({ request }) => {
+        const user = await getSessionUser(request);
+        if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
+
+        const parsed = editEntrySchema.safeParse(await request.json().catch(() => null));
+        if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
+
+        const entry = await db()
+          .prepare("SELECT format, request_id FROM calendar_entries WHERE id = ?1 AND user_id = ?2")
+          .bind(parsed.data.entryId, user.id)
+          .first<{ format: CalendarFormat; request_id: string | null }>();
+        if (!entry) return json({ ok: false, error: "no_encontrada" }, { status: 404 });
+        if (entry.request_id) return json({ ok: false, error: "ya_pedida" }, { status: 409 });
+        if (entry.format === "carrusel" && parsed.data.slides?.length !== 4) {
+          return json({ ok: false, error: "faltan_laminas" }, { status: 400 });
+        }
+
+        await db()
+          .prepare(
+            `UPDATE calendar_entries SET title = ?2, brief = ?3, slides_json = ?4
+             WHERE id = ?1 AND request_id IS NULL`,
+          )
+          .bind(
+            parsed.data.entryId,
+            parsed.data.title.trim(),
+            parsed.data.brief.trim(),
+            entry.format === "carrusel" ? JSON.stringify(parsed.data.slides) : null,
+          )
+          .run();
+
+        return json({ ok: true });
       },
 
       // "Replanear mes" — clears only the entries the client never acted on
