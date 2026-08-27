@@ -65,12 +65,23 @@ export async function exchangeCodeForInstagramIdentity(
   } catch {
     return { ok: false, error: "tiempo_agotado" };
   }
-  const shortJson = (await shortResponse.json().catch(() => ({}))) as {
-    access_token?: string;
-    user_id?: string;
-    error_message?: string;
-  };
-  if (!shortResponse.ok || !shortJson.access_token || !shortJson.user_id) {
+  // Instagram returns user_id as a raw JSON number, not a quoted string —
+  // and it's a 17+ digit id, well past Number.MAX_SAFE_INTEGER, so
+  // JSON.parse (via response.json()) silently rounds it and corrupts it
+  // (Meta then rejects publish calls with "Object with ID '...0' does not
+  // exist"). Pull the digits straight out of the response text instead, so
+  // it's never round-tripped through a JS number.
+  const shortText = await shortResponse.text();
+  const shortJson = (() => {
+    try {
+      return JSON.parse(shortText) as { access_token?: string; error_message?: string };
+    } catch {
+      return {};
+    }
+  })();
+  const userIdMatch = shortText.match(/"user_id"\s*:\s*(\d+)/);
+  const userId = userIdMatch?.[1];
+  if (!shortResponse.ok || !shortJson.access_token || !userId) {
     console.info("[instagram-login-auth] short token exchange failed", shortJson.error_message);
     return { ok: false, error: "intercambio_fallido" };
   }
@@ -102,7 +113,7 @@ export async function exchangeCodeForInstagramIdentity(
   const meUrl = new URL(`${GRAPH_BASE}/me`);
   meUrl.searchParams.set("fields", "user_id,username");
   meUrl.searchParams.set("access_token", longJson.access_token);
-  let username = shortJson.user_id;
+  let username = userId;
   try {
     const meResponse = await fetch(meUrl.toString());
     const meJson = (await meResponse.json().catch(() => ({}))) as { username?: string };
@@ -113,6 +124,6 @@ export async function exchangeCodeForInstagramIdentity(
 
   return {
     ok: true,
-    data: { accessToken: longJson.access_token, igUserId: shortJson.user_id, username },
+    data: { accessToken: longJson.access_token, igUserId: userId, username },
   };
 }
