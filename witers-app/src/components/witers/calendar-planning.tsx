@@ -1047,37 +1047,20 @@ function ConnectionsStrip() {
   );
 }
 
-type PublicationResult = {
-  platform: SocialPlatform;
-  status: "success" | "error";
-  external_post_id: string | null;
-  error: string | null;
-};
-
 // Botón "Publicar" junto al copy sugerido — solo aparece para piezas ya
 // "lista" (imagen o carrusel; video queda fuera de v1, ver el plan). Sube
 // directo a las redes conectadas en ConnectionsStrip vía
 // /api/calendar-entries-publish.
 function PublishSection({ entry }: { entry: CalendarEntry }) {
   const { t } = useLanguage();
-  const qc = useQueryClient();
   const [selected, setSelected] = useState<Set<SocialPlatform>>(new Set());
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishNotice, setPublishNotice] = useState<string | null>(null);
 
   const { data: connections = EMPTY_CONNECTIONS } = useQuery({
     queryKey: ["social-connections"],
     queryFn: fetchConnections,
-  });
-
-  const { data: publications = [] } = useQuery({
-    queryKey: ["calendar-entry-publications", entry.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/calendar-entries-publish?entryId=${entry.id}`);
-      const data = (await res.json()) as { ok: boolean; publications?: PublicationResult[] };
-      return data.ok && data.publications ? data.publications : [];
-    },
-    enabled: entry.status === "lista" && entry.format !== "video",
   });
 
   if (entry.status !== "lista") return null;
@@ -1106,24 +1089,44 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
     });
   }
 
+  function platformLabel(platform: SocialPlatform): string {
+    return platform === "instagram" ? "Instagram" : "Facebook";
+  }
+
   async function publish() {
     if (selected.size === 0) return;
     setPublishing(true);
     setPublishError(null);
+    setPublishNotice(null);
     try {
       const res = await fetch("/api/calendar-entries-publish", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ entryId: entry.id, platforms: Array.from(selected) }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      if (!data.ok) {
+      const data = (await res.json()) as {
+        ok: boolean;
+        results?: Record<string, { ok: boolean; error?: string }>;
+      };
+      if (!data.ok || !data.results) {
         setPublishError(
           t("No pudimos publicar. Intenta de nuevo.", "We couldn't publish. Try again."),
         );
         return;
       }
-      void qc.invalidateQueries({ queryKey: ["calendar-entry-publications", entry.id] });
+      const lines = Object.entries(data.results).map(([platform, result]) =>
+        result.ok
+          ? t(
+              `✓ Publicado en ${platformLabel(platform as SocialPlatform)}`,
+              `✓ Published to ${platformLabel(platform as SocialPlatform)}`,
+            )
+          : t(
+              `✗ Error al publicar en ${platformLabel(platform as SocialPlatform)}`,
+              `✗ Failed to publish to ${platformLabel(platform as SocialPlatform)}`,
+            ),
+      );
+      setPublishNotice(lines.join(" · "));
+      setTimeout(() => setPublishNotice(null), 4000);
     } catch {
       setPublishError(
         t("No pudimos publicar. Intenta de nuevo.", "We couldn't publish. Try again."),
@@ -1170,22 +1173,8 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
             {publishing ? t("Publicando...", "Publishing...") : t("Publicar", "Publish")}
           </button>
           {publishError ? <p className="mt-2 text-xs text-red-600">{publishError}</p> : null}
-          {publications.length > 0 ? (
-            <ul className="mt-3 space-y-1">
-              {publications.map((pub, i) => (
-                <li key={i} className="text-xs text-wit-gray">
-                  {pub.status === "success"
-                    ? t(
-                        `✓ Publicado en ${pub.platform === "instagram" ? "Instagram" : "Facebook"}`,
-                        `✓ Published to ${pub.platform === "instagram" ? "Instagram" : "Facebook"}`,
-                      )
-                    : t(
-                        `✗ Error al publicar en ${pub.platform === "instagram" ? "Instagram" : "Facebook"}${pub.error ? `: ${pub.error}` : ""}`,
-                        `✗ Failed to publish to ${pub.platform === "instagram" ? "Instagram" : "Facebook"}${pub.error ? `: ${pub.error}` : ""}`,
-                      )}
-                </li>
-              ))}
-            </ul>
+          {publishNotice ? (
+            <p className="mt-2 text-xs font-semibold text-wit-gray">{publishNotice}</p>
           ) : null}
         </>
       )}
