@@ -662,22 +662,27 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
       </p>
 
       {entry.status === "lista" && entry.format === "video" && entry.deliveredVideoHref ? (
-        <div className="mt-3 aspect-square overflow-hidden rounded-2xl border border-wit-ink/5 bg-black">
+        <div className="mt-3 overflow-hidden rounded-2xl border border-wit-ink/5 bg-black">
           <video
             controls
             preload="metadata"
-            className="h-full w-full object-contain"
+            className="block max-h-[70vh] w-full"
             src={entry.deliveredVideoHref}
           />
         </div>
       ) : entry.status === "lista" && entry.deliveredImages?.length ? (
-        <div className="mt-3 aspect-square overflow-hidden rounded-2xl border border-wit-ink/5">
+        // Sin relación de aspecto forzada — la pieza puede ser 1:1, 3:4,
+        // 9:16, etc., y forzarla a un cuadro cuadrado con object-cover
+        // recortaba y ocultaba parte del contenido real. La imagen se
+        // muestra a su proporción real, con el ancho de la columna como
+        // único límite.
+        <div className="mt-3 flex justify-center overflow-hidden rounded-2xl border border-wit-ink/5 bg-wit-mist/20">
           <SlideGallery
             key={entry.id}
             images={entry.deliveredImages}
             alt={entry.title}
-            className="relative h-full w-full"
-            imageClassName="h-full w-full object-cover"
+            className="relative"
+            imageClassName="block max-h-[70vh] w-full object-contain"
           />
         </div>
       ) : (
@@ -1121,12 +1126,15 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
               `✓ Published to ${platformLabel(platform as SocialPlatform)}`,
             )
           : t(
-              `✗ Error al publicar en ${platformLabel(platform as SocialPlatform)}`,
-              `✗ Failed to publish to ${platformLabel(platform as SocialPlatform)}`,
+              `✗ Error al publicar en ${platformLabel(platform as SocialPlatform)}${result.error ? `: ${result.error}` : ""}`,
+              `✗ Failed to publish to ${platformLabel(platform as SocialPlatform)}${result.error ? `: ${result.error}` : ""}`,
             ),
       );
       setPublishNotice(lines.join(" · "));
-      setTimeout(() => setPublishNotice(null), 4000);
+      // Un error trae el motivo real de Meta, útil para diagnosticar — se
+      // queda visible más tiempo que una confirmación simple de éxito.
+      const hasError = Object.values(data.results).some((r) => !r.ok);
+      setTimeout(() => setPublishNotice(null), hasError ? 12000 : 4000);
     } catch {
       setPublishError(
         t("No pudimos publicar. Intenta de nuevo.", "We couldn't publish. Try again."),
