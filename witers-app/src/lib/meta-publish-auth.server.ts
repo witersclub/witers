@@ -13,10 +13,13 @@ const AUTH_ENDPOINT = `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth`;
 const TOKEN_ENDPOINT = `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`;
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
-// No business_management: the flow only ever touches Pages the connecting
-// user already manages, listed via /me/accounts — nothing here needs
-// Business Manager-level access.
-const SCOPE = "pages_show_list,pages_read_engagement,pages_manage_posts";
+// business_management IS needed here, despite only ever touching Pages the
+// connecting user already manages: /me/accounts only lists Pages owned
+// directly by the person's profile unless the token also carries
+// business_management — without it, a Page owned by a Business Portfolio
+// (the common case once a client has any Business Manager set up) comes
+// back as an empty list even though the person has full access to it.
+const SCOPE = "pages_show_list,pages_read_engagement,pages_manage_posts,business_management";
 
 type MetaPublishConfig = { appId: string; appSecret: string };
 
