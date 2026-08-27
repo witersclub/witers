@@ -261,7 +261,12 @@ function buildCarouselSystemPrompt(brand: WitBrandContext): string {
 
 function buildCalendarSystemPrompt(
   brand: WitBrandContext,
-  opts: { monthLabel: string; todayDate: string; monthEndDate: string },
+  opts: {
+    monthLabel: string;
+    todayDate: string;
+    monthEndDate: string;
+    existingEntries?: { date: string; title: string }[];
+  },
 ): string {
   const brandLines = [
     `Nombre de la marca: ${brand.companyName}.`,
@@ -291,6 +296,14 @@ function buildCalendarSystemPrompt(
     `Mes que se está planificando: ${opts.monthLabel}. Hoy es ${opts.todayDate}; el mes termina ` +
     `el ${opts.monthEndDate}. Todas las fechas que propongas deben estar entre esas dos, ambas ` +
     "incluidas — nunca antes de hoy.\n\n" +
+    (opts.existingEntries?.length
+      ? "Estas fechas de este mes YA tienen una pieza planeada (el cliente ya la pidió o la " +
+        "tiene en curso) — NUNCA propongas ninguna de estas fechas de nuevo, ni las cuentes " +
+        "como huecos vacíos al calcular la cadencia; solo estás completando el resto del mes " +
+        "alrededor de ellas:\n" +
+        opts.existingEntries.map((e) => `- ${e.date}: ${e.title}`).join("\n") +
+        "\n\n"
+      : "") +
     "Ya conoces estos datos de la marca del cliente, así que NUNCA los preguntes:\n" +
     brandLines.join("\n") +
     "\n\n" +
@@ -871,7 +884,12 @@ const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export async function runWitCalendarChat(
   history: WitChatMessage[],
   brand: WitBrandContext,
-  opts: { monthLabel: string; todayDate: string; monthEndDate: string },
+  opts: {
+    monthLabel: string;
+    todayDate: string;
+    monthEndDate: string;
+    existingEntries?: { date: string; title: string }[];
+  },
 ): Promise<WitCalendarChatResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false, error: "falta_openai_api_key" };

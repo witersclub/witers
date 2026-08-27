@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getBrandProfile } from "../../../lib/brand-profile.server";
 import { getBrandMemory } from "../../../lib/brand-memory.server";
 import { runWitCalendarChat } from "../../../lib/wit-chat.server";
-import { getSessionUser, json } from "../../../lib/witers-auth.server";
+import { db, getSessionUser, json } from "../../../lib/witers-auth.server";
 
 const schema = z.object({
   messages: z
@@ -29,14 +29,13 @@ function iso(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function monthContext(target?: { year: number; month: number }): {
+function monthContext(target: { year: number; month: number }): {
   monthLabel: string;
   todayDate: string;
   monthEndDate: string;
 } {
   const now = new Date();
-  const year = target?.year ?? now.getUTCFullYear();
-  const month = target?.month ?? now.getUTCMonth() + 1;
+  const { year, month } = target;
   const monthStartDate = new Date(Date.UTC(year, month - 1, 1));
   const monthEnd = new Date(Date.UTC(year, month, 0));
   const monthLabel = monthStartDate.toLocaleDateString("es-MX", {
@@ -71,6 +70,27 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
         const parsed = schema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
 
+        const now = new Date();
+        const year = parsed.data.year ?? now.getUTCFullYear();
+        const month = parsed.data.month ?? now.getUTCMonth() + 1;
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const monthStart = `${year}-${pad(month)}-01`;
+        const monthEndDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+        const monthEnd = `${year}-${pad(month)}-${pad(monthEndDay)}`;
+
+        // Pieces the client already planned this month (usually the ones
+        // "Replanear mes" left untouched because they're already requested)
+        // — Wit needs these so a re-plan fills in the REST of the month
+        // instead of proposing a date that's already taken.
+        const existingRows = await db()
+          .prepare(
+            `SELECT scheduled_date, title FROM calendar_entries
+             WHERE user_id = ?1 AND scheduled_date BETWEEN ?2 AND ?3
+             ORDER BY scheduled_date ASC`,
+          )
+          .bind(user.id, monthStart, monthEnd)
+          .all<{ scheduled_date: string; title: string }>();
+
         const result = await runWitCalendarChat(
           parsed.data.messages,
           {
@@ -80,11 +100,13 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
             hasLogo: Boolean(profile.logo_key),
             brandMemory: await getBrandMemory(user.id),
           },
-          monthContext(
-            parsed.data.year && parsed.data.month
-              ? { year: parsed.data.year, month: parsed.data.month }
-              : undefined,
-          ),
+          {
+            ...monthContext({ year, month }),
+            existingEntries: (existingRows.results ?? []).map((r) => ({
+              date: r.scheduled_date,
+              title: r.title,
+            })),
+          },
         );
 
         if (!result.ok) return json(result, { status: 502 });
