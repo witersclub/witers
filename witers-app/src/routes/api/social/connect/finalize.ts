@@ -4,13 +4,7 @@ import { z } from "zod";
 import { upsertSocialConnection } from "../../../../lib/social-connections.server";
 import { db, getSessionUser, json } from "../../../../lib/witers-auth.server";
 
-type PendingPage = {
-  id: string;
-  name: string;
-  ciphertext: string;
-  iv: string;
-  instagramUserId: string | null;
-};
+type PendingPage = { id: string; name: string; ciphertext: string; iv: string };
 type PendingRow = { pages_json: string };
 
 const schema = z.object({ pendingId: z.string().uuid(), pageId: z.string() });
@@ -52,17 +46,6 @@ export const Route = createFileRoute("/api/social/connect/finalize")({
           page.ciphertext,
           page.iv,
         );
-        if (page.instagramUserId) {
-          await upsertSocialConnection(
-            user.id,
-            "instagram",
-            page.instagramUserId,
-            page.name,
-            page.id,
-            page.ciphertext,
-            page.iv,
-          );
-        }
 
         await db()
           .prepare("UPDATE social_connect_pending SET used_at = datetime('now') WHERE id = ?1")

@@ -2,13 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { db, getSessionUser, json } from "../../../../lib/witers-auth.server";
 
-type PendingPage = { id: string; name: string; instagramUserId: string | null };
+type PendingPage = { id: string; name: string };
 type PendingRow = { pages_json: string };
 
 // Backs the "which Page?" picker the client sees after connecting when
-// they manage more than one Facebook Page — returns just id/name/whether
-// Instagram is linked, never the (encrypted) tokens riding along in
-// pages_json.
+// they manage more than one Facebook Page — returns just id/name, never
+// the (encrypted) tokens riding along in pages_json.
 export const Route = createFileRoute("/api/social/connect/pending")({
   server: {
     handlers: {
@@ -28,9 +27,10 @@ export const Route = createFileRoute("/api/social/connect/pending")({
           .first<PendingRow>();
         if (!row) return json({ ok: false, error: "no_encontrado_o_vencido" }, { status: 404 });
 
-        const pages = (JSON.parse(row.pages_json) as (PendingPage & Record<string, unknown>)[]).map(
-          (p) => ({ id: p.id, name: p.name, instagramUserId: p.instagramUserId }),
-        );
+        const pages = (JSON.parse(row.pages_json) as PendingPage[]).map((p) => ({
+          id: p.id,
+          name: p.name,
+        }));
         return json({ ok: true, pages });
       },
     },

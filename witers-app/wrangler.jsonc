@@ -12,11 +12,15 @@
   //   7. npx wrangler secret put STRIPE_SECRET_KEY  (membership checkout — must match the
   //      mode, test vs live, of STRIPE_PUBLISHABLE_KEY below, or Elements/PaymentIntents fail)
   //   8. npx wrangler secret put META_PUBLISH_APP_ID      (Meta App for the "connect your
-  //      Instagram/Facebook to publish" flow — separate from FACEBOOK_APP_ID, which is only
+  //      Facebook Page to publish" flow — separate from FACEBOOK_APP_ID, which is only
   //      "Sign in with Facebook", and from META_ACCESS_TOKEN, the shared ads-read token)
   //   9. npx wrangler secret put META_PUBLISH_APP_SECRET
   //  10. npx wrangler secret put TOKEN_ENCRYPTION_KEY     (32 bytes hex — `openssl rand -hex 32` —
   //      encrypts the OAuth tokens saved in social_connections; see token-crypto.server.ts)
+  //  11. npx wrangler secret put INSTAGRAM_APP_ID         (separate Meta App, "Instagram API with
+  //      Instagram Login" product — lets a client connect Instagram directly, no Facebook Page
+  //      needed; see instagram-login-auth.server.ts)
+  //  12. npx wrangler secret put INSTAGRAM_APP_SECRET
   "name": "witers",
 
   "main": "dist/server/server.js",

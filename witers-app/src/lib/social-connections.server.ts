@@ -9,7 +9,7 @@ export async function upsertSocialConnection(
   platform: "facebook" | "instagram",
   externalId: string,
   externalName: string,
-  pageId: string,
+  pageId: string | null,
   ciphertext: string,
   iv: string,
 ): Promise<void> {

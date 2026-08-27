@@ -903,10 +903,10 @@ async function fetchConnections(): Promise<ConnectionsState> {
   return data.ok && data.connections ? data.connections : EMPTY_CONNECTIONS;
 }
 
-// Tira de "Conexiones" arriba del calendario — tocar Instagram o Facebook
-// manda al mismo flujo de OAuth (/api/social/connect/start), que conecta
-// ambos a la vez cuando la Página elegida tiene Instagram vinculado.
-// TikTok no tiene integración todavía, se muestra deshabilitado.
+// Tira de "Conexiones" arriba del calendario — Instagram se conecta
+// directo con su propia cuenta (sin pasar por Facebook), y Facebook se
+// conecta aparte con su Página. Cada ícono manda a su propio flujo de
+// OAuth. TikTok no tiene integración todavía, se muestra deshabilitado.
 function ConnectionsStrip() {
   const { t } = useLanguage();
   const qc = useQueryClient();
@@ -997,9 +997,13 @@ function ConnectionsStrip() {
         </button>
       );
     }
+    const connectHref =
+      platform === "instagram"
+        ? "/api/social/connect/instagram/start"
+        : "/api/social/connect/start";
     return (
       <a
-        href="/api/social/connect/start"
+        href={connectHref}
         className="flex items-center gap-1.5 rounded-full border border-wit-ink/12 bg-white px-3 py-1.5 text-xs font-bold text-wit-gray hover:border-wit-ink/25 hover:text-wit-ink"
       >
         <PillIcon className="h-3.5 w-3.5" strokeWidth={2.2} />

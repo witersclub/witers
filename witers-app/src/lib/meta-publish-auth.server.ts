@@ -1,10 +1,11 @@
-// OAuth for connecting a client's own Instagram/Facebook account so WITERS
-// can publish to it — a separate concern from both facebook-auth.server.ts
-// ("Sign in with Facebook" into a WITERS account) and meta-ads.server.ts
-// (the shared META_ACCESS_TOKEN used to read a client's ad account). This
-// uses its own Meta App (META_PUBLISH_APP_ID/SECRET) with publish-capable
-// scopes — restricted permissions Meta only grants to that App's own
-// testers until it passes App Review. Server-only.
+// OAuth for connecting a client's own Facebook Page so WITERS can publish
+// to it — a separate concern from both facebook-auth.server.ts ("Sign in
+// with Facebook" into a WITERS account) and meta-ads.server.ts (the shared
+// META_ACCESS_TOKEN used to read a client's ad account). This uses its own
+// Meta App (META_PUBLISH_APP_ID/SECRET) with publish-capable scopes —
+// restricted permissions Meta only grants to that App's own testers until
+// it passes App Review. Instagram is connected separately and directly via
+// instagram-login-auth.server.ts, not through a linked Page here. Server-only.
 import process from "node:process";
 
 const GRAPH_VERSION = "v21.0";
@@ -15,8 +16,7 @@ const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 // No business_management: the flow only ever touches Pages the connecting
 // user already manages, listed via /me/accounts — nothing here needs
 // Business Manager-level access.
-const SCOPE =
-  "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish";
+const SCOPE = "pages_show_list,pages_read_engagement,pages_manage_posts";
 
 type MetaPublishConfig = { appId: string; appSecret: string };
 
@@ -98,14 +98,9 @@ export async function exchangeCodeForLongLivedToken(
   return { ok: true, accessToken: longJson.access_token };
 }
 
-export type ManagedPage = {
-  id: string;
-  name: string;
-  accessToken: string;
-  instagramUserId: string | null;
-};
+export type ManagedPage = { id: string; name: string; accessToken: string };
 
-export async function listPagesWithInstagram(
+export async function listManagedPages(
   userAccessToken: string,
 ): Promise<{ ok: true; pages: ManagedPage[] } | { ok: false; error: string }> {
   const accountsUrl = new URL(`${GRAPH_BASE}/me/accounts`);
@@ -127,24 +122,10 @@ export async function listPagesWithInstagram(
     return { ok: false, error: "paginas_no_disponibles" };
   }
 
-  const pages: ManagedPage[] = [];
-  for (const page of accountsJson.data) {
-    const igUrl = new URL(`${GRAPH_BASE}/${page.id}`);
-    igUrl.searchParams.set("fields", "instagram_business_account");
-    igUrl.searchParams.set("access_token", page.access_token);
-    let instagramUserId: string | null = null;
-    try {
-      const igResponse = await fetch(igUrl.toString());
-      const igJson = (await igResponse.json().catch(() => ({}))) as {
-        instagram_business_account?: { id?: string };
-      };
-      instagramUserId = igJson.instagram_business_account?.id ?? null;
-    } catch {
-      // No Instagram linked, or the lookup failed — this Page still works
-      // for Facebook publishing on its own, so this isn't fatal.
-    }
-    pages.push({ id: page.id, name: page.name, accessToken: page.access_token, instagramUserId });
-  }
-
+  const pages = accountsJson.data.map((page) => ({
+    id: page.id,
+    name: page.name,
+    accessToken: page.access_token,
+  }));
   return { ok: true, pages };
 }

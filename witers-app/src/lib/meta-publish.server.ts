@@ -1,17 +1,20 @@
 // Graph API calls that actually publish a piece to a connected Instagram
 // account or Facebook Page. Callers pass already-public image URLs (either
 // the AI-generation CDN url, or one built from
-// /api/public/calendar-media.ts) and the connection's decrypted Page
-// access token — Instagram Graph API operations are authenticated with the
-// linked Facebook Page's access token, not a separate Instagram token.
-// Server-only.
+// /api/public/calendar-media.ts). Instagram is connected directly (see
+// instagram-login-auth.server.ts) so its calls go to graph.instagram.com
+// with that account's own access token; Facebook Pages stay on
+// graph.facebook.com with the Page's access token — different hosts, same
+// container → publish shape. Server-only.
 
 const GRAPH_VERSION = "v21.0";
-const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
+const FACEBOOK_GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
+const INSTAGRAM_GRAPH_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 
 export type PublishResult = { ok: true; externalPostId: string } | { ok: false; error: string };
 
 async function graphPost(
+  base: string,
   path: string,
   params: Record<string, string>,
 ): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; error: string }> {
@@ -19,7 +22,7 @@ async function graphPost(
   const timer = setTimeout(() => controller.abort(), 60_000);
   let response: Response;
   try {
-    response = await fetch(`${GRAPH_BASE}${path}`, {
+    response = await fetch(`${base}${path}`, {
       method: "POST",
       signal: controller.signal,
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -43,22 +46,22 @@ async function graphPost(
 
 export async function publishImageToInstagram(
   igUserId: string,
-  pageAccessToken: string,
+  accessToken: string,
   imageUrl: string,
   caption: string,
 ): Promise<PublishResult> {
-  const container = await graphPost(`/${igUserId}/media`, {
+  const container = await graphPost(INSTAGRAM_GRAPH_BASE, `/${igUserId}/media`, {
     image_url: imageUrl,
     caption,
-    access_token: pageAccessToken,
+    access_token: accessToken,
   });
   if (!container.ok) return container;
   const creationId = container.body.id as string | undefined;
   if (!creationId) return { ok: false, error: "sin_creation_id" };
 
-  const publish = await graphPost(`/${igUserId}/media_publish`, {
+  const publish = await graphPost(INSTAGRAM_GRAPH_BASE, `/${igUserId}/media_publish`, {
     creation_id: creationId,
-    access_token: pageAccessToken,
+    access_token: accessToken,
   });
   if (!publish.ok) return publish;
   return { ok: true, externalPostId: (publish.body.id as string) ?? creationId };
@@ -66,16 +69,16 @@ export async function publishImageToInstagram(
 
 export async function publishCarouselToInstagram(
   igUserId: string,
-  pageAccessToken: string,
+  accessToken: string,
   imageUrls: string[],
   caption: string,
 ): Promise<PublishResult> {
   const childIds: string[] = [];
   for (const imageUrl of imageUrls) {
-    const child = await graphPost(`/${igUserId}/media`, {
+    const child = await graphPost(INSTAGRAM_GRAPH_BASE, `/${igUserId}/media`, {
       image_url: imageUrl,
       is_carousel_item: "true",
-      access_token: pageAccessToken,
+      access_token: accessToken,
     });
     if (!child.ok) return child;
     const childId = child.body.id as string | undefined;
@@ -83,19 +86,19 @@ export async function publishCarouselToInstagram(
     childIds.push(childId);
   }
 
-  const container = await graphPost(`/${igUserId}/media`, {
+  const container = await graphPost(INSTAGRAM_GRAPH_BASE, `/${igUserId}/media`, {
     media_type: "CAROUSEL",
     children: childIds.join(","),
     caption,
-    access_token: pageAccessToken,
+    access_token: accessToken,
   });
   if (!container.ok) return container;
   const creationId = container.body.id as string | undefined;
   if (!creationId) return { ok: false, error: "sin_creation_id" };
 
-  const publish = await graphPost(`/${igUserId}/media_publish`, {
+  const publish = await graphPost(INSTAGRAM_GRAPH_BASE, `/${igUserId}/media_publish`, {
     creation_id: creationId,
-    access_token: pageAccessToken,
+    access_token: accessToken,
   });
   if (!publish.ok) return publish;
   return { ok: true, externalPostId: (publish.body.id as string) ?? creationId };
@@ -107,7 +110,7 @@ export async function publishImageToFacebookPage(
   imageUrl: string,
   caption: string,
 ): Promise<PublishResult> {
-  const result = await graphPost(`/${pageId}/photos`, {
+  const result = await graphPost(FACEBOOK_GRAPH_BASE, `/${pageId}/photos`, {
     url: imageUrl,
     caption,
     access_token: pageAccessToken,
@@ -126,7 +129,7 @@ export async function publishCarouselToFacebookPage(
 ): Promise<PublishResult> {
   const mediaIds: string[] = [];
   for (const imageUrl of imageUrls) {
-    const photo = await graphPost(`/${pageId}/photos`, {
+    const photo = await graphPost(FACEBOOK_GRAPH_BASE, `/${pageId}/photos`, {
       url: imageUrl,
       published: "false",
       access_token: pageAccessToken,
@@ -137,7 +140,7 @@ export async function publishCarouselToFacebookPage(
     mediaIds.push(id);
   }
 
-  const post = await graphPost(`/${pageId}/feed`, {
+  const post = await graphPost(FACEBOOK_GRAPH_BASE, `/${pageId}/feed`, {
     message: caption,
     attached_media: JSON.stringify(mediaIds.map((id) => ({ media_fbid: id }))),
     access_token: pageAccessToken,

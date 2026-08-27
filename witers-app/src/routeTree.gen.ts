@@ -134,6 +134,8 @@ import { Route as ApiAuthGoogleStartRouteImport } from './routes/api/auth/google
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
 import { Route as ApiAuthFacebookStartRouteImport } from './routes/api/auth/facebook/start'
 import { Route as ApiAuthFacebookCallbackRouteImport } from './routes/api/auth/facebook/callback'
+import { Route as ApiSocialConnectInstagramStartRouteImport } from './routes/api/social/connect/instagram/start'
+import { Route as ApiSocialConnectInstagramCallbackRouteImport } from './routes/api/social/connect/instagram/callback'
 
 const WiterRoute = WiterRouteImport.update({
   id: '/witer',
@@ -786,6 +788,18 @@ const ApiAuthFacebookCallbackRoute = ApiAuthFacebookCallbackRouteImport.update({
   path: '/api/auth/facebook/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSocialConnectInstagramStartRoute =
+  ApiSocialConnectInstagramStartRouteImport.update({
+    id: '/api/social/connect/instagram/start',
+    path: '/api/social/connect/instagram/start',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSocialConnectInstagramCallbackRoute =
+  ApiSocialConnectInstagramCallbackRouteImport.update({
+    id: '/api/social/connect/instagram/callback',
+    path: '/api/social/connect/instagram/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -913,6 +927,8 @@ export interface FileRoutesByFullPath {
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
   '/api/social/connect/start': typeof ApiSocialConnectStartRoute
+  '/api/social/connect/instagram/callback': typeof ApiSocialConnectInstagramCallbackRoute
+  '/api/social/connect/instagram/start': typeof ApiSocialConnectInstagramStartRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1040,6 +1056,8 @@ export interface FileRoutesByTo {
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
   '/api/social/connect/start': typeof ApiSocialConnectStartRoute
+  '/api/social/connect/instagram/callback': typeof ApiSocialConnectInstagramCallbackRoute
+  '/api/social/connect/instagram/start': typeof ApiSocialConnectInstagramStartRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1168,6 +1186,8 @@ export interface FileRoutesById {
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
   '/api/social/connect/start': typeof ApiSocialConnectStartRoute
+  '/api/social/connect/instagram/callback': typeof ApiSocialConnectInstagramCallbackRoute
+  '/api/social/connect/instagram/start': typeof ApiSocialConnectInstagramStartRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1297,6 +1317,8 @@ export interface FileRouteTypes {
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
     | '/api/social/connect/start'
+    | '/api/social/connect/instagram/callback'
+    | '/api/social/connect/instagram/start'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1424,6 +1446,8 @@ export interface FileRouteTypes {
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
     | '/api/social/connect/start'
+    | '/api/social/connect/instagram/callback'
+    | '/api/social/connect/instagram/start'
   id:
     | '__root__'
     | '/'
@@ -1551,6 +1575,8 @@ export interface FileRouteTypes {
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
     | '/api/social/connect/start'
+    | '/api/social/connect/instagram/callback'
+    | '/api/social/connect/instagram/start'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1679,6 +1705,8 @@ export interface RootRouteChildren {
   ApiSocialConnectFinalizeRoute: typeof ApiSocialConnectFinalizeRoute
   ApiSocialConnectPendingRoute: typeof ApiSocialConnectPendingRoute
   ApiSocialConnectStartRoute: typeof ApiSocialConnectStartRoute
+  ApiSocialConnectInstagramCallbackRoute: typeof ApiSocialConnectInstagramCallbackRoute
+  ApiSocialConnectInstagramStartRoute: typeof ApiSocialConnectInstagramStartRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -2558,6 +2586,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthFacebookCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/social/connect/instagram/start': {
+      id: '/api/social/connect/instagram/start'
+      path: '/api/social/connect/instagram/start'
+      fullPath: '/api/social/connect/instagram/start'
+      preLoaderRoute: typeof ApiSocialConnectInstagramStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/social/connect/instagram/callback': {
+      id: '/api/social/connect/instagram/callback'
+      path: '/api/social/connect/instagram/callback'
+      fullPath: '/api/social/connect/instagram/callback'
+      preLoaderRoute: typeof ApiSocialConnectInstagramCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -2687,6 +2729,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSocialConnectFinalizeRoute: ApiSocialConnectFinalizeRoute,
   ApiSocialConnectPendingRoute: ApiSocialConnectPendingRoute,
   ApiSocialConnectStartRoute: ApiSocialConnectStartRoute,
+  ApiSocialConnectInstagramCallbackRoute:
+    ApiSocialConnectInstagramCallbackRoute,
+  ApiSocialConnectInstagramStartRoute: ApiSocialConnectInstagramStartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

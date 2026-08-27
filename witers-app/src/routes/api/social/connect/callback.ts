@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import {
   exchangeCodeForLongLivedToken,
-  listPagesWithInstagram,
+  listManagedPages,
 } from "../../../../lib/meta-publish-auth.server";
 import { upsertSocialConnection } from "../../../../lib/social-connections.server";
 import { encryptToken } from "../../../../lib/token-crypto.server";
@@ -23,19 +23,14 @@ function readCookie(request: Request, name: string): string | null {
   return match ? match[1] : null;
 }
 
-type PendingPage = {
-  id: string;
-  name: string;
-  ciphertext: string;
-  iv: string;
-  instagramUserId: string | null;
-};
+type PendingPage = { id: string; name: string; ciphertext: string; iv: string };
 
 // Meta lands the browser back here after the client authorizes the
-// META_PUBLISH app. Saves the connected Page (and its linked Instagram
-// account, if any) directly when the user manages exactly one Page; when
-// they manage several, stashes the choice in social_connect_pending and
-// sends the client to pick one (?social_pick=<id>) instead of guessing.
+// META_PUBLISH app. Saves the connected Page directly when the user
+// manages exactly one Page; when they manage several, stashes the choice
+// in social_connect_pending and sends the client to pick one
+// (?social_pick=<id>) instead of guessing. Instagram is connected
+// separately via /api/social/connect/instagram — nothing here touches it.
 export const Route = createFileRoute("/api/social/connect/callback")({
   server: {
     handlers: {
@@ -54,26 +49,29 @@ export const Route = createFileRoute("/api/social/connect/callback")({
         const tokenResult = await exchangeCodeForLongLivedToken(code, url.origin);
         if (!tokenResult.ok) return redirect("/panel?social_error=1");
 
-        const pagesResult = await listPagesWithInstagram(tokenResult.accessToken);
+        const pagesResult = await listManagedPages(tokenResult.accessToken);
         if (!pagesResult.ok) return redirect("/panel?social_error=1");
         if (pagesResult.pages.length === 0) return redirect("/panel?social_error=sin_paginas");
 
         if (pagesResult.pages.length === 1) {
           const page = pagesResult.pages[0];
-          await saveConnection(user.id, page.id, page.name, page.accessToken, page.instagramUserId);
+          const { ciphertext, iv } = await encryptToken(page.accessToken);
+          await upsertSocialConnection(
+            user.id,
+            "facebook",
+            page.id,
+            page.name,
+            page.id,
+            ciphertext,
+            iv,
+          );
           return redirect("/panel?social_connected=1");
         }
 
         const pending: PendingPage[] = [];
         for (const page of pagesResult.pages) {
           const { ciphertext, iv } = await encryptToken(page.accessToken);
-          pending.push({
-            id: page.id,
-            name: page.name,
-            ciphertext,
-            iv,
-            instagramUserId: page.instagramUserId,
-          });
+          pending.push({ id: page.id, name: page.name, ciphertext, iv });
         }
         const pendingId = crypto.randomUUID();
         await db()
@@ -89,25 +87,3 @@ export const Route = createFileRoute("/api/social/connect/callback")({
     },
   },
 });
-
-async function saveConnection(
-  userId: string,
-  pageId: string,
-  pageName: string,
-  pageAccessToken: string,
-  instagramUserId: string | null,
-): Promise<void> {
-  const { ciphertext, iv } = await encryptToken(pageAccessToken);
-  await upsertSocialConnection(userId, "facebook", pageId, pageName, pageId, ciphertext, iv);
-  if (instagramUserId) {
-    await upsertSocialConnection(
-      userId,
-      "instagram",
-      instagramUserId,
-      pageName,
-      pageId,
-      ciphertext,
-      iv,
-    );
-  }
-}
