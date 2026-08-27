@@ -44,6 +44,45 @@ async function graphPost(
   return { ok: true, body };
 }
 
+// Instagram creates a media container synchronously (the /media call
+// returns an id right away) but actually fetches/processes the image
+// asynchronously — publishing (or referencing it as a carousel child)
+// before it reaches status_code "FINISHED" fails with "Media ID is not
+// available". A single image usually clears this by the time the next
+// call happens, but a carousel's 4 back-to-back child creations often
+// don't — poll until each container is genuinely ready before moving on.
+async function waitForContainerReady(
+  creationId: string,
+  accessToken: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const maxAttempts = 15;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const url = new URL(`${INSTAGRAM_GRAPH_BASE}/${creationId}`);
+    url.searchParams.set("fields", "status_code");
+    url.searchParams.set("access_token", accessToken);
+    let response: Response;
+    try {
+      response = await fetch(url.toString());
+    } catch {
+      return { ok: false, error: "tiempo_agotado" };
+    }
+    const body = (await response.json().catch(() => ({}))) as {
+      status_code?: string;
+      error?: { message?: string };
+    };
+    if (!response.ok) {
+      console.info("[meta-publish] container status check failed", body.error?.message);
+      return { ok: false, error: body.error?.message ?? "meta_error" };
+    }
+    if (body.status_code === "FINISHED") return { ok: true };
+    if (body.status_code === "ERROR" || body.status_code === "EXPIRED") {
+      return { ok: false, error: `contenedor_${body.status_code.toLowerCase()}` };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  return { ok: false, error: "tiempo_agotado_procesando" };
+}
+
 export async function publishImageToInstagram(
   igUserId: string,
   accessToken: string,
@@ -58,6 +97,9 @@ export async function publishImageToInstagram(
   if (!container.ok) return container;
   const creationId = container.body.id as string | undefined;
   if (!creationId) return { ok: false, error: "sin_creation_id" };
+
+  const ready = await waitForContainerReady(creationId, accessToken);
+  if (!ready.ok) return ready;
 
   const publish = await graphPost(INSTAGRAM_GRAPH_BASE, `/${igUserId}/media_publish`, {
     creation_id: creationId,
@@ -83,6 +125,8 @@ export async function publishCarouselToInstagram(
     if (!child.ok) return child;
     const childId = child.body.id as string | undefined;
     if (!childId) return { ok: false, error: "sin_creation_id" };
+    const childReady = await waitForContainerReady(childId, accessToken);
+    if (!childReady.ok) return childReady;
     childIds.push(childId);
   }
 
@@ -95,6 +139,9 @@ export async function publishCarouselToInstagram(
   if (!container.ok) return container;
   const creationId = container.body.id as string | undefined;
   if (!creationId) return { ok: false, error: "sin_creation_id" };
+
+  const ready = await waitForContainerReady(creationId, accessToken);
+  if (!ready.ok) return ready;
 
   const publish = await graphPost(INSTAGRAM_GRAPH_BASE, `/${igUserId}/media_publish`, {
     creation_id: creationId,
