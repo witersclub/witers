@@ -32,6 +32,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiWitVideoIdeaRouteImport } from './routes/api/wit-video-idea'
 import { Route as ApiVisitorHeartbeatRouteImport } from './routes/api/visitor-heartbeat'
 import { Route as ApiVideoRequestsRouteImport } from './routes/api/video-requests'
+import { Route as ApiVideoRequestChangeRouteImport } from './routes/api/video-request-change'
 import { Route as ApiUserRouteImport } from './routes/api/user'
 import { Route as ApiUploadVideoRawRouteImport } from './routes/api/upload-video-raw'
 import { Route as ApiUploadReferenceRouteImport } from './routes/api/upload-reference'
@@ -250,6 +251,11 @@ const ApiVisitorHeartbeatRoute = ApiVisitorHeartbeatRouteImport.update({
 const ApiVideoRequestsRoute = ApiVideoRequestsRouteImport.update({
   id: '/api/video-requests',
   path: '/api/video-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVideoRequestChangeRoute = ApiVideoRequestChangeRouteImport.update({
+  id: '/api/video-request-change',
+  path: '/api/video-request-change',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiUserRoute = ApiUserRouteImport.update({
@@ -851,6 +857,7 @@ export interface FileRoutesByFullPath {
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
+  '/api/video-request-change': typeof ApiVideoRequestChangeRoute
   '/api/video-requests': typeof ApiVideoRequestsRoute
   '/api/visitor-heartbeat': typeof ApiVisitorHeartbeatRoute
   '/api/wit-video-idea': typeof ApiWitVideoIdeaRoute
@@ -980,6 +987,7 @@ export interface FileRoutesByTo {
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
+  '/api/video-request-change': typeof ApiVideoRequestChangeRoute
   '/api/video-requests': typeof ApiVideoRequestsRoute
   '/api/visitor-heartbeat': typeof ApiVisitorHeartbeatRoute
   '/api/wit-video-idea': typeof ApiWitVideoIdeaRoute
@@ -1110,6 +1118,7 @@ export interface FileRoutesById {
   '/api/upload-reference': typeof ApiUploadReferenceRoute
   '/api/upload-video-raw': typeof ApiUploadVideoRawRoute
   '/api/user': typeof ApiUserRoute
+  '/api/video-request-change': typeof ApiVideoRequestChangeRoute
   '/api/video-requests': typeof ApiVideoRequestsRoute
   '/api/visitor-heartbeat': typeof ApiVisitorHeartbeatRoute
   '/api/wit-video-idea': typeof ApiWitVideoIdeaRoute
@@ -1241,6 +1250,7 @@ export interface FileRouteTypes {
     | '/api/upload-reference'
     | '/api/upload-video-raw'
     | '/api/user'
+    | '/api/video-request-change'
     | '/api/video-requests'
     | '/api/visitor-heartbeat'
     | '/api/wit-video-idea'
@@ -1370,6 +1380,7 @@ export interface FileRouteTypes {
     | '/api/upload-reference'
     | '/api/upload-video-raw'
     | '/api/user'
+    | '/api/video-request-change'
     | '/api/video-requests'
     | '/api/visitor-heartbeat'
     | '/api/wit-video-idea'
@@ -1499,6 +1510,7 @@ export interface FileRouteTypes {
     | '/api/upload-reference'
     | '/api/upload-video-raw'
     | '/api/user'
+    | '/api/video-request-change'
     | '/api/video-requests'
     | '/api/visitor-heartbeat'
     | '/api/wit-video-idea'
@@ -1629,6 +1641,7 @@ export interface RootRouteChildren {
   ApiUploadReferenceRoute: typeof ApiUploadReferenceRoute
   ApiUploadVideoRawRoute: typeof ApiUploadVideoRawRoute
   ApiUserRoute: typeof ApiUserRoute
+  ApiVideoRequestChangeRoute: typeof ApiVideoRequestChangeRoute
   ApiVideoRequestsRoute: typeof ApiVideoRequestsRoute
   ApiVisitorHeartbeatRoute: typeof ApiVisitorHeartbeatRoute
   ApiWitVideoIdeaRoute: typeof ApiWitVideoIdeaRoute
@@ -1870,6 +1883,13 @@ declare module '@tanstack/react-router' {
       path: '/api/video-requests'
       fullPath: '/api/video-requests'
       preLoaderRoute: typeof ApiVideoRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/video-request-change': {
+      id: '/api/video-request-change'
+      path: '/api/video-request-change'
+      fullPath: '/api/video-request-change'
+      preLoaderRoute: typeof ApiVideoRequestChangeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/user': {
@@ -2653,6 +2673,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUploadReferenceRoute: ApiUploadReferenceRoute,
   ApiUploadVideoRawRoute: ApiUploadVideoRawRoute,
   ApiUserRoute: ApiUserRoute,
+  ApiVideoRequestChangeRoute: ApiVideoRequestChangeRoute,
   ApiVideoRequestsRoute: ApiVideoRequestsRoute,
   ApiVisitorHeartbeatRoute: ApiVisitorHeartbeatRoute,
   ApiWitVideoIdeaRoute: ApiWitVideoIdeaRoute,

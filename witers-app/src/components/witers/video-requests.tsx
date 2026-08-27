@@ -6,6 +6,7 @@
 // owns the query, the tab state, and the wizard portal, exactly like it
 // does for images; this file just exports the pieces it composes.
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   Clapperboard,
@@ -45,6 +46,7 @@ export type VideoRequestRow = {
   delivered_at: string | null;
   created_at: string;
   raw_files_json: string | null;
+  change_request_note: string | null;
 };
 
 type RawFile = { id: string; original_name: string; r2_key: string };
@@ -186,10 +188,60 @@ export function VideoRequestList({ rows, loading }: { rows: VideoRequestRow[]; l
 
 function VideoEntry({ row }: { row: VideoRequestRow }) {
   const { t } = useLanguage();
+  const qc = useQueryClient();
   const st = STATUS_LABEL[row.status] ?? STATUS_LABEL.nueva;
   const platform = PLATFORM_OPTIONS.find((p) => p.id === row.platform);
   const rawFiles = parseRawFiles(row);
   const [downloading, setDownloading] = useState(false);
+  const [requestingChange, setRequestingChange] = useState(false);
+  const [changeMessage, setChangeMessage] = useState("");
+  const [changeBusy, setChangeBusy] = useState(false);
+  const [changeError, setChangeError] = useState<string | null>(null);
+  const [changeSent, setChangeSent] = useState(false);
+
+  async function sendChange() {
+    if (changeMessage.trim().length < 5) {
+      setChangeError(
+        t(
+          "Cuéntanos con un poco más de detalle qué quieres ajustar.",
+          "Tell us in a bit more detail what you'd like adjusted.",
+        ),
+      );
+      return;
+    }
+    setChangeBusy(true);
+    setChangeError(null);
+    try {
+      const res = await fetch("/api/video-request-change", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ videoRequestId: row.id, message: changeMessage.trim() }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (data.ok) {
+        setChangeMessage("");
+        setRequestingChange(false);
+        setChangeSent(true);
+        await qc.invalidateQueries({ queryKey: ["video-requests"] });
+      } else {
+        setChangeError(
+          t(
+            "No pudimos enviar tu pedido. Intenta de nuevo.",
+            "We couldn't send your request. Try again.",
+          ),
+        );
+      }
+    } catch {
+      setChangeError(
+        t(
+          "No pudimos enviar tu pedido. Intenta de nuevo.",
+          "We couldn't send your request. Try again.",
+        ),
+      );
+    } finally {
+      setChangeBusy(false);
+    }
+  }
 
   return (
     <div className="wit-glass rounded-2xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
@@ -244,14 +296,68 @@ function VideoEntry({ row }: { row: VideoRequestRow }) {
                 setDownloading(false);
               }
             }}
-            className="flex w-full items-center justify-center gap-1.5 border-t border-wit-ink/10 bg-white py-2.5 text-xs font-bold text-wit-blue hover:bg-wit-mist/40 disabled:opacity-60"
+            className="flex w-1/2 items-center justify-center gap-1.5 border-t border-wit-ink/10 bg-white py-2.5 text-xs font-bold text-wit-blue hover:bg-wit-mist/40 disabled:opacity-60"
           >
             <Download className="h-3.5 w-3.5" strokeWidth={2.3} />
-            {downloading
-              ? t("Descargando...", "Downloading...")
-              : t("Descargar video", "Download video")}
+            {downloading ? t("Descargando...", "Downloading...") : t("Descargar", "Download")}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setChangeSent(false);
+              setRequestingChange(true);
+            }}
+            className="flex w-1/2 items-center justify-center gap-1.5 border-t border-l border-wit-ink/10 bg-white py-2.5 text-xs font-bold text-wit-ink hover:bg-wit-mist/40"
+          >
+            <Pencil className="h-3.5 w-3.5" strokeWidth={2.3} />
+            {t("Pedir cambio", "Request a change")}
           </button>
         </div>
+      ) : null}
+
+      {requestingChange ? (
+        <div className="mt-4 rounded-xl bg-wit-mist/40 p-4">
+          <p className="text-xs font-bold text-wit-ink">
+            {t("¿Qué quieres ajustar del video?", "What would you like adjusted about the video?")}
+          </p>
+          <textarea
+            value={changeMessage}
+            onChange={(e) => setChangeMessage(e.target.value)}
+            rows={3}
+            placeholder={t(
+              "Cuéntanos qué quieres ajustar...",
+              "Tell us what you'd like adjusted...",
+            )}
+            className="mt-2 w-full rounded-xl border border-wit-ink/15 px-3.5 py-2.5 text-sm outline-none focus:border-wit-blue"
+          />
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              disabled={changeBusy}
+              onClick={sendChange}
+              className="rounded-full bg-wit-blue px-5 py-2.5 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+            >
+              {changeBusy ? t("Enviando...", "Sending...") : t("Enviar pedido", "Send request")}
+            </button>
+            <button
+              type="button"
+              disabled={changeBusy}
+              onClick={() => setRequestingChange(false)}
+              className="text-sm font-semibold text-wit-gray hover:text-wit-ink"
+            >
+              {t("Cancelar", "Cancel")}
+            </button>
+          </div>
+          {changeError ? <p className="mt-2 text-xs text-red-600">{changeError}</p> : null}
+        </div>
+      ) : null}
+      {changeSent ? (
+        <p className="mt-3 text-xs font-semibold text-emerald-700">
+          {t(
+            "Recibimos tu pedido de cambio. El equipo lo va a retomar.",
+            "Got your change request — the team will pick it back up.",
+          )}
+        </p>
       ) : null}
     </div>
   );

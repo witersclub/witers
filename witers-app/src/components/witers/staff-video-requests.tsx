@@ -52,6 +52,7 @@ type StaffVideoRequest = {
   delivered_key: string | null;
   created_at: string;
   raw_files_json: string | null;
+  change_request_note: string | null;
 };
 
 function parseRawFiles(row: StaffVideoRequest): RawFile[] {
@@ -313,6 +314,13 @@ function StaffVideoCard({ row, me }: { row: StaffVideoRequest; me: string }) {
         <p className="mt-2 rounded-xl bg-wit-blue/5 px-3.5 py-2.5 text-xs text-wit-ink">
           <span className="font-bold text-wit-blue">Escenas con IA solicitadas: </span>
           {row.ai_scenes_note}
+        </p>
+      ) : null}
+
+      {row.change_request_note && row.status !== "completada" ? (
+        <p className="mt-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-xs text-wit-ink">
+          <span className="font-bold text-amber-700">Cambio pedido por el cliente: </span>
+          {row.change_request_note}
         </p>
       ) : null}
 
