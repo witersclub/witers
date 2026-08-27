@@ -344,6 +344,10 @@ function buildCalendarSystemPrompt(
     "turno — no anuncies con texto que vas a hacerlo ni preguntes '¿te parece bien?' antes de " +
     "llamarla. La tarjeta de resumen que aparece después de la función es el punto donde el " +
     "cliente revisa y confirma el plan; no necesitas pedir permiso en el chat antes de eso.\n\n" +
+    "IMPORTANTE — llama a submit_content_calendar UNA SOLA VEZ, con TODAS las fechas del mes " +
+    "completo calculadas según la cadencia acordada, nunca solo la primera semana ni el plan " +
+    "dividido en varias llamadas: si el cliente pidió 'martes y jueves', calcula y entrega TODOS " +
+    "los martes y jueves del mes en esa única llamada, no solo los primeros.\n\n" +
     "Si en algún momento ves en la conversación un mensaje tuyo que empieza con 'Plan propuesto " +
     "para el mes:' seguido de una lista de fechas, ya le habías propuesto un plan al cliente antes " +
     "de este turno — trátalo como el plan actual vigente, no como algo nuevo. Si el cliente dice " +
@@ -889,6 +893,12 @@ export async function runWitCalendarChat(
         messages: [{ role: "system", content: buildCalendarSystemPrompt(brand, opts) }, ...history],
         tools: CALENDAR_TOOLS,
         tool_choice: "auto",
+        // A full month's worth of fully-fleshed entries (video scripts,
+        // 4-slide carousels) is a large payload — without this, the model
+        // sometimes splits it across multiple tool_calls (e.g. one per
+        // week) instead of one big one. Force a single call so nothing
+        // downstream can silently read only the first chunk.
+        parallel_tool_calls: false,
       }),
     });
   } catch {
@@ -907,14 +917,23 @@ export async function runWitCalendarChat(
   const message = body.choices?.[0]?.message;
   if (!message) return { ok: false, error: "sin_resultado" };
 
-  const toolCall = message.tool_calls?.[0];
-  if (toolCall?.function.name === "submit_content_calendar") {
+  // parallel_tool_calls:false above should keep this to one call, but read
+  // every submit_content_calendar call present (not just the first) as a
+  // second line of defense — silently reading only tool_calls[0] is
+  // exactly what dropped whole weeks of a plan before this fix.
+  const calendarCalls = (message.tool_calls ?? []).filter(
+    (c) => c.function.name === "submit_content_calendar",
+  );
+  if (calendarCalls.length > 0) {
     try {
-      const args = JSON.parse(toolCall.function.arguments) as {
+      type RawArgs = {
         entries?: Array<
           Partial<CalendarEntryDraft> & { slides?: Array<Partial<CarouselSlideDraft>> }
         >;
       };
+      const allEntries = calendarCalls.flatMap(
+        (c) => (JSON.parse(c.function.arguments) as RawArgs).entries ?? [],
+      );
       type RawCalendarEntry = {
         date: string;
         format?: CalendarFormat;
@@ -922,7 +941,7 @@ export async function runWitCalendarChat(
         brief: string;
         slides?: CarouselSlideDraft[];
       };
-      const mapped: RawCalendarEntry[] = (args.entries ?? []).map((e) => {
+      const mapped: RawCalendarEntry[] = allEntries.map((e) => {
         const raw: RawCalendarEntry = {
           date: e.date?.trim() ?? "",
           format: e.format,
