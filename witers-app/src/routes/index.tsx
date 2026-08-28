@@ -141,9 +141,9 @@ function Hero() {
           {t("Branding · Marketing · IA", "Branding · Marketing · AI")}
         </span>
         <h1 className="wit-rise wit-rise-d1 mx-auto mt-7 max-w-2xl text-5xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-7xl">
-          {t("Elevemos tu", "Let's elevate your")}{" "}
+          {t("Crear tu contenido", "Creating content")}{" "}
           <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
-            {t("marca", "brand")}
+            {t("nunca fue tan fácil", "has never been easier")}
           </span>
           .
         </h1>
