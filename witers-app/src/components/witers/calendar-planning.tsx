@@ -1078,6 +1078,7 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
           platform: SocialPlatform;
           status: "processing" | "success" | "error";
           error: string | null;
+          created_at: string;
         }[];
       };
       return data.ok ? data.videoPublications ?? [] : [];
@@ -1176,16 +1177,29 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
             )}
           </p>
           {videoPublicationsQuery.data?.[0] ? (
-            <p className="mt-2 text-xs font-semibold text-wit-gray">
-              {videoPublicationsQuery.data[0].status === "processing"
-                ? t("El último envío sigue procesándose en Meta.", "The latest submission is still processing in Meta.")
-                : videoPublicationsQuery.data[0].status === "success"
-                  ? t("✓ El último envío se publicó correctamente.", "✓ The latest submission was published successfully.")
-                  : t(
-                      `✗ El último envío no se publicó${videoPublicationsQuery.data[0].error ? `: ${videoPublicationsQuery.data[0].error}` : "."}`,
-                      `✗ The latest submission did not publish${videoPublicationsQuery.data[0].error ? `: ${videoPublicationsQuery.data[0].error}` : "."}`,
-                    )}
-            </p>
+            <div className="mt-2 space-y-1 text-xs font-semibold text-wit-gray">
+              {videoPublicationsQuery.data.slice(0, 2).map((publication) => {
+                const platform = platformLabel(publication.platform as SocialPlatform);
+                return (
+                  <p key={`${publication.platform}-${publication.created_at}`}>
+                    {publication.status === "processing"
+                      ? t(
+                          `${platform}: el envío sigue procesándose en Meta.`,
+                          `${platform}: the submission is still processing in Meta.`,
+                        )
+                      : publication.status === "success"
+                        ? t(
+                            `✓ ${platform}: publicado correctamente.`,
+                            `✓ ${platform}: published successfully.`,
+                          )
+                        : t(
+                            `✗ ${platform}: no se publicó${publication.error ? ` — ${publication.error}` : "."}`,
+                            `✗ ${platform}: did not publish${publication.error ? ` — ${publication.error}` : "."}`,
+                          )}
+                  </p>
+                );
+              })}
+            </div>
           ) : null}
         </>
       ) : null}

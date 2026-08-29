@@ -18,6 +18,29 @@ export type ProcessingResult =
   | { state: "success"; externalPostId: string }
   | { state: "error"; error: string };
 
+type MetaErrorBody = {
+  error?: { message?: string; error_user_msg?: string };
+  message?: string;
+};
+
+// Meta occasionally returns a plain-text or HTML error from rupload instead
+// of the usual Graph JSON. Keep a short, user-safe reason in D1 and log the
+// HTTP status, rather than replacing the useful cause with a generic label.
+async function readMetaError(response: Response, fallback: string): Promise<string> {
+  const raw = await response.text().catch(() => "");
+  let message = "";
+  try {
+    const body = JSON.parse(raw) as MetaErrorBody;
+    message = body.error?.error_user_msg ?? body.error?.message ?? body.message ?? "";
+  } catch {
+    // Non-JSON responses are common for CDN fetch failures. Do not store an
+    // HTML document in the database or surface it to the customer.
+  }
+  const normalized = message.replace(/\s+/g, " ").trim().slice(0, 500);
+  console.info("[meta-publish] Meta request failed", response.status, normalized || fallback);
+  return normalized || `${fallback} (HTTP ${response.status})`;
+}
+
 async function graphPost(
   base: string,
   path: string,
@@ -39,12 +62,19 @@ async function graphPost(
     clearTimeout(timer);
   }
 
-  const body = (await response.json().catch(() => ({}))) as Record<string, unknown> & {
-    error?: { message?: string };
-  };
+  const raw = await response.text().catch(() => "");
+  const body = (() => {
+    try {
+      return JSON.parse(raw) as Record<string, unknown> & MetaErrorBody;
+    } catch {
+      return {} as Record<string, unknown> & MetaErrorBody;
+    }
+  })();
   if (!response.ok) {
-    console.info("[meta-publish] graph call failed", path, body.error?.message);
-    return { ok: false, error: (body.error?.message as string) || "meta_error" };
+    const message = body.error?.error_user_msg ?? body.error?.message ?? body.message;
+    const normalized = message?.replace(/\s+/g, " ").trim().slice(0, 500);
+    console.info("[meta-publish] graph call failed", path, response.status, normalized || "meta_error");
+    return { ok: false, error: normalized || `meta_error (HTTP ${response.status})` };
   }
   return { ok: true, body };
 }
@@ -62,12 +92,19 @@ async function graphGet(
   } catch {
     return { ok: false, error: "tiempo_agotado" };
   }
-  const body = (await response.json().catch(() => ({}))) as Record<string, unknown> & {
-    error?: { message?: string };
-  };
+  const raw = await response.text().catch(() => "");
+  const body = (() => {
+    try {
+      return JSON.parse(raw) as Record<string, unknown> & MetaErrorBody;
+    } catch {
+      return {} as Record<string, unknown> & MetaErrorBody;
+    }
+  })();
   if (!response.ok) {
-    console.info("[meta-publish] graph read failed", path, body.error?.message);
-    return { ok: false, error: body.error?.message ?? "meta_error" };
+    const message = body.error?.error_user_msg ?? body.error?.message ?? body.message;
+    const normalized = message?.replace(/\s+/g, " ").trim().slice(0, 500);
+    console.info("[meta-publish] graph read failed", path, response.status, normalized || "meta_error");
+    return { ok: false, error: normalized || `meta_error (HTTP ${response.status})` };
   }
   return { ok: true, body };
 }
@@ -192,8 +229,7 @@ export async function createFacebookReel(
     return { ok: false, error: "tiempo_agotado" };
   }
   if (!upload.ok) {
-    const body = (await upload.json().catch(() => ({}))) as { error?: { message?: string } };
-    return { ok: false, error: body.error?.message ?? "carga_video_fallida" };
+    return { ok: false, error: await readMetaError(upload, "carga_video_fallida") };
   }
 
   const finish = await graphPost(FACEBOOK_GRAPH_BASE, `/${pageId}/video_reels`, {
