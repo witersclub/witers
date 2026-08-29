@@ -12,6 +12,11 @@ const FACEBOOK_GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 const INSTAGRAM_GRAPH_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 
 export type PublishResult = { ok: true; externalPostId: string } | { ok: false; error: string };
+export type ProcessingResult =
+  | { state: "processing" }
+  | { state: "ready" }
+  | { state: "success"; externalPostId: string }
+  | { state: "error"; error: string };
 
 async function graphPost(
   base: string,
@@ -40,6 +45,29 @@ async function graphPost(
   if (!response.ok) {
     console.info("[meta-publish] graph call failed", path, body.error?.message);
     return { ok: false, error: (body.error?.message as string) || "meta_error" };
+  }
+  return { ok: true, body };
+}
+
+async function graphGet(
+  base: string,
+  path: string,
+  params: Record<string, string>,
+): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; error: string }> {
+  const url = new URL(`${base}${path}`);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  let response: Response;
+  try {
+    response = await fetch(url.toString());
+  } catch {
+    return { ok: false, error: "tiempo_agotado" };
+  }
+  const body = (await response.json().catch(() => ({}))) as Record<string, unknown> & {
+    error?: { message?: string };
+  };
+  if (!response.ok) {
+    console.info("[meta-publish] graph read failed", path, body.error?.message);
+    return { ok: false, error: body.error?.message ?? "meta_error" };
   }
   return { ok: true, body };
 }
@@ -81,6 +109,121 @@ async function waitForContainerReady(
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
   return { ok: false, error: "tiempo_agotado_procesando" };
+}
+
+// Reels are deliberately split into creation and final publishing. Meta fetches
+// and encodes the video asynchronously, so the calendar's cron worker checks
+// this container later instead of holding an HTTP request open.
+export async function createInstagramReel(
+  igUserId: string,
+  accessToken: string,
+  videoUrl: string,
+  caption: string,
+): Promise<{ ok: true; processingId: string } | { ok: false; error: string }> {
+  const container = await graphPost(INSTAGRAM_GRAPH_BASE, `/${igUserId}/media`, {
+    media_type: "REELS",
+    video_url: videoUrl,
+    caption,
+    share_to_feed: "true",
+    access_token: accessToken,
+  });
+  if (!container.ok) return container;
+  const processingId = container.body.id as string | undefined;
+  return processingId ? { ok: true, processingId } : { ok: false, error: "sin_creation_id" };
+}
+
+export async function checkInstagramReel(
+  creationId: string,
+  accessToken: string,
+): Promise<ProcessingResult> {
+  const result = await graphGet(INSTAGRAM_GRAPH_BASE, `/${creationId}`, {
+    fields: "status_code,status",
+    access_token: accessToken,
+  });
+  if (!result.ok) return { state: "error", error: result.error };
+  const status = result.body.status_code;
+  if (status === "FINISHED") return { state: "ready" };
+  if (status === "PUBLISHED") {
+    return { state: "success", externalPostId: (result.body.id as string) ?? creationId };
+  }
+  if (status === "ERROR" || status === "EXPIRED") {
+    return { state: "error", error: `contenedor_${status.toLowerCase()}` };
+  }
+  return { state: "processing" };
+}
+
+export async function publishInstagramReel(
+  igUserId: string,
+  accessToken: string,
+  creationId: string,
+): Promise<PublishResult> {
+  const publish = await graphPost(INSTAGRAM_GRAPH_BASE, `/${igUserId}/media_publish`, {
+    creation_id: creationId,
+    access_token: accessToken,
+  });
+  if (!publish.ok) return publish;
+  return { ok: true, externalPostId: (publish.body.id as string) ?? creationId };
+}
+
+// Facebook Reels uses its resumable-upload API even when Meta fetches from a
+// URL. The initial two calls are short; the encoding/publish result is checked
+// by the same cron worker as Instagram.
+export async function createFacebookReel(
+  pageId: string,
+  accessToken: string,
+  videoUrl: string,
+  caption: string,
+): Promise<{ ok: true; processingId: string } | { ok: false; error: string }> {
+  const start = await graphPost(FACEBOOK_GRAPH_BASE, `/${pageId}/video_reels`, {
+    upload_phase: "start",
+    access_token: accessToken,
+  });
+  if (!start.ok) return start;
+  const processingId = start.body.video_id as string | undefined;
+  if (!processingId) return { ok: false, error: "sin_video_id" };
+
+  let upload: Response;
+  try {
+    upload = await fetch(`https://rupload.facebook.com/video-upload/${GRAPH_VERSION}/${processingId}`, {
+      method: "POST",
+      headers: { Authorization: `OAuth ${accessToken}`, file_url: videoUrl },
+    });
+  } catch {
+    return { ok: false, error: "tiempo_agotado" };
+  }
+  if (!upload.ok) {
+    const body = (await upload.json().catch(() => ({}))) as { error?: { message?: string } };
+    return { ok: false, error: body.error?.message ?? "carga_video_fallida" };
+  }
+
+  const finish = await graphPost(FACEBOOK_GRAPH_BASE, `/${pageId}/video_reels`, {
+    upload_phase: "finish",
+    video_id: processingId,
+    video_state: "PUBLISHED",
+    description: caption,
+    access_token: accessToken,
+  });
+  if (!finish.ok) return finish;
+  return { ok: true, processingId };
+}
+
+export async function checkFacebookReel(
+  processingId: string,
+  accessToken: string,
+): Promise<ProcessingResult> {
+  const result = await graphGet(FACEBOOK_GRAPH_BASE, `/${processingId}`, {
+    fields: "status",
+    access_token: accessToken,
+  });
+  if (!result.ok) return { state: "error", error: result.error };
+  const serialized = JSON.stringify(result.body.status ?? {}).toLowerCase();
+  if (serialized.includes("error") || serialized.includes("failed")) {
+    return { state: "error", error: "procesamiento_video_fallido" };
+  }
+  if (serialized.includes("published") || serialized.includes("complete") || serialized.includes("ready")) {
+    return { state: "success", externalPostId: processingId };
+  }
+  return { state: "processing" };
 }
 
 export async function publishImageToInstagram(

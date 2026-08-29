@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { resolveCalendarEntryMedia } from "../../lib/calendar-entry-media.server";
 import {
+  createFacebookReel,
+  createInstagramReel,
   publishCarouselToFacebookPage,
   publishCarouselToInstagram,
   publishImageToFacebookPage,
@@ -25,6 +27,13 @@ type PublicationRow = {
   error: string | null;
   published_at: string;
 };
+type VideoPublicationRow = {
+  platform: Platform;
+  status: "processing" | "success" | "error";
+  external_post_id: string | null;
+  error: string | null;
+  created_at: string;
+};
 
 const schema = z.object({
   entryId: z.string().uuid(),
@@ -37,10 +46,9 @@ const schema = z.object({
 // Publishes an already-delivered imagen/carrusel piece straight to the
 // client's connected Instagram/Facebook — one attempt per requested
 // platform, each recorded as its own row in calendar_entry_publications
-// (never overwritten) so a retry after a failure keeps history. Video is
-// rejected here: Meta's video publish flow is async (upload → poll until
-// FINISHED → publish), which doesn't fit a single Worker request without a
-// job queue this project doesn't have — deliberately out of v1.
+// (never overwritten) so a retry after a failure keeps history. Video uses a
+// separate persisted operation; the Worker cron completes it after Meta has
+// fetched and encoded the reel.
 export const Route = createFileRoute("/api/calendar-entries-publish")({
   server: {
     handlers: {
@@ -60,7 +68,20 @@ export const Route = createFileRoute("/api/calendar-entries-publish")({
           .bind(entryId)
           .all<PublicationRow>();
 
-        return json({ ok: true, publications: rows.results ?? [] });
+        const videoRows = await db()
+          .prepare(
+            `SELECT platform, status, external_post_id, error, created_at
+             FROM calendar_entry_video_publications
+             WHERE entry_id = ?1 ORDER BY created_at DESC`,
+          )
+          .bind(entryId)
+          .all<VideoPublicationRow>();
+
+        return json({
+          ok: true,
+          publications: rows.results ?? [],
+          videoPublications: videoRows.results ?? [],
+        });
       },
 
       POST: async ({ request }) => {
@@ -76,9 +97,6 @@ export const Route = createFileRoute("/api/calendar-entries-publish")({
         if (media.status !== "lista") {
           return json({ ok: false, error: "pieza_no_lista" }, { status: 409 });
         }
-        if (media.format === "video") {
-          return json({ ok: false, error: "video_no_soportado" }, { status: 409 });
-        }
         if (!media.caption) {
           return json({ ok: false, error: "falta_copy" }, { status: 409 });
         }
@@ -87,14 +105,16 @@ export const Route = createFileRoute("/api/calendar-entries-publish")({
         }
 
         const url = new URL(request.url);
-        const imageUrls = media.items.map(
+        const publicMediaUrls = media.items.map(
           (item, index) =>
             item.imageUrl ??
             `${url.origin}/api/public/calendar-media?entryId=${entryId}&index=${index}`,
         );
 
-        const results: Record<string, { ok: boolean; externalPostId?: string; error?: string }> =
-          {};
+        const results: Record<
+          string,
+          { ok: boolean; processing?: boolean; externalPostId?: string; error?: string }
+        > = {};
 
         for (const platform of platforms) {
           const connection = await db()
@@ -111,6 +131,33 @@ export const Route = createFileRoute("/api/calendar-entries-publish")({
           }
 
           const accessToken = await decryptToken(connection.access_token, connection.token_iv);
+          if (media.format === "video") {
+            const started =
+              platform === "instagram"
+                ? await createInstagramReel(
+                    connection.external_id,
+                    accessToken,
+                    publicMediaUrls[0],
+                    media.caption,
+                  )
+                : connection.page_id
+                  ? await createFacebookReel(
+                      connection.page_id,
+                      accessToken,
+                      publicMediaUrls[0],
+                      media.caption,
+                    )
+                  : { ok: false as const, error: "pagina_no_disponible" };
+            if (started.ok) {
+              await recordVideoPublication(entryId, user.id, platform, started.processingId);
+              results[platform] = { ok: true, processing: true };
+            } else {
+              results[platform] = { ok: false, error: started.error };
+              await recordVideoPublicationError(entryId, user.id, platform, started.error);
+            }
+            continue;
+          }
+
           const isCarousel = media.format === "carrusel";
           const result =
             platform === "instagram"
@@ -118,26 +165,26 @@ export const Route = createFileRoute("/api/calendar-entries-publish")({
                 ? await publishCarouselToInstagram(
                     connection.external_id,
                     accessToken,
-                    imageUrls,
+                    publicMediaUrls,
                     media.caption,
                   )
                 : await publishImageToInstagram(
                     connection.external_id,
                     accessToken,
-                    imageUrls[0],
+                    publicMediaUrls[0],
                     media.caption,
                   )
               : isCarousel
                 ? await publishCarouselToFacebookPage(
                     connection.page_id,
                     accessToken,
-                    imageUrls,
+                    publicMediaUrls,
                     media.caption,
                   )
                 : await publishImageToFacebookPage(
                     connection.page_id,
                     accessToken,
-                    imageUrls[0],
+                    publicMediaUrls[0],
                     media.caption,
                   );
 
@@ -175,5 +222,37 @@ async function recordPublication(
       externalPostId,
       error,
     )
+    .run();
+}
+
+async function recordVideoPublication(
+  entryId: string,
+  userId: string,
+  platform: Platform,
+  processingId: string,
+): Promise<void> {
+  await db()
+    .prepare(
+      `INSERT INTO calendar_entry_video_publications
+       (id, entry_id, user_id, platform, processing_id, status)
+       VALUES (?1, ?2, ?3, ?4, ?5, 'processing')`,
+    )
+    .bind(crypto.randomUUID(), entryId, userId, platform, processingId)
+    .run();
+}
+
+async function recordVideoPublicationError(
+  entryId: string,
+  userId: string,
+  platform: Platform,
+  error: string,
+): Promise<void> {
+  await db()
+    .prepare(
+      `INSERT INTO calendar_entry_video_publications
+       (id, entry_id, user_id, platform, processing_id, status, error, completed_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, 'error', ?6, datetime('now'))`,
+    )
+    .bind(crypto.randomUUID(), entryId, userId, platform, "", error.slice(0, 1000))
     .run();
 }

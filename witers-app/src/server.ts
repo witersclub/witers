@@ -2,10 +2,12 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { processPendingVideoPublications } from "./lib/video-publication.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
+type ScheduledContext = { waitUntil: (promise: Promise<unknown>) => void };
 
 let serverEntryPromise: Promise<ServerEntry> | undefined;
 
@@ -50,5 +52,12 @@ export default {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
     }
+  },
+  async scheduled(_event: unknown, _env: unknown, ctx: ScheduledContext) {
+    ctx.waitUntil(
+      processPendingVideoPublications().catch((error) =>
+        console.error("[video-publication] cron failed", error),
+      ),
+    );
   },
 };

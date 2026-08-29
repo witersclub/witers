@@ -1053,11 +1053,11 @@ function ConnectionsStrip() {
 }
 
 // Botón "Publicar" junto al copy sugerido — solo aparece para piezas ya
-// "lista" (imagen o carrusel; video queda fuera de v1, ver el plan). Sube
-// directo a las redes conectadas en ConnectionsStrip vía
-// /api/calendar-entries-publish.
+// "lista". Videos se envían a Meta y continúan procesándose en segundo plano;
+// imágenes y carruseles se publican durante la misma solicitud.
 function PublishSection({ entry }: { entry: CalendarEntry }) {
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<SocialPlatform>>(new Set());
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
@@ -1067,19 +1067,26 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
     queryKey: ["social-connections"],
     queryFn: fetchConnections,
   });
+  const videoPublicationsQuery = useQuery({
+    queryKey: ["calendar-entry-video-publications", entry.id],
+    enabled: entry.status === "lista" && entry.format === "video",
+    queryFn: async () => {
+      const res = await fetch(`/api/calendar-entries-publish?entryId=${encodeURIComponent(entry.id)}`);
+      const data = (await res.json()) as {
+        ok: boolean;
+        videoPublications?: {
+          platform: SocialPlatform;
+          status: "processing" | "success" | "error";
+          error: string | null;
+        }[];
+      };
+      return data.ok ? data.videoPublications ?? [] : [];
+    },
+    refetchInterval: (query) =>
+      query.state.data?.some((publication) => publication.status === "processing") ? 10_000 : false,
+  });
 
   if (entry.status !== "lista") return null;
-
-  if (entry.format === "video") {
-    return (
-      <p className="mt-3.5 text-xs text-wit-gray">
-        {t(
-          "Publicar video directo a redes estará disponible pronto.",
-          "Publishing video straight to your accounts is coming soon.",
-        )}
-      </p>
-    );
-  }
 
   const connectedPlatforms = (["instagram", "facebook"] as SocialPlatform[]).filter(
     (p) => connections[p],
@@ -1111,7 +1118,7 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
       });
       const data = (await res.json()) as {
         ok: boolean;
-        results?: Record<string, { ok: boolean; error?: string }>;
+        results?: Record<string, { ok: boolean; processing?: boolean; error?: string }>;
       };
       if (!data.ok || !data.results) {
         setPublishError(
@@ -1121,7 +1128,12 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
       }
       const lines = Object.entries(data.results).map(([platform, result]) =>
         result.ok
-          ? t(
+          ? result.processing
+            ? t(
+                `◌ Procesando video para ${platformLabel(platform as SocialPlatform)}. Puede tardar unos minutos.`,
+                `◌ Processing video for ${platformLabel(platform as SocialPlatform)}. This can take a few minutes.`,
+              )
+            : t(
               `✓ Publicado en ${platformLabel(platform as SocialPlatform)}`,
               `✓ Published to ${platformLabel(platform as SocialPlatform)}`,
             )
@@ -1131,10 +1143,16 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
             ),
       );
       setPublishNotice(lines.join(" · "));
+      if (entry.format === "video") {
+        void queryClient.invalidateQueries({
+          queryKey: ["calendar-entry-video-publications", entry.id],
+        });
+      }
       // Un error trae el motivo real de Meta, útil para diagnosticar — se
       // queda visible más tiempo que una confirmación simple de éxito.
       const hasError = Object.values(data.results).some((r) => !r.ok);
-      setTimeout(() => setPublishNotice(null), hasError ? 12000 : 4000);
+      const hasProcessing = Object.values(data.results).some((r) => r.processing);
+      setTimeout(() => setPublishNotice(null), hasError || hasProcessing ? 12000 : 4000);
     } catch {
       setPublishError(
         t("No pudimos publicar. Intenta de nuevo.", "We couldn't publish. Try again."),
@@ -1149,6 +1167,28 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
       <p className="text-xs font-bold uppercase tracking-wider text-wit-gray">
         {t("Publicar", "Publish")}
       </p>
+      {entry.format === "video" ? (
+        <>
+          <p className="mt-1 text-xs text-wit-gray">
+            {t(
+              "Meta procesa el video antes de publicarlo. Puedes salir de esta pantalla: WITERS continúa el proceso.",
+              "Meta processes the video before publishing it. You can leave this screen: WITERS continues the process.",
+            )}
+          </p>
+          {videoPublicationsQuery.data?.[0] ? (
+            <p className="mt-2 text-xs font-semibold text-wit-gray">
+              {videoPublicationsQuery.data[0].status === "processing"
+                ? t("El último envío sigue procesándose en Meta.", "The latest submission is still processing in Meta.")
+                : videoPublicationsQuery.data[0].status === "success"
+                  ? t("✓ El último envío se publicó correctamente.", "✓ The latest submission was published successfully.")
+                  : t(
+                      `✗ El último envío no se publicó${videoPublicationsQuery.data[0].error ? `: ${videoPublicationsQuery.data[0].error}` : "."}`,
+                      `✗ The latest submission did not publish${videoPublicationsQuery.data[0].error ? `: ${videoPublicationsQuery.data[0].error}` : "."}`,
+                    )}
+            </p>
+          ) : null}
+        </>
+      ) : null}
       {connectedPlatforms.length === 0 ? (
         <p className="mt-2 text-sm text-wit-gray">
           {t(
