@@ -46,7 +46,6 @@ import {
   Pencil,
   Plane,
   Plus,
-  RefreshCw,
   Rocket,
   Route as RouteIcon,
   ShieldCheck,
@@ -841,9 +840,9 @@ function PanelContent() {
           </div>
         </div>
       ) : null}
-      <header className="wit-glass relative z-40 border-b border-wit-ink/10">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-3 sm:px-5">
-          <Link to="/" className="shrink-0">
+      <header className="wit-glass relative z-40 border-b border-wit-ink/10 pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-3 sm:h-15 sm:px-5">
+          <Link to="/" className="shrink-0 scale-90 origin-left sm:scale-100">
             <WitersLogo compact />
           </Link>
           <div className="flex items-center gap-1.5 sm:gap-3">
@@ -884,7 +883,7 @@ function PanelContent() {
         onProfile={() => setView("perfil")}
       />
 
-      <main className="mx-auto max-w-6xl px-5 py-10 pb-24 sm:pb-10">
+      <main className="mx-auto max-w-6xl px-5 py-5 pb-24 sm:py-6 sm:pb-10">
         {view === "perfil" ? (
           <PerfilView me={me.data} onBack={() => setView("panel")} onLogout={logout} />
         ) : needsOnboarding ? (
@@ -914,21 +913,21 @@ function PanelContent() {
                     spacing. */}
                 <div className="hidden lg:block">
                   <div className="lg:max-w-xl">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h1 className="text-4xl font-extrabold tracking-tighter text-wit-ink">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink">
                         {t("Hola,", "Hi,")}{" "}
-                        <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
+                        <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span> 👋
                       </h1>
                     </div>
-                    <p className="mt-2 text-base text-wit-gray">
+                    <p className="mt-1 text-sm font-medium text-wit-gray">
                       {t(
-                        "Pide creatividades y da seguimiento a cada solicitud desde aquí.",
-                        "Request creatives and track every request from here.",
+                        "Planifica y solicita tu contenido",
+                        "Plan and request your content",
                       )}
                     </p>
                   </div>
 
-                  <div className="mt-8">
+                  <div className="mt-4">
                     <PlanificacionPanel streakWeeks={streakWeeks} />
                   </div>
 
@@ -1080,21 +1079,21 @@ function PanelContent() {
                     same reasoning as the desktop block above. */}
                 <div className="lg:hidden">
                   <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink md:text-3xl">
                         {t("Hola,", "Hi,")}{" "}
-                        <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>
+                        <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span> 👋
                       </h1>
                     </div>
-                    <p className="mt-2 text-base text-wit-gray">
+                    <p className="mt-1 text-sm font-medium text-wit-gray">
                       {t(
-                        "Pide creatividades y da seguimiento a cada solicitud desde aquí.",
-                        "Request creatives and track every request from here.",
+                        "Planifica y solicita tu contenido",
+                        "Plan and request your content",
                       )}
                     </p>
                   </div>
 
-                  <div className="mt-6">
+                  <div className="mt-4">
                     <PlanificacionPanel streakWeeks={streakWeeks} />
                   </div>
 

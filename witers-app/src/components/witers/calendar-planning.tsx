@@ -19,8 +19,6 @@ import {
   GalleryHorizontal,
   Image as ImageIcon,
   Instagram,
-  Music2,
-  RefreshCw,
   Send,
   Video as VideoIcon,
   X,
@@ -910,9 +908,8 @@ async function fetchConnections(): Promise<ConnectionsState> {
 
 // Tira de "Conexiones" arriba del calendario — Instagram se conecta
 // directo con su propia cuenta (sin pasar por Facebook), y Facebook se
-// conecta aparte con su Página. Cada ícono manda a su propio flujo de
-// OAuth. TikTok no tiene integración todavía, se muestra deshabilitado.
-function ConnectionsStrip() {
+// conecta aparte con su Página. Cada ícono manda a su propio flujo de OAuth.
+function ConnectionsStrip({ className = "" }: { className?: string }) {
   const { t } = useLanguage();
   const qc = useQueryClient();
   const [notice, setNotice] = useState<string | null>(null);
@@ -1018,16 +1015,9 @@ function ConnectionsStrip() {
   }
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
+    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       <Pill icon={Instagram} label="Instagram" platform="instagram" />
       <Pill icon={Facebook} label="Facebook" platform="facebook" />
-      <span
-        title={t("Próximamente", "Coming soon")}
-        className="flex items-center gap-1.5 rounded-full border border-wit-ink/8 bg-wit-mist/40 px-3 py-1.5 text-xs font-bold text-wit-gray/60"
-      >
-        <Music2 className="h-3.5 w-3.5" strokeWidth={2.2} />
-        TikTok · {t("Próximamente", "Coming soon")}
-      </span>
       {notice ? <p className="text-xs font-semibold text-wit-gray">{notice}</p> : null}
       {pendingId && pendingPages.length > 0 ? (
         <div className="mt-1 w-full rounded-2xl border border-wit-ink/10 bg-white p-3">
@@ -1319,62 +1309,80 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="flex flex-wrap items-center gap-3 text-3xl font-extrabold tracking-tighter text-wit-ink sm:text-4xl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink sm:text-3xl">
           {t("Planificación", "Planning")}
-          <span className="flex items-center gap-2 text-wit-blue">
-            <Calendar className="h-6 w-6" strokeWidth={2.2} />
-            {monthLabel}
-          </span>
-          {streakWeeks > 0 ? (
-            <span className="flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
-              <Flame className="h-3.5 w-3.5" strokeWidth={2} />
-              {t(
-                `${streakWeeks} ${streakWeeks === 1 ? "semana seguida" : "semanas seguidas"}`,
-                `${streakWeeks} ${streakWeeks === 1 ? "week in a row" : "weeks in a row"}`,
-              )}
-            </span>
-          ) : null}
         </h1>
-        <div className="ml-auto flex items-center gap-2">
-          {entries.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => setConfirmingReplan(true)}
-              className="flex items-center gap-1.5 rounded-full border border-wit-ink/12 bg-white px-3.5 py-2 text-xs font-bold text-wit-gray hover:border-wit-ink/25 hover:text-wit-ink"
-            >
-              <RefreshCw className="h-3.5 w-3.5" strokeWidth={2.2} />
-              {pendingCount > 0
-                ? t("Replanear mes", "Re-plan month")
-                : t("Planificar más", "Plan more")}
-            </button>
-          ) : null}
+        <button
+          type="button"
+          disabled={replanning}
+          onClick={() =>
+            entries.length > 0 ? setConfirmingReplan(true) : setWizardOpen(true)
+          }
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 py-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(0,71,255,0.22)] transition-all hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+        >
+          <span className="text-lg leading-none">+</span>
+          {replanning
+            ? t("Cargando...", "Loading...")
+            : t("Planificar contenido", "Plan content")}
+        </button>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 sm:justify-between">
+        <div className="flex items-center gap-1.5 rounded-2xl bg-white/75 p-1 shadow-sm">
           <button
             type="button"
             onClick={() => setMonthOffset((m) => m - 1)}
             aria-label={t("Mes anterior", "Previous month")}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-wit-ink/12 bg-white text-wit-gray hover:border-wit-ink/25"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-wit-gray transition-colors hover:bg-wit-mist/60 hover:text-wit-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue"
           >
             <ChevronLeft className="h-4 w-4" strokeWidth={2.4} />
           </button>
+          <span className="flex items-center gap-2 px-1 text-sm font-extrabold capitalize text-wit-ink sm:text-base">
+            <Calendar className="h-4 w-4 text-wit-blue" strokeWidth={2.3} />
+            {monthLabel}
+          </span>
           <button
             type="button"
             onClick={() => setMonthOffset((m) => m + 1)}
             aria-label={t("Mes siguiente", "Next month")}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-wit-ink/12 bg-white text-wit-gray hover:border-wit-ink/25"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-wit-gray transition-colors hover:bg-wit-mist/60 hover:text-wit-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue"
           >
             <ChevronRight className="h-4 w-4" strokeWidth={2.4} />
           </button>
         </div>
+        {streakWeeks > 0 ? (
+          <span className="flex items-center gap-1.5 rounded-full bg-[#fff7e8] px-3 py-2 text-xs font-bold text-orange-700">
+            <Flame className="h-3.5 w-3.5" strokeWidth={2.1} />
+            {t(
+              `${streakWeeks} ${streakWeeks === 1 ? "semana seguida" : "semanas seguidas"}`,
+              `${streakWeeks} ${streakWeeks === 1 ? "week in a row" : "weeks in a row"}`,
+            )}
+          </span>
+        ) : null}
       </div>
-      <p className="mt-1.5 text-sm text-wit-gray">
-        {t(
-          "Organiza qué vas a publicar este mes — cada casilla es una solicitud lista para pedir.",
-          "Organize what you'll publish this month — every square is a request ready to send.",
-        )}
-      </p>
-
-      <ConnectionsStrip />
+      <div className="mt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <ConnectionsStrip className="min-w-0" />
+          {entries.length > 0 ? (
+            <p className="shrink-0 text-xs font-bold text-wit-gray">
+              <span className="text-wit-ink">
+                {requestedCount} {t("de", "of")} {entries.length}{" "}
+                {t("piezas", "pieces")}
+              </span>
+              <span className="text-wit-gray"> · </span>
+              <span className="text-wit-blue">{progressPct}%</span>
+            </p>
+          ) : null}
+        </div>
+        {entries.length > 0 ? (
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-wit-mist/60">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-wit-blue via-[#775cff] to-wit-pink"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        ) : null}
+      </div>
 
       {confirmingReplan ? (
         <div className="wit-glass mt-4 flex flex-col gap-3 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:flex-row sm:items-center sm:justify-between">
@@ -1414,30 +1422,10 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
         </div>
       ) : null}
 
-      {entries.length > 0 ? (
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-xs font-bold text-wit-gray">
-            <span>
-              {t(
-                `${requestedCount} de ${entries.length} piezas ya pedidas`,
-                `${requestedCount} of ${entries.length} pieces requested`,
-              )}
-            </span>
-            <span className="text-wit-blue">{progressPct}%</span>
-          </div>
-          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-wit-mist/60">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-wit-blue to-wit-pink"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-        </div>
-      ) : null}
-
       {entriesQuery.isLoading ? (
-        <div className="mt-6 h-64 animate-pulse rounded-3xl bg-wit-mist/30" />
+        <div className="mt-3 h-64 animate-pulse rounded-3xl bg-wit-mist/30" />
       ) : entries.length === 0 ? (
-        <div className="wit-glass mt-6 flex flex-col items-center gap-4 rounded-3xl border border-dashed border-wit-ink/15 px-6 py-16 text-center">
+        <div className="wit-glass mt-3 flex flex-col items-center gap-4 rounded-3xl border border-dashed border-wit-ink/15 px-6 py-16 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
             <Calendar className="h-6 w-6" strokeWidth={2} />
           </span>
@@ -1464,7 +1452,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           </button>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
+        <div className="mt-3 grid grid-cols-1 gap-5 pb-20 lg:grid-cols-[1fr_320px] lg:pb-0">
           {/* Same grid at every size — only the density changes (smaller
               cells/text on a phone) instead of swapping to a separate
               agenda-list layout on mobile. */}
