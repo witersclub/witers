@@ -160,22 +160,17 @@ function Hero() {
 
 function HeroPhoneDemo() {
   const { t } = useLanguage();
-  const steps = [
-    [t("01 · TU IDEA", "01 · YOUR IDEA"), t("Cuéntale a Wit lo que imaginas", "Tell Wit what you imagine"), "bg-wit-blue"],
-    [t("02 · CREANDO", "02 · CREATING"), t("Tu contenido cobra vida", "Your content comes to life"), "bg-wit-pink"],
-    [t("03 · LISTO", "03 · READY"), t("Revísalo y publícalo", "Review it and publish it"), "bg-emerald-500"],
-  ] as const;
-  return <div className="wit-hero-phone-stage wit-rise wit-rise-d2" aria-label={t("Así se crea contenido con WITERS", "How content is created with WITERS")}>
+  const calendarItems = ["bg-wit-blue", "bg-wit-pink", "bg-emerald-500", "bg-amber-400", "bg-wit-blue", "bg-wit-pink", "bg-violet-500", "bg-emerald-500", "bg-wit-blue", "bg-amber-400", "bg-wit-pink", "bg-wit-blue", "bg-emerald-500", "bg-violet-500", "bg-wit-pink"];
+  return <div className="wit-hero-phone-stage" aria-label={t("Calendario de contenido de WITERS", "WITERS content calendar")}>
     <div className="wit-hero-chip wit-hero-chip-idea"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-wit-blue text-sm text-white">✦</span>{t("Una idea", "An idea")}</div>
     <div className="wit-hero-chip wit-hero-chip-publish"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-xs text-white">✓</span>{t("Listo para publicar", "Ready to publish")}</div>
-    <div className="wit-hero-phone"><div className="relative h-[480px] overflow-hidden rounded-[2.15rem] bg-[#f7f8fa] p-3 sm:h-[530px]">
+    <div className="wit-hero-phone-entry"><div className="wit-hero-phone"><div className="relative h-[480px] overflow-hidden rounded-[2.15rem] bg-[#f7f8fa] p-3 sm:h-[530px]">
       <div className="absolute left-1/2 top-0 z-20 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-wit-ink" />
       <div className="flex items-center justify-between px-1 pt-4"><div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-wit-blue"><span className="brightness-0 invert"><WMark size={14} /></span></span><span className="text-[10px] font-extrabold tracking-tight text-wit-ink">WITERS</span></div><span className="rounded-full bg-white px-2 py-1 text-[8px] font-bold text-wit-gray shadow-sm">{t("Tu espacio", "Your space")}</span></div>
-      <div className="mt-5 px-1"><p className="text-[11px] font-semibold text-wit-gray">{t("Hoy creamos", "Today we create")}</p><p className="mt-0.5 text-xl font-extrabold tracking-tight text-wit-ink">{t("Algo increíble.", "Something amazing.")}</p></div>
-      <div className="relative mt-4 h-[244px] overflow-hidden rounded-3xl bg-wit-ink p-4 shadow-[0_16px_35px_rgba(5,13,40,0.22)] sm:h-[280px]"><div className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-wit-pink/70 blur-2xl" /><div className="absolute -bottom-14 -left-12 h-36 w-36 rounded-full bg-wit-blue blur-2xl" />
-        {steps.map(([eyebrow, title, accent], index) => <div key={eyebrow} className={`wit-hero-phone-step wit-hero-phone-step-${index}`}><span className={`mb-4 block h-1.5 w-10 rounded-full ${accent}`} /><p className="text-[9px] font-bold tracking-[0.18em] text-white/60">{eyebrow}</p><p className="mt-3 max-w-[180px] text-2xl font-extrabold leading-[1.03] tracking-tight text-white">{title}</p><div className="mt-5 flex items-center gap-2 rounded-2xl bg-white/10 p-2.5 backdrop-blur"><span className={`h-8 w-8 rounded-xl ${accent}`} /><span className="h-2 flex-1 rounded-full bg-white/35" /></div></div>)}
-      </div><div className="absolute inset-x-3 bottom-3 flex items-center justify-between rounded-full bg-white/90 px-4 py-3 shadow-[0_8px_20px_rgba(5,13,40,0.12)] backdrop-blur"><span className="h-2 w-2 rounded-full bg-wit-blue" /><span className="h-2 w-2 rounded-full bg-wit-blue/20" /><span className="h-2 w-2 rounded-full bg-wit-blue/20" /><span className="text-[9px] font-extrabold text-wit-blue">{t("CREAR", "CREATE")}</span></div>
-    </div></div>
+      <div className="mt-5 px-1"><p className="text-[11px] font-semibold text-wit-gray">{t("Tu contenido", "Your content")}</p><p className="mt-0.5 text-xl font-extrabold tracking-tight text-wit-ink">{t("Calendario de junio", "June calendar")}</p></div>
+      <div className="mt-4 rounded-3xl bg-white p-3 shadow-[0_16px_35px_rgba(5,13,40,0.12)]"><div className="flex items-center justify-between"><span className="text-[9px] font-extrabold text-wit-ink">{t("PLANIFICADO", "PLANNED")}</span><span className="rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-bold text-emerald-600">15 {t("piezas", "pieces")}</span></div><div className="mt-3 grid grid-cols-5 gap-1.5">{calendarItems.map((color, index) => <div key={index} className="relative aspect-square rounded-lg bg-wit-ice p-1"><span className="text-[7px] font-bold text-wit-gray">{index + 3}</span>{index < 15 ? <span className={`absolute inset-x-1 bottom-1 h-2.5 rounded-sm ${color}`} /> : null}</div>)}</div><div className="mt-3 flex items-center justify-between border-t border-wit-ink/5 pt-2.5"><span className="text-[8px] font-semibold text-wit-gray">{t("Imagen · Video · Carrusel", "Image · Video · Carousel")}</span><span className="text-[8px] font-extrabold text-wit-blue">{t("Ver todo", "See all")}</span></div></div>
+      <div className="absolute inset-x-3 bottom-3 flex items-center justify-between rounded-full bg-white/90 px-4 py-3 shadow-[0_8px_20px_rgba(5,13,40,0.12)] backdrop-blur"><span className="h-2 w-2 rounded-full bg-wit-blue" /><span className="h-2 w-2 rounded-full bg-wit-blue/20" /><span className="h-2 w-2 rounded-full bg-wit-blue/20" /><span className="text-[9px] font-extrabold text-wit-blue">{t("CALENDARIO", "CALENDAR")}</span></div>
+    </div></div></div>
   </div>;
 }
 
