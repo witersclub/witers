@@ -124,7 +124,8 @@ function publicationStatusMeta(entry: CalendarEntry, t: (es: string, en: string)
   if (entry.publicationStatus === "partial") return { label: t("Publicada parcialmente", "Partially published"), cls: "bg-amber-50 text-amber-700" };
   if (entry.publicationStatus === "error") return { label: t("Error de publicación", "Publishing error"), cls: "bg-red-50 text-red-700" };
   if (entry.publicationStatus === "canceled") return { label: t("Cancelada", "Canceled"), cls: "bg-wit-mist/50 text-wit-gray" };
-  return statusMeta(entry.status, t);
+  const designStatus = statusMeta(entry.status, t);
+  return { label: designStatus.label, cls: designStatus.badgeClass };
 }
 
 function isoDate(d: Date): string {
