@@ -41,6 +41,11 @@ export const Route = createFileRoute("/api/public/calendar-media")({
         return new Response(obj.body as unknown as BodyInit, {
           headers: {
             "content-type": obj.httpMetadata?.contentType ?? "application/octet-stream",
+            "content-length": String(obj.size),
+            // Give external video processors a filename with an extension in
+            // addition to the MIME type. The route itself intentionally has
+            // no extension because it is a protected lookup by calendar id.
+            "content-disposition": `inline; filename="${item.r2Key.split("/").pop() ?? "media"}"`,
             "cache-control": "public, max-age=3600",
           },
         });

@@ -41,6 +41,47 @@ async function readMetaError(response: Response, fallback: string): Promise<stri
   return normalized || `${fallback} (HTTP ${response.status})`;
 }
 
+// Facebook normally accepts a hosted URL, but can reject an otherwise valid
+// Cloudflare-served file while it tries to inspect it remotely (HTTP 422).
+// In that case, stream the exact same public file to Meta's upload session.
+// This avoids buffering the video in the Worker and keeps the fallback safe
+// for the short Reel files supported by Facebook.
+async function uploadFacebookReelBinary(
+  uploadUrl: string,
+  accessToken: string,
+  videoUrl: string,
+): Promise<{ ok: true; response: Response } | { ok: false; error: string }> {
+  let source: Response;
+  try {
+    source = await fetch(videoUrl);
+  } catch {
+    return { ok: false, error: "archivo_video_no_accesible" };
+  }
+  if (!source.ok || !source.body) {
+    return { ok: false, error: `archivo_video_no_accesible (HTTP ${source.status})` };
+  }
+  const fileSize = source.headers.get("content-length");
+  if (!fileSize || !/^\d+$/.test(fileSize)) {
+    return { ok: false, error: "archivo_video_sin_tamano" };
+  }
+
+  try {
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `OAuth ${accessToken}`,
+        offset: "0",
+        file_size: fileSize,
+        "content-type": "application/octet-stream",
+      },
+      body: source.body,
+    });
+    return { ok: true, response };
+  } catch {
+    return { ok: false, error: "carga_directa_tiempo_agotado" };
+  }
+}
+
 async function graphPost(
   base: string,
   path: string,
@@ -218,15 +259,26 @@ export async function createFacebookReel(
   if (!start.ok) return start;
   const processingId = start.body.video_id as string | undefined;
   if (!processingId) return { ok: false, error: "sin_video_id" };
+  const returnedUploadUrl = start.body.upload_url as string | undefined;
+  const uploadUrl =
+    returnedUploadUrl && /^https:\/\/rupload\.facebook\.com\//.test(returnedUploadUrl)
+      ? returnedUploadUrl
+      : `https://rupload.facebook.com/video-upload/${GRAPH_VERSION}/${processingId}`;
 
   let upload: Response;
   try {
-    upload = await fetch(`https://rupload.facebook.com/video-upload/${GRAPH_VERSION}/${processingId}`, {
+    upload = await fetch(uploadUrl, {
       method: "POST",
       headers: { Authorization: `OAuth ${accessToken}`, file_url: videoUrl },
     });
   } catch {
     return { ok: false, error: "tiempo_agotado" };
+  }
+  if (!upload.ok && upload.status === 422) {
+    console.info("[meta-publish] Facebook rejected hosted video; retrying streamed upload", processingId);
+    const direct = await uploadFacebookReelBinary(uploadUrl, accessToken, videoUrl);
+    if (!direct.ok) return direct;
+    upload = direct.response;
   }
   if (!upload.ok) {
     return { ok: false, error: await readMetaError(upload, "carga_video_fallida") };
