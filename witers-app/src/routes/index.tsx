@@ -162,8 +162,6 @@ function HeroPhoneDemo() {
   const { t } = useLanguage();
   const calendarItems = ["bg-wit-blue", "bg-wit-pink", "bg-emerald-500", "bg-amber-400", "bg-wit-blue", "bg-wit-pink", "bg-violet-500", "bg-emerald-500", "bg-wit-blue", "bg-amber-400", "bg-wit-pink", "bg-wit-blue", "bg-emerald-500", "bg-violet-500", "bg-wit-pink"];
   return <div className="wit-hero-phone-stage" aria-label={t("Calendario de contenido de WITERS", "WITERS content calendar")}>
-    <div className="wit-hero-chip wit-hero-chip-idea"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-wit-blue text-sm text-white">✦</span>{t("Una idea", "An idea")}</div>
-    <div className="wit-hero-chip wit-hero-chip-publish"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-xs text-white">✓</span>{t("Listo para publicar", "Ready to publish")}</div>
     <div className="wit-hero-phone-entry"><div className="wit-hero-phone"><div className="relative h-[480px] overflow-hidden rounded-[2.15rem] bg-[#f7f8fa] p-3 sm:h-[530px]">
       <div className="absolute left-1/2 top-0 z-20 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-wit-ink" />
       <div className="flex items-center justify-between px-1 pt-4"><div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-wit-blue"><span className="brightness-0 invert"><WMark size={14} /></span></span><span className="text-[10px] font-extrabold tracking-tight text-wit-ink">WITERS</span></div><span className="rounded-full bg-white px-2 py-1 text-[8px] font-bold text-wit-gray shadow-sm">{t("Tu espacio", "Your space")}</span></div>
