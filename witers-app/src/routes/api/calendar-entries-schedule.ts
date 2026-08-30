@@ -49,10 +49,7 @@ async function validateSchedule(
   return connectionIds ? { connectionIds } : { error: "red_no_conectada" };
 }
 
-// routeTree.gen.ts is produced by Vite after TypeScript's first pass. The
-// cast lets that initial pass accept this newly added file; Vite then records
-// the route in the generated tree for the deployed Worker.
-export const Route = createFileRoute("/api/calendar-entries-schedule" as never)({
+export const Route = createFileRoute("/api/calendar-entries-schedule")({
   server: {
     handlers: {
       GET: async ({ request }) => {

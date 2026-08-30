@@ -56,6 +56,7 @@ import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ApiCampaignAdsRouteImport } from './routes/api/campaign-ads'
 import { Route as ApiCalendarEntriesRequestRouteImport } from './routes/api/calendar-entries-request'
 import { Route as ApiCalendarEntriesPublishRouteImport } from './routes/api/calendar-entries-publish'
+import { Route as ApiCalendarEntriesScheduleRouteImport } from './routes/api/calendar-entries-schedule'
 import { Route as ApiCalendarEntriesCaptionRouteImport } from './routes/api/calendar-entries-caption'
 import { Route as ApiCalendarEntriesRouteImport } from './routes/api/calendar-entries'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
@@ -2051,6 +2052,13 @@ declare module '@tanstack/react-router' {
       path: '/api/calendar-entries-publish'
       fullPath: '/api/calendar-entries-publish'
       preLoaderRoute: typeof ApiCalendarEntriesPublishRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar-entries-schedule': {
+      id: '/api/calendar-entries-schedule'
+      path: '/api/calendar-entries-schedule'
+      fullPath: '/api/calendar-entries-schedule'
+      preLoaderRoute: typeof ApiCalendarEntriesScheduleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/calendar-entries-caption': {
