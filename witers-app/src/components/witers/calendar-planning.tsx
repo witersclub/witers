@@ -12,6 +12,7 @@ import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Calendar,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
   Facebook,
@@ -19,6 +20,8 @@ import {
   GalleryHorizontal,
   Image as ImageIcon,
   Instagram,
+  Loader2,
+  PenLine,
   Send,
   Video as VideoIcon,
   X,
@@ -59,6 +62,9 @@ type CalendarEntry = CalendarEntryDraft & {
   // Copy sugerido para redes — null hasta que se genera la primera vez
   // que se abre la pieza (ver /api/calendar-entries-caption).
   caption: string | null;
+  publicationStatus: "scheduled" | "publishing" | "published" | "partial" | "error" | "canceled" | null;
+  scheduledForUtc: string | null;
+  publicationTimezone: string | null;
 };
 type WitMessage = {
   role: "user" | "assistant";
@@ -109,6 +115,16 @@ function statusMeta(
   if (status === "en_diseno")
     return { label: t("En diseño", "In design"), badgeClass: "bg-wit-blue/10 text-wit-blue" };
   return { label: t("Por planear", "Not requested"), badgeClass: "bg-wit-mist/50 text-wit-gray" };
+}
+
+function publicationStatusMeta(entry: CalendarEntry, t: (es: string, en: string) => string) {
+  if (entry.publicationStatus === "scheduled") return { label: t("Programada", "Scheduled"), cls: "bg-violet-50 text-violet-700" };
+  if (entry.publicationStatus === "publishing") return { label: t("Publicando", "Publishing"), cls: "bg-amber-50 text-amber-700" };
+  if (entry.publicationStatus === "published") return { label: t("Publicada", "Published"), cls: "bg-emerald-50 text-emerald-700" };
+  if (entry.publicationStatus === "partial") return { label: t("Publicada parcialmente", "Partially published"), cls: "bg-amber-50 text-amber-700" };
+  if (entry.publicationStatus === "error") return { label: t("Error de publicación", "Publishing error"), cls: "bg-red-50 text-red-700" };
+  if (entry.publicationStatus === "canceled") return { label: t("Cancelada", "Canceled"), cls: "bg-wit-mist/50 text-wit-gray" };
+  return statusMeta(entry.status, t);
 }
 
 function isoDate(d: Date): string {
@@ -457,11 +473,10 @@ const EMPTY_SLIDES: CalendarSlideDraft[] = [
   { title: "", brief: "" },
 ];
 
-function EntryDetail({ entry }: { entry: CalendarEntry }) {
+function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => void }) {
   const { t } = useLanguage();
   const qc = useQueryClient();
   const Icon = FORMAT_ICON[entry.format];
-  const meta = statusMeta(entry.status, t);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pickingFormat, setPickingFormat] = useState(false);
@@ -475,6 +490,10 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
   const [generatingCaption, setGeneratingCaption] = useState(false);
   const [captionError, setCaptionError] = useState<string | null>(null);
   const [captionCopied, setCaptionCopied] = useState(false);
+  const [editingCaption, setEditingCaption] = useState(false);
+  const [captionDraft, setCaptionDraft] = useState(entry.caption ?? "");
+  const [savingCaption, setSavingCaption] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   async function generateCaption() {
     setGeneratingCaption(true);
@@ -525,11 +544,27 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
     setCaptionText(entry.caption);
     setCaptionError(null);
     setCaptionCopied(false);
+    setEditingCaption(false);
+    setCaptionDraft(entry.caption ?? "");
     if (!entry.caption) void generateCaption();
     // Only re-run on a day switch, not on every refetch of the same entry —
     // that would blow away in-progress edits after an unrelated invalidation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !saving && !savingCaption) requestClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    dialogRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose, saving, savingCaption, editing, editingCaption, captionDraft, captionText, editTitle, editBrief]);
 
   async function copyCaption() {
     if (!captionText) return;
@@ -540,6 +575,29 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
     } catch {
       // Clipboard permission denied or unavailable — the text is still
       // right there on screen to copy by hand, nothing else to do.
+    }
+  }
+
+  async function saveCaption() {
+    if (!captionDraft.trim() || captionDraft.trim() === captionText || savingCaption) return;
+    setSavingCaption(true);
+    setCaptionError(null);
+    try {
+      const res = await fetch("/api/calendar-entries-caption", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ entryId: entry.id, caption: captionDraft }),
+      });
+      const data = (await res.json()) as { ok: boolean; caption?: string };
+      if (!data.ok || !data.caption) throw new Error("save_caption_failed");
+      setCaptionText(data.caption);
+      setCaptionDraft(data.caption);
+      setEditingCaption(false);
+      void qc.invalidateQueries({ queryKey: ["calendar-entries"] });
+    } catch {
+      setCaptionError(t("No pudimos guardar el copy. Intenta de nuevo.", "We couldn't save the copy. Try again."));
+    } finally {
+      setSavingCaption(false);
     }
   }
 
@@ -653,18 +711,55 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
     }
   }
 
-  return (
-    <div className="wit-glass rounded-3xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)] lg:sticky lg:top-5">
-      <p className="text-xs font-bold uppercase tracking-wider text-wit-gray">
-        {formatDayLabel(entry.date, t)}
-      </p>
+  function requestClose() {
+    const copyDirty = editingCaption && captionDraft.trim() !== (captionText ?? "");
+    const pieceDirty = editing && (editTitle !== entry.title || editBrief !== entry.brief);
+    if ((copyDirty || pieceDirty) && !window.confirm(t("Tienes cambios sin guardar. ¿Cerrar de todos modos?", "You have unsaved changes. Close anyway?"))) return;
+    onClose();
+  }
+
+  const publicationMeta = publicationStatusMeta(entry, t);
+  const previewHref = entry.deliveredVideoHref ?? entry.deliveredImages?.[0] ?? null;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[70] bg-wit-ink/55 backdrop-blur-[2px] motion-reduce:transition-none"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !saving && !savingCaption) requestClose();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="calendar-entry-detail-title"
+        tabIndex={-1}
+        className="absolute inset-0 flex h-[100dvh] flex-col overflow-y-auto bg-white px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] outline-none animate-in slide-in-from-bottom-4 duration-200 motion-reduce:animate-none md:inset-x-4 md:top-[4vh] md:mx-auto md:h-[92dvh] md:max-w-3xl md:rounded-3xl md:px-7 md:pb-28 md:pt-6 md:shadow-[0_30px_80px_rgba(5,13,40,0.32)]"
+      >
+        <header className="sticky top-0 z-10 -mx-5 flex items-center gap-3 border-b border-wit-ink/8 bg-white/95 px-5 pb-3 backdrop-blur md:-mx-7 md:px-7">
+          <button
+            type="button"
+            onClick={requestClose}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-wit-ink transition-colors hover:bg-wit-mist/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue"
+            aria-label={t("Volver al calendario", "Back to calendar")}
+          >
+            <ChevronLeft className="h-6 w-6" strokeWidth={2.4} />
+          </button>
+          <div className="min-w-0">
+            <h2 id="calendar-entry-detail-title" className="text-base font-extrabold text-wit-ink">
+              {t("Detalle de publicación", "Post details")}
+            </h2>
+            <p className="text-xs font-semibold capitalize text-wit-gray">{formatDayLabel(entry.date, t)}</p>
+          </div>
+        </header>
+
+        <div className="pt-4">
 
       {entry.status === "lista" && entry.format === "video" && entry.deliveredVideoHref ? (
         <div className="mt-3 overflow-hidden rounded-2xl border border-wit-ink/5 bg-black">
           <video
             controls
             preload="metadata"
-            className="block max-h-[70vh] w-full"
+            className="block max-h-[48dvh] w-full object-contain"
             src={entry.deliveredVideoHref}
           />
         </div>
@@ -680,7 +775,7 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
             images={entry.deliveredImages}
             alt={entry.title}
             className="relative"
-            imageClassName="block max-h-[70vh] w-full object-contain"
+            imageClassName="block max-h-[48dvh] w-full object-contain"
           />
         </div>
       ) : (
@@ -688,6 +783,15 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
           <Icon className="h-10 w-10 text-wit-blue/45" strokeWidth={1.6} />
         </div>
       )}
+      {previewHref ? (
+        <button
+          type="button"
+          onClick={() => window.open(previewHref, "_blank", "noopener,noreferrer")}
+          className="mt-2 text-xs font-bold text-wit-blue hover:text-wit-blue-deep"
+        >
+          {t("Ampliar vista previa", "Expand preview")}
+        </button>
+      ) : null}
 
       {editing ? (
         <input
@@ -705,10 +809,20 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
           <Icon className="h-3 w-3" strokeWidth={2.4} />
           {formatLabel(entry.format, t)}
         </span>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${meta.badgeClass}`}>
-          {meta.label}
+        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${publicationMeta.cls}`}>
+          {publicationMeta.label}
         </span>
       </div>
+      {entry.publicationStatus === "scheduled" && entry.scheduledForUtc ? (
+        <p className="mt-2 text-xs font-semibold text-violet-700">
+          {new Intl.DateTimeFormat(t("es-MX", "en-US"), {
+            dateStyle: "long",
+            timeStyle: "short",
+            timeZone: entry.publicationTimezone ?? undefined,
+          }).format(new Date(`${entry.scheduledForUtc.replace(" ", "T")}Z`))}
+          {entry.publicationTimezone ? ` — ${entry.publicationTimezone}` : ""}
+        </p>
+      ) : null}
 
       {editing ? (
         entry.format === "carrusel" ? (
@@ -770,13 +884,47 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
 
       {editing ? null : (
         <div className="mt-3.5 rounded-2xl border border-wit-ink/5 bg-wit-mist/30 p-3.5">
-          <p className="text-xs font-bold uppercase tracking-wider text-wit-gray">
-            {t("Copy sugerido", "Suggested copy")}
-          </p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-wit-gray">
+              {t("Copy para la publicación", "Post copy")}
+            </p>
+            {captionText && !editingCaption ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setCaptionDraft(captionText);
+                  setEditingCaption(true);
+                }}
+                className="flex items-center gap-1 text-xs font-bold text-wit-blue hover:text-wit-blue-deep"
+              >
+                <PenLine className="h-3.5 w-3.5" />
+                {t("Editar", "Edit")}
+              </button>
+            ) : null}
+          </div>
           {generatingCaption ? (
             <p className="mt-2 text-sm text-wit-gray">
               {t("Generando copy...", "Generating copy...")}
             </p>
+          ) : captionText && editingCaption ? (
+            <>
+              <textarea
+                value={captionDraft}
+                onChange={(event) => setCaptionDraft(event.target.value)}
+                rows={8}
+                maxLength={5000}
+                className="mt-2 w-full resize-none rounded-xl border border-wit-ink/15 bg-white px-3 py-2 text-sm leading-relaxed text-wit-ink outline-none focus:border-wit-blue focus:ring-2 focus:ring-wit-blue/15"
+              />
+              <p className="mt-1 text-right text-[11px] font-medium text-wit-gray">{captionDraft.length}/5000</p>
+              <div className="mt-2 flex gap-2">
+                <button type="button" onClick={() => setEditingCaption(false)} disabled={savingCaption} className="min-h-11 flex-1 rounded-full border border-wit-ink/15 bg-white px-3 text-xs font-bold text-wit-ink disabled:opacity-50">
+                  {t("Cancelar", "Cancel")}
+                </button>
+                <button type="button" onClick={saveCaption} disabled={savingCaption || !captionDraft.trim() || captionDraft.trim() === captionText} className="min-h-11 flex-1 rounded-full bg-wit-blue px-3 text-xs font-bold text-white disabled:opacity-50">
+                  {savingCaption ? t("Guardando...", "Saving...") : t("Guardar cambios", "Save changes")}
+                </button>
+              </div>
+            </>
           ) : captionText ? (
             <>
               <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-wit-ink">
@@ -788,7 +936,7 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
                   onClick={copyCaption}
                   className="rounded-full border border-wit-ink/15 bg-white px-3.5 py-1.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30"
                 >
-                  {captionCopied ? t("Copiado ✓", "Copied ✓") : t("Copiar", "Copy")}
+                  {captionCopied ? t("Copy copiado", "Copy copied") : t("Copiar texto", "Copy text")}
                 </button>
                 <button
                   type="button"
@@ -824,6 +972,7 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
       )}
 
       {editing ? null : <PublishSection entry={entry} />}
+      {editing ? null : <DesignChangeRequest entry={entry} />}
 
       {entry.status !== "por_planear" ? null : editing ? (
         <div className="mt-4">
@@ -889,8 +1038,11 @@ function EntryDetail({ entry }: { entry: CalendarEntry }) {
           </button>
         </div>
       )}
-      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
-    </div>
+        {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -904,6 +1056,73 @@ async function fetchConnections(): Promise<ConnectionsState> {
   const res = await fetch("/api/social/connections");
   const data = (await res.json()) as { ok: boolean; connections?: ConnectionsState };
   return data.ok && data.connections ? data.connections : EMPTY_CONNECTIONS;
+}
+
+function DesignChangeRequest({ entry }: { entry: CalendarEntry }) {
+  const { t } = useLanguage();
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState("Cambiar texto de la imagen");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (entry.status !== "lista" || !entry.requestId) return null;
+  async function submit() {
+    if (sending || message.trim().length < 5) return;
+    setSending(true);
+    setError(null);
+    const endpoint =
+      entry.format === "video"
+        ? "/api/video-request-change"
+        : entry.format === "carrusel"
+          ? "/api/carousel-request-change"
+          : "/api/request-change";
+    const body =
+      entry.format === "video"
+        ? { videoRequestId: entry.requestId, message: `${kind}: ${message.trim()}` }
+        : entry.format === "carrusel"
+          ? { carouselRequestId: entry.requestId, message: `${kind}: ${message.trim()}` }
+          : { requestId: entry.requestId, message: `${kind}: ${message.trim()}` };
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      if (!data.ok) throw new Error("change_request_failed");
+      setOpen(false);
+      setMessage("");
+      void qc.invalidateQueries({ queryKey: ["calendar-entries"] });
+    } catch {
+      setError(t("No pudimos enviar la solicitud. Intenta de nuevo.", "We couldn't send the request. Try again."));
+    } finally {
+      setSending(false);
+    }
+  }
+  return (
+    <section className="mt-4 rounded-2xl border border-wit-ink/8 bg-white p-3.5">
+      <button type="button" onClick={() => setOpen((value) => !value)} className="text-sm font-bold text-wit-ink hover:text-wit-blue">
+        {t("Solicitar cambio de diseño", "Request a design change")}
+      </button>
+      {open ? (
+        <div className="mt-3 space-y-3">
+          <select value={kind} onChange={(event) => setKind(event.target.value)} className="min-h-11 w-full rounded-xl border border-wit-ink/15 bg-white px-3 text-sm text-wit-ink">
+            <option>{t("Cambiar texto de la imagen", "Change image text")}</option>
+            <option>{t("Cambiar fotografía", "Change photo")}</option>
+            <option>{t("Cambiar colores", "Change colors")}</option>
+            <option>{t("Corregir información", "Correct information")}</option>
+            <option>{t("Otro cambio", "Other change")}</option>
+          </select>
+          <textarea value={message} onChange={(event) => setMessage(event.target.value)} rows={4} required placeholder={t("Describe el cambio que necesitas", "Describe the change you need")} className="w-full resize-none rounded-xl border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue" />
+          <button type="button" onClick={submit} disabled={sending || message.trim().length < 5} className="min-h-11 rounded-full bg-wit-blue px-4 text-xs font-bold text-white disabled:opacity-50">
+            {sending ? t("Enviando...", "Sending...") : t("Enviar solicitud", "Send request")}
+          </button>
+          {error ? <p className="text-xs text-red-600">{error}</p> : null}
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 // Tira de "Conexiones" arriba del calendario — Instagram se conecta
@@ -1052,6 +1271,10 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [publishNotice, setPublishNotice] = useState<string | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleValue, setScheduleValue] = useState("");
+  const [scheduling, setScheduling] = useState(false);
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
   const { data: connections = EMPTY_CONNECTIONS } = useQuery({
     queryKey: ["social-connections"],
@@ -1098,6 +1321,12 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
 
   async function publish() {
     if (selected.size === 0) return;
+    if (!window.confirm(
+      t(
+        `¿Publicar ahora en ${Array.from(selected).map(platformLabel).join(" y ")}?`,
+        `Publish now to ${Array.from(selected).map(platformLabel).join(" and ")}?`,
+      ),
+    )) return;
     setPublishing(true);
     setPublishError(null);
     setPublishNotice(null);
@@ -1153,6 +1382,46 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
     }
   }
 
+  async function schedule() {
+    if (selected.size === 0 || !scheduleValue || scheduling) return;
+    const date = new Date(scheduleValue);
+    if (!Number.isFinite(date.getTime()) || date.getTime() <= Date.now()) {
+      setPublishError(t("Elige una fecha y hora futuras.", "Choose a future date and time."));
+      return;
+    }
+    setScheduling(true);
+    setPublishError(null);
+    try {
+      const res = await fetch("/api/calendar-entries-schedule", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          entryId: entry.id,
+          scheduledForUtc: date.toISOString(),
+          timezone,
+          platforms: Array.from(selected),
+        }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) throw new Error(data.error);
+      setScheduleOpen(false);
+      setPublishNotice(t("Publicación programada", "Post scheduled"));
+      void queryClient.invalidateQueries({ queryKey: ["calendar-entries"] });
+    } catch {
+      setPublishError(t("No pudimos programar la publicación.", "We couldn't schedule the post."));
+    } finally {
+      setScheduling(false);
+    }
+  }
+
+  async function cancelSchedule() {
+    if (!window.confirm(t("¿Cancelar esta programación?", "Cancel this schedule?"))) return;
+    const res = await fetch(`/api/calendar-entries-schedule?entryId=${encodeURIComponent(entry.id)}`, {
+      method: "DELETE",
+    });
+    if (res.ok) void queryClient.invalidateQueries({ queryKey: ["calendar-entries"] });
+  }
+
   return (
     <div className="mt-3.5 rounded-2xl border border-wit-ink/5 bg-wit-mist/30 p-3.5">
       <p className="text-xs font-bold uppercase tracking-wider text-wit-gray">
@@ -1202,28 +1471,47 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
         </p>
       ) : (
         <>
-          <div className="mt-2 flex flex-wrap gap-3">
-            {connectedPlatforms.map((platform) => (
-              <label key={platform} className="flex items-center gap-1.5 text-sm text-wit-ink">
+          <p className="mt-3 text-sm font-bold text-wit-ink">{t("¿Dónde quieres publicar?", "Where do you want to publish?")}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(["instagram", "facebook"] as SocialPlatform[]).map((platform) => {
+              const connected = Boolean(connections[platform]);
+              return (
+              <label key={platform} className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold ${connected ? "text-wit-ink" : "cursor-not-allowed bg-wit-mist/35 text-wit-gray"} ${selected.has(platform) ? "border-wit-blue bg-wit-blue/5" : "border-wit-ink/12 bg-white"}`}>
                 <input
                   type="checkbox"
                   checked={selected.has(platform)}
                   onChange={() => toggle(platform)}
+                  disabled={!connected}
                   className="h-4 w-4 rounded border-wit-ink/25"
                 />
-                {platform === "instagram" ? "Instagram" : "Facebook"}
+                <span>{platform === "instagram" ? "Instagram" : "Facebook"}</span>
+                <span className="max-w-24 truncate text-xs font-medium text-wit-gray">{connections[platform]?.name ?? t("No conectada", "Not connected")}</span>
               </label>
-            ))}
+              );
+            })}
           </div>
-          <button
-            type="button"
-            disabled={selected.size === 0 || publishing}
-            onClick={publish}
-            className="wit-glow-button mt-3 flex items-center gap-1.5 rounded-full px-5 py-2.5 text-xs font-bold text-white disabled:opacity-50"
-          >
-            <Send className="h-3.5 w-3.5" strokeWidth={2.4} />
-            {publishing ? t("Publicando...", "Publishing...") : t("Publicar", "Publish")}
-          </button>
+          {entry.publicationStatus === "scheduled" ? (
+            <button type="button" onClick={cancelSchedule} className="mt-3 text-xs font-bold text-red-600 hover:underline">
+              {t("Cancelar programación", "Cancel schedule")}
+            </button>
+          ) : null}
+          {scheduleOpen ? (
+            <div className="mt-3 rounded-2xl border border-wit-blue/15 bg-white p-3">
+              <label className="text-xs font-bold text-wit-ink" htmlFor={`schedule-${entry.id}`}>{t("Fecha y hora", "Date and time")}</label>
+              <input id={`schedule-${entry.id}`} type="datetime-local" value={scheduleValue} min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)} onChange={(event) => setScheduleValue(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-xl border border-wit-ink/15 px-3 text-sm" />
+              <p className="mt-2 text-xs text-wit-gray">{t(`Zona horaria: ${timezone}`, `Time zone: ${timezone}`)}</p>
+              <p className="mt-1 text-xs font-medium text-wit-gray">{Array.from(selected).map(platformLabel).join(" · ")}</p>
+              <button type="button" onClick={schedule} disabled={scheduling || !scheduleValue || selected.size === 0} className="mt-3 min-h-11 rounded-full bg-wit-blue px-4 text-xs font-bold text-white disabled:opacity-50">{scheduling ? t("Programando...", "Scheduling...") : t("Confirmar programación", "Confirm schedule")}</button>
+            </div>
+          ) : null}
+          <div className="sticky bottom-0 z-10 -mx-3.5 mt-4 flex flex-col gap-2 border-t border-wit-ink/8 bg-white/95 px-3.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:flex-row">
+            <button type="button" disabled={selected.size === 0 || publishing || scheduling} onClick={() => setScheduleOpen((value) => !value)} className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-full border border-wit-blue bg-white px-4 text-sm font-bold text-wit-blue shadow-sm transition-colors hover:bg-wit-blue/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue disabled:opacity-50">
+              <CalendarClock className="h-4 w-4" />{t("Programar", "Schedule")}
+            </button>
+            <button type="button" disabled={selected.size === 0 || publishing || scheduling} onClick={publish} className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-wit-pink via-[#775cff] to-wit-blue px-4 text-sm font-bold text-white shadow-[0_8px_20px_rgba(119,92,255,0.22)] transition-transform hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-50">
+              {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{publishing ? t("Publicando...", "Publishing...") : t("Publicar ahora", "Publish now")}
+            </button>
+          </div>
           {publishError ? <p className="mt-2 text-xs text-red-600">{publishError}</p> : null}
           {publishNotice ? (
             <p className="mt-2 text-xs font-semibold text-wit-gray">{publishNotice}</p>
@@ -1241,6 +1529,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const detailTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [confirmingReplan, setConfirmingReplan] = useState(false);
   const [replanning, setReplanning] = useState(false);
   const qc = useQueryClient();
@@ -1249,11 +1538,14 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
   const target = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + monthOffset, 1));
   const year = target.getUTCFullYear();
   const month = target.getUTCMonth() + 1;
-  const monthLabel = target.toLocaleDateString(t("es-MX", "en-US"), {
+  const monthParts = new Intl.DateTimeFormat(t("es-MX", "en-US"), {
     month: "long",
     year: "numeric",
     timeZone: "UTC",
-  });
+  }).formatToParts(target);
+  const monthName = monthParts.find((part) => part.type === "month")?.value ?? "";
+  const monthYear = monthParts.find((part) => part.type === "year")?.value ?? "";
+  const monthLabel = `${monthName.charAt(0).toUpperCase()}${monthName.slice(1)} ${monthYear}`;
   const today = isoDate(base);
 
   const entriesQuery = useQuery({
@@ -1271,18 +1563,10 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
   for (const e of entries) if (!entryByDate.has(e.date)) entryByDate.set(e.date, e);
 
   useEffect(() => {
-    if (entries.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-    setSelectedId((prev) => {
-      if (prev && entries.some((e) => e.id === prev)) return prev;
-      // Default to the first not-yet-requested piece — the actual next
-      // action — falling back to the first entry of the month.
-      return (entries.find((e) => e.status === "por_planear") ?? entries[0]).id;
-    });
-    // Only re-run when the entry list itself changes — not on every
-    // selectedId change, which would fight the user's own clicks.
+    setSelectedId((prev) => (prev && entries.some((entry) => entry.id === prev) ? prev : null));
+    // A piece opens only from its calendar control, never automatically on
+    // month load. The mounted calendar therefore keeps its scroll/selection
+    // behind the modal until the client explicitly closes it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entries.map((e) => e.id).join(",")]);
 
@@ -1319,7 +1603,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           onClick={() =>
             entries.length > 0 ? setConfirmingReplan(true) : setWizardOpen(true)
           }
-          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 py-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(0,71,255,0.22)] transition-all hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] transition-all hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-11 sm:w-auto"
         >
           <span className="text-lg leading-none">+</span>
           {replanning
@@ -1327,8 +1611,8 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
             : t("Planificar contenido", "Plan content")}
         </button>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2 sm:justify-between">
-        <div className="flex items-center gap-1.5 rounded-2xl bg-white/75 p-1 shadow-sm">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 items-center gap-1 rounded-2xl bg-white/75 p-1 shadow-sm">
           <button
             type="button"
             onClick={() => setMonthOffset((m) => m - 1)}
@@ -1337,7 +1621,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           >
             <ChevronLeft className="h-4 w-4" strokeWidth={2.4} />
           </button>
-          <span className="flex items-center gap-2 px-1 text-sm font-extrabold capitalize text-wit-ink sm:text-base">
+          <span className="flex min-w-0 items-center gap-1.5 px-0.5 text-sm font-extrabold text-wit-ink sm:px-1 sm:text-base">
             <Calendar className="h-4 w-4 text-wit-blue" strokeWidth={2.3} />
             {monthLabel}
           </span>
@@ -1351,7 +1635,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           </button>
         </div>
         {streakWeeks > 0 ? (
-          <span className="flex items-center gap-1.5 rounded-full bg-[#fff7e8] px-3 py-2 text-xs font-bold text-orange-700">
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#fff7e8] px-3 py-2 text-xs font-bold text-orange-700">
             <Flame className="h-3.5 w-3.5" strokeWidth={2.1} />
             {t(
               `${streakWeeks} ${streakWeeks === 1 ? "semana seguida" : "semanas seguidas"}`,
@@ -1487,7 +1771,11 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                     key={cell.date}
                     type="button"
                     disabled={!entry}
-                    onClick={() => entry && setSelectedId(entry.id)}
+                    onClick={(event) => {
+                      if (!entry) return;
+                      detailTriggerRef.current = event.currentTarget;
+                      setSelectedId(entry.id);
+                    }}
                     className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all duration-200 sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${
                       isSelected
                         ? "border-2 border-wit-blue bg-white shadow-[0_6px_18px_rgba(0,71,255,0.14)]"
@@ -1546,7 +1834,15 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
             </div>
           </div>
 
-          {selected ? <EntryDetail entry={selected} /> : null}
+          {selected ? (
+            <EntryDetail
+              entry={selected}
+              onClose={() => {
+                setSelectedId(null);
+                requestAnimationFrame(() => detailTriggerRef.current?.focus());
+              }}
+            />
+          ) : null}
         </div>
       )}
 

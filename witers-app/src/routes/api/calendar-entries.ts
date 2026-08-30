@@ -13,6 +13,9 @@ type EntryRow = {
   slides_json: string | null;
   request_id: string | null;
   caption: string | null;
+  publication_status: string | null;
+  scheduled_for_utc: string | null;
+  publication_timezone: string | null;
 };
 
 type SlideDraft = { title?: string; brief: string };
@@ -94,10 +97,13 @@ export const Route = createFileRoute("/api/calendar-entries")({
 
         const rows = await db()
           .prepare(
-            `SELECT id, scheduled_date, format, title, brief, slides_json, request_id, caption
-             FROM calendar_entries
-             WHERE user_id = ?1 AND scheduled_date BETWEEN ?2 AND ?3
-             ORDER BY scheduled_date ASC`,
+            `SELECT e.id, e.scheduled_date, e.format, e.title, e.brief, e.slides_json,
+                    e.request_id, e.caption, s.status AS publication_status,
+                    s.scheduled_for_utc, s.timezone AS publication_timezone
+             FROM calendar_entries e
+             LEFT JOIN calendar_entry_schedules s ON s.entry_id = e.id
+             WHERE e.user_id = ?1 AND e.scheduled_date BETWEEN ?2 AND ?3
+             ORDER BY e.scheduled_date ASC`,
           )
           .bind(user.id, monthStart, monthEnd)
           .all<EntryRow>();
@@ -209,6 +215,9 @@ export const Route = createFileRoute("/api/calendar-entries")({
           deliveredImages: e.request_id ? (galleryById.get(e.request_id) ?? null) : null,
           deliveredVideoHref: e.request_id ? (videoHrefById.get(e.request_id) ?? null) : null,
           caption: e.caption,
+          publicationStatus: e.publication_status,
+          scheduledForUtc: e.scheduled_for_utc,
+          publicationTimezone: e.publication_timezone,
         }));
 
         return json({ ok: true, entries: withStatus });

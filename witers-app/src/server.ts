@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { processDueCalendarSchedules } from "./lib/calendar-schedule.server";
 import { processPendingVideoPublications } from "./lib/video-publication.server";
 
 type ServerEntry = {
@@ -55,8 +56,8 @@ export default {
   },
   async scheduled(_event: unknown, _env: unknown, ctx: ScheduledContext) {
     ctx.waitUntil(
-      processPendingVideoPublications().catch((error) =>
-        console.error("[video-publication] cron failed", error),
+      Promise.all([processDueCalendarSchedules(), processPendingVideoPublications()]).catch((error) =>
+        console.error("[calendar-publication] cron failed", error),
       ),
     );
   },

@@ -32,6 +32,10 @@ function parseSlides(json: string): SlideDraft[] | null {
 // so opening the same piece again doesn't call OpenAI a second time; the
 // client's "Regenerar" button just calls this same endpoint again.
 const schema = z.object({ entryId: z.string().uuid() });
+const editSchema = z.object({
+  entryId: z.string().uuid(),
+  caption: z.string().min(1).max(5000),
+});
 
 export const Route = createFileRoute("/api/calendar-entries-caption")({
   server: {
@@ -71,6 +75,22 @@ export const Route = createFileRoute("/api/calendar-entries-caption")({
           .run();
 
         return json({ ok: true, caption: result.caption });
+      },
+      PATCH: async ({ request }) => {
+        const user = await getSessionUser(request);
+        if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
+        const parsed = editSchema.safeParse(await request.json().catch(() => null));
+        if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
+        const result = await db()
+          .prepare(
+            `UPDATE calendar_entries SET caption = ?3
+             WHERE id = ?1 AND user_id = ?2`,
+          )
+          .bind(parsed.data.entryId, user.id, parsed.data.caption.trim())
+          .run();
+        return result.meta.changes
+          ? json({ ok: true, caption: parsed.data.caption.trim() })
+          : json({ ok: false, error: "no_encontrada" }, { status: 404 });
       },
     },
   },
