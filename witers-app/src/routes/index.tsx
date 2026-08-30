@@ -135,52 +135,48 @@ function Hero() {
   const { t } = useLanguage();
 
   return (
-    <section className="relative overflow-hidden pb-16 pt-32 md:pb-24 md:pt-40">
-      <div className="relative mx-auto max-w-3xl px-5 text-center md:px-[110px]">
-        <span className="wit-rise inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-white/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue backdrop-blur-sm">
-          {t("Branding · Marketing · IA", "Branding · Marketing · AI")}
-        </span>
-        <h1 className="wit-rise wit-rise-d1 mx-auto mt-7 max-w-2xl text-5xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-7xl">
-          {t("Crear tu contenido", "Creating content")}{" "}
-          <span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">
-            {t("nunca fue tan fácil", "has never been easier")}
-          </span>
-          .
-        </h1>
-        <p className="wit-rise wit-rise-d2 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-wit-gray">
-          {t(
-            "Estrategia, diseño y tecnología para marcas que quieren dejar huella. Únete a la comunidad y empieza a crear hoy.",
-            "Strategy, design, and technology for brands that want to leave a mark. Join the community and start creating today.",
-          )}
-        </p>
-        <div className="wit-rise wit-rise-d2 mt-9 flex flex-col items-center gap-5">
-          <Link
-            to={signedIn ? "/panel" : "/registro"}
-            onClick={() => trackCtaClick("Unirme ahora (hero)")}
-            className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-8 py-4 text-base font-bold uppercase tracking-[0.06em] text-white shadow-[0_18px_40px_rgba(0,71,255,0.38)] transition-all duration-200 hover:shadow-[0_22px_48px_rgba(0,71,255,0.48)] active:scale-[0.98]"
-          >
-            {t("Unirme ahora", "Join now")}
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1"
-            >
-              <path d="M3 13 13 3M13 3H6M13 3v7" />
-            </svg>
-          </Link>
-          <a href="/nuestra-historia" className="wit-navlink text-sm font-semibold text-wit-ink">
-            {t("Conocer la comunidad", "Meet the community")}
-          </a>
+    <section className="relative overflow-hidden pb-14 pt-28 md:pb-20 md:pt-36">
+      <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 md:grid-cols-[1.05fr_0.95fr] md:px-[72px] lg:px-[110px]">
+        <div className="text-center md:text-left">
+          <span className="wit-rise inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-white/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue backdrop-blur-sm">{t("Branding · Marketing · IA", "Branding · Marketing · AI")}</span>
+          <h1 className="wit-rise wit-rise-d1 mt-7 max-w-2xl text-5xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-6xl lg:text-7xl">
+            {t("Crear tu contenido", "Creating content")}{" "}<span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">{t("nunca fue tan fácil", "has never been easier")}</span>.
+          </h1>
+          <p className="wit-rise wit-rise-d2 mt-6 max-w-xl text-lg leading-relaxed text-wit-gray">
+            {t("Estrategia, diseño y tecnología para marcas que quieren dejar huella. Únete a la comunidad y empieza a crear hoy.", "Strategy, design, and technology for brands that want to leave a mark. Join the community and start creating today.")}
+          </p>
+          <div className="wit-rise wit-rise-d2 mt-9 flex flex-col items-center gap-5 md:items-start">
+            <Link to={signedIn ? "/panel" : "/registro"} onClick={() => trackCtaClick("Unirme ahora (hero)")} className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-8 py-4 text-base font-bold uppercase tracking-[0.06em] text-white shadow-[0_18px_40px_rgba(0,71,255,0.38)] transition-all duration-200 hover:shadow-[0_22px_48px_rgba(0,71,255,0.48)] active:scale-[0.98]">
+              {t("Unirme ahora", "Join now")}<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1"><path d="M3 13 13 3M13 3H6M13 3v7" /></svg>
+            </Link>
+            <a href="/nuestra-historia" className="wit-navlink text-sm font-semibold text-wit-ink">{t("Conocer la comunidad", "Meet the community")}</a>
+          </div>
         </div>
+        <HeroPhoneDemo />
       </div>
     </section>
   );
+}
+
+function HeroPhoneDemo() {
+  const { t } = useLanguage();
+  const steps = [
+    [t("01 · TU IDEA", "01 · YOUR IDEA"), t("Cuéntale a Wit lo que imaginas", "Tell Wit what you imagine"), "bg-wit-blue"],
+    [t("02 · CREANDO", "02 · CREATING"), t("Tu contenido cobra vida", "Your content comes to life"), "bg-wit-pink"],
+    [t("03 · LISTO", "03 · READY"), t("Revísalo y publícalo", "Review it and publish it"), "bg-emerald-500"],
+  ] as const;
+  return <div className="wit-hero-phone-stage wit-rise wit-rise-d2" aria-label={t("Así se crea contenido con WITERS", "How content is created with WITERS")}>
+    <div className="wit-hero-chip wit-hero-chip-idea"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-wit-blue text-sm text-white">✦</span>{t("Una idea", "An idea")}</div>
+    <div className="wit-hero-chip wit-hero-chip-publish"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-xs text-white">✓</span>{t("Listo para publicar", "Ready to publish")}</div>
+    <div className="wit-hero-phone"><div className="relative h-[480px] overflow-hidden rounded-[2.15rem] bg-[#f7f8fa] p-3 sm:h-[530px]">
+      <div className="absolute left-1/2 top-0 z-20 h-5 w-28 -translate-x-1/2 rounded-b-2xl bg-wit-ink" />
+      <div className="flex items-center justify-between px-1 pt-4"><div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-wit-blue"><span className="brightness-0 invert"><WMark size={14} /></span></span><span className="text-[10px] font-extrabold tracking-tight text-wit-ink">WITERS</span></div><span className="rounded-full bg-white px-2 py-1 text-[8px] font-bold text-wit-gray shadow-sm">{t("Tu espacio", "Your space")}</span></div>
+      <div className="mt-5 px-1"><p className="text-[11px] font-semibold text-wit-gray">{t("Hoy creamos", "Today we create")}</p><p className="mt-0.5 text-xl font-extrabold tracking-tight text-wit-ink">{t("Algo increíble.", "Something amazing.")}</p></div>
+      <div className="relative mt-4 h-[244px] overflow-hidden rounded-3xl bg-wit-ink p-4 shadow-[0_16px_35px_rgba(5,13,40,0.22)] sm:h-[280px]"><div className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-wit-pink/70 blur-2xl" /><div className="absolute -bottom-14 -left-12 h-36 w-36 rounded-full bg-wit-blue blur-2xl" />
+        {steps.map(([eyebrow, title, accent], index) => <div key={eyebrow} className={`wit-hero-phone-step wit-hero-phone-step-${index}`}><span className={`mb-4 block h-1.5 w-10 rounded-full ${accent}`} /><p className="text-[9px] font-bold tracking-[0.18em] text-white/60">{eyebrow}</p><p className="mt-3 max-w-[180px] text-2xl font-extrabold leading-[1.03] tracking-tight text-white">{title}</p><div className="mt-5 flex items-center gap-2 rounded-2xl bg-white/10 p-2.5 backdrop-blur"><span className={`h-8 w-8 rounded-xl ${accent}`} /><span className="h-2 flex-1 rounded-full bg-white/35" /></div></div>)}
+      </div><div className="absolute inset-x-3 bottom-3 flex items-center justify-between rounded-full bg-white/90 px-4 py-3 shadow-[0_8px_20px_rgba(5,13,40,0.12)] backdrop-blur"><span className="h-2 w-2 rounded-full bg-wit-blue" /><span className="h-2 w-2 rounded-full bg-wit-blue/20" /><span className="h-2 w-2 rounded-full bg-wit-blue/20" /><span className="text-[9px] font-extrabold text-wit-blue">{t("CREAR", "CREATE")}</span></div>
+    </div></div>
+  </div>;
 }
 
 /* ---------------- 1a. RESULTADOS REALES (imagen + reseña) ---------------- */

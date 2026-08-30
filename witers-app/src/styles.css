@@ -433,6 +433,20 @@
   animation-delay: 0.26s;
 }
 
+/* Animated story in the public landing hero: idea → creation → publishing. */
+.wit-hero-phone-stage { position: relative; display: flex; min-height: 540px; align-items: center; justify-content: center; }
+.wit-hero-phone { width: 278px; padding: 7px; border: 7px solid var(--color-wit-ink); border-radius: 2.6rem; background: var(--color-wit-ink); box-shadow: 0 36px 90px rgba(5,13,40,.34); animation: wit-hero-phone-float 6s ease-in-out infinite; }
+.wit-hero-chip { position: absolute; z-index: 2; display: flex; align-items: center; gap: .5rem; border: 1px solid rgba(255,255,255,.72); border-radius: 999px; background: rgba(255,255,255,.9); padding: .42rem .7rem .42rem .42rem; box-shadow: 0 16px 36px rgba(5,13,40,.14); color: var(--color-wit-ink); font-size: .72rem; font-weight: 800; backdrop-filter: blur(12px); }
+.wit-hero-chip-idea { top: 14%; left: 1%; animation: wit-hero-chip-drift 5s ease-in-out infinite; }
+.wit-hero-chip-publish { right: 0; bottom: 15%; animation: wit-hero-chip-drift 5s ease-in-out -2.5s infinite; }
+.wit-hero-phone-step { position: absolute; inset: 1rem; opacity: 0; animation: wit-hero-phone-step 9s ease-in-out infinite; }
+.wit-hero-phone-step-1 { animation-delay: 3s; }.wit-hero-phone-step-2 { animation-delay: 6s; }
+@keyframes wit-hero-phone-float { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-14px) rotate(2deg); } }
+@keyframes wit-hero-chip-drift { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-9px) rotate(3deg); } }
+@keyframes wit-hero-phone-step { 0%,7% { opacity: 0; transform: translateY(10px); } 13%,30% { opacity: 1; transform: translateY(0); } 36%,100% { opacity: 0; transform: translateY(-10px); } }
+@media (max-width: 767px) { .wit-hero-phone-stage { min-height: 485px; margin-top: -.5rem; }.wit-hero-phone { transform: scale(.9); }.wit-hero-chip-idea { left: 4%; }.wit-hero-chip-publish { right: 4%; } }
+@media (prefers-reduced-motion: reduce) { .wit-hero-phone, .wit-hero-chip, .wit-hero-phone-step { animation: none; }.wit-hero-phone-step-0 { opacity: 1; } }
+
 @keyframes wit-float {
   0%,
   100% {
