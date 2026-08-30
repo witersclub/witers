@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { bindings } from "../../lib/bindings.server";
 import { resolveCalendarEntryMedia } from "../../lib/calendar-entry-media.server";
 import {
   createFacebookReel,
@@ -132,6 +133,10 @@ export const Route = createFileRoute("/api/calendar-entries-publish")({
 
           const accessToken = await decryptToken(connection.access_token, connection.token_iv);
           if (media.format === "video") {
+            const directVideo =
+              platform === "facebook"
+                ? await loadFacebookVideoFromR2(media.items[0]?.r2Key ?? null)
+                : null;
             const started =
               platform === "instagram"
                 ? await createInstagramReel(
@@ -146,6 +151,7 @@ export const Route = createFileRoute("/api/calendar-entries-publish")({
                       accessToken,
                       publicMediaUrls[0],
                       media.caption,
+                      directVideo,
                     )
                   : { ok: false as const, error: "pagina_no_disponible" };
             if (started.ok) {
@@ -202,6 +208,32 @@ export const Route = createFileRoute("/api/calendar-entries-publish")({
     },
   },
 });
+
+async function loadFacebookVideoFromR2(
+  r2Key: string | null,
+): Promise<{ body: BodyInit; size: number } | null> {
+  if (!r2Key) {
+    console.info("[meta-publish] Facebook direct upload has no R2 key");
+    return null;
+  }
+  const { STORAGE } = bindings();
+  if (!STORAGE) {
+    console.info("[meta-publish] Facebook direct upload has no R2 binding");
+    return null;
+  }
+  try {
+    const object = await STORAGE.get(r2Key);
+    if (!object) {
+      console.info("[meta-publish] Facebook direct upload R2 object missing");
+      return null;
+    }
+    console.info("[meta-publish] Facebook direct upload R2 object ready", object.size);
+    return { body: object.body as unknown as BodyInit, size: object.size };
+  } catch {
+    console.info("[meta-publish] Facebook direct upload R2 read failed");
+    return null;
+  }
+}
 
 async function recordPublication(
   entryId: string,

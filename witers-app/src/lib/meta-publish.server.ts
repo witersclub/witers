@@ -22,6 +22,7 @@ type MetaErrorBody = {
   error?: { message?: string; error_user_msg?: string };
   message?: string;
 };
+type DirectVideo = { body: BodyInit; size: number };
 
 // Meta occasionally returns a plain-text or HTML error from rupload instead
 // of the usual Graph JSON. Keep a short, user-safe reason in D1 and log the
@@ -43,41 +44,31 @@ async function readMetaError(response: Response, fallback: string): Promise<stri
 
 // Facebook normally accepts a hosted URL, but can reject an otherwise valid
 // Cloudflare-served file while it tries to inspect it remotely (HTTP 422).
-// In that case, stream the exact same public file to Meta's upload session.
-// This avoids buffering the video in the Worker and keeps the fallback safe
-// for the short Reel files supported by Facebook.
+// In that case, stream the file directly from R2 to Meta's upload session.
+// This avoids a Worker fetching its own public URL and never buffers the
+// video in memory.
 async function uploadFacebookReelBinary(
   uploadUrl: string,
   accessToken: string,
-  videoUrl: string,
+  video: DirectVideo,
+  processingId: string,
 ): Promise<{ ok: true; response: Response } | { ok: false; error: string }> {
-  let source: Response;
-  try {
-    source = await fetch(videoUrl);
-  } catch {
-    return { ok: false, error: "archivo_video_no_accesible" };
-  }
-  if (!source.ok || !source.body) {
-    return { ok: false, error: `archivo_video_no_accesible (HTTP ${source.status})` };
-  }
-  const fileSize = source.headers.get("content-length");
-  if (!fileSize || !/^\d+$/.test(fileSize)) {
-    return { ok: false, error: "archivo_video_sin_tamano" };
-  }
-
+  console.info("[meta-publish] Facebook direct upload starting", processingId, video.size);
   try {
     const response = await fetch(uploadUrl, {
       method: "POST",
       headers: {
         Authorization: `OAuth ${accessToken}`,
         offset: "0",
-        file_size: fileSize,
+        file_size: String(video.size),
         "content-type": "application/octet-stream",
       },
-      body: source.body,
+      body: video.body,
     });
+    console.info("[meta-publish] Facebook direct upload completed", processingId, response.status);
     return { ok: true, response };
   } catch {
+    console.info("[meta-publish] Facebook direct upload timed out", processingId);
     return { ok: false, error: "carga_directa_tiempo_agotado" };
   }
 }
@@ -251,6 +242,7 @@ export async function createFacebookReel(
   accessToken: string,
   videoUrl: string,
   caption: string,
+  directVideo: DirectVideo | null,
 ): Promise<{ ok: true; processingId: string } | { ok: false; error: string }> {
   const start = await graphPost(FACEBOOK_GRAPH_BASE, `/${pageId}/video_reels`, {
     upload_phase: "start",
@@ -276,7 +268,11 @@ export async function createFacebookReel(
   }
   if (!upload.ok && upload.status === 422) {
     console.info("[meta-publish] Facebook rejected hosted video; retrying streamed upload", processingId);
-    const direct = await uploadFacebookReelBinary(uploadUrl, accessToken, videoUrl);
+    if (!directVideo) {
+      console.info("[meta-publish] Facebook direct upload unavailable in R2", processingId);
+      return { ok: false, error: "archivo_video_no_disponible_en_r2" };
+    }
+    const direct = await uploadFacebookReelBinary(uploadUrl, accessToken, directVideo, processingId);
     if (!direct.ok) return direct;
     upload = direct.response;
   }
