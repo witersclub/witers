@@ -1468,8 +1468,8 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           {/* Same grid at every size — only the density changes (smaller
               cells/text on a phone) instead of swapping to a separate
               agenda-list layout on mobile. */}
-          <div className="wit-glass rounded-3xl p-3 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:p-5">
-            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+          <div className="wit-glass rounded-3xl p-2.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:p-4">
+            <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
               {[
                 t("Lun", "Mon"),
                 t("Mar", "Tue"),
@@ -1481,13 +1481,13 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
               ].map((label) => (
                 <div
                   key={label}
-                  className="truncate pl-0.5 text-[8px] font-bold uppercase tracking-wider text-wit-gray sm:pl-1 sm:text-[11px]"
+                  className="truncate py-1 text-center text-[8px] font-bold uppercase tracking-wider text-wit-gray sm:text-[10px]"
                 >
                   {label}
                 </div>
               ))}
             </div>
-            <div className="mt-1 grid grid-cols-7 gap-1 sm:mt-1.5 sm:gap-2">
+            <div className="mt-1 grid grid-cols-7 gap-1 sm:mt-1.5 sm:gap-1.5">
               {grid.map((cell) => {
                 const entry = entryByDate.get(cell.date);
                 const Icon = entry ? FORMAT_ICON[entry.format] : null;
@@ -1500,20 +1500,25 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                     type="button"
                     disabled={!entry}
                     onClick={() => entry && setSelectedId(entry.id)}
-                    className={`relative flex min-h-[48px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-colors sm:min-h-[92px] sm:gap-1.5 sm:rounded-2xl sm:p-2 ${
+                    className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all duration-200 sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${
                       isSelected
                         ? "border-2 border-wit-blue bg-white shadow-[0_6px_18px_rgba(0,71,255,0.14)]"
                         : cell.inMonth
-                          ? "border-wit-ink/5 bg-white hover:border-wit-ink/15"
+                          ? entry && !hasThumb
+                            ? entry.status === "lista"
+                              ? "border-emerald-200/80 bg-emerald-50/70 hover:border-emerald-300"
+                              : entry.status === "en_diseno"
+                                ? "border-wit-blue/15 bg-wit-blue/[0.045] hover:border-wit-blue/35"
+                                : "border-wit-ink/7 bg-white hover:border-wit-ink/18"
+                            : "border-wit-ink/5 bg-white hover:border-wit-ink/15"
                           : "border-transparent bg-wit-mist/10"
                     } ${!entry ? "cursor-default" : "cursor-pointer"}`}
                   >
                     {hasThumb ? (
-                      <img
-                        src={entry!.thumbHref!}
-                        alt={entry!.title}
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
+                      <>
+                        <img src={entry!.thumbHref!} alt={entry!.title} className="absolute inset-0 h-full w-full object-cover" />
+                        <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-black/10" />
+                      </>
                     ) : null}
                     <span
                       className={`relative z-10 font-wit-mono text-[8px] sm:text-xs ${
@@ -1534,11 +1539,12 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                           <Icon className="h-2.5 w-2.5" strokeWidth={2.4} />
                         </span>
                       ) : (
-                        <span
-                          className={`relative z-10 mt-auto flex items-center gap-1 truncate rounded-md px-1 py-0.5 text-[9px] font-semibold sm:rounded-lg sm:px-1.5 sm:py-1 sm:text-[10px] ${statusMeta(entry.status, t).badgeClass}`}
-                        >
+                        <span className={`relative z-10 mt-auto flex flex-col items-start gap-0.5 overflow-hidden rounded-md px-1 py-0.5 text-[8px] font-semibold sm:rounded-lg sm:px-1.5 sm:py-1 ${statusMeta(entry.status, t).badgeClass}`}>
+                          <span className="flex items-center gap-1">
                           <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={2.4} />
-                          <span className="hidden truncate sm:inline">{entry.title}</span>
+                            <span className="hidden text-[8px] font-bold uppercase tracking-wide sm:inline">{formatLabel(entry.format, t)}</span>
+                          </span>
+                          <span className="hidden w-full truncate text-[9px] font-semibold leading-tight sm:inline">{entry.title}</span>
                         </span>
                       )
                     ) : isToday ? (
