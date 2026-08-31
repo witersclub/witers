@@ -494,6 +494,7 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
   const [editingCaption, setEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState(entry.caption ?? "");
   const [savingCaption, setSavingCaption] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<number | null>(null);
   const pointerRef = useRef<{ id: number; startY: number; lastY: number; lastAt: number } | null>(null);
@@ -571,12 +572,15 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
       if (event.key === "Escape" && !saving && !savingCaption) requestClose();
     };
     window.addEventListener("keydown", onKeyDown);
-    dialogRef.current?.focus();
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [onClose, saving, savingCaption, editing, editingCaption, captionDraft, captionText, editTitle, editBrief]);
+
+  useEffect(() => {
+    sheetRef.current?.focus();
+  }, []);
 
   useEffect(() => () => {
     if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
@@ -592,7 +596,7 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
 
   useEffect(() => {
     if (!isMobileSheet) return;
-    const height = dialogRef.current?.getBoundingClientRect().height || window.innerHeight;
+    const height = sheetRef.current?.getBoundingClientRect().height || window.innerHeight;
     setSheetOffset(height);
     const frame = window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => setSheetOffset(0));
@@ -750,7 +754,7 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
       onClose();
       return;
     }
-    const height = dialogRef.current?.getBoundingClientRect().height || window.innerHeight;
+    const height = sheetRef.current?.getBoundingClientRect().height || window.innerHeight;
     setClosing(true);
     draggingRef.current = false;
     setDragging(false);
@@ -804,7 +808,7 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
     pointerRef.current = null;
     if (!draggingRef.current) return;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
-    const height = dialogRef.current?.getBoundingClientRect().height || window.innerHeight;
+    const height = sheetRef.current?.getBoundingClientRect().height || window.innerHeight;
     draggingRef.current = false;
     setDragging(false);
     if (deltaY >= height * 0.25 || velocityY > 0.6) {
@@ -816,7 +820,7 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
 
   const publicationMeta = publicationStatusMeta(entry, t);
   const previewHref = entry.deliveredVideoHref ?? entry.deliveredImages?.[0] ?? null;
-  const sheetHeight = dialogRef.current?.getBoundingClientRect().height || (typeof window !== "undefined" ? window.innerHeight : 1000);
+  const sheetHeight = sheetRef.current?.getBoundingClientRect().height || (typeof window !== "undefined" ? window.innerHeight : 1000);
   const sheetProgress = isMobileSheet ? Math.min(1, Math.max(0, sheetOffset / sheetHeight)) : 0;
   const glassBlur = 20 - sheetProgress * 11;
   const backdropOpacity = isMobileSheet ? 0.15 * (1 - sheetProgress) : 0.55;
@@ -834,7 +838,7 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
       }}
     >
       <div
-        ref={dialogRef}
+        ref={sheetRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="calendar-entry-detail-title"
@@ -843,18 +847,22 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
         onPointerMove={onSheetPointerMove}
         onPointerUp={onSheetPointerEnd}
         onPointerCancel={onSheetPointerEnd}
-        className={`absolute inset-0 flex h-[100dvh] flex-col overflow-y-auto rounded-t-[28px] bg-white px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] outline-none motion-reduce:transition-none md:inset-x-4 md:top-[4vh] md:mx-auto md:h-[92dvh] md:max-w-3xl md:rounded-3xl md:px-7 md:pb-28 md:pt-6 md:shadow-[0_30px_80px_rgba(5,13,40,0.32)] ${(dragging || closing) ? "will-change-transform transition-none" : "transition-transform duration-[430ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:duration-0"}`}
-        style={isMobileSheet ? { transform: `translate3d(0, ${sheetOffset}px, 0)` } : undefined}
+        className={`absolute inset-0 isolate flex h-[100dvh] flex-col overflow-hidden rounded-t-[28px] bg-white/90 outline-none motion-reduce:transition-none md:inset-x-4 md:top-[4vh] md:mx-auto md:h-[92dvh] md:max-w-3xl md:rounded-3xl md:bg-white md:shadow-[0_30px_80px_rgba(5,13,40,0.32)] ${(dragging || closing) ? "will-change-transform transition-none" : "transition-transform duration-[430ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:duration-0"}`}
+        style={isMobileSheet ? {
+          transform: `translate3d(0, ${sheetOffset}px, 0)`,
+          backdropFilter: `blur(${12 - sheetProgress * 4}px) saturate(${120 - sheetProgress * 12}%)`,
+          WebkitBackdropFilter: `blur(${12 - sheetProgress * 4}px) saturate(${120 - sheetProgress * 12}%)`,
+        } : undefined}
       >
         <header
-          className="sticky top-0 z-10 -mx-5 flex items-center gap-3 border-b border-white/45 px-5 pb-3 pt-4 shadow-[0_8px_24px_rgba(5,13,40,0.04)] md:-mx-7 md:bg-white md:px-7 md:pt-0"
+          className="relative z-10 flex shrink-0 items-center gap-3 border-b border-white/55 px-5 pb-3 pt-[calc(1.25rem+env(safe-area-inset-top))] shadow-[0_8px_24px_rgba(5,13,40,0.04)] md:bg-white md:px-7 md:pb-3 md:pt-6"
           style={isMobileSheet ? {
-            backgroundColor: `rgba(255, 255, 255, ${0.72 - sheetProgress * 0.18})`,
+            backgroundColor: `rgba(255, 255, 255, ${0.86 - sheetProgress * 0.1})`,
             backdropFilter: `blur(${glassBlur}px) saturate(${150 - sheetProgress * 35}%)`,
             WebkitBackdropFilter: `blur(${glassBlur}px) saturate(${150 - sheetProgress * 35}%)`,
           } : undefined}
         >
-          <span aria-hidden="true" className="absolute left-1/2 top-1.5 h-1.5 w-10 -translate-x-1/2 rounded-full bg-wit-ink/20 md:hidden" />
+          <span aria-hidden="true" className="absolute left-1/2 top-[calc(env(safe-area-inset-top)+0.45rem)] h-1.5 w-10 -translate-x-1/2 rounded-full bg-wit-ink/20 md:hidden" />
           <button
             type="button"
             onClick={requestClose}
@@ -871,7 +879,11 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
           </div>
         </header>
 
-        <div className="pt-4">
+        <div
+          ref={dialogRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:px-7 md:pb-28"
+        >
+          <div className="pt-4">
 
       {entry.status === "lista" && entry.format === "video" && entry.deliveredVideoHref ? (
         <div className="mt-3 overflow-hidden rounded-2xl border border-wit-ink/5 bg-black">
