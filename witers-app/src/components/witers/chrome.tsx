@@ -15,7 +15,7 @@ import {
   WitersLogo,
 } from "./brand";
 
-export function SiteHeader() {
+export function SiteHeader({ landing = false }: { landing?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const me = useMe();
@@ -29,14 +29,27 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const links = [
-    { href: "/marca", label: t("Branding", "Branding") },
-    { href: "/redes", label: t("Redes", "Social") },
-    { href: "/pauta", label: t("Campañas de Meta", "Meta Campaigns") },
-    { href: "/nuestra-historia", label: t("Nuestra historia", "Our story") },
-    { href: "/nuestra-historia#valores", label: t("Comunidad", "Community") },
-    { href: "/#membresia", label: t("Membresía", "Membership") },
-  ];
+  const links = landing
+    ? [
+        { href: "#producto", label: t("Producto", "Product") },
+        { href: "#funciones", label: t("Funciones", "Features") },
+        { href: "#precio", label: t("Precio", "Pricing") },
+        { href: "#resultados", label: t("Resultados", "Results") },
+      ]
+    : [
+        { href: "/marca", label: t("Branding", "Branding") },
+        { href: "/redes", label: t("Redes", "Social") },
+        { href: "/pauta", label: t("Campañas de Meta", "Meta Campaigns") },
+        { href: "/nuestra-historia", label: t("Nuestra historia", "Our story") },
+        { href: "/nuestra-historia#valores", label: t("Comunidad", "Community") },
+        { href: "/#membresia", label: t("Membresía", "Membership") },
+      ];
+
+  const ctaLabel = signedIn
+    ? t("Mi panel", "My panel")
+    : landing
+      ? t("Empezar ahora", "Start now")
+      : t("Unirme a WITERS", "Join WITERS");
 
   return (
     <header
@@ -75,7 +88,7 @@ export function SiteHeader() {
               trackCtaClick(signedIn ? "Mi panel (header)" : "Unirme a WITERS (header)")
             }
           >
-            {signedIn ? t("Mi panel", "My panel") : t("Unirme a WITERS", "Join WITERS")}
+            {ctaLabel}
           </CtaPill>
           <LanguageToggle />
         </nav>
@@ -133,7 +146,7 @@ export function SiteHeader() {
                 )
               }
             >
-              {signedIn ? t("Mi panel", "My panel") : t("Unirme a WITERS", "Join WITERS")}
+              {ctaLabel}
             </CtaPill>
             <LanguageToggle className="self-start" align="left" />
           </div>

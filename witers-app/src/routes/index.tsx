@@ -1,6 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  BarChart3,
+  CalendarDays,
+  Check,
+  ChevronRight,
+  Image as ImageIcon,
+  Megaphone,
+  MonitorSmartphone,
+  Send,
+  Sparkles,
+} from "lucide-react";
 
 import { SiteFooter, SiteHeader } from "../components/witers/chrome";
 import { WMark } from "../components/witers/brand";
@@ -28,10 +39,10 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Comunidad de branding, marketing, inteligencia artificial y tecnología. Únete a WITERS y genera creatividades publicitarias con IA.",
+          "Planifica, crea y publica todo un mes de contenido desde un solo lugar con WITERS.",
       },
     ],
-    links: [{ rel: "canonical", href: "https://witers.example/" }],
+    links: [{ rel: "canonical", href: "https://witers.com/" }],
   }),
   component: Landing,
 });
@@ -39,15 +50,13 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div className="wit-page min-h-dvh overflow-x-clip">
-      <HeroVideoBackground />
-      <SiteHeader />
+      <SiteHeader landing />
       <Hero />
-      <Testimonios />
+      <HowItWorks />
+      <Capabilities />
+      <DevicesSection />
       <MarcasQueConfian />
-      <PruebaInteractiva />
-      <CampanasTeaser />
-      <PanelPreview />
-      <Membresia />
+      <SinglePlan />
       <Faq />
       <CtaFinal />
       <SiteFooter />
@@ -135,26 +144,45 @@ function Hero() {
   const { t } = useLanguage();
 
   return (
-    <section className="relative overflow-hidden pb-14 pt-28 md:pb-20 md:pt-36">
-      <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 md:grid-cols-[1.05fr_0.95fr] md:px-[72px] lg:px-[110px]">
-        <div className="text-center md:text-left">
-          <span className="wit-rise inline-flex items-center gap-2 rounded-full border border-wit-blue/25 bg-white/80 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-wit-blue backdrop-blur-sm">{t("Branding · Marketing · IA", "Branding · Marketing · AI")}</span>
-          <h1 className="wit-rise wit-rise-d1 mt-7 max-w-2xl text-5xl font-extrabold leading-[1.05] tracking-tighter text-wit-ink md:text-6xl lg:text-7xl">
-            {t("Crear tu contenido", "Creating content")}{" "}<span className="bg-[linear-gradient(135deg,#0047FF,#7d9aff)] bg-clip-text text-transparent">{t("nunca fue tan fácil", "has never been easier")}</span>.
+    <section id="producto" className="relative overflow-hidden bg-[#fbfcff] pb-16 pt-28 md:pb-28 md:pt-36">
+      <div aria-hidden="true" className="absolute -right-48 top-12 h-[34rem] w-[34rem] rounded-full bg-wit-mist/40 blur-3xl" />
+      <div className="relative mx-auto grid max-w-[1440px] items-center gap-12 px-5 md:px-10 lg:grid-cols-[0.78fr_1.22fr] lg:px-[7vw]">
+        <div className="max-w-xl text-center lg:text-left">
+          <span className="inline-flex rounded-full border border-wit-blue/15 bg-white px-3.5 py-2 text-[11px] font-extrabold uppercase tracking-[0.2em] text-wit-blue shadow-sm">{t("Todo en un solo lugar", "Everything in one place")}</span>
+          <h1 className="mt-6 text-[clamp(2.55rem,7vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.06em] text-wit-ink">
+            {t("Planifica, crea y publica", "Plan, create and publish")}<br />
+            {t("todo un mes de contenido.", "a whole month of content.")}<br />
+            <span className="wit-underline text-wit-blue">{t("En minutos.", "In minutes.")}</span>
           </h1>
-          <p className="wit-rise wit-rise-d2 mt-6 max-w-xl text-lg leading-relaxed text-wit-gray">
-            {t("Estrategia, diseño y tecnología para marcas que quieren dejar huella. Únete a la comunidad y empieza a crear hoy.", "Strategy, design, and technology for brands that want to leave a mark. Join the community and start creating today.")}
-          </p>
-          <div className="wit-rise wit-rise-d2 mt-9 flex flex-col items-center gap-5 md:items-start">
-            <Link to={signedIn ? "/panel" : "/registro"} onClick={() => trackCtaClick("Unirme ahora (hero)")} className="group inline-flex items-center gap-2.5 rounded-full bg-[linear-gradient(135deg,#2b57ff,#0047FF_55%,#1d2fa6)] px-8 py-4 text-base font-bold uppercase tracking-[0.06em] text-white shadow-[0_18px_40px_rgba(0,71,255,0.38)] transition-all duration-200 hover:shadow-[0_22px_48px_rgba(0,71,255,0.48)] active:scale-[0.98]">
-              {t("Unirme ahora", "Join now")}<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-200 group-hover:translate-x-1 group-hover:-translate-y-1"><path d="M3 13 13 3M13 3H6M13 3v7" /></svg>
+          <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-wit-gray sm:text-lg lg:mx-0">{t("Tu estrategia, tus piezas, tus redes y tu calendario trabajando juntos para hacer crecer tu marca.", "Your strategy, pieces, social networks and calendar working together to grow your brand.")}</p>
+          <div className="mt-8 flex flex-col items-center gap-4 lg:items-start">
+            <Link to={signedIn ? "/panel" : "/registro"} onClick={() => trackCtaClick("Empezar ahora (hero landing)")} className="wit-brand-gradient group inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-extrabold uppercase tracking-[0.08em] text-white shadow-[0_16px_35px_rgba(77,55,231,0.24)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]">
+              {t("Empezar ahora", "Start now")} <span aria-hidden="true" className="text-lg leading-none">↗</span>
             </Link>
-            <a href="/nuestra-historia" className="wit-navlink text-sm font-semibold text-wit-ink">{t("Conocer la comunidad", "Meet the community")}</a>
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm font-semibold text-wit-gray lg:justify-start">
+              <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-wit-blue" />{t("Todo incluido", "Everything included")}</span>
+              <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4 text-wit-blue" />{t("Cancela cuando quieras", "Cancel anytime")}</span>
+            </div>
           </div>
         </div>
-        <HeroPhoneDemo />
+        <ProductHeroMockup />
       </div>
     </section>
+  );
+}
+
+function ProductHeroMockup() {
+  const tiles = ["brand-example-fitzone.webp", "brand-example-mia.webp", "brand-example-alma.webp", "brand-example-lumina.webp", "brand-example-noa.webp"];
+  return (
+    <div className="relative mx-auto w-full max-w-[790px] pb-7 pt-2 lg:pt-8">
+      <div className="overflow-hidden rounded-[28px] border border-wit-ink/10 bg-white p-2 shadow-[0_28px_75px_rgba(5,13,40,0.14)] sm:p-3">
+        <div className="flex min-h-[335px] overflow-hidden rounded-[20px] bg-[#f7f8fa] sm:min-h-[430px]">
+          <aside className="hidden w-[112px] shrink-0 border-r border-wit-ink/5 bg-white p-3 sm:block"><div className="flex items-center gap-1.5 text-[9px] font-extrabold text-wit-ink"><WMark size={20} /> WITERS</div><div className="mt-8 space-y-3 text-[8px] font-bold text-wit-gray"><p className="rounded-lg bg-wit-blue/10 px-2 py-2 text-wit-blue">Inicio</p><p className="px-2">Mi marca</p><p className="px-2">Calendario</p><p className="px-2">Campañas</p></div></aside>
+          <div className="min-w-0 flex-1 p-3 sm:p-5"><div className="flex items-center justify-between gap-2"><div><p className="text-[9px] font-semibold text-wit-gray">Hola, Hildebrando</p><p className="mt-1 text-sm font-extrabold text-wit-ink sm:text-lg">Planificación</p></div><span className="wit-brand-gradient rounded-full px-3 py-2 text-[8px] font-bold text-white sm:px-4 sm:text-[10px]">+ Programar mes</span></div><div className="mt-4 flex flex-wrap items-center justify-between gap-2"><div className="flex gap-1.5"><span className="rounded-full border border-wit-ink/10 bg-white px-2 py-1 text-[7px] font-bold text-wit-gray sm:text-[9px]">◎ witersclub</span><span className="rounded-full border border-wit-ink/10 bg-white px-2 py-1 text-[7px] font-bold text-wit-gray sm:text-[9px]">f Witers</span></div><span className="text-[8px] font-extrabold text-wit-blue sm:text-[10px]">8 de 8 piezas · 100%</span></div><div className="mt-2 h-1 overflow-hidden rounded-full bg-wit-mist"><div className="wit-brand-gradient h-full w-[78%] rounded-full" /></div><div className="mt-4 rounded-2xl bg-white p-3 shadow-sm"><div className="flex items-center justify-between"><p className="text-[9px] font-extrabold text-wit-ink sm:text-[11px]">Agosto 2026</p><span className="text-[8px] font-bold text-wit-blue">Ver calendario →</span></div><div className="mt-3 grid grid-cols-7 gap-1 text-center text-[7px] font-bold text-wit-gray sm:gap-2 sm:text-[8px]">{["LUN","MAR","MIÉ","JUE","VIE","SÁB","DOM"].map((day) => <span key={day}>{day}</span>)}{Array.from({ length: 14 }, (_, index) => <div key={index} className="aspect-square min-w-0 overflow-hidden rounded-md bg-wit-ice p-1 text-left sm:rounded-lg"><span>{index + 18}</span>{index >= 7 && index < 12 ? <img src={`/assets/${tiles[index - 7]}`} alt="" className="mt-0.5 h-[67%] w-full rounded-sm object-cover" /> : null}</div>)}</div></div></div>
+        </div>
+      </div>
+      <div className="absolute -bottom-3 left-3 w-[142px] overflow-hidden rounded-[1.65rem] border-[5px] border-wit-ink bg-[#f7f8fa] p-2 shadow-[0_18px_38px_rgba(5,13,40,0.23)] sm:-bottom-8 sm:left-7 sm:w-[190px]"><div className="mx-auto h-3 w-14 rounded-b-lg bg-wit-ink" /><p className="mt-3 text-[8px] font-bold text-wit-gray">Tu contenido</p><p className="text-xs font-extrabold text-wit-ink">Calendario</p><div className="mt-3 grid grid-cols-4 gap-1">{Array.from({ length: 12 }, (_, i) => <span key={i} className={`aspect-square rounded-sm ${i % 3 === 0 ? "bg-wit-blue" : "bg-wit-mist"}`} />)}</div></div>
+    </div>
   );
 }
 
@@ -170,6 +198,36 @@ function HeroPhoneDemo() {
       <div className="absolute inset-x-3 bottom-3 flex items-center justify-between rounded-full bg-white/90 px-4 py-3 shadow-[0_8px_20px_rgba(5,13,40,0.12)] backdrop-blur"><span className="h-2 w-2 rounded-full bg-wit-blue" /><span className="h-2 w-2 rounded-full bg-wit-blue/20" /><span className="h-2 w-2 rounded-full bg-wit-blue/20" /><span className="text-[9px] font-extrabold text-wit-blue">{t("CALENDARIO", "CALENDAR")}</span></div>
     </div></div></div>
   </div>;
+}
+
+function SectionEyebrow({ children }: { children: ReactNode }) {
+  return <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-wit-blue">{children}</p>;
+}
+
+function HowItWorks() {
+  const steps = [
+    { icon: CalendarDays, title: "Planea", text: "Organiza tu mes y define la estrategia de tu marca." },
+    { icon: Sparkles, title: "Creamos", text: "Preparamos el contenido que necesitas respetando tu identidad." },
+    { icon: Send, title: "Programas", text: "Revisa, aprueba y deja listo tu contenido." },
+    { icon: BarChart3, title: "Publicamos", text: "Publicamos en tus redes conectadas y consultas resultados." },
+  ];
+  return <section id="funciones" className="bg-white py-20 md:py-28"><div className="mx-auto max-w-6xl px-5 md:px-10"><div className="text-center"><SectionEyebrow>Así funciona WITERS</SectionEyebrow><h2 className="mt-3 text-3xl font-extrabold tracking-[-0.04em] text-wit-ink md:text-5xl">De una idea a todo tu mes, en 4 pasos</h2></div><div className="relative mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{steps.map((step, index) => <article key={step.title} className="relative rounded-[24px] border border-wit-ink/7 bg-[#fbfcff] p-6 transition-transform duration-300 hover:-translate-y-1"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue"><step.icon className="h-5 w-5" /></span><span className="absolute right-5 top-6 font-wit-mono text-xs font-semibold text-wit-blue/45">0{index + 1}</span><h3 className="mt-5 text-lg font-extrabold uppercase tracking-wide text-wit-ink">{step.title}</h3><p className="mt-2 text-sm leading-relaxed text-wit-gray">{step.text}</p></article>)}</div></div></section>;
+}
+
+function Capabilities() {
+  const features = [
+    { icon: ImageIcon, title: "Contenido para tu marca", text: "Imágenes, reels, carruseles y copies manteniendo tu identidad." },
+    { icon: CalendarDays, title: "Planificación", text: "Organiza visualmente tu contenido y tu calendario mensual." },
+    { icon: Send, title: "Publicación automática", text: "Programa Instagram y Facebook desde WITERS." },
+    { icon: Megaphone, title: "Campañas", text: "Convierte tus mejores piezas en campañas de Meta Ads." },
+    { icon: BarChart3, title: "Reportes y resultados", text: "Consulta métricas y entiende qué está funcionando." },
+  ];
+  return <section className="bg-[#f7f8fa] py-20 md:py-28"><div className="mx-auto max-w-6xl px-5 md:px-10"><SectionEyebrow>Todo lo que puedes hacer</SectionEyebrow><h2 className="mt-3 max-w-lg text-3xl font-extrabold tracking-[-0.04em] text-wit-ink md:text-5xl">Todo tu contenido, conectado.</h2><div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><article className="rounded-[28px] bg-wit-navy p-7 text-white sm:col-span-2 lg:row-span-2"><ImageIcon className="h-7 w-7 text-[#9db4ff]" /><h3 className="mt-12 text-2xl font-extrabold">{features[0].title}</h3><p className="mt-3 max-w-sm text-base leading-relaxed text-white/65">{features[0].text}</p></article>{features.slice(1).map((feature) => <article key={feature.title} className="rounded-[24px] border border-wit-ink/7 bg-white p-6 transition-transform duration-300 hover:-translate-y-1"><feature.icon className="h-6 w-6 text-wit-blue" /><h3 className="mt-7 text-lg font-extrabold text-wit-ink">{feature.title}</h3><p className="mt-2 text-sm leading-relaxed text-wit-gray">{feature.text}</p></article>)}</div></div></section>;
+}
+
+function DevicesSection() {
+  const benefits = ["Aprueba y revisa piezas", "Consulta tu calendario", "Programa publicaciones", "Revisa tus campañas y resultados"];
+  return <section className="overflow-hidden bg-white py-20 md:py-28"><div className="mx-auto grid max-w-6xl items-center gap-12 px-5 md:px-10 lg:grid-cols-[1fr_1.05fr]"><div className="order-2 lg:order-1"><SectionEyebrow>Experiencia desktop + móvil</SectionEyebrow><h2 className="mt-3 text-3xl font-extrabold tracking-[-0.04em] text-wit-ink md:text-5xl">Tu contenido, donde estés.</h2><p className="mt-5 max-w-md text-lg leading-relaxed text-wit-gray">Revisa y administra todo desde tu teléfono.</p><ul className="mt-7 space-y-3">{benefits.map((benefit) => <li key={benefit} className="flex items-center gap-3 text-sm font-semibold text-wit-ink"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-wit-blue/10"><Check className="h-3.5 w-3.5 text-wit-blue" /></span>{benefit}</li>)}</ul></div><div className="order-1 relative mx-auto w-full max-w-xl lg:order-2"><div className="rounded-[28px] border border-wit-ink/10 bg-[#f7f8fa] p-4 shadow-[0_22px_55px_rgba(5,13,40,0.1)]"><div className="flex items-center gap-1.5 border-b border-wit-ink/5 pb-3"><span className="h-2 w-2 rounded-full bg-wit-pink" /><span className="h-2 w-2 rounded-full bg-amber-300" /><span className="h-2 w-2 rounded-full bg-emerald-400" /></div><div className="mt-4 grid grid-cols-[0.32fr_1fr] gap-3"><div className="rounded-xl bg-white p-3 text-[8px] font-bold text-wit-gray"><WMark size={18} /><p className="mt-5 rounded bg-wit-blue/10 p-2 text-wit-blue">Inicio</p><p className="mt-3">Calendario</p><p className="mt-3">Campañas</p></div><div className="rounded-xl bg-white p-4"><p className="text-sm font-extrabold text-wit-ink">Tu calendario</p><div className="mt-3 grid grid-cols-7 gap-1.5">{Array.from({ length: 28 }, (_, i) => <span key={i} className={`aspect-square rounded-sm ${i % 6 === 0 ? "wit-brand-gradient" : "bg-wit-mist/55"}`} />)}</div><div className="mt-4 grid grid-cols-3 gap-2"><span className="h-12 rounded-lg bg-wit-mist/65" /><span className="h-12 rounded-lg bg-wit-blue/10" /><span className="h-12 rounded-lg bg-wit-pink/10" /></div></div></div></div><div className="absolute -bottom-9 -left-2 w-[150px] rounded-[28px] border-[5px] border-wit-ink bg-white p-3 shadow-[0_20px_42px_rgba(5,13,40,0.2)] sm:-left-8 sm:w-[180px]"><MonitorSmartphone className="h-5 w-5 text-wit-blue" /><p className="mt-5 text-xs font-extrabold text-wit-ink">Calendario</p><div className="mt-3 grid grid-cols-4 gap-1">{Array.from({ length: 12 }, (_, i) => <span key={i} className={`aspect-square rounded-sm ${i % 4 === 0 ? "bg-wit-pink" : "bg-wit-mist"}`} />)}</div></div></div></div></section>;
 }
 
 /* ---------------- 1a. RESULTADOS REALES (imagen + reseña) ---------------- */
@@ -348,7 +406,7 @@ function MarcasQueConfian() {
   const slots = buildTickerSlots(list, Math.min(3, list.length));
 
   return (
-    <section className="relative bg-white py-16 md:py-20">
+    <section id="resultados" className="relative bg-white py-20 md:py-24">
       <div className="px-5 md:px-[110px]">
         <p className="text-center text-base text-wit-gray">
           {t("Marcas que ya confían en", "Brands that already trust")}{" "}
@@ -530,15 +588,22 @@ function PruebaInteractiva() {
 
 /* ---------------- 1c. CTA FINAL ---------------- */
 
+function SinglePlan() {
+  const me = useMe();
+  const signedIn = Boolean(me.data?.ok);
+  const benefits = ["Creación de contenido para tu marca", "Calendario y planificación", "Programación de contenido", "Publicación en redes conectadas", "Gestión de marca y campañas", "Reportes y analítica"];
+  return <section id="precio" className="bg-[#f7f8fa] py-20 md:py-28"><div className="mx-auto max-w-5xl px-5 text-center md:px-10"><SectionEyebrow>Todo WITERS. Un solo plan.</SectionEyebrow><h2 className="mx-auto mt-3 max-w-2xl text-3xl font-extrabold tracking-[-0.04em] text-wit-ink md:text-5xl">Todo lo que necesitas para llevar el contenido de tu marca.</h2><article className="relative mx-auto mt-10 max-w-3xl overflow-hidden rounded-[32px] bg-wit-navy px-6 py-8 text-left shadow-[0_30px_80px_rgba(5,13,40,0.2)] sm:px-10 sm:py-11"><div aria-hidden="true" className="absolute -right-20 -top-16 h-64 w-64 rounded-full bg-wit-blue/30 blur-3xl" /><div className="relative grid gap-8 md:grid-cols-[1fr_auto] md:items-end"><div><p className="text-sm font-extrabold uppercase tracking-[0.18em] text-[#a9bbff]">WITERS completo</p><p className="mt-5 text-4xl font-extrabold tracking-[-0.05em] text-white sm:text-5xl">$5,999.90 <span className="text-lg font-semibold text-white/60">MXN / mes</span></p><p className="mt-3 text-base text-white/65">Todo incluido.</p></div><Link to={signedIn ? "/panel" : "/registro"} onClick={() => trackCtaClick("Empezar con WITERS (precio)")} className="wit-brand-gradient inline-flex items-center justify-center gap-2 rounded-full px-6 py-4 text-sm font-extrabold uppercase tracking-[0.06em] text-white transition-transform hover:-translate-y-0.5 active:scale-[0.98]">Empezar con WITERS <ChevronRight className="h-4 w-4" /></Link></div><ul className="relative mt-9 grid gap-3 border-t border-white/10 pt-7 sm:grid-cols-2">{benefits.map((benefit) => <li key={benefit} className="flex items-center gap-2.5 text-sm font-medium text-white/85"><Check className="h-4 w-4 shrink-0 text-[#a9bbff]" />{benefit}</li>)}</ul><p className="relative mt-7 text-sm text-white/55">Cancela cuando quieras.</p></article></div></section>;
+}
+
 function CtaFinal() {
   const me = useMe();
   const signedIn = Boolean(me.data?.ok);
   const { t } = useLanguage();
   return (
-    <section className="relative bg-white py-16 md:py-20">
-      <div className="flex flex-col items-start gap-8 border-t border-wit-ink/10 px-5 pt-14 md:flex-row md:items-center md:justify-between md:px-[110px]">
-        <h2 className="text-2xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
-          {t("Tu marca tiene algo único.", "Your brand has something unique.")}
+    <section className="relative overflow-hidden bg-white py-16 md:py-24">
+      <div className="mx-5 flex flex-col items-start gap-8 rounded-[32px] bg-wit-navy px-7 py-10 md:mx-[7vw] md:flex-row md:items-center md:justify-between md:px-12 md:py-14">
+        <h2 className="text-3xl font-extrabold tracking-[-0.05em] text-white md:text-5xl">
+          {t("Tu próximo mes de contenido", "Your next month of content")}
           <br />
           {t("Hagamos que el mundo", "Let's make the world")}{" "}
           <span className="italic text-wit-blue">{t("la vea", "see it")}</span>.
@@ -862,18 +927,35 @@ function buildFaqsEn(): FaqEntry[] {
 function Faq() {
   const { lang } = useLanguage();
   const [openIdx, setOpenIdx] = useState<number | null>(0);
-  const faqs = lang === "en" ? buildFaqsEn() : buildFaqsEs();
+  const faqs: FaqEntry[] = lang === "en"
+    ? [
+        { q: "Can I try WITERS before paying?", a: "Create your account to get to know the platform and its onboarding flow. Membership activation and its conditions are shown before checkout." },
+        { q: "Which social networks can I connect?", a: "WITERS currently supports the connected Instagram and Facebook accounts available in your panel." },
+        { q: "How does scheduling work?", a: "You choose eligible planned pieces and their publishing time. WITERS stores the schedule and publishes through the connected social account." },
+        { q: "What content can I create?", a: "The platform supports image, video, carousel and copy requests, according to your active membership and the availability shown in your panel." },
+        { q: "Can I cancel whenever I want?", a: "You can review the cancellation terms before subscribing and from your account. Cancellation applies according to the terms of the active membership." },
+        { q: "How do campaigns work?", a: "Campaign tools let you work with Meta Ads from WITERS and review the associated results in your panel." },
+      ]
+    : [
+        { q: "¿Puedo probar WITERS antes de pagar?", a: "Puedes crear tu cuenta para conocer la plataforma y su flujo de bienvenida. La activación de la membresía y sus condiciones se muestran antes de pagar." },
+        { q: "¿Qué redes sociales puedo conectar?", a: "WITERS admite actualmente las cuentas conectadas de Instagram y Facebook que estén disponibles en tu panel." },
+        { q: "¿Cómo funciona la programación?", a: "Eliges las piezas planeadas que son aptas para publicar y su horario. WITERS guarda la programación y publica mediante la cuenta social conectada." },
+        { q: "¿Qué contenido puedo crear?", a: "La plataforma admite solicitudes de imagen, video, carrusel y copy, de acuerdo con tu membresía activa y la disponibilidad mostrada en tu panel." },
+        { q: "¿Puedo cancelar cuando quiera?", a: "Puedes revisar las condiciones de cancelación antes de suscribirte y desde tu cuenta. La cancelación se aplica conforme a los términos de la membresía activa." },
+        { q: "¿Cómo funcionan las campañas?", a: "Las herramientas de campañas permiten trabajar con Meta Ads desde WITERS y revisar los resultados asociados en tu panel." },
+      ];
   return (
     <section className="relative bg-white py-20 md:py-24">
       <div className="mx-auto max-w-3xl px-5">
-        <h2 className="text-center text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
+        <SectionEyebrow>Preguntas frecuentes</SectionEyebrow>
+        <h2 className="mt-3 text-center text-3xl font-extrabold tracking-tighter text-wit-ink md:text-4xl">
           {lang === "en" ? (
             <>
-              Frequently asked <span className="wit-underline text-wit-blue">questions</span>
+              We answer your <span className="wit-underline text-wit-blue">questions</span>
             </>
           ) : (
             <>
-              Preguntas <span className="wit-underline text-wit-blue">frecuentes</span>
+              Resolvemos tus <span className="wit-underline text-wit-blue">dudas</span>
             </>
           )}
         </h2>
