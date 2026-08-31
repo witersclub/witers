@@ -1343,10 +1343,11 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
           type="button"
           onClick={() => disconnect(platform)}
           title={t(`Desconectar ${label}`, `Disconnect ${label}`)}
-          className="flex items-center gap-1.5 rounded-full border border-wit-blue/25 bg-wit-blue/10 px-3 py-1.5 text-xs font-bold text-wit-blue"
+          className="flex h-11 items-center gap-2 rounded-full border border-wit-ink/10 bg-white px-3 text-xs font-bold text-wit-ink shadow-[0_2px_8px_rgba(5,13,40,0.03)]"
         >
-          <PillIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
+          <PillIcon className={platform === "instagram" ? "h-4 w-4 text-wit-pink" : "h-4 w-4 text-[#1877f2]"} strokeWidth={2.2} />
           {connection.name ?? label}
+          <ChevronDown className="h-3.5 w-3.5 text-wit-gray" strokeWidth={2.2} />
         </button>
       );
     }
@@ -1357,7 +1358,7 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
     return (
       <a
         href={connectHref}
-        className="flex items-center gap-1.5 rounded-full border border-wit-ink/12 bg-white px-3 py-1.5 text-xs font-bold text-wit-gray hover:border-wit-ink/25 hover:text-wit-ink"
+        className="flex h-11 items-center gap-2 rounded-full border border-wit-ink/12 bg-white px-3 text-xs font-bold text-wit-gray hover:border-wit-ink/25 hover:text-wit-ink"
       >
         <PillIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
         {t(`Conectar ${label}`, `Connect ${label}`)}
@@ -1656,6 +1657,124 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
 
 /* ---------- main panel ---------- */
 
+type MonthlyScheduleItem = { entry: CalendarEntry; at: Date; platforms: SocialPlatform[] };
+
+function buildMonthlySlots(year: number, month: number, weekdays: number[], times: string[]): Date[] {
+  const slots: Date[] = [];
+  const now = new Date();
+  const last = new Date(year, month, 0).getDate();
+  for (let day = 1; day <= last; day += 1) {
+    const date = new Date(year, month - 1, day);
+    if (!weekdays.includes(date.getDay())) continue;
+    for (const time of times) {
+      const [hours, minutes] = time.split(":").map(Number);
+      const slot = new Date(year, month - 1, day, hours, minutes, 0, 0);
+      if (slot > now) slots.push(slot);
+    }
+  }
+  return slots.sort((a, b) => a.getTime() - b.getTime());
+}
+
+function MonthlyProgrammingSheet({
+  entries,
+  year,
+  month,
+  monthLabel,
+  scheduledCount,
+  onClose,
+}: {
+  entries: CalendarEntry[];
+  year: number;
+  month: number;
+  monthLabel: string;
+  scheduledCount: number;
+  onClose: () => void;
+}) {
+  const { t } = useLanguage();
+  const qc = useQueryClient();
+  const publishable = entries.filter((entry) => entry.status === "lista" && entry.publicationStatus !== "scheduled");
+  const [step, setStep] = useState<0 | 1 | 2 | 3 | 4>(0);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(publishable.map((entry) => entry.id)));
+  const [weekdays, setWeekdays] = useState<number[]>([1, 3, 5]);
+  const [times, setTimes] = useState<string[]>(["10:00"]);
+  const [platforms, setPlatforms] = useState<Set<SocialPlatform>>(new Set(["instagram", "facebook"]));
+  const [plans, setPlans] = useState<MonthlyScheduleItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState<{ ok: number; failed: MonthlyScheduleItem[] } | null>(null);
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const { data: connections = EMPTY_CONNECTIONS } = useQuery({ queryKey: ["social-connections"], queryFn: fetchConnections });
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !saving) onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose, saving]);
+
+  function toggleSelected(id: string) {
+    setSelected((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function continueToPreview() {
+    const chosen = publishable.filter((entry) => selected.has(entry.id));
+    const activePlatforms = (["instagram", "facebook"] as SocialPlatform[]).filter((platform) => platforms.has(platform) && connections[platform]);
+    const slots = buildMonthlySlots(year, month, weekdays, times);
+    if (!chosen.length) return setError(t("Selecciona al menos una pieza.", "Select at least one piece."));
+    if (!activePlatforms.length) return setError(t("Selecciona una red conectada.", "Select a connected network."));
+    if (slots.length < chosen.length) return setError(t(`Seleccionaste ${slots.length} espacios para ${chosen.length} publicaciones. Agrega más días u horarios.`, `You selected ${slots.length} slots for ${chosen.length} posts. Add more days or times.`));
+    setError(null);
+    setPlans(chosen.map((entry, index) => ({ entry, at: slots[index], platforms: activePlatforms })));
+    setStep(3);
+  }
+  async function confirm() {
+    if (saving) return;
+    setSaving(true);
+    const failed: MonthlyScheduleItem[] = [];
+    let ok = 0;
+    for (const plan of plans) {
+      try {
+        const response = await fetch("/api/calendar-entries-schedule", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ entryId: plan.entry.id, scheduledForUtc: plan.at.toISOString(), timezone, platforms: plan.platforms }),
+        });
+        const data = (await response.json()) as { ok: boolean };
+        if (!response.ok || !data.ok) failed.push(plan); else ok += 1;
+      } catch { failed.push(plan); }
+    }
+    await qc.invalidateQueries({ queryKey: ["calendar-entries"] });
+    setResult({ ok, failed });
+    setSaving(false);
+    setStep(4);
+  }
+  const stepLabel = ["", t("Selecciona el contenido", "Select content"), t("Elige días y horarios", "Choose days and times"), t("Vista previa", "Preview")];
+  return createPortal(
+    <div className="fixed inset-0 z-[80] bg-wit-ink/15 backdrop-blur-[2px]" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section role="dialog" aria-modal="true" aria-label={t("Programa tu contenido del mes", "Schedule your month's content")} className="absolute inset-x-0 bottom-0 flex max-h-[94dvh] flex-col rounded-t-[30px] bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-14px_40px_rgba(5,13,40,0.14)] md:inset-x-4 md:top-[5vh] md:mx-auto md:max-w-2xl md:rounded-3xl md:pb-6">
+        <span aria-hidden="true" className="mx-auto h-1.5 w-10 rounded-full bg-wit-ink/20 md:hidden" />
+        <header className="mt-3 flex items-center justify-between gap-3"><div>{step > 0 && step < 4 ? <p className="text-xs font-bold text-wit-blue">1&nbsp;&nbsp;2&nbsp;&nbsp;3</p> : null}<h2 className="text-lg font-extrabold text-wit-ink">{step === 0 ? t("Programa tu contenido del mes", "Schedule your month's content") : step === 4 ? t("¡Todo listo! 🎉", "All set! 🎉") : stepLabel[step]}</h2></div><button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist" aria-label={t("Cerrar", "Close")}><X className="h-5 w-5" /></button></header>
+        <div className="min-h-0 flex-1 overflow-y-auto pb-4 pt-5">
+          {step === 0 ? <><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-wit-pink/10 text-wit-pink"><CalendarClock className="h-8 w-8" /></div><p className="mt-4 text-center text-sm leading-relaxed text-wit-gray">{t("Organiza todas tus publicaciones del mes en minutos y nosotros nos encargamos del resto.", "Organize all of your month's posts in minutes and we'll handle the rest.")}</p><div className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-wit-mist/35 p-4 text-center"><b className="block text-xl text-wit-ink">{scheduledCount}</b><span className="text-xs text-wit-gray">{t("Ya programadas", "Already scheduled")}</span></div><div className="rounded-2xl bg-wit-pink/8 p-4 text-center"><b className="block text-xl text-wit-ink">{publishable.length}</b><span className="text-xs text-wit-gray">{t("Pendientes", "Pending")}</span></div></div></> : null}
+          {step === 1 ? <div className="space-y-2"><label className="flex items-center justify-between rounded-xl bg-wit-mist/30 px-3 py-3 text-sm font-bold text-wit-ink"><span>{t(`Seleccionar todo (${publishable.length})`, `Select all (${publishable.length})`)}</span><input type="checkbox" checked={selected.size === publishable.length} onChange={(event) => setSelected(event.target.checked ? new Set(publishable.map((item) => item.id)) : new Set())} /></label>{publishable.map((entry) => { const Icon = FORMAT_ICON[entry.format]; return <label key={entry.id} className="flex min-h-16 items-center gap-3 rounded-2xl border border-wit-ink/7 px-3"><span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-wit-mist/40">{entry.thumbHref ? <img src={entry.thumbHref} alt="" className="h-full w-full object-cover" /> : <Icon className="h-5 w-5 text-wit-blue" />}</span><span className="min-w-0 flex-1"><b className="block truncate text-sm text-wit-ink">{entry.title}</b><span className="text-xs text-wit-gray">{formatLabel(entry.format, t)}</span></span><input type="checkbox" checked={selected.has(entry.id)} onChange={() => toggleSelected(entry.id)} /></label>; })}</div> : null}
+          {step === 2 ? <div><p className="text-sm font-bold text-wit-ink">{t("Días de publicación", "Publishing days")}</p><div className="mt-3 grid grid-cols-7 gap-1">{[[1,"Lun"],[2,"Mar"],[3,"Mié"],[4,"Jue"],[5,"Vie"],[6,"Sáb"],[0,"Dom"]].map(([value,label]) => <button key={String(value)} type="button" onClick={() => setWeekdays((current) => current.includes(Number(value)) ? current.filter((day) => day !== Number(value)) : [...current, Number(value)])} className={`min-h-11 rounded-xl text-xs font-bold ${weekdays.includes(Number(value)) ? "wit-brand-gradient text-white" : "bg-wit-mist/40 text-wit-gray"}`}>{label}</button>)}</div><p className="mt-6 text-sm font-bold text-wit-ink">{t("Horarios de publicación", "Publishing times")}</p><div className="mt-3 flex flex-wrap gap-2">{times.map((time, index) => <label key={`${time}-${index}`} className="rounded-xl border border-wit-blue/20 bg-wit-blue/5 px-3 py-2 text-sm font-bold text-wit-blue"><input type="time" value={time} onChange={(event) => setTimes((current) => current.map((item, i) => i === index ? event.target.value : item))} className="bg-transparent" /></label>)}<button type="button" onClick={() => setTimes((current) => [...current, "14:00"])} className="rounded-xl border border-dashed border-wit-ink/20 px-3 py-2 text-sm font-bold text-wit-gray">+ {t("Agregar horario", "Add time")}</button></div><p className="mt-6 text-sm font-bold text-wit-ink">{t("Redes sociales", "Social networks")}</p><div className="mt-2 flex flex-wrap gap-2">{(["instagram", "facebook"] as SocialPlatform[]).map((platform) => <label key={platform} className={`rounded-full border px-3 py-2 text-xs font-bold ${connections[platform] ? "border-wit-ink/10 text-wit-ink" : "opacity-40"}`}><input type="checkbox" disabled={!connections[platform]} checked={platforms.has(platform)} onChange={() => setPlatforms((current) => { const next = new Set(current); if (next.has(platform)) next.delete(platform); else next.add(platform); return next; })} /> {platform === "instagram" ? "Instagram" : "Facebook"} · {connections[platform]?.name ?? t("Sin conectar", "Not connected")}</label>)}</div></div> : null}
+          {step === 3 ? <div className="space-y-2">{plans.slice(0, 40).map((plan) => <div key={plan.entry.id} className="flex items-center gap-3 rounded-xl bg-wit-mist/25 p-3"><span className="w-24 shrink-0 text-xs font-bold text-wit-blue">{plan.at.toLocaleDateString(t("es-MX", "en-US"), { weekday: "short", day: "numeric", month: "short" })}<br />{plan.at.toLocaleTimeString(t("es-MX", "en-US"), { hour: "2-digit", minute: "2-digit" })}</span><span className="min-w-0 flex-1 truncate text-sm font-semibold text-wit-ink">{plan.entry.title}</span><span className="text-xs text-wit-gray">{plan.platforms.includes("instagram") ? "◎" : ""} {plan.platforms.includes("facebook") ? "f" : ""}</span></div>)}</div> : null}
+          {step === 4 && result ? <div className="text-center"><p className="mt-8 text-sm text-wit-gray">{result.failed.length ? t(`${result.ok} piezas programadas; ${result.failed.length} necesitan atención.`, `${result.ok} pieces scheduled; ${result.failed.length} need attention.`) : t(`Has programado ${result.ok} piezas para ${monthLabel}.`, `You scheduled ${result.ok} pieces for ${monthLabel}.`)}</p><div className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-emerald-50 p-4"><b className="block text-xl text-emerald-700">{result.ok}</b><span className="text-xs text-emerald-700">{t("Programadas", "Scheduled")}</span></div><div className="rounded-2xl bg-wit-mist/35 p-4"><b className="block text-xl text-wit-ink">{plans.length ? `${plans[0]?.at.getDate()}–${plans.at(-1)?.at.getDate()}` : "—"}</b><span className="text-xs text-wit-gray">{t("Fechas", "Dates")}</span></div></div></div> : null}
+          {error ? <p className="mt-4 text-sm font-semibold text-red-600">{error}</p> : null}
+        </div>
+        <footer className="pt-2">{step === 0 ? <button type="button" onClick={() => setStep(1)} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Comenzar programación", "Start scheduling")}</button> : step === 1 ? <button type="button" onClick={() => setStep(2)} disabled={!selected.size} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white disabled:opacity-50">{t("Continuar", "Continue")}</button> : step === 2 ? <button type="button" onClick={continueToPreview} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Continuar", "Continue")}</button> : step === 3 ? <button type="button" onClick={confirm} disabled={saving} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white disabled:opacity-50">{saving ? t("Programando contenido...", "Scheduling content...") : t("Confirmar programación", "Confirm scheduling")}</button> : <button type="button" onClick={onClose} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Ver calendario", "View calendar")}</button>}</footer>
+      </section>
+    </div>, document.body);
+}
+
 export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
   const { t } = useLanguage();
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -1664,6 +1783,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [confirmingReplan, setConfirmingReplan] = useState(false);
   const [replanning, setReplanning] = useState(false);
+  const [monthlyProgrammingOpen, setMonthlyProgrammingOpen] = useState(false);
   const qc = useQueryClient();
 
   const base = new Date();
@@ -1705,7 +1825,17 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
   const selected = entries.find((e) => e.id === selectedId) ?? null;
   const requestedCount = entries.filter((e) => e.status !== "por_planear").length;
   const pendingCount = entries.length - requestedCount;
-  const progressPct = entries.length > 0 ? Math.round((requestedCount / entries.length) * 100) : 0;
+  const publishableEntries = entries.filter((entry) => entry.status === "lista");
+  const monthlyScheduledCount = publishableEntries.filter((entry) =>
+    entry.publicationStatus === "scheduled" ||
+    entry.publicationStatus === "publishing" ||
+    entry.publicationStatus === "published" ||
+    entry.publicationStatus === "partial",
+  ).length;
+  const monthlyPendingCount = publishableEntries.length - monthlyScheduledCount;
+  const monthlyProgressPct = publishableEntries.length
+    ? Math.round((monthlyScheduledCount / publishableEntries.length) * 100)
+    : 0;
   const grid = buildMonthGrid(year, month);
 
   async function replan() {
@@ -1782,19 +1912,19 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           {entries.length > 0 ? (
             <p className="shrink-0 text-xs font-bold text-wit-gray">
               <span className="text-wit-ink">
-                {requestedCount} {t("de", "of")} {entries.length}{" "}
+                {monthlyScheduledCount} {t("de", "of")} {publishableEntries.length}{" "}
                 {t("piezas", "pieces")}
               </span>
               <span className="text-wit-gray"> · </span>
-              <span className="text-wit-blue">{progressPct}%</span>
+              <span className="text-wit-blue">{monthlyProgressPct}%</span>
             </p>
           ) : null}
         </div>
         {entries.length > 0 ? (
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-wit-mist/60">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-wit-blue via-[#775cff] to-wit-pink"
-              style={{ width: `${progressPct}%` }}
+              className="wit-brand-gradient h-full rounded-full"
+              style={{ width: `${monthlyProgressPct}%` }}
             />
           </div>
         ) : null}
@@ -1978,6 +2108,19 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
         </div>
       )}
 
+      {entries.length > 0 ? (
+        <section className="wit-brand-gradient mt-6 rounded-3xl p-5 text-white shadow-[0_12px_30px_rgba(122,57,232,0.18)]">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2"><CalendarClock className="h-5 w-5" /><h2 className="text-lg font-extrabold">{monthlyScheduledCount === 0 ? t("Programa tu mes", "Schedule your month") : monthlyPendingCount === 0 ? t(`${monthLabel} está programado ✓`, `${monthLabel} is scheduled ✓`) : t("Tu mes está en marcha", "Your month is underway")}</h2></div>
+              <p className="mt-2 max-w-[18rem] text-sm leading-relaxed text-white/85">{monthlyPendingCount === 0 ? t(`${monthlyScheduledCount} piezas listas`, `${monthlyScheduledCount} pieces ready`) : monthlyScheduledCount ? t(`${monthlyScheduledCount} de ${publishableEntries.length} piezas programadas`, `${monthlyScheduledCount} of ${publishableEntries.length} pieces scheduled`) : t(`Tienes ${monthlyPendingCount} piezas pendientes de programación.`, `You have ${monthlyPendingCount} pieces pending scheduling.`)}</p>
+            </div>
+            <div className="grid shrink-0 gap-2 border-l border-white/30 pl-4 text-sm"><span><b className="block text-lg">{monthlyScheduledCount}</b><small className="text-white/80">{t("Programadas", "Scheduled")}</small></span><span><b className="block text-lg">{monthlyPendingCount}</b><small className="text-white/80">{t("Pendientes", "Pending")}</small></span></div>
+          </div>
+          <button type="button" onClick={() => setMonthlyProgrammingOpen(true)} className="mt-5 flex min-h-[50px] w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-extrabold text-violet-700"><CalendarClock className="h-4 w-4" />{monthlyPendingCount === 0 ? t("Ver programación", "View schedule") : monthlyScheduledCount ? t("Continuar programación", "Continue scheduling") : t("Programar contenido del mes", "Schedule month's content")}<ChevronRight className="h-4 w-4" /></button>
+        </section>
+      ) : null}
+
       {wizardOpen
         ? createPortal(
             <div className="fixed inset-0 z-50 bg-white">
@@ -1995,6 +2138,16 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
             document.body,
           )
         : null}
+      {monthlyProgrammingOpen ? (
+        <MonthlyProgrammingSheet
+          entries={entries}
+          year={year}
+          month={month}
+          monthLabel={monthLabel}
+          scheduledCount={monthlyScheduledCount}
+          onClose={() => setMonthlyProgrammingOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

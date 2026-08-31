@@ -1147,7 +1147,7 @@ function PanelContent() {
                     <button
                       type="button"
                       onClick={() => setCreateSheetOpen(true)}
-                      className="flex min-h-[100px] w-full items-center gap-4 rounded-3xl bg-wit-blue px-5 text-left text-white transition-transform active:scale-[0.99]"
+                      className="wit-brand-gradient flex min-h-[100px] w-full items-center gap-4 rounded-3xl px-5 text-left text-white transition-transform active:scale-[0.99]"
                     >
                       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/18 text-2xl font-medium">+</span>
                       <span className="min-w-0 flex-1">

@@ -27,6 +27,26 @@
   --font-wit-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
+:root {
+  --witers-gradient: linear-gradient(110deg, #ff2fa8 0%, #cb35db 34%, #7a39e8 66%, #315bff 100%);
+}
+
+.wit-brand-gradient {
+  background: var(--witers-gradient);
+  background-size: 200% 200%;
+  animation: witers-gradient 8s ease-in-out infinite;
+}
+
+@keyframes witers-gradient {
+  0%,
+  100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wit-brand-gradient { animation: none; }
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -238,9 +258,9 @@
 .wit-glow-button {
   position: relative;
   isolation: isolate;
-  background: linear-gradient(120deg, var(--color-wit-blue), var(--color-wit-pink), var(--color-wit-blue));
+  background: var(--witers-gradient);
   background-size: 200% 200%;
-  animation: wit-glow-shift 4.5s ease-in-out infinite;
+  animation: witers-gradient 8s ease-in-out infinite;
 }
 .wit-glow-button::before {
   content: "";
@@ -248,11 +268,11 @@
   inset: -22px;
   z-index: -1;
   border-radius: inherit;
-  background: linear-gradient(120deg, var(--color-wit-blue), var(--color-wit-pink), var(--color-wit-blue));
+  background: var(--witers-gradient);
   background-size: 200% 200%;
   filter: blur(28px);
   opacity: 0.6;
-  animation: wit-glow-shift 4.5s ease-in-out infinite;
+  animation: witers-gradient 8s ease-in-out infinite;
 }
 @keyframes wit-glow-shift {
   0%,
