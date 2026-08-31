@@ -17,8 +17,11 @@ const SCOPE = "instagram_business_basic,instagram_business_content_publish";
 type InstagramLoginConfig = { appId: string; appSecret: string };
 
 export function getInstagramLoginConfig(): InstagramLoginConfig | { error: string } {
-  const appId = process.env.INSTAGRAM_APP_ID;
-  const appSecret = process.env.INSTAGRAM_APP_SECRET;
+  // Cloudflare secrets pasted from a dashboard can occasionally include a
+  // trailing newline or space. Neither is part of a Meta App ID/secret and
+  // would make Instagram reject the authorization request before callback.
+  const appId = process.env.INSTAGRAM_APP_ID?.trim();
+  const appSecret = process.env.INSTAGRAM_APP_SECRET?.trim();
   if (!appId || !appSecret) return { error: "falta_instagram_config" };
   return { appId, appSecret };
 }
