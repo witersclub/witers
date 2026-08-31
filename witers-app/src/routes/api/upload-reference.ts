@@ -8,7 +8,20 @@ import { getSessionUser, json } from "../../lib/witers-auth.server";
 const MAX_BYTES = 15 * 1024 * 1024;
 // application/pdf covers the "Manual de marca" upload in the panel's
 // "Activos de marca" section — everything else here is a reference image.
-const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "application/pdf", "text/plain", "text/markdown", "application/json"];
+const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "application/pdf", "text/plain", "text/markdown", "application/json", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+// Word and Markdown are frequently sent by browsers as application/octet-stream
+// or an empty type. Match their extension explicitly without opening this
+// endpoint to arbitrary binary uploads.
+const DOCUMENT_EXT = /\.(docs?|md|markdown|txt|text)$/i;
+const DOCUMENT_CONTENT_TYPE: Record<string, string> = {
+  doc: "application/msword",
+  docs: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  md: "text/markdown",
+  markdown: "text/markdown",
+  txt: "text/plain",
+  text: "text/plain",
+};
 // Optional brand font files (onboarding's FontUploadPicker) are matched by
 // filename extension instead of MIME type — browsers report wildly
 // inconsistent (and sometimes empty) content-types for fonts, unlike the
@@ -40,7 +53,8 @@ export const Route = createFileRoute("/api/upload-reference")({
           return json({ ok: false, error: "archivo_faltante" }, { status: 400 });
         }
         const fontExtMatch = file.name.match(FONT_EXT);
-        if (!ALLOWED_MIME.includes(file.type) && !fontExtMatch) {
+        const documentExtMatch = file.name.match(DOCUMENT_EXT);
+        if (!ALLOWED_MIME.includes(file.type) && !fontExtMatch && !documentExtMatch) {
           return json({ ok: false, error: "tipo_no_permitido" }, { status: 400 });
         }
         if (file.size > MAX_BYTES) {
@@ -49,12 +63,18 @@ export const Route = createFileRoute("/api/upload-reference")({
 
         const ext = fontExtMatch
           ? fontExtMatch[1].toLowerCase()
+          : documentExtMatch
+            ? documentExtMatch[1].toLowerCase()
           : file.type === "image/png"
             ? "png"
             : file.type === "image/webp"
               ? "webp"
               : file.type === "application/pdf" ? "pdf" : file.type === "text/markdown" ? "md" : file.type === "application/json" ? "json" : file.type === "text/plain" ? "txt" : "jpg";
-        const contentType = fontExtMatch ? FONT_CONTENT_TYPE[ext] : file.type;
+        const contentType = fontExtMatch
+          ? FONT_CONTENT_TYPE[ext]
+          : documentExtMatch
+            ? DOCUMENT_CONTENT_TYPE[ext]
+            : file.type;
         const key = `refs/${user.id}/${crypto.randomUUID()}.${ext}`;
         await STORAGE.put(key, (await file.arrayBuffer()) as ArrayBuffer, {
           httpMetadata: { contentType },
