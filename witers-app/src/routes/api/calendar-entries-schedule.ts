@@ -10,6 +10,9 @@ const scheduleSchema = z.object({
   scheduledForUtc: z.string().datetime({ offset: true }),
   timezone: z.string().min(1).max(100),
   platforms: platformsSchema,
+  // Only supplied when the client explicitly reprograms an expired calendar
+  // date. Current planned dates otherwise remain untouched.
+  plannedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 const updateSchema = scheduleSchema.partial().extend({ entryId: z.string().uuid() });
 
@@ -98,6 +101,12 @@ export const Route = createFileRoute("/api/calendar-entries-schedule")({
             JSON.stringify(valid.connectionIds),
           )
           .run();
+        if (parsed.data.plannedDate) {
+          await db()
+            .prepare(`UPDATE calendar_entries SET scheduled_date = ?3 WHERE id = ?1 AND user_id = ?2`)
+            .bind(parsed.data.entryId, user.id, parsed.data.plannedDate)
+            .run();
+        }
         return json({ ok: true });
       },
       PATCH: async ({ request }) => {

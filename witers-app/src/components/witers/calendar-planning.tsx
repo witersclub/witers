@@ -66,6 +66,7 @@ type CalendarEntry = CalendarEntryDraft & {
   publicationStatus: "scheduled" | "publishing" | "published" | "partial" | "error" | "canceled" | null;
   scheduledForUtc: string | null;
   publicationTimezone: string | null;
+  publicationPlatforms: SocialPlatform[] | null;
 };
 type WitMessage = {
   role: "user" | "assistant";
@@ -1743,22 +1744,29 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
 
 /* ---------- main panel ---------- */
 
-type MonthlyScheduleItem = { entry: CalendarEntry; at: Date; platforms: SocialPlatform[] };
+type MonthlyScheduleItem = {
+  entry: CalendarEntry;
+  plannedDate: string;
+  time: string;
+  at: Date;
+  platforms: SocialPlatform[];
+  reprogrammed: boolean;
+};
 
-function buildMonthlySlots(year: number, month: number, weekdays: number[], times: string[]): Date[] {
-  const slots: Date[] = [];
-  const now = new Date();
-  const last = new Date(year, month, 0).getDate();
-  for (let day = 1; day <= last; day += 1) {
-    const date = new Date(year, month - 1, day);
-    if (!weekdays.includes(date.getDay())) continue;
-    for (const time of times) {
-      const [hours, minutes] = time.split(":").map(Number);
-      const slot = new Date(year, month - 1, day, hours, minutes, 0, 0);
-      if (slot > now) slots.push(slot);
-    }
-  }
-  return slots.sort((a, b) => a.getTime() - b.getTime());
+function dateKeyInTimezone(timezone: string, date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+function scheduledDateTime(plannedDate: string, time: string): Date {
+  return new Date(`${plannedDate}T${time}:00`);
 }
 
 function MonthlyProgrammingSheet({
@@ -1778,17 +1786,37 @@ function MonthlyProgrammingSheet({
 }) {
   const { t } = useLanguage();
   const qc = useQueryClient();
-  const publishable = entries.filter((entry) => entry.status === "lista" && entry.publicationStatus !== "scheduled");
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const today = dateKeyInTimezone(timezone);
+  const isFutureScheduled = (entry: CalendarEntry) =>
+    entry.publicationStatus === "scheduled" &&
+    Boolean(entry.scheduledForUtc) &&
+    Date.parse(`${entry.scheduledForUtc!.replace(" ", "T")}Z`) > Date.now();
+  const isExpired = (entry: CalendarEntry) =>
+    !isFutureScheduled(entry) &&
+    entry.publicationStatus !== "published" &&
+    entry.publicationStatus !== "partial" &&
+    entry.date < today;
+  const publishable = entries.filter(
+    (entry) => entry.status === "lista" && !isFutureScheduled(entry) && entry.publicationStatus !== "published",
+  );
+  const expiredEntries = publishable.filter(isExpired);
+  const pendingEntries = publishable.filter((entry) => !isExpired(entry));
   const [step, setStep] = useState<0 | 1 | 2 | 3 | 4>(0);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(publishable.map((entry) => entry.id)));
-  const [weekdays, setWeekdays] = useState<number[]>([1, 3, 5]);
-  const [times, setTimes] = useState<string[]>(["10:00"]);
+  const [defaultTime, setDefaultTime] = useState("18:00");
+  const [useDefaultTime, setUseDefaultTime] = useState(true);
+  const [timeOverrides, setTimeOverrides] = useState<Record<string, string>>({});
+  const [dateOverrides, setDateOverrides] = useState<Record<string, string>>({});
+  // Kept while the old visual markup below remains in the source; the new
+  // monthly flow never reads these values or redistributes calendar dates.
+  const [weekdays, setWeekdays] = useState<number[]>([]);
+  const [times, setTimes] = useState<string[]>([]);
   const [platforms, setPlatforms] = useState<Set<SocialPlatform>>(new Set(["instagram", "facebook"]));
   const [plans, setPlans] = useState<MonthlyScheduleItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ ok: number; failed: MonthlyScheduleItem[] } | null>(null);
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const { data: connections = EMPTY_CONNECTIONS } = useQuery({ queryKey: ["social-connections"], queryFn: fetchConnections });
 
   useEffect(() => {
@@ -1813,13 +1841,40 @@ function MonthlyProgrammingSheet({
   }
   function continueToPreview() {
     const chosen = publishable.filter((entry) => selected.has(entry.id));
-    const activePlatforms = (["instagram", "facebook"] as SocialPlatform[]).filter((platform) => platforms.has(platform) && connections[platform]);
-    const slots = buildMonthlySlots(year, month, weekdays, times);
+    const activePlatforms = (["instagram", "facebook"] as SocialPlatform[]).filter(
+      (platform) => platforms.has(platform) && connections[platform],
+    );
     if (!chosen.length) return setError(t("Selecciona al menos una pieza.", "Select at least one piece."));
     if (!activePlatforms.length) return setError(t("Selecciona una red conectada.", "Select a connected network."));
-    if (slots.length < chosen.length) return setError(t(`Seleccionaste ${slots.length} espacios para ${chosen.length} publicaciones. Agrega más días u horarios.`, `You selected ${slots.length} slots for ${chosen.length} posts. Add more days or times.`));
+    const nextPlans = chosen.map((entry) => {
+      const plannedDate = dateOverrides[entry.id] ?? entry.date;
+      const time = timeOverrides[entry.id] ?? defaultTime;
+      return {
+        entry,
+        plannedDate,
+        time,
+        at: scheduledDateTime(plannedDate, time),
+        platforms:
+          entry.publicationPlatforms?.filter((platform) => connections[platform]) ?? activePlatforms,
+        reprogrammed: plannedDate !== entry.date,
+      };
+    });
+    if (nextPlans.some((plan) => isExpired(plan.entry) && !dateOverrides[plan.entry.id])) {
+      return setError(t("Reprograma las publicaciones con fecha vencida para continuar.", "Reschedule expired posts to continue."));
+    }
+    if (nextPlans.some((plan) => !Number.isFinite(plan.at.getTime()) || plan.at <= new Date())) {
+      return setError(t("Todas las fechas y horarios deben ser futuros.", "All dates and times must be in the future."));
+    }
+    const conflicts = new Set<string>();
+    for (const plan of nextPlans) {
+      for (const platform of plan.platforms) {
+        const key = `${plan.at.toISOString()}-${platform}`;
+        if (conflicts.has(key)) return setError(t("Dos piezas tienen el mismo horario y red. Ajusta una hora.", "Two pieces have the same time and network. Adjust one time."));
+        conflicts.add(key);
+      }
+    }
     setError(null);
-    setPlans(chosen.map((entry, index) => ({ entry, at: slots[index], platforms: activePlatforms })));
+    setPlans(nextPlans);
     setStep(3);
   }
   async function confirm() {
@@ -1831,7 +1886,7 @@ function MonthlyProgrammingSheet({
       try {
         const response = await fetch("/api/calendar-entries-schedule", {
           method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ entryId: plan.entry.id, scheduledForUtc: plan.at.toISOString(), timezone, platforms: plan.platforms }),
+          body: JSON.stringify({ entryId: plan.entry.id, scheduledForUtc: plan.at.toISOString(), timezone, platforms: plan.platforms, plannedDate: plan.reprogrammed ? plan.plannedDate : undefined }),
         });
         const data = (await response.json()) as { ok: boolean };
         if (!response.ok || !data.ok) failed.push(plan); else ok += 1;
@@ -1842,21 +1897,54 @@ function MonthlyProgrammingSheet({
     setSaving(false);
     setStep(4);
   }
-  const stepLabel = ["", t("Selecciona el contenido", "Select content"), t("Elige días y horarios", "Choose days and times"), t("Vista previa", "Preview")];
+  const stepLabel = ["", t("Selecciona el contenido", "Select content"), t("Define tus horarios", "Set your times"), t("Revisar programación", "Review schedule")];
   return createPortal(
     <div className="fixed inset-0 z-[80] bg-wit-ink/15 backdrop-blur-[2px]" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section role="dialog" aria-modal="true" aria-label={t("Programa tu contenido del mes", "Schedule your month's content")} className="absolute inset-x-0 bottom-0 flex max-h-[94dvh] flex-col rounded-t-[30px] bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-14px_40px_rgba(5,13,40,0.14)] md:inset-x-4 md:top-[5vh] md:mx-auto md:max-w-2xl md:rounded-3xl md:pb-6">
         <span aria-hidden="true" className="mx-auto h-1.5 w-10 rounded-full bg-wit-ink/20 md:hidden" />
         <header className="mt-3 flex items-center justify-between gap-3"><div>{step > 0 && step < 4 ? <p className="text-xs font-bold text-wit-blue">1&nbsp;&nbsp;2&nbsp;&nbsp;3</p> : null}<h2 className="text-lg font-extrabold text-wit-ink">{step === 0 ? t("Programa tu contenido del mes", "Schedule your month's content") : step === 4 ? t("¡Todo listo! 🎉", "All set! 🎉") : stepLabel[step]}</h2></div><button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist" aria-label={t("Cerrar", "Close")}><X className="h-5 w-5" /></button></header>
         <div className="min-h-0 flex-1 overflow-y-auto pb-4 pt-5">
+          {step === 0 ? (
+            <div>
+              <h3 className="text-center text-xl font-extrabold text-wit-ink">{t("Deja listo tu contenido del mes", "Get your month's content ready")}</h3>
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-wit-pink/10 text-wit-pink"><CalendarClock className="h-7 w-7" /></div>
+              <p className="mt-4 text-center text-sm leading-relaxed text-wit-gray">{t("Tus piezas ya tienen una fecha asignada. Elige cuáles quieres dejar programadas y nosotros nos encargamos de publicarlas.", "Your pieces already have a date. Choose which ones to automate and we'll publish them.")}</p>
+              <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-2xl bg-violet-50 p-3"><b className="block text-xl text-violet-700">{scheduledCount}</b><span className="text-[11px] font-semibold text-violet-700">{t("Programadas", "Scheduled")}</span></div>
+                <div className="rounded-2xl bg-wit-pink/10 p-3"><b className="block text-xl text-wit-pink">{pendingEntries.length}</b><span className="text-[11px] font-semibold text-wit-gray">{t("Por programar", "To schedule")}</span></div>
+                <div className="rounded-2xl bg-amber-50 p-3"><b className="block text-xl text-amber-700">{expiredEntries.length}</b><span className="text-[11px] font-semibold text-amber-700">{t("Fecha vencida", "Expired")}</span></div>
+              </div>
+              <div className="mt-5 space-y-3 rounded-2xl bg-wit-mist/25 p-4 text-xs text-wit-gray"><p><b className="text-wit-ink">{t("Fechas ya planeadas", "Dates already planned")}</b><br />{t("Las fechas fueron definidas en tu calendario.", "Dates were defined in your calendar.")}</p><p><b className="text-wit-ink">{t("Tú eliges la hora", "You choose the time")}</b><br />{t("Selecciona el horario en que publicaremos.", "Choose the time we will publish.")}</p><p><b className="text-wit-ink">{t("Publicamos por ti", "We publish for you")}</b><br />{t("Nos encargamos de publicar automáticamente en las redes que elijas.", "We'll publish automatically to the networks you choose.")}</p></div>
+            </div>
+          ) : null}
+          {step === 1 ? (
+            <div className="space-y-2">
+              <p className="text-sm text-wit-gray">{t("Elige las piezas que quieres dejar programadas.", "Choose the pieces you want to schedule.")}</p>
+              {expiredEntries.length ? <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">{t(`${expiredEntries.length} publicaciones tienen la fecha vencida. Podrás asignarles una nueva fecha antes de programarlas.`, `${expiredEntries.length} posts have expired dates. You can assign a new date before scheduling.`)}</p> : null}
+              <label className="flex items-center justify-between rounded-xl bg-wit-mist/30 px-3 py-3 text-sm font-bold text-wit-ink"><span>{t(`Seleccionar todo (${publishable.length})`, `Select all (${publishable.length})`)}</span><input type="checkbox" checked={selected.size === publishable.length} onChange={(event) => setSelected(event.target.checked ? new Set(publishable.map((item) => item.id)) : new Set())} /></label>
+              {publishable.map((entry) => { const Icon = FORMAT_ICON[entry.format]; const expired = isExpired(entry); return <label key={entry.id} className={`flex min-h-[72px] items-center gap-3 rounded-2xl border px-3 ${expired ? "border-amber-200 bg-amber-50/50" : "border-wit-ink/7"}`}><span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-wit-mist/40">{entry.thumbHref ? <img src={entry.thumbHref} alt="" className="h-full w-full object-cover" /> : <Icon className="h-5 w-5 text-wit-blue" />}</span><span className="min-w-0 flex-1"><b className="block truncate text-sm text-wit-ink">{entry.title}</b><span className="block text-xs text-wit-gray">{formatLabel(entry.format, t)} · 📅 {new Intl.DateTimeFormat(t("es-MX", "en-US"), { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${entry.date}T00:00:00Z`))}{expired ? ` · ${t("Fecha vencida", "Expired")}` : ""}</span></span><input type="checkbox" checked={selected.has(entry.id)} onChange={() => toggleSelected(entry.id)} /></label>; })}
+            </div>
+          ) : null}
+          {step === 2 ? (
+            <div className="space-y-4">
+              <p className="text-sm leading-relaxed text-wit-gray">{t("Mantendremos las fechas planeadas. Solo elige a qué hora quieres publicar.", "We'll keep planned dates. Just choose what time to publish.")}</p>
+              <div className="grid grid-cols-2 gap-2">{["10:00", "13:00", "18:00"].map((time) => <button key={time} type="button" onClick={() => setDefaultTime(time)} className={`min-h-11 rounded-xl border text-sm font-bold ${defaultTime === time ? "border-wit-pink bg-wit-pink/10 text-wit-pink" : "border-wit-ink/10 text-wit-gray"}`}>{new Date(`2000-01-01T${time}:00`).toLocaleTimeString(t("es-MX", "en-US"), { hour: "numeric", minute: "2-digit" })}</button>)}<label className="flex min-h-11 items-center justify-center rounded-xl border border-wit-ink/10 text-sm font-bold text-wit-gray">{t("Elegir otro", "Choose another")}<input type="time" value={defaultTime} onChange={(event) => setDefaultTime(event.target.value)} className="ml-2 w-20 bg-transparent" /></label></div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-wit-ink"><input type="checkbox" checked={useDefaultTime} onChange={(event) => setUseDefaultTime(event.target.checked)} />{t("Usar este horario para todas", "Use this time for all")}</label>
+              <div className="rounded-2xl border border-wit-ink/8 p-3"><p className="text-sm font-bold text-wit-ink">{t("Redes donde publicar", "Networks to publish")}</p><div className="mt-2 flex flex-wrap gap-2">{(["instagram", "facebook"] as SocialPlatform[]).filter((platform) => connections[platform]).map((platform) => <label key={platform} className="rounded-full border border-wit-ink/10 px-3 py-2 text-xs font-bold text-wit-ink"><input type="checkbox" checked={platforms.has(platform)} onChange={() => setPlatforms((current) => { const next = new Set(current); if (next.has(platform)) next.delete(platform); else next.add(platform); return next; })} /> {platform === "instagram" ? "Instagram" : "Facebook"} · {connections[platform]?.name}</label>)}</div></div>
+              {expiredEntries.filter((entry) => selected.has(entry.id)).length ? <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3"><p className="text-sm font-bold text-amber-800">{t(`Publicaciones con fecha vencida (${expiredEntries.filter((entry) => selected.has(entry.id)).length})`, `Expired posts (${expiredEntries.filter((entry) => selected.has(entry.id)).length})`)}</p>{expiredEntries.filter((entry) => selected.has(entry.id)).map((entry) => <div key={entry.id} className="mt-3 border-t border-amber-200 pt-3"><b className="block text-sm text-wit-ink">{entry.title}</b><span className="text-xs text-amber-800">{t(`Fecha anterior: ${entry.date}`, `Previous date: ${entry.date}`)}</span><div className="mt-2 grid grid-cols-2 gap-2"><input type="date" min={today} value={dateOverrides[entry.id] ?? ""} onChange={(event) => setDateOverrides((value) => ({ ...value, [entry.id]: event.target.value }))} className="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" /><input type="time" value={timeOverrides[entry.id] ?? defaultTime} onChange={(event) => setTimeOverrides((value) => ({ ...value, [entry.id]: event.target.value }))} className="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" /></div></div>)}</div> : null}
+              {!useDefaultTime ? <div className="space-y-2">{publishable.filter((entry) => selected.has(entry.id) && !isExpired(entry)).map((entry) => <label key={entry.id} className="flex items-center justify-between rounded-xl bg-wit-mist/25 px-3 py-2 text-sm font-semibold text-wit-ink"><span className="truncate pr-3">{entry.title}</span><input type="time" value={timeOverrides[entry.id] ?? defaultTime} onChange={(event) => setTimeOverrides((value) => ({ ...value, [entry.id]: event.target.value }))} className="w-24 bg-transparent text-xs" /></label>)}</div> : null}
+            </div>
+          ) : null}
+          <div className="hidden">
           {step === 0 ? <><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-wit-pink/10 text-wit-pink"><CalendarClock className="h-8 w-8" /></div><p className="mt-4 text-center text-sm leading-relaxed text-wit-gray">{t("Organiza todas tus publicaciones del mes en minutos y nosotros nos encargamos del resto.", "Organize all of your month's posts in minutes and we'll handle the rest.")}</p><div className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-wit-mist/35 p-4 text-center"><b className="block text-xl text-wit-ink">{scheduledCount}</b><span className="text-xs text-wit-gray">{t("Ya programadas", "Already scheduled")}</span></div><div className="rounded-2xl bg-wit-pink/8 p-4 text-center"><b className="block text-xl text-wit-ink">{publishable.length}</b><span className="text-xs text-wit-gray">{t("Pendientes", "Pending")}</span></div></div></> : null}
           {step === 1 ? <div className="space-y-2"><label className="flex items-center justify-between rounded-xl bg-wit-mist/30 px-3 py-3 text-sm font-bold text-wit-ink"><span>{t(`Seleccionar todo (${publishable.length})`, `Select all (${publishable.length})`)}</span><input type="checkbox" checked={selected.size === publishable.length} onChange={(event) => setSelected(event.target.checked ? new Set(publishable.map((item) => item.id)) : new Set())} /></label>{publishable.map((entry) => { const Icon = FORMAT_ICON[entry.format]; return <label key={entry.id} className="flex min-h-16 items-center gap-3 rounded-2xl border border-wit-ink/7 px-3"><span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-wit-mist/40">{entry.thumbHref ? <img src={entry.thumbHref} alt="" className="h-full w-full object-cover" /> : <Icon className="h-5 w-5 text-wit-blue" />}</span><span className="min-w-0 flex-1"><b className="block truncate text-sm text-wit-ink">{entry.title}</b><span className="text-xs text-wit-gray">{formatLabel(entry.format, t)}</span></span><input type="checkbox" checked={selected.has(entry.id)} onChange={() => toggleSelected(entry.id)} /></label>; })}</div> : null}
           {step === 2 ? <div><p className="text-sm font-bold text-wit-ink">{t("Días de publicación", "Publishing days")}</p><div className="mt-3 grid grid-cols-7 gap-1">{[[1,"Lun"],[2,"Mar"],[3,"Mié"],[4,"Jue"],[5,"Vie"],[6,"Sáb"],[0,"Dom"]].map(([value,label]) => <button key={String(value)} type="button" onClick={() => setWeekdays((current) => current.includes(Number(value)) ? current.filter((day) => day !== Number(value)) : [...current, Number(value)])} className={`min-h-11 rounded-xl text-xs font-bold ${weekdays.includes(Number(value)) ? "wit-brand-gradient text-white" : "bg-wit-mist/40 text-wit-gray"}`}>{label}</button>)}</div><p className="mt-6 text-sm font-bold text-wit-ink">{t("Horarios de publicación", "Publishing times")}</p><div className="mt-3 flex flex-wrap gap-2">{times.map((time, index) => <label key={`${time}-${index}`} className="rounded-xl border border-wit-blue/20 bg-wit-blue/5 px-3 py-2 text-sm font-bold text-wit-blue"><input type="time" value={time} onChange={(event) => setTimes((current) => current.map((item, i) => i === index ? event.target.value : item))} className="bg-transparent" /></label>)}<button type="button" onClick={() => setTimes((current) => [...current, "14:00"])} className="rounded-xl border border-dashed border-wit-ink/20 px-3 py-2 text-sm font-bold text-wit-gray">+ {t("Agregar horario", "Add time")}</button></div><p className="mt-6 text-sm font-bold text-wit-ink">{t("Redes sociales", "Social networks")}</p><div className="mt-2 flex flex-wrap gap-2">{(["instagram", "facebook"] as SocialPlatform[]).map((platform) => <label key={platform} className={`rounded-full border px-3 py-2 text-xs font-bold ${connections[platform] ? "border-wit-ink/10 text-wit-ink" : "opacity-40"}`}><input type="checkbox" disabled={!connections[platform]} checked={platforms.has(platform)} onChange={() => setPlatforms((current) => { const next = new Set(current); if (next.has(platform)) next.delete(platform); else next.add(platform); return next; })} /> {platform === "instagram" ? "Instagram" : "Facebook"} · {connections[platform]?.name ?? t("Sin conectar", "Not connected")}</label>)}</div></div> : null}
-          {step === 3 ? <div className="space-y-2">{plans.slice(0, 40).map((plan) => <div key={plan.entry.id} className="flex items-center gap-3 rounded-xl bg-wit-mist/25 p-3"><span className="w-24 shrink-0 text-xs font-bold text-wit-blue">{plan.at.toLocaleDateString(t("es-MX", "en-US"), { weekday: "short", day: "numeric", month: "short" })}<br />{plan.at.toLocaleTimeString(t("es-MX", "en-US"), { hour: "2-digit", minute: "2-digit" })}</span><span className="min-w-0 flex-1 truncate text-sm font-semibold text-wit-ink">{plan.entry.title}</span><span className="text-xs text-wit-gray">{plan.platforms.includes("instagram") ? "◎" : ""} {plan.platforms.includes("facebook") ? "f" : ""}</span></div>)}</div> : null}
+          </div>
+          {step === 3 ? <div className="space-y-2"><p className="text-sm font-bold text-wit-ink">{t("Revisar programación", "Review schedule")}</p>{plans.slice(0, 40).map((plan) => <div key={plan.entry.id} className="flex items-center gap-3 rounded-xl bg-wit-mist/25 p-3"><span className="w-24 shrink-0 text-xs font-bold text-wit-blue">{plan.at.toLocaleDateString(t("es-MX", "en-US"), { weekday: "short", day: "numeric", month: "short" })}<br />{plan.at.toLocaleTimeString(t("es-MX", "en-US"), { hour: "2-digit", minute: "2-digit" })}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-wit-ink">{plan.entry.title}</span><span className="text-xs text-wit-gray">{plan.platforms.map((platform) => platform === "instagram" ? "Instagram" : "Facebook").join(" · ")}{plan.reprogrammed ? ` · ${t("Fecha actualizada", "Date updated")}` : ""}</span></span></div>)}</div> : null}
           {step === 4 && result ? <div className="text-center"><p className="mt-8 text-sm text-wit-gray">{result.failed.length ? t(`${result.ok} piezas programadas; ${result.failed.length} necesitan atención.`, `${result.ok} pieces scheduled; ${result.failed.length} need attention.`) : t(`Has programado ${result.ok} piezas para ${monthLabel}.`, `You scheduled ${result.ok} pieces for ${monthLabel}.`)}</p><div className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-emerald-50 p-4"><b className="block text-xl text-emerald-700">{result.ok}</b><span className="text-xs text-emerald-700">{t("Programadas", "Scheduled")}</span></div><div className="rounded-2xl bg-wit-mist/35 p-4"><b className="block text-xl text-wit-ink">{plans.length ? `${plans[0]?.at.getDate()}–${plans.at(-1)?.at.getDate()}` : "—"}</b><span className="text-xs text-wit-gray">{t("Fechas", "Dates")}</span></div></div></div> : null}
           {error ? <p className="mt-4 text-sm font-semibold text-red-600">{error}</p> : null}
         </div>
-        <footer className="pt-2">{step === 0 ? <button type="button" onClick={() => setStep(1)} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Comenzar programación", "Start scheduling")}</button> : step === 1 ? <button type="button" onClick={() => setStep(2)} disabled={!selected.size} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white disabled:opacity-50">{t("Continuar", "Continue")}</button> : step === 2 ? <button type="button" onClick={continueToPreview} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Continuar", "Continue")}</button> : step === 3 ? <button type="button" onClick={confirm} disabled={saving} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white disabled:opacity-50">{saving ? t("Programando contenido...", "Scheduling content...") : t("Confirmar programación", "Confirm scheduling")}</button> : <button type="button" onClick={onClose} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Ver calendario", "View calendar")}</button>}</footer>
+        <footer className="pt-2">{step === 0 ? <button type="button" onClick={() => setStep(1)} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Revisar y programar", "Review and schedule")}</button> : step === 1 ? <button type="button" onClick={() => setStep(2)} disabled={!selected.size} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white disabled:opacity-50">{t("Continuar", "Continue")}</button> : step === 2 ? <button type="button" onClick={continueToPreview} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Revisar programación", "Review schedule")}</button> : step === 3 ? <button type="button" onClick={confirm} disabled={saving} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white disabled:opacity-50">{saving ? t("Programando contenido...", "Scheduling content...") : t("Confirmar programación", "Confirm scheduling")}</button> : <button type="button" onClick={onClose} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Ver calendario", "View calendar")}</button>}</footer>
       </section>
     </div>, document.body);
 }
@@ -1912,13 +2000,18 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
   const requestedCount = entries.filter((e) => e.status !== "por_planear").length;
   const pendingCount = entries.length - requestedCount;
   const publishableEntries = entries.filter((entry) => entry.status === "lista");
+  const planningToday = dateKeyInTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
+  const hasFutureSchedule = (entry: CalendarEntry) =>
+    entry.publicationStatus === "scheduled" &&
+    Boolean(entry.scheduledForUtc) &&
+    Date.parse(`${entry.scheduledForUtc!.replace(" ", "T")}Z`) > Date.now();
   const monthlyScheduledCount = publishableEntries.filter((entry) =>
-    entry.publicationStatus === "scheduled" ||
-    entry.publicationStatus === "publishing" ||
-    entry.publicationStatus === "published" ||
-    entry.publicationStatus === "partial",
+    hasFutureSchedule(entry),
   ).length;
-  const monthlyPendingCount = publishableEntries.length - monthlyScheduledCount;
+  const monthlyExpiredCount = publishableEntries.filter(
+    (entry) => !hasFutureSchedule(entry) && entry.publicationStatus !== "published" && entry.publicationStatus !== "partial" && entry.date < planningToday,
+  ).length;
+  const monthlyPendingCount = publishableEntries.length - monthlyScheduledCount - monthlyExpiredCount;
   const monthlyProgressPct = publishableEntries.length
     ? Math.round((monthlyScheduledCount / publishableEntries.length) * 100)
     : 0;
@@ -2206,12 +2299,12 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                   <h2 className="text-[20px] font-extrabold leading-[1.2] tracking-tight text-wit-ink sm:text-[22px]">
                     {monthlyScheduledCount === 0
                       ? t("Programa tu mes", "Schedule your month")
-                      : monthlyPendingCount === 0
+                      : monthlyPendingCount === 0 && monthlyExpiredCount === 0
                         ? t(`${monthLabel} está programado ✓`, `${monthLabel} is scheduled ✓`)
                         : t("Tu mes está en marcha", "Your month is underway")}
                   </h2>
                   <p className="mt-2 text-[15px] font-medium leading-snug text-wit-gray sm:text-base">
-                    {monthlyPendingCount === 0
+                    {monthlyPendingCount === 0 && monthlyExpiredCount === 0
                       ? t(`${monthlyScheduledCount} piezas listas`, `${monthlyScheduledCount} pieces ready`)
                       : monthlyScheduledCount
                         ? t(
@@ -2244,6 +2337,16 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                   )}
                 </small>
               </span>
+              {monthlyExpiredCount > 0 ? (
+                <span>
+                  <b className="block text-[26px] font-extrabold leading-none text-amber-700 sm:text-[30px]">
+                    {monthlyExpiredCount}
+                  </b>
+                  <small className="mt-1 block text-[13px] font-semibold text-amber-700 sm:text-sm">
+                    {t("Fecha vencida", "Expired")}
+                  </small>
+                </span>
+              ) : null}
               <span>
                 <b className="block text-[26px] font-extrabold leading-none text-wit-pink sm:text-[30px]">
                   {monthlyPendingCount}
@@ -2261,7 +2364,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           >
             <span className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-[17px] bg-white px-4">
               <CalendarClock className="h-4 w-4" />
-              {monthlyPendingCount === 0
+              {monthlyPendingCount === 0 && monthlyExpiredCount === 0
                 ? t("Ver programación", "View schedule")
                 : monthlyScheduledCount
                   ? t("Continuar programación", "Continue scheduling")

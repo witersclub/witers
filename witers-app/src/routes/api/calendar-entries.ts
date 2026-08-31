@@ -16,6 +16,7 @@ type EntryRow = {
   publication_status: string | null;
   scheduled_for_utc: string | null;
   publication_timezone: string | null;
+  publication_platforms: string | null;
 };
 
 type SlideDraft = { title?: string; brief: string };
@@ -99,7 +100,8 @@ export const Route = createFileRoute("/api/calendar-entries")({
           .prepare(
             `SELECT e.id, e.scheduled_date, e.format, e.title, e.brief, e.slides_json,
                     e.request_id, e.caption, s.status AS publication_status,
-                    s.scheduled_for_utc, s.timezone AS publication_timezone
+                    s.scheduled_for_utc, s.timezone AS publication_timezone,
+                    s.platforms_json AS publication_platforms
              FROM calendar_entries e
              LEFT JOIN calendar_entry_schedules s ON s.entry_id = e.id
              WHERE e.user_id = ?1 AND e.scheduled_date BETWEEN ?2 AND ?3
@@ -218,6 +220,9 @@ export const Route = createFileRoute("/api/calendar-entries")({
           publicationStatus: e.publication_status,
           scheduledForUtc: e.scheduled_for_utc,
           publicationTimezone: e.publication_timezone,
+          publicationPlatforms: e.publication_platforms
+            ? (JSON.parse(e.publication_platforms) as ("facebook" | "instagram")[])
+            : null,
         }));
 
         return json({ ok: true, entries: withStatus });
