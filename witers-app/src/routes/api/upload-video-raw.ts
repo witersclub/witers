@@ -32,6 +32,7 @@ export const Route = createFileRoute("/api/upload-video-raw")({
 
         const url = new URL(request.url);
         const originalName = (url.searchParams.get("filename") ?? "video").slice(0, 200);
+        const asBrandAsset = url.searchParams.get("brandAsset") === "1";
         const contentType = request.headers.get("content-type") ?? "";
         if (!ALLOWED.includes(contentType)) {
           return json({ ok: false, error: "tipo_no_permitido" }, { status: 400 });
@@ -46,7 +47,7 @@ export const Route = createFileRoute("/api/upload-video-raw")({
         }
 
         const ext = EXT_BY_TYPE[contentType] ?? "mp4";
-        const key = `video-raw/${user.id}/${crypto.randomUUID()}.${ext}`;
+        const key = `${asBrandAsset ? "brand-assets" : "video-raw"}/${user.id}/${crypto.randomUUID()}.${ext}`;
         // request.body is a real ReadableStream at runtime — cast past the
         // mismatch between DOM's global ReadableStream (lib.dom) and the
         // one @cloudflare/workers-types declares for R2Bucket.put's
@@ -55,13 +56,23 @@ export const Route = createFileRoute("/api/upload-video-raw")({
           httpMetadata: { contentType },
         });
 
-        await db()
-          .prepare(
-            `INSERT INTO video_request_raw_files (id, video_request_id, r2_key, original_name, size_bytes)
-             VALUES (?1, NULL, ?2, ?3, ?4)`,
-          )
-          .bind(crypto.randomUUID(), key, originalName, contentLength)
-          .run();
+        if (asBrandAsset) {
+          await db()
+            .prepare(
+              `INSERT INTO brand_assets (id, user_id, r2_key, original_name, kind, mime_type, size_bytes)
+               VALUES (?1, ?2, ?3, ?4, 'video', ?5, ?6)`,
+            )
+            .bind(crypto.randomUUID(), user.id, key, originalName, contentType, contentLength)
+            .run();
+        } else {
+          await db()
+            .prepare(
+              `INSERT INTO video_request_raw_files (id, video_request_id, r2_key, original_name, size_bytes)
+               VALUES (?1, NULL, ?2, ?3, ?4)`,
+            )
+            .bind(crypto.randomUUID(), key, originalName, contentLength)
+            .run();
+        }
 
         return json({ ok: true, key });
       },

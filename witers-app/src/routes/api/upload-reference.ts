@@ -8,7 +8,7 @@ import { getSessionUser, json } from "../../lib/witers-auth.server";
 const MAX_BYTES = 15 * 1024 * 1024;
 // application/pdf covers the "Manual de marca" upload in the panel's
 // "Activos de marca" section — everything else here is a reference image.
-const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
+const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "application/pdf", "text/plain", "text/markdown", "application/json"];
 // Optional brand font files (onboarding's FontUploadPicker) are matched by
 // filename extension instead of MIME type — browsers report wildly
 // inconsistent (and sometimes empty) content-types for fonts, unlike the
@@ -53,9 +53,7 @@ export const Route = createFileRoute("/api/upload-reference")({
             ? "png"
             : file.type === "image/webp"
               ? "webp"
-              : file.type === "application/pdf"
-                ? "pdf"
-                : "jpg";
+              : file.type === "application/pdf" ? "pdf" : file.type === "text/markdown" ? "md" : file.type === "application/json" ? "json" : file.type === "text/plain" ? "txt" : "jpg";
         const contentType = fontExtMatch ? FONT_CONTENT_TYPE[ext] : file.type;
         const key = `refs/${user.id}/${crypto.randomUUID()}.${ext}`;
         await STORAGE.put(key, (await file.arrayBuffer()) as ArrayBuffer, {

@@ -19,6 +19,11 @@ export type WitBrandContext = {
   // brand-memory.server.ts. Null until the brand has generated at least
   // one signal.
   brandMemory: string | null;
+  // Files explicitly selected from "Mente de marca". Text exports from a
+  // strategy/brand document are included verbatim (bounded server-side);
+  // visual files are still named so Wit knows they exist, without claiming
+  // to have parsed an image or PDF it cannot inspect in this request.
+  brandAssets?: { originalName: string; kind: string; textContent: string | null }[];
 };
 
 export type WitChatMessage = { role: "user" | "assistant"; content: string };
@@ -88,6 +93,16 @@ function buildSystemPrompt(brand: WitBrandContext): string {
         `solicitados — tenlos en cuenta con criterio profesional, pero nunca los menciones ` +
         `explícitamente al cliente ni le preguntes por ellos: ${brand.brandMemory}`,
     );
+  }
+  if (brand.brandAssets?.length) {
+    const textAssets = brand.brandAssets.filter((a) => a.textContent).map(
+      (a) => `Archivo ${a.kind} “${a.originalName}”: ${a.textContent}`,
+    );
+    const visualAssets = brand.brandAssets.filter((a) => !a.textContent).map(
+      (a) => `${a.kind}: ${a.originalName}`,
+    );
+    if (textAssets.length) brandLines.push(`Información aportada en Mente de marca:\n${textAssets.join("\n")}`);
+    if (visualAssets.length) brandLines.push(`Archivos de referencia disponibles: ${visualAssets.join(", ")}.`);
   }
 
   return (
@@ -194,6 +209,16 @@ function buildCarouselSystemPrompt(brand: WitBrandContext): string {
         `explícitamente al cliente ni le preguntes por ellos: ${brand.brandMemory}`,
     );
   }
+  if (brand.brandAssets?.length) {
+    const textAssets = brand.brandAssets.filter((a) => a.textContent).map(
+      (a) => `Archivo ${a.kind} “${a.originalName}”: ${a.textContent}`,
+    );
+    const visualAssets = brand.brandAssets.filter((a) => !a.textContent).map(
+      (a) => `${a.kind}: ${a.originalName}`,
+    );
+    if (textAssets.length) brandLines.push(`Información aportada en Mente de marca:\n${textAssets.join("\n")}`);
+    if (visualAssets.length) brandLines.push(`Archivos de referencia disponibles: ${visualAssets.join(", ")}.`);
+  }
 
   return (
     "Eres Wit, el director creativo de IA de WITERS, una agencia de branding por membresía. " +
@@ -266,6 +291,7 @@ function buildCalendarSystemPrompt(
     todayDate: string;
     monthEndDate: string;
     existingEntries?: { date: string; title: string }[];
+    expectedEntries?: number;
   },
 ): string {
   const brandLines = [
@@ -283,6 +309,16 @@ function buildCalendarSystemPrompt(
         `solicitados — tenlos en cuenta con criterio profesional, pero nunca los menciones ` +
         `explícitamente al cliente ni le preguntes por ellos: ${brand.brandMemory}`,
     );
+  }
+  if (brand.brandAssets?.length) {
+    const textAssets = brand.brandAssets.filter((a) => a.textContent).map(
+      (a) => `Archivo ${a.kind} “${a.originalName}”: ${a.textContent}`,
+    );
+    const visualAssets = brand.brandAssets.filter((a) => !a.textContent).map(
+      (a) => `${a.kind}: ${a.originalName}`,
+    );
+    if (textAssets.length) brandLines.push(`Información aportada en Mente de marca:\n${textAssets.join("\n")}`);
+    if (visualAssets.length) brandLines.push(`Archivos de referencia disponibles: ${visualAssets.join(", ")}.`);
   }
 
   return (
@@ -361,6 +397,9 @@ function buildCalendarSystemPrompt(
     "completo calculadas según la cadencia acordada, nunca solo la primera semana ni el plan " +
     "dividido en varias llamadas: si el cliente pidió 'martes y jueves', calcula y entrega TODOS " +
     "los martes y jueves del mes en esa única llamada, no solo los primeros.\n\n" +
+    (opts.expectedEntries
+      ? `El cliente pidió exactamente ${opts.expectedEntries} piezas nuevas. Debes entregar exactamente ${opts.expectedEntries} entradas válidas; una respuesta con menos entradas es un plan incompleto y no sirve.\n\n`
+      : "") +
     "Si en algún momento ves en la conversación un mensaje tuyo que empieza con 'Plan propuesto " +
     "para el mes:' seguido de una lista de fechas, ya le habías propuesto un plan al cliente antes " +
     "de este turno — trátalo como el plan actual vigente, no como algo nuevo. Si el cliente dice " +
@@ -987,6 +1026,10 @@ export async function runWitCalendarChat(
           (e.format !== "carrusel" || e.slides?.length === 4),
       );
       if (entries.length === 0) return { ok: false, error: "respuesta_invalida" };
+      if (opts.expectedEntries && entries.length !== opts.expectedEntries) {
+        console.info("[wit-chat] incomplete calendar plan", { expected: opts.expectedEntries, received: entries.length });
+        return { ok: false, error: "plan_incompleto" };
+      }
       return { ok: true, kind: "done", entries };
     } catch {
       return { ok: false, error: "respuesta_invalida" };

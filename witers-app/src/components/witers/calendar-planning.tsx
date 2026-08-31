@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Facebook,
+  FileText,
   Flame,
   GalleryHorizontal,
   Image as ImageIcon,
@@ -24,6 +25,7 @@ import {
   Loader2,
   PenLine,
   Send,
+  Upload,
   Video as VideoIcon,
   X,
 } from "lucide-react";
@@ -197,6 +199,12 @@ function CalendarWizard({
   const [chatError, setChatError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [brandMindOpen, setBrandMindOpen] = useState(false);
+  const [brandAssets, setBrandAssets] = useState<
+    { id: string; original_name: string; kind: string; use_in_planning: number }[]
+  >([]);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [assetError, setAssetError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
@@ -211,10 +219,56 @@ function CalendarWizard({
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [input]);
 
+  async function loadBrandAssets() {
+    try {
+      const res = await fetch("/api/brand-profile", { credentials: "include" });
+      const data = (await res.json()) as { ok: boolean; assets?: typeof brandAssets };
+      if (!data.ok) return;
+      const assets = data.assets ?? [];
+      setBrandAssets(assets);
+      setSelectedAssetIds(assets.filter((a) => a.use_in_planning === 1).map((a) => a.id));
+    } catch {
+      setAssetError(t("No pudimos cargar tus archivos de marca.", "We couldn't load your brand files."));
+    }
+  }
+
+  async function uploadBrandAsset(file: File | null) {
+    if (!file) return;
+    setAssetError(null);
+    const allowedText = ["text/plain", "text/markdown", "application/json"].includes(file.type);
+    if (file.type.startsWith("video/")) {
+      setAssetError(t("Por ahora agrega videos desde Mi marca; aquí puedes usar imágenes, PDF o un archivo de texto de estrategia.", "For now add videos from My brand; here you can use images, PDFs, or a strategy text file."));
+      return;
+    }
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const upload = await fetch("/api/upload-reference", { method: "POST", body: fd });
+      const uploaded = (await upload.json()) as { ok: boolean; key?: string };
+      if (!uploaded.ok || !uploaded.key) throw new Error("upload");
+      const textContent = allowedText ? (await file.text()).slice(0, 12000) : null;
+      const save = await fetch("/api/brand-profile", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "add_asset", key: uploaded.key, originalName: file.name, kind: allowedText ? "strategy" : file.type === "application/pdf" ? "manual" : "reference", mimeType: file.type || "application/octet-stream", sizeBytes: file.size, textContent }),
+      });
+      if (!save.ok) throw new Error("save");
+      await loadBrandAssets();
+    } catch {
+      setAssetError(t("No pudimos guardar el archivo. Intenta de nuevo.", "We couldn't save the file. Try again."));
+    }
+  }
+
   async function askWit(next: WitMessage[]) {
     setTyping(true);
     setChatError(null);
     try {
+      // When the client explicitly asks to fill the whole month, make that
+      // promise executable: a five-day partial answer must never look like
+      // a completed monthly plan.
+      const asksForFullMonth = next.some(
+        (m) => m.role === "user" && /(?:todo el mes|mes completo|todos los d[ií]as|diario|entire month|whole month|every day)/i.test(m.content),
+      );
+      const daysInTargetMonth = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
       const res = await fetch("/api/wit/calendar-chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -222,6 +276,8 @@ function CalendarWizard({
           messages: next.map(({ role, content }) => ({ role, content })),
           year: targetYear,
           month: targetMonth,
+          brandAssetIds: selectedAssetIds,
+          expectedEntries: asksForFullMonth ? daysInTargetMonth : undefined,
         }),
       });
       const data = (await res.json()) as
@@ -335,6 +391,9 @@ function CalendarWizard({
           {t(`Planificando ${monthLabel} con Wit`, `Planning ${monthLabel} with Wit`)}
         </p>
       </div>
+
+      <button type="button" onClick={() => { setBrandMindOpen(true); void loadBrandAssets(); }} className="mb-1 flex w-full items-center justify-between rounded-2xl border border-wit-blue/10 bg-wit-blue/[0.04] px-4 py-3 text-left transition-colors hover:bg-wit-blue/[0.08]">
+        <span className="flex items-center gap-2.5"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-wit-blue shadow-sm"><FileText className="h-4 w-4" /></span><span><span className="block text-sm font-bold text-wit-ink">{t("Mente de marca", "Brand mind")}</span><span className="block text-xs text-wit-gray">{selectedAssetIds.length ? t(`${selectedAssetIds.length} archivos activos para este plan`, `${selectedAssetIds.length} files active for this plan`) : t("Agrega contexto para que Wit conozca tu marca", "Add context so Wit knows your brand")}</span></span></span><ChevronRight className="h-4 w-4 text-wit-blue" /></button>
 
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-3 py-4">
@@ -463,6 +522,17 @@ function CalendarWizard({
           </form>
         </div>
       ) : null}
+      {brandMindOpen ? createPortal(
+        <div className="fixed inset-0 z-[90] flex items-end bg-wit-ink/20 p-0 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label={t("Mente de marca", "Brand mind")}>
+          <div className="w-full rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-3 shadow-2xl md:mx-auto md:mb-8 md:max-w-lg md:rounded-[28px]">
+            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-wit-ink/15" />
+            <div className="flex items-center justify-between"><div><p className="text-lg font-extrabold text-wit-ink">{t("Mente de marca", "Brand mind")}</p><p className="mt-0.5 text-sm text-wit-gray">{t("Elige qué archivos debe considerar Wit en este plan.", "Choose which files Wit should consider for this plan.")}</p></div><button type="button" onClick={() => setBrandMindOpen(false)} aria-label={t("Cerrar", "Close")} className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-mist text-wit-ink"><X className="h-5 w-5" /></button></div>
+            <label className="mt-5 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-wit-blue/35 bg-wit-blue/[0.03] px-4 py-3 text-sm font-bold text-wit-blue"><Upload className="h-4 w-4" />{t("Cargar archivo", "Upload file")}<input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,text/markdown,application/json" onChange={(e) => void uploadBrandAsset(e.target.files?.[0] ?? null)} /></label>
+            <div className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">{brandAssets.length ? brandAssets.map((asset) => <label key={asset.id} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-wit-ink/8 px-3 py-3"><input type="checkbox" checked={selectedAssetIds.includes(asset.id)} onChange={(e) => setSelectedAssetIds((current) => e.target.checked ? [...current, asset.id] : current.filter((id) => id !== asset.id))} className="h-4 w-4 accent-[#315BFF]" /><FileText className="h-4 w-4 shrink-0 text-wit-blue" /><span className="min-w-0 flex-1 truncate text-sm font-semibold text-wit-ink">{asset.original_name}</span><span className="text-xs capitalize text-wit-gray">{asset.kind}</span></label>) : <p className="rounded-2xl bg-wit-mist/50 px-4 py-5 text-center text-sm text-wit-gray">{t("Aún no tienes archivos. Sube tu manual, estrategia o referencias.", "You don't have files yet. Upload your manual, strategy, or references.")}</p>}</div>
+            {assetError ? <p className="mt-3 text-sm text-red-600">{assetError}</p> : null}
+            <button type="button" onClick={() => setBrandMindOpen(false)} className="mt-5 w-full rounded-2xl bg-wit-blue py-3.5 text-sm font-bold text-white">{t("Usar en esta planificación", "Use in this plan")}</button>
+          </div>
+        </div>, document.body) : null}
     </div>
   );
 }

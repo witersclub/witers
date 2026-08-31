@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { getBrandProfile } from "../../../lib/brand-profile.server";
+import { getPlanningBrandAssets } from "../../../lib/brand-assets.server";
 import { getBrandMemory } from "../../../lib/brand-memory.server";
 import { runWitCalendarChat } from "../../../lib/wit-chat.server";
 import { db, getSessionUser, json } from "../../../lib/witers-auth.server";
@@ -23,6 +24,8 @@ const schema = z.object({
   // for next month kept getting this month's plan back instead.
   year: z.number().int().min(2020).max(2100).optional(),
   month: z.number().int().min(1).max(12).optional(),
+  brandAssetIds: z.array(z.string().uuid()).max(30).optional(),
+  expectedEntries: z.number().int().min(1).max(60).optional(),
 });
 
 function iso(d: Date): string {
@@ -99,6 +102,11 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
             businessType: profile.business_type,
             hasLogo: Boolean(profile.logo_key),
             brandMemory: await getBrandMemory(user.id),
+            brandAssets: (await getPlanningBrandAssets(user.id, parsed.data.brandAssetIds)).map((asset) => ({
+              originalName: asset.original_name,
+              kind: asset.kind,
+              textContent: asset.text_content ? asset.text_content.slice(0, 6000) : null,
+            })),
           },
           {
             ...monthContext({ year, month }),
@@ -106,6 +114,7 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
               date: r.scheduled_date,
               title: r.title,
             })),
+            expectedEntries: parsed.data.expectedEntries,
           },
         );
 

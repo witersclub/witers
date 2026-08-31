@@ -4014,6 +4014,7 @@ function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null })
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <BrandMindCard />
       <BrandColorsCard brandProfile={brandProfile} />
       <LogoCard fileKey={brandProfile?.logo_key ?? null} />
       <BrandFontCard brandProfile={brandProfile} />
@@ -4032,6 +4033,51 @@ function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null })
       />
     </div>
   );
+}
+
+function BrandMindCard() {
+  const { t } = useLanguage();
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [assets, setAssets] = useState<{ id: string; original_name: string; kind: string; use_in_planning: number }[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    const res = await fetch("/api/brand-profile", { credentials: "include" });
+    const data = (await res.json()) as { ok: boolean; assets?: typeof assets };
+    if (data.ok) setAssets(data.assets ?? []);
+  }
+  async function add(file: File | null) {
+    if (!file) return;
+    setError(null);
+    try {
+      if (file.type.startsWith("video/")) {
+        const upload = await fetch(`/api/upload-video-raw?brandAsset=1&filename=${encodeURIComponent(file.name)}`, { method: "POST", headers: { "content-type": file.type }, body: file });
+        if (!upload.ok) throw new Error("upload");
+        await load();
+        return;
+      }
+      const key = await uploadReferenceFile(file);
+      if (!key) throw new Error("upload");
+      const textContent = ["text/plain", "text/markdown", "application/json"].includes(file.type)
+        ? (await file.text()).slice(0, 12000) : null;
+      const res = await fetch("/api/brand-profile", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "add_asset", key, originalName: file.name, kind: textContent ? "strategy" : file.type === "application/pdf" ? "manual" : "reference", mimeType: file.type || "application/octet-stream", sizeBytes: file.size, textContent }) });
+      if (!res.ok) throw new Error("save");
+      await load();
+      void qc.invalidateQueries({ queryKey: ["brand-profile"] });
+    } catch {
+      setError(t("No pudimos cargar este archivo.", "We couldn't upload this file."));
+    }
+  }
+  return <>
+    <button type="button" onClick={() => { setOpen(true); void load(); }} className="wit-glass flex min-h-56 flex-col items-start rounded-3xl p-7 text-left shadow-[0_20px_60px_rgba(5,13,40,0.07)] transition-transform hover:-translate-y-0.5">
+      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue"><Sparkles className="h-6 w-6" /></span>
+      <p className="mt-5 text-lg font-bold text-wit-ink">{t("Mente de marca", "Brand mind")}</p>
+      <p className="mt-1 text-sm leading-relaxed text-wit-gray">{t("Tu manual, estrategia y referencias para que Wit cree con el contexto correcto.", "Your manual, strategy, and references so Wit creates with the right context.")}</p>
+      <span className="mt-auto pt-5 text-sm font-bold text-wit-blue">{t("Abrir biblioteca", "Open library")} <ChevronRight className="inline h-4 w-4" /></span>
+    </button>
+    {open ? createPortal(<div className="fixed inset-0 z-[80] flex items-end bg-wit-ink/25 p-0 backdrop-blur-[2px]" role="dialog" aria-modal="true"><div className="w-full rounded-t-[30px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-3 md:mx-auto md:mb-8 md:max-w-xl md:rounded-[30px]"><div className="mx-auto h-1.5 w-10 rounded-full bg-wit-ink/15" /><div className="mt-4 flex items-start justify-between"><div><h2 className="text-xl font-extrabold text-wit-ink">{t("Mente de marca", "Brand mind")}</h2><p className="mt-1 text-sm text-wit-gray">{t("Archivos que Wit puede usar al planificar y crear.", "Files Wit can use while planning and creating.")}</p></div><button type="button" onClick={() => setOpen(false)} className="rounded-full bg-wit-mist p-2 text-wit-ink" aria-label={t("Cerrar", "Close")}><X className="h-5 w-5" /></button></div><label className="mt-5 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-wit-blue/35 bg-wit-blue/[0.03] py-4 text-sm font-bold text-wit-blue"><Plus className="h-4 w-4" />{t("Cargar archivo", "Upload file")}<input type="file" className="sr-only" accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,text/markdown,application/json,video/mp4,video/quicktime,video/webm,video/x-m4v" onChange={(e) => void add(e.target.files?.[0] ?? null)} /></label><div className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">{assets.length ? assets.map((asset) => <div key={asset.id} className="flex items-center gap-3 rounded-2xl border border-wit-ink/10 px-4 py-3"><FileText className="h-4 w-4 text-wit-blue" /><span className="min-w-0 flex-1 truncate text-sm font-semibold text-wit-ink">{asset.original_name}</span><span className="text-xs capitalize text-wit-gray">{asset.kind}</span></div>) : <p className="rounded-2xl bg-wit-mist/50 p-5 text-center text-sm text-wit-gray">{t("Aún no has cargado archivos.", "You haven't uploaded files yet.")}</p>}</div>{error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}</div></div>, document.body) : null}
+  </>;
 }
 
 /* ---------- Wit conversation (request creation) ---------- */
