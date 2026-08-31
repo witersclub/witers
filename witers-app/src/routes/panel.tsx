@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import type * as LeafletNS from "leaflet";
@@ -89,6 +90,7 @@ import {
   CarouselLandingScreen,
   CarouselRequestList,
   CarouselWizard,
+  parseSlides,
   type CarouselRequestRow,
 } from "../components/witers/carousel-requests";
 import { downloadFileByKey } from "../lib/download-file";
@@ -532,6 +534,10 @@ function PanelContent() {
   const [videoWizardOpen, setVideoWizardOpen] = useState(false);
   const [carouselTab, setCarouselTab] = useState<"solicitudes" | "nueva">("nueva");
   const [carouselWizardOpen, setCarouselWizardOpen] = useState(false);
+  const [createSheetOpen, setCreateSheetOpen] = useState(false);
+  const [requestSheetKind, setRequestSheetKind] = useState<
+    "imagenes" | "videos" | "carruseles" | "todas" | null
+  >(null);
   // The chat is a takeover of the content area, not a third tab — a totally
   // new client (no requests yet) lands straight on it; a returning one opens
   // it with the glowing "Chat IA" button and closes it (or taps a tab) to
@@ -747,6 +753,40 @@ function PanelContent() {
   );
   const videoRows = videoRequests.data?.videoRequests ?? [];
   const carouselRows = carouselRequests.data?.carouselRequests ?? [];
+  const recentRequests: HomeRequestSummary[] = [
+    ...rows.map((row) => {
+      const result = parseResults(row).at(-1) ?? null;
+      return {
+        id: row.id,
+        kind: "imagenes" as const,
+        title: row.title,
+        status: row.status,
+        createdAt: row.created_at,
+        thumbnail: result?.image_url ?? (result?.r2_key ? `/api/file?key=${encodeURIComponent(result.r2_key)}` : null),
+      };
+    }),
+    ...videoRows.map((row) => ({
+      id: row.id,
+      kind: "videos" as const,
+      title: row.title,
+      status: row.status,
+      createdAt: row.created_at,
+      thumbnail: row.delivered_key ? `/api/file?key=${encodeURIComponent(row.delivered_key)}` : null,
+    })),
+    ...carouselRows.map((row) => {
+      const slide = parseSlides(row).find((item) => item.delivered_key);
+      return {
+        id: row.id,
+        kind: "carruseles" as const,
+        title: row.title,
+        status: row.status,
+        createdAt: row.created_at,
+        thumbnail: slide?.delivered_key ? `/api/file?key=${encodeURIComponent(slide.delivered_key)}` : null,
+      };
+    }),
+  ]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3);
   // "Impact panel" stats — closes the loop from pedir → pieza → campaña →
   // resultado, and doubles as the client's own history read back as an
   // achievement instead of a task list. All computed from data already
@@ -883,7 +923,7 @@ function PanelContent() {
         onProfile={() => setView("perfil")}
       />
 
-      <main className="mx-auto max-w-6xl px-5 py-5 pb-24 sm:py-6 sm:pb-10">
+      <main className="mx-auto max-w-6xl px-5 py-5 pb-[calc(8rem+env(safe-area-inset-bottom))] sm:py-6 sm:pb-10">
         {view === "perfil" ? (
           <PerfilView me={me.data} onBack={() => setView("panel")} onLogout={logout} />
         ) : needsOnboarding ? (
@@ -1097,154 +1137,47 @@ function PanelContent() {
                     <PlanificacionPanel streakWeeks={streakWeeks} />
                   </div>
 
-                  <div className="wit-glass mt-8 flex flex-col gap-3 rounded-2xl px-5 py-4 shadow-[0_10px_30px_rgba(5,13,40,0.06)] sm:max-w-xs">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
-                        {t("Tu cupo este mes", "Your quota this month")}
-                      </p>
-                      <span
-                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
-                      >
-                        {active
-                          ? t(
-                              `${getPlan(membership?.plan).nombre} activa`,
-                              `${getPlan(membership?.plan).nombre} active`,
-                            )
-                          : t("Sin membresía", "No membership")}
-                      </span>
-                    </div>
-                    <div className="flex items-start justify-center gap-9">
-                      <QuotaRing
-                        icon={ImageIcon}
-                        remaining={active ? remaining : 0}
-                        quota={
-                          (membership?.requests_quota ?? 20) +
-                          (membership?.bonus_requests_quota ?? 0)
-                        }
-                        colorHex="#0047ff"
-                        label={t("Imágenes", "Images")}
-                      />
-                      <QuotaRing
-                        icon={VideoIcon}
-                        remaining={active ? videoRemaining : 0}
-                        quota={membership?.video_requests_quota ?? 0}
-                        colorHex="#ff3fb0"
-                        label={t("Video", "Video")}
-                        locked={!membership || membership.video_requests_quota === 0}
-                        onLockedClick={() => setUpgradeTeaser("video")}
-                      />
-                      <QuotaRing
-                        icon={GalleryHorizontal}
-                        remaining={active ? carouselRemaining : 0}
-                        quota={membership?.carousel_requests_quota ?? 0}
-                        colorHex="#10b981"
-                        label={t("Carrusel", "Carousel")}
-                        locked={!membership || membership.carousel_requests_quota === 0}
-                        onLockedClick={() => setUpgradeTeaser("carrusel")}
-                      />
-                    </div>
-                    {membership && membership.bonus_requests_quota > 0 ? (
-                      <p className="text-center text-[11px] font-semibold text-wit-blue">
-                        {t(
-                          `+${membership.bonus_requests_quota} de paquetes comprados`,
-                          `+${membership.bonus_requests_quota} from purchased packs`,
-                        )}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {campaignsLaunched > 0 || totalReach > 0 || totalResultsImpact > 0 ? (
-                    // Their own history read back as an achievement, and the
-                    // loop closed all the way to real results — not just a
-                    // request counter. Each stat only shows once there's a
-                    // real number behind it (0 campañas/0 alcance/0
-                    // resultados would read as failure, not motivation). The
-                    // whole card is a single button (not three separate ones
-                    // around each number) — a client tapping the title or the
-                    // padding between numbers should still land on Campañas.
+                  <div className="mt-7 space-y-6">
+                    <HomeRequestsCard
+                      rows={recentRequests}
+                      loading={requests.isLoading || videoRequests.isLoading || carouselRequests.isLoading}
+                      onOpen={(kind) => setRequestSheetKind(kind)}
+                      onViewAll={() => setRequestSheetKind("todas")}
+                    />
                     <button
                       type="button"
-                      onClick={() => setSection("campanas")}
-                      className="wit-glass mt-6 w-full rounded-2xl p-5 text-left shadow-[0_10px_30px_rgba(5,13,40,0.06)] transition-transform active:scale-[0.99]"
+                      onClick={() => setCreateSheetOpen(true)}
+                      className="flex min-h-[100px] w-full items-center gap-4 rounded-3xl bg-wit-blue px-5 text-left text-white transition-transform active:scale-[0.99]"
                     >
-                      <p className="text-sm font-bold text-wit-ink">
-                        {t("Resultados de campañas", "Campaign results")}
-                      </p>
-                      {/* grid-cols-3 (not flex-wrap) so the three points always
-                        sit on one line, even on a narrow phone. */}
-                      <div className="mt-4 grid grid-cols-3 gap-2">
-                        {campaignsLaunched > 0 ? (
-                          <div className="flex flex-col items-center gap-1 text-center">
-                            <Rocket className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
-                            <span className="text-lg font-extrabold leading-none text-wit-ink">
-                              {campaignsLaunched}
-                            </span>
-                            <span className="text-[10px] leading-tight text-wit-gray">
-                              {t(
-                                campaignsLaunched === 1 ? "campaña lanzada" : "campañas lanzadas",
-                                campaignsLaunched === 1
-                                  ? "campaign launched"
-                                  : "campaigns launched",
-                              )}
-                            </span>
-                          </div>
-                        ) : null}
-                        {totalReach > 0 ? (
-                          <div className="flex flex-col items-center gap-1 text-center">
-                            <Eye className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
-                            <span className="text-lg font-extrabold leading-none text-wit-ink">
-                              {totalReach.toLocaleString("es-MX")}
-                            </span>
-                            <span className="text-[10px] leading-tight text-wit-gray">
-                              {t("personas alcanzadas", "people reached")}
-                            </span>
-                          </div>
-                        ) : null}
-                        {totalResultsImpact > 0 ? (
-                          <div className="flex flex-col items-center gap-1 text-center">
-                            <Target className="h-4 w-4 text-wit-blue" strokeWidth={1.9} />
-                            <span className="text-lg font-extrabold leading-none text-wit-ink">
-                              {totalResultsImpact.toLocaleString("es-MX")}
-                            </span>
-                            <span className="text-[10px] leading-tight text-wit-gray">
-                              {t("mensajes recibidos", "messages received")}
-                            </span>
-                          </div>
-                        ) : null}
-                      </div>
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/18 text-2xl font-medium">+</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-base font-extrabold">{t("Crear contenido", "Create content")}</span>
+                        <span className="mt-1 block text-sm leading-snug text-white/80">
+                          {t("Cuéntanos qué necesitas y nosotros lo hacemos realidad.", "Tell us what you need and we'll make it happen.")}
+                        </span>
+                      </span>
+                      <ChevronRight className="h-5 w-5 shrink-0" strokeWidth={2.5} />
                     </button>
-                  ) : null}
-
-                  {!active ? (
-                    <div className="mt-8 flex flex-col items-start gap-4 rounded-3xl bg-wit-navy p-8 text-white md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="text-xl font-bold">
-                          {t(
-                            "Activa tu membresía para empezar a crear.",
-                            "Activate your membership to start creating.",
-                          )}
-                        </p>
-                        <p className="mt-1 text-sm text-white/70">
-                          {t(
-                            "Elige entre Essential, Grow o Scale — desde $5,999 MXN al mes.",
-                            "Choose Essential, Grow, or Scale — starting at $5,999 MXN a month.",
-                          )}
-                        </p>
-                      </div>
-                      <Link
-                        to="/upgrade"
-                        className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:brightness-110"
-                      >
-                        {t("Quiero mi membresía", "I want my membership")}
-                      </Link>
-                    </div>
-                  ) : null}
+                    <ThisMonthCard
+                      active={active}
+                      planName={getPlan(membership?.plan).nombre}
+                      imageUsed={membership?.requests_used ?? 0}
+                      imageTotal={(membership?.requests_quota ?? 20) + (membership?.bonus_requests_quota ?? 0)}
+                      videoUsed={membership?.video_requests_used ?? 0}
+                      videoTotal={membership?.video_requests_quota ?? 0}
+                      carouselUsed={membership?.carousel_requests_used ?? 0}
+                      carouselTotal={membership?.carousel_requests_quota ?? 0}
+                      reach={totalReach}
+                      messages={totalResultsImpact}
+                      onOpenCampaigns={() => setSection("campanas")}
+                    />
+                  </div>
                 </div>
               </>
             ) : null}
 
             {section === "creatividad" ? (
-              <>
+              <div className="hidden lg:block">
                 {/* Quick-start entry points, now also the only selector for
                     Imágenes/Videos/Carruseles — the old separate pill row
                     became redundant once tapping a card already switches
@@ -1377,7 +1310,7 @@ function PanelContent() {
                     )}
                   </div>
                 ) : null}
-              </>
+              </div>
             ) : section === "activos" ? (
               <div className="mt-8">
                 <BrandShowcaseCarousel brandProfile={brandProfile} />
@@ -1523,6 +1456,41 @@ function PanelContent() {
             document.body,
           )
         : null}
+
+      {createSheetOpen ? (
+        <CreateContentSheet
+          onClose={() => setCreateSheetOpen(false)}
+          onImage={() => {
+            setCreateSheetOpen(false);
+            openChat();
+          }}
+          onVideo={() => {
+            setCreateSheetOpen(false);
+            setVideoWizardOpen(true);
+          }}
+          onCarousel={() => {
+            setCreateSheetOpen(false);
+            setCarouselWizardOpen(true);
+          }}
+        />
+      ) : null}
+
+      {requestSheetKind ? (
+        <MobileRequestsSheet
+          kind={requestSheetKind}
+          imageRows={rows}
+          videoRows={videoRows}
+          carouselRows={carouselRows}
+          imageLoading={requests.isLoading}
+          videoLoading={videoRequests.isLoading}
+          carouselLoading={carouselRequests.isLoading}
+          onClose={() => setRequestSheetKind(null)}
+          onCreate={() => {
+            setRequestSheetKind(null);
+            setCreateSheetOpen(true);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -5743,6 +5711,301 @@ function PreviewImageRow({ label, fileKey }: { label: string; fileKey: string })
 }
 
 /* ---------- request history ---------- */
+
+type HomeRequestSummary = {
+  id: string;
+  kind: "imagenes" | "videos" | "carruseles";
+  title: string;
+  status: string;
+  createdAt: string;
+  thumbnail: string | null;
+};
+
+function homeRequestStatus(status: string, t: (es: string, en: string) => string) {
+  if (status === "completada" || status === "cerrada") {
+    return { label: t("Completada", "Completed"), cls: "bg-emerald-50 text-emerald-700" };
+  }
+  if (status === "rechazada") {
+    return { label: t("Rechazada", "Rejected"), cls: "bg-red-50 text-red-600" };
+  }
+  return { label: t("En proceso", "In progress"), cls: "bg-blue-50 text-wit-blue" };
+}
+
+function HomeRequestsCard({
+  rows,
+  loading,
+  onOpen,
+  onViewAll,
+}: {
+  rows: HomeRequestSummary[];
+  loading: boolean;
+  onOpen: (kind: HomeRequestSummary["kind"]) => void;
+  onViewAll: () => void;
+}) {
+  const { t } = useLanguage();
+  return (
+    <section className="rounded-3xl border border-wit-ink/5 bg-white p-5 shadow-[0_8px_24px_rgba(5,13,40,0.04)]">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-wit-ink">
+          {t("Mis solicitudes", "My requests")}
+        </h2>
+        <button type="button" onClick={onViewAll} className="text-xs font-bold text-wit-blue">
+          {t("Ver todas", "View all")} <ChevronRight className="inline h-3.5 w-3.5" strokeWidth={2.5} />
+        </button>
+      </div>
+      <div className="mt-3 divide-y divide-wit-ink/6">
+        {loading ? (
+          [0, 1, 2].map((index) => <div key={index} className="h-20 animate-pulse bg-wit-mist/30" />)
+        ) : rows.length ? (
+          rows.map((row) => {
+            const status = homeRequestStatus(row.status, t);
+            const Icon = row.kind === "videos" ? VideoIcon : row.kind === "carruseles" ? GalleryHorizontal : ImageIcon;
+            return (
+              <button
+                key={`${row.kind}-${row.id}`}
+                type="button"
+                onClick={() => onOpen(row.kind)}
+                className="flex min-h-[76px] w-full items-center gap-3 py-2 text-left"
+              >
+                {row.thumbnail ? (
+                  <img src={row.thumbnail} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+                ) : (
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-wit-mist/55">
+                    <Icon className="h-5 w-5 text-wit-blue/65" strokeWidth={2} />
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-bold text-wit-ink">{row.title}</span>
+                  <span className="mt-1 block text-xs text-wit-gray">
+                    {new Date(`${row.createdAt.replace(" ", "T")}Z`).toLocaleDateString(t("es-MX", "en-US"), {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                </span>
+                <span className={`hidden rounded-full px-2.5 py-1 text-[11px] font-bold min-[360px]:inline ${status.cls}`}>
+                  {status.label}
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-wit-gray" strokeWidth={2.4} />
+              </button>
+            );
+          })
+        ) : (
+          <p className="py-6 text-center text-sm text-wit-gray">
+            {t("Aún no tienes solicitudes.", "You don't have any requests yet.")}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ThisMonthCard({
+  active,
+  planName,
+  imageUsed,
+  imageTotal,
+  videoUsed,
+  videoTotal,
+  carouselUsed,
+  carouselTotal,
+  reach,
+  messages,
+  onOpenCampaigns,
+}: {
+  active: boolean;
+  planName: string;
+  imageUsed: number;
+  imageTotal: number;
+  videoUsed: number;
+  videoTotal: number;
+  carouselUsed: number;
+  carouselTotal: number;
+  reach: number;
+  messages: number;
+  onOpenCampaigns: () => void;
+}) {
+  const { t } = useLanguage();
+  const quotas = [
+    { icon: ImageIcon, used: imageUsed, total: imageTotal, label: t("Imágenes", "Images"), cls: "text-wit-blue bg-wit-blue/10" },
+    { icon: VideoIcon, used: videoUsed, total: videoTotal, label: t("Videos", "Videos"), cls: "text-wit-pink bg-wit-pink/10" },
+    { icon: GalleryHorizontal, used: carouselUsed, total: carouselTotal, label: t("Carruseles", "Carousels"), cls: "text-emerald-600 bg-emerald-50" },
+  ];
+  return (
+    <section className="rounded-3xl border border-wit-ink/5 bg-white p-5 shadow-[0_8px_24px_rgba(5,13,40,0.04)]">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-wit-ink">{t("Este mes", "This month")}</h2>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+          {active ? t(`${planName} activa`, `${planName} active`) : t("Sin membresía", "No membership")}
+        </span>
+      </div>
+      <div className="mt-5 grid grid-cols-3 gap-2">
+        {quotas.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.label} className="min-w-0 text-center">
+              <span className={`mx-auto flex h-9 w-9 items-center justify-center rounded-xl ${item.cls}`}>
+                <Icon className="h-4 w-4" strokeWidth={2.1} />
+              </span>
+              <p className="mt-2 text-sm font-extrabold text-wit-ink">{Math.max(0, item.used)}/{item.total}</p>
+              <p className="truncate text-[10px] font-semibold text-wit-gray">{item.label}</p>
+            </div>
+          );
+        })}
+      </div>
+      <button type="button" onClick={onOpenCampaigns} className="mt-5 grid w-full grid-cols-2 divide-x divide-wit-ink/8 border-t border-wit-ink/8 pt-4 text-left">
+        <span className="pr-4">
+          <span className="block text-lg font-extrabold text-wit-ink">{reach.toLocaleString("es-MX")}</span>
+          <span className="text-[11px] font-medium text-wit-gray">{t("Personas alcanzadas", "People reached")}</span>
+        </span>
+        <span className="pl-4">
+          <span className="block text-lg font-extrabold text-wit-ink">{messages.toLocaleString("es-MX")}</span>
+          <span className="text-[11px] font-medium text-wit-gray">{t("Mensajes recibidos", "Messages received")}</span>
+        </span>
+      </button>
+    </section>
+  );
+}
+
+function CreateContentSheet({
+  onClose,
+  onImage,
+  onVideo,
+  onCarousel,
+}: {
+  onClose: () => void;
+  onImage: () => void;
+  onVideo: () => void;
+  onCarousel: () => void;
+}) {
+  const { t } = useLanguage();
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const pointerRef = useRef<{ id: number; startY: number; lastY: number; lastAt: number } | null>(null);
+  const [offset, setOffset] = useState(typeof window === "undefined" ? 1000 : window.innerHeight);
+  const [dragging, setDragging] = useState(false);
+  const [closing, setClosing] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => requestAnimationFrame(() => setOffset(0)));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  function dismiss() {
+    if (closing) return;
+    setClosing(true);
+    setOffset(sheetRef.current?.getBoundingClientRect().height ?? window.innerHeight);
+    window.setTimeout(onClose, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 360);
+  }
+  function select(action: () => void) {
+    onClose();
+    action();
+  }
+  function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.button !== 0 || closing) return;
+    pointerRef.current = { id: event.pointerId, startY: event.clientY, lastY: event.clientY, lastAt: performance.now() };
+  }
+  function onPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const pointer = pointerRef.current;
+    if (!pointer || pointer.id !== event.pointerId || closing) return;
+    const delta = Math.max(0, event.clientY - pointer.startY);
+    if (!delta) return;
+    setDragging(true);
+    pointer.lastY = event.clientY;
+    pointer.lastAt = performance.now();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+    setOffset(delta);
+  }
+  function onPointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    const pointer = pointerRef.current;
+    if (!pointer || pointer.id !== event.pointerId) return;
+    const delta = Math.max(0, event.clientY - pointer.startY);
+    const velocity = Math.max(0, event.clientY - pointer.lastY) / Math.max(1, performance.now() - pointer.lastAt);
+    pointerRef.current = null;
+    if (!dragging) return;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    setDragging(false);
+    if (delta > (sheetRef.current?.getBoundingClientRect().height ?? window.innerHeight) * 0.25 || velocity > 0.6) dismiss();
+    else setOffset(0);
+  }
+  const progress = Math.min(1, Math.max(0, offset / (sheetRef.current?.getBoundingClientRect().height ?? window.innerHeight)));
+  const options = [
+    { label: t("Imagen", "Image"), icon: ImageIcon, color: "bg-wit-blue/10 text-wit-blue", action: onImage },
+    { label: t("Video", "Video"), icon: VideoIcon, color: "bg-wit-pink/10 text-wit-pink", action: onVideo },
+    { label: t("Carrusel", "Carousel"), icon: GalleryHorizontal, color: "bg-emerald-50 text-emerald-600", action: onCarousel },
+  ];
+  return createPortal(
+    <div className="fixed inset-0 z-[60] bg-wit-ink/15 backdrop-blur-[2px]" style={{ opacity: 1 - progress * 0.8 }} onMouseDown={(event) => event.target === event.currentTarget && dismiss()}>
+      <div
+        ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-content-title"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerEnd}
+        onPointerCancel={onPointerEnd}
+        className={`absolute inset-x-0 bottom-0 rounded-t-[28px] bg-white px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-4 shadow-[0_-12px_40px_rgba(5,13,40,0.14)] ${dragging || closing ? "transition-none" : "transition-transform duration-[360ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:duration-0"}`}
+        style={{ transform: `translate3d(0, ${offset}px, 0)` }}
+      >
+        <span aria-hidden="true" className="mx-auto block h-1.5 w-10 rounded-full bg-wit-ink/20" />
+        <div className="mt-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 id="create-content-title" className="text-xl font-extrabold text-wit-ink">{t("¿Qué quieres crear?", "What do you want to create?")}</h2>
+            <p className="mt-1 text-sm text-wit-gray">{t("También puedes contarnos qué necesitas y nosotros elegimos el formato.", "You can also tell us what you need and we'll choose the format.")}</p>
+          </div>
+          <button type="button" onClick={dismiss} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist" aria-label={t("Cerrar", "Close")}><X className="h-5 w-5" /></button>
+        </div>
+        <div className="mt-6 grid grid-cols-3 gap-3">
+          {options.map((option) => {
+            const Icon = option.icon;
+            return <button key={option.label} type="button" onClick={() => select(option.action)} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-wit-ink/8 bg-white text-xs font-bold text-wit-ink active:scale-[0.98]"><span className={`flex h-10 w-10 items-center justify-center rounded-xl ${option.color}`}><Icon className="h-5 w-5" /></span>{option.label}</button>;
+          })}
+        </div>
+        <button type="button" onClick={() => select(onImage)} className="mt-5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 text-sm font-bold text-white"><Sparkles className="h-4 w-4" />{t("Hacer una solicitud", "Make a request")}</button>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function MobileRequestsSheet({
+  kind,
+  imageRows,
+  videoRows,
+  carouselRows,
+  imageLoading,
+  videoLoading,
+  carouselLoading,
+  onClose,
+  onCreate,
+}: {
+  kind: "imagenes" | "videos" | "carruseles" | "todas";
+  imageRows: RequestRow[];
+  videoRows: VideoRequestRow[];
+  carouselRows: CarouselRequestRow[];
+  imageLoading: boolean;
+  videoLoading: boolean;
+  carouselLoading: boolean;
+  onClose: () => void;
+  onCreate: () => void;
+}) {
+  const { t } = useLanguage();
+  return createPortal(
+    <div className="fixed inset-0 z-[60] bg-white pt-[env(safe-area-inset-top)]">
+      <header className="flex h-16 items-center gap-3 border-b border-wit-ink/8 px-5">
+        <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full text-wit-ink hover:bg-wit-mist" aria-label={t("Volver", "Back")}><ArrowLeft className="h-5 w-5" /></button>
+        <h2 className="flex-1 text-base font-extrabold text-wit-ink">{t("Mis solicitudes", "My requests")}</h2>
+        <button type="button" onClick={onCreate} className="text-sm font-bold text-wit-blue">{t("Crear", "Create")}</button>
+      </header>
+      <div className="h-[calc(100dvh-4rem-env(safe-area-inset-top))] overflow-y-auto px-5 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-5">
+        {(kind === "todas" || kind === "imagenes") ? <section><h3 className="mb-3 text-xs font-extrabold uppercase tracking-[0.15em] text-wit-gray">{t("Imágenes", "Images")}</h3><RequestList rows={imageRows} loading={imageLoading} onNew={onCreate} /></section> : null}
+        {(kind === "todas" || kind === "videos") ? <section className={kind === "todas" ? "mt-8" : ""}><h3 className="mb-3 text-xs font-extrabold uppercase tracking-[0.15em] text-wit-gray">{t("Videos", "Videos")}</h3><VideoRequestList rows={videoRows} loading={videoLoading} /></section> : null}
+        {(kind === "todas" || kind === "carruseles") ? <section className={kind === "todas" ? "mt-8" : ""}><h3 className="mb-3 text-xs font-extrabold uppercase tracking-[0.15em] text-wit-gray">{t("Carruseles", "Carousels")}</h3><CarouselRequestList rows={carouselRows} loading={carouselLoading} /></section> : null}
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
 function RequestList({
   rows,
