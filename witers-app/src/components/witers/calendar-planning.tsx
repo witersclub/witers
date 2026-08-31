@@ -2084,7 +2084,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           </button>
         </div>
       ) : (
-        <div className="mt-3 grid grid-cols-1 gap-5 pb-20 lg:grid-cols-[1fr_320px] lg:pb-0">
+        <div className="mt-3 grid grid-cols-1 gap-5 pb-0 lg:grid-cols-[1fr_320px]">
           {/* Same grid at every size — only the density changes (smaller
               cells/text on a phone) instead of swapping to a separate
               agenda-list layout on mobile. */}
@@ -2195,15 +2195,80 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
       )}
 
       {entries.length > 0 ? (
-        <section className="wit-brand-gradient mt-6 rounded-3xl p-5 text-white shadow-[0_12px_30px_rgba(122,57,232,0.18)]">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2"><CalendarClock className="h-5 w-5" /><h2 className="text-lg font-extrabold">{monthlyScheduledCount === 0 ? t("Programa tu mes", "Schedule your month") : monthlyPendingCount === 0 ? t(`${monthLabel} está programado ✓`, `${monthLabel} is scheduled ✓`) : t("Tu mes está en marcha", "Your month is underway")}</h2></div>
-              <p className="mt-2 max-w-[18rem] text-sm leading-relaxed text-white/85">{monthlyPendingCount === 0 ? t(`${monthlyScheduledCount} piezas listas`, `${monthlyScheduledCount} pieces ready`) : monthlyScheduledCount ? t(`${monthlyScheduledCount} de ${publishableEntries.length} piezas programadas`, `${monthlyScheduledCount} of ${publishableEntries.length} pieces scheduled`) : t(`Tienes ${monthlyPendingCount} piezas pendientes de programación.`, `You have ${monthlyPendingCount} pieces pending scheduling.`)}</p>
+        <section className="mt-6 rounded-3xl border border-[rgba(20,30,60,0.06)] bg-white p-5 text-wit-ink shadow-[0_8px_30px_rgba(20,30,60,0.06)] sm:p-[22px]">
+          <div className="grid grid-cols-[minmax(0,1fr)_84px] gap-x-4 min-[360px]:grid-cols-[minmax(0,1fr)_auto] min-[360px]:gap-x-5">
+            <div className="min-w-0">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-wit-pink/10 text-wit-pink">
+                  <CalendarClock className="h-5 w-5" strokeWidth={2.2} />
+                </span>
+                <div className="min-w-0 pt-0.5">
+                  <h2 className="text-[20px] font-extrabold leading-[1.2] tracking-tight text-wit-ink sm:text-[22px]">
+                    {monthlyScheduledCount === 0
+                      ? t("Programa tu mes", "Schedule your month")
+                      : monthlyPendingCount === 0
+                        ? t(`${monthLabel} está programado ✓`, `${monthLabel} is scheduled ✓`)
+                        : t("Tu mes está en marcha", "Your month is underway")}
+                  </h2>
+                  <p className="mt-2 text-[15px] font-medium leading-snug text-wit-gray sm:text-base">
+                    {monthlyPendingCount === 0
+                      ? t(`${monthlyScheduledCount} piezas listas`, `${monthlyScheduledCount} pieces ready`)
+                      : monthlyScheduledCount
+                        ? t(
+                            `${monthlyScheduledCount} de ${publishableEntries.length} piezas programadas`,
+                            `${monthlyScheduledCount} of ${publishableEntries.length} pieces scheduled`,
+                          )
+                        : t(
+                            `Tienes ${monthlyPendingCount} piezas pendientes de programación.`,
+                            `You have ${monthlyPendingCount} pieces pending scheduling.`,
+                          )}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[rgba(80,90,130,0.10)]">
+                <div
+                  className="wit-brand-gradient h-full rounded-full"
+                  style={{ width: `${monthlyProgressPct}%` }}
+                />
+              </div>
             </div>
-            <div className="grid shrink-0 gap-2 border-l border-white/30 pl-4 text-sm"><span><b className="block text-lg">{monthlyScheduledCount}</b><small className="text-white/80">{t("Programadas", "Scheduled")}</small></span><span><b className="block text-lg">{monthlyPendingCount}</b><small className="text-white/80">{t("Pendientes", "Pending")}</small></span></div>
+            <div className="grid content-start gap-3 border-l border-[rgba(20,30,60,0.08)] pl-4 text-left">
+              <span>
+                <b className="block text-[26px] font-extrabold leading-none text-violet-700 sm:text-[30px]">
+                  {monthlyScheduledCount}
+                </b>
+                <small className="mt-1 block text-[13px] font-semibold text-wit-gray sm:text-sm">
+                  {t(
+                    monthlyScheduledCount === 1 ? "Programada" : "Programadas",
+                    monthlyScheduledCount === 1 ? "Scheduled" : "Scheduled",
+                  )}
+                </small>
+              </span>
+              <span>
+                <b className="block text-[26px] font-extrabold leading-none text-wit-pink sm:text-[30px]">
+                  {monthlyPendingCount}
+                </b>
+                <small className="mt-1 block text-[13px] font-semibold text-wit-gray sm:text-sm">
+                  {t("Pendientes", "Pending")}
+                </small>
+              </span>
+            </div>
           </div>
-          <button type="button" onClick={() => setMonthlyProgrammingOpen(true)} className="mt-5 flex min-h-[50px] w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-extrabold text-violet-700"><CalendarClock className="h-4 w-4" />{monthlyPendingCount === 0 ? t("Ver programación", "View schedule") : monthlyScheduledCount ? t("Continuar programación", "Continue scheduling") : t("Programar contenido del mes", "Schedule month's content")}<ChevronRight className="h-4 w-4" /></button>
+          <button
+            type="button"
+            onClick={() => setMonthlyProgrammingOpen(true)}
+            className="wit-brand-gradient mt-5 flex min-h-[58px] w-full items-center justify-center rounded-[18px] p-px text-sm font-extrabold text-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2"
+          >
+            <span className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-[17px] bg-white px-4">
+              <CalendarClock className="h-4 w-4" />
+              {monthlyPendingCount === 0
+                ? t("Ver programación", "View schedule")
+                : monthlyScheduledCount
+                  ? t("Continuar programación", "Continue scheduling")
+                  : t("Programar contenido del mes", "Schedule month's content")}
+              <ChevronRight className="h-4 w-4" />
+            </span>
+          </button>
         </section>
       ) : null}
 
