@@ -50,16 +50,12 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div className="wit-page min-h-dvh overflow-x-clip">
-      <SiteHeader />
+      <SiteHeader landing />
       <Hero />
-      <Testimonios />
       <HowItWorks />
       <Capabilities />
       <DevicesSection />
       <MarcasQueConfian />
-      <PruebaInteractiva />
-      <CampanasTeaser />
-      <PanelPreview />
       <SinglePlan />
       <Faq />
       <CtaFinal />
@@ -210,12 +206,20 @@ function SectionEyebrow({ children }: { children: ReactNode }) {
 
 function HowItWorks() {
   const steps = [
-    { icon: CalendarDays, title: "Planea", text: "Organiza tu mes y define la estrategia de tu marca." },
-    { icon: Sparkles, title: "Creamos", text: "Preparamos el contenido que necesitas respetando tu identidad." },
-    { icon: Send, title: "Programas", text: "Revisa, aprueba y deja listo tu contenido." },
-    { icon: BarChart3, title: "Publicamos", text: "Publicamos en tus redes conectadas y consultas resultados." },
-  ];
-  return <section id="funciones" className="bg-white py-20 md:py-28"><div className="mx-auto max-w-6xl px-5 md:px-10"><div className="text-center"><SectionEyebrow>Así funciona WITERS</SectionEyebrow><h2 className="mt-3 text-3xl font-extrabold tracking-[-0.04em] text-wit-ink md:text-5xl">De una idea a todo tu mes, en 4 pasos</h2></div><div className="relative mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{steps.map((step, index) => <article key={step.title} className="relative rounded-[24px] border border-wit-ink/7 bg-[#fbfcff] p-6 transition-transform duration-300 hover:-translate-y-1"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue"><step.icon className="h-5 w-5" /></span><span className="absolute right-5 top-6 font-wit-mono text-xs font-semibold text-wit-blue/45">0{index + 1}</span><h3 className="mt-5 text-lg font-extrabold uppercase tracking-wide text-wit-ink">{step.title}</h3><p className="mt-2 text-sm leading-relaxed text-wit-gray">{step.text}</p></article>)}</div></div></section>;
+    { icon: CalendarDays, title: "PLANEAS", lead: "Dinos qué quieres lograr este mes.", text: "Organizamos tu estrategia, temas y calendario.", kind: "calendar" },
+    { icon: Sparkles, title: "CREAMOS", lead: "Tu contenido empieza a tomar forma.", text: "Nuestro equipo y la IA preparan contenido fiel a tu identidad.", kind: "content" },
+    { icon: Check, title: "APRUEBAS", lead: "Tú tienes siempre la última palabra.", text: "Revisa cada pieza, solicita cambios o apruébala desde tu panel.", kind: "approval" },
+    { icon: Send, title: "PUBLICAMOS", lead: "Tu mes queda listo para salir.", text: "Programa tu contenido y lo publicamos en tus redes conectadas.", kind: "publish" },
+  ] as const;
+  return <section id="funciones" className="bg-white py-20 md:py-32"><div className="mx-auto max-w-6xl px-5 md:px-10"><div className="max-w-2xl"><SectionEyebrow>Así funciona WITERS</SectionEyebrow><h2 className="mt-3 text-3xl font-extrabold tracking-[-0.05em] text-wit-ink md:text-5xl">De una idea a todo tu mes, en 4 pasos</h2></div><div className="relative mt-12 space-y-7 md:mt-16 md:space-y-10">{steps.map((step, index) => <article key={step.title} className="relative grid gap-6 rounded-[28px] border border-wit-ink/[0.07] bg-[#fbfcff] p-5 sm:p-7 md:grid-cols-[0.75fr_1.25fr] md:items-center md:gap-12"><div className="relative pl-12 md:pl-0"><span className="absolute left-0 top-0 flex h-9 w-9 items-center justify-center rounded-full bg-wit-blue text-xs font-extrabold text-white md:static md:mb-5">0{index + 1}</span><span className="hidden md:flex h-11 w-11 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue"><step.icon className="h-5 w-5" /></span><h3 className="mt-1 text-lg font-extrabold tracking-wide text-wit-ink md:mt-5">{step.title}</h3><p className="mt-3 text-lg font-bold leading-snug text-wit-ink">{step.lead}</p><p className="mt-2 text-sm leading-relaxed text-wit-gray">{step.text}</p></div><HowStepVisual kind={step.kind} /></article>)}</div><div className="mt-12 rounded-[28px] bg-wit-navy px-6 py-8 text-center text-white md:mt-16 md:px-12"><p className="text-2xl font-extrabold tracking-[-0.04em] md:text-4xl">30 días de contenido.<br />Un solo lugar.</p><p className="mx-auto mt-3 max-w-xl text-sm text-white/65 md:text-base">Planifica, crea y publica todo tu mes sin saltar entre herramientas.</p><Link to="/registro" onClick={() => trackCtaClick("Crear mi mes (cómo funciona)")} className="wit-brand-gradient mt-6 inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-extrabold uppercase tracking-wide text-white">Crear mi mes <ChevronRight className="h-4 w-4" /></Link></div></div></section>;
+}
+
+function HowStepVisual({ kind }: { kind: "calendar" | "content" | "approval" | "publish" }) {
+  const assets = ["brand-example-fitzone.webp", "brand-example-mia.webp", "brand-example-alma.webp"];
+  if (kind === "content") return <div className="grid grid-cols-3 gap-3 rounded-2xl bg-white p-3 shadow-[0_12px_28px_rgba(5,13,40,.08)]">{assets.map((asset, index) => <img key={asset} src={`/assets/${asset}`} alt="Pieza de contenido de WITERS" loading="lazy" className={`aspect-[4/5] w-full rounded-xl object-cover ${index === 1 ? "translate-y-3" : ""}`} />)}</div>;
+  if (kind === "approval") return <div className="rounded-2xl bg-white p-4 shadow-[0_12px_28px_rgba(5,13,40,.08)]"><div className="flex gap-3"><img src="/assets/brand-example-lumina.webp" alt="Vista previa de publicación" loading="lazy" className="h-24 w-24 rounded-xl object-cover" /><div className="min-w-0 flex-1"><p className="text-xs font-extrabold text-wit-ink">Promoción de temporada</p><p className="mt-2 text-[11px] text-wit-gray">Lista para revisión</p><div className="mt-4 flex gap-2"><span className="rounded-full border border-wit-ink/10 px-2.5 py-1 text-[10px] font-bold text-wit-ink">Solicitar cambio</span><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">Aprobar</span></div></div></div></div>;
+  if (kind === "publish") return <div className="rounded-2xl bg-white p-4 shadow-[0_12px_28px_rgba(5,13,40,.08)]"><p className="text-xs font-extrabold text-wit-ink">Publicaciones programadas</p>{["Lun 08 · 6:00 p. m.", "Mié 10 · 10:00 a. m.", "Vie 12 · 6:00 p. m."].map((date) => <div key={date} className="mt-2 flex items-center justify-between rounded-xl bg-wit-mist/50 px-3 py-2"><span className="text-[11px] font-semibold text-wit-ink">{date}</span><span className="text-[11px] font-bold text-wit-blue">Instagram · Facebook ✓</span></div>)}</div>;
+  return <div className="rounded-2xl bg-white p-4 shadow-[0_12px_28px_rgba(5,13,40,.08)]"><div className="flex items-center justify-between"><p className="text-xs font-extrabold text-wit-ink">Septiembre 2026</p><span className="text-[10px] font-bold text-wit-blue">Ver calendario</span></div><div className="mt-4 grid grid-cols-7 gap-1.5">{Array.from({ length: 28 }, (_, i) => <span key={i} className={`aspect-square rounded-md ${i === 2 || i === 9 || i === 16 || i === 23 ? "wit-brand-gradient" : "bg-wit-mist/70"}`} />)}</div></div>;
 }
 
 function Capabilities() {
@@ -609,15 +613,14 @@ function CtaFinal() {
         <h2 className="text-3xl font-extrabold tracking-[-0.05em] text-white md:text-5xl">
           {t("Tu próximo mes de contenido", "Your next month of content")}
           <br />
-          {t("Hagamos que el mundo", "Let's make the world")}{" "}
-          <span className="italic text-wit-blue">{t("la vea", "see it")}</span>.
+          {t("puede empezar hoy.", "can start today.")}
         </h2>
         <Link
           to={signedIn ? "/panel" : "/registro"}
-          onClick={() => trackCtaClick("Hablemos de tu proyecto (CTA final)")}
+          onClick={() => trackCtaClick("Empezar ahora (CTA final)")}
           className="group inline-flex shrink-0 items-center gap-2.5 rounded-full border border-wit-ink/15 bg-white px-7 py-3.5 text-sm font-bold uppercase tracking-[0.08em] text-wit-ink shadow-[0_10px_30px_rgba(5,13,40,0.08)] transition-all duration-200 hover:bg-wit-ink hover:text-white active:scale-[0.98]"
         >
-          {t("Hablemos de tu proyecto", "Let's talk about your project")}
+          {t("Empezar ahora", "Start now")}
           <svg
             width="15"
             height="15"
