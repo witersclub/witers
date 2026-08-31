@@ -928,6 +928,7 @@ export async function runWitCalendarChat(
     todayDate: string;
     monthEndDate: string;
     existingEntries?: { date: string; title: string }[];
+    expectedEntries?: number;
   },
 ): Promise<WitCalendarChatResult> {
   const apiKey = process.env.OPENAI_API_KEY;
