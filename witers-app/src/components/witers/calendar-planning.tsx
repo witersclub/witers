@@ -7,7 +7,7 @@
 // its 4 slides already structured by Wit at planning time, and video with
 // no uploaded file (the guion becomes the AI-scenes note) — see
 // /api/calendar-entries-request.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -495,6 +495,17 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
   const [captionDraft, setCaptionDraft] = useState(entry.caption ?? "");
   const [savingCaption, setSavingCaption] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<number | null>(null);
+  const pointerRef = useRef<{ id: number; startY: number; lastY: number; lastAt: number } | null>(null);
+  const draggingRef = useRef(false);
+  const [isMobileSheet, setIsMobileSheet] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
+  );
+  const [sheetOffset, setSheetOffset] = useState(
+    () => (typeof window !== "undefined" ? window.innerHeight : 1000),
+  );
+  const [dragging, setDragging] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   async function generateCaption() {
     setGeneratingCaption(true);
@@ -566,6 +577,28 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [onClose, saving, savingCaption, editing, editingCaption, captionDraft, captionText, editTitle, editBrief]);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobileSheet(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileSheet) return;
+    const height = dialogRef.current?.getBoundingClientRect().height || window.innerHeight;
+    setSheetOffset(height);
+    const frame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => setSheetOffset(0));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isMobileSheet, entry.id]);
 
   async function copyCaption() {
     if (!captionText) return;
@@ -712,18 +745,90 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
     }
   }
 
+  function finishClose() {
+    if (!isMobileSheet) {
+      onClose();
+      return;
+    }
+    const height = dialogRef.current?.getBoundingClientRect().height || window.innerHeight;
+    setClosing(true);
+    draggingRef.current = false;
+    setDragging(false);
+    setSheetOffset(height);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    closeTimerRef.current = window.setTimeout(onClose, reducedMotion ? 0 : 430);
+  }
+
   function requestClose() {
     const copyDirty = editingCaption && captionDraft.trim() !== (captionText ?? "");
     const pieceDirty = editing && (editTitle !== entry.title || editBrief !== entry.brief);
     if ((copyDirty || pieceDirty) && !window.confirm(t("Tienes cambios sin guardar. ¿Cerrar de todos modos?", "You have unsaved changes. Close anyway?"))) return;
-    onClose();
+    finishClose();
+  }
+
+  function onSheetPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!isMobileSheet || closing || event.button !== 0) return;
+    pointerRef.current = {
+      id: event.pointerId,
+      startY: event.clientY,
+      lastY: event.clientY,
+      lastAt: performance.now(),
+    };
+  }
+
+  function onSheetPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const pointer = pointerRef.current;
+    if (!isMobileSheet || !pointer || pointer.id !== event.pointerId || closing) return;
+    const deltaY = Math.max(0, event.clientY - pointer.startY);
+    // Normal content scrolling wins until the user returns to the very top.
+    // Only then does a downward pull become a dismissal gesture.
+    if (dialogRef.current?.scrollTop && !draggingRef.current) return;
+    if (deltaY <= 0) return;
+    if (!draggingRef.current) {
+      draggingRef.current = true;
+      setDragging(true);
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    }
+    pointer.lastY = event.clientY;
+    pointer.lastAt = performance.now();
+    event.preventDefault();
+    setSheetOffset(deltaY);
+  }
+
+  function onSheetPointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    const pointer = pointerRef.current;
+    if (!isMobileSheet || !pointer || pointer.id !== event.pointerId) return;
+    const deltaY = Math.max(0, event.clientY - pointer.startY);
+    const elapsed = Math.max(1, performance.now() - pointer.lastAt);
+    const velocityY = Math.max(0, event.clientY - pointer.lastY) / elapsed;
+    pointerRef.current = null;
+    if (!draggingRef.current) return;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    const height = dialogRef.current?.getBoundingClientRect().height || window.innerHeight;
+    draggingRef.current = false;
+    setDragging(false);
+    if (deltaY >= height * 0.25 || velocityY > 0.6) {
+      requestClose();
+    } else {
+      setSheetOffset(0);
+    }
   }
 
   const publicationMeta = publicationStatusMeta(entry, t);
   const previewHref = entry.deliveredVideoHref ?? entry.deliveredImages?.[0] ?? null;
+  const sheetHeight = dialogRef.current?.getBoundingClientRect().height || (typeof window !== "undefined" ? window.innerHeight : 1000);
+  const sheetProgress = isMobileSheet ? Math.min(1, Math.max(0, sheetOffset / sheetHeight)) : 0;
+  const glassBlur = 20 - sheetProgress * 11;
+  const backdropOpacity = isMobileSheet ? 0.15 * (1 - sheetProgress) : 0.55;
+  const backdropBlur = isMobileSheet ? 2 * (1 - sheetProgress) : 2;
   return createPortal(
     <div
-      className="fixed inset-0 z-[70] bg-wit-ink/55 backdrop-blur-[2px] motion-reduce:transition-none"
+      className="fixed inset-0 z-[70] motion-reduce:transition-none"
+      style={{
+        backgroundColor: `rgba(5, 10, 25, ${backdropOpacity})`,
+        backdropFilter: `blur(${backdropBlur}px)`,
+        WebkitBackdropFilter: `blur(${backdropBlur}px)`,
+      }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !saving && !savingCaption) requestClose();
       }}
@@ -734,9 +839,22 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
         aria-modal="true"
         aria-labelledby="calendar-entry-detail-title"
         tabIndex={-1}
-        className="absolute inset-0 flex h-[100dvh] flex-col overflow-y-auto bg-white px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] outline-none animate-in slide-in-from-bottom-4 duration-200 motion-reduce:animate-none md:inset-x-4 md:top-[4vh] md:mx-auto md:h-[92dvh] md:max-w-3xl md:rounded-3xl md:px-7 md:pb-28 md:pt-6 md:shadow-[0_30px_80px_rgba(5,13,40,0.32)]"
+        onPointerDown={onSheetPointerDown}
+        onPointerMove={onSheetPointerMove}
+        onPointerUp={onSheetPointerEnd}
+        onPointerCancel={onSheetPointerEnd}
+        className={`absolute inset-0 flex h-[100dvh] flex-col overflow-y-auto rounded-t-[28px] bg-white px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))] outline-none motion-reduce:transition-none md:inset-x-4 md:top-[4vh] md:mx-auto md:h-[92dvh] md:max-w-3xl md:rounded-3xl md:px-7 md:pb-28 md:pt-6 md:shadow-[0_30px_80px_rgba(5,13,40,0.32)] ${(dragging || closing) ? "will-change-transform transition-none" : "transition-transform duration-[430ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:duration-0"}`}
+        style={isMobileSheet ? { transform: `translate3d(0, ${sheetOffset}px, 0)` } : undefined}
       >
-        <header className="sticky top-0 z-10 -mx-5 flex items-center gap-3 border-b border-wit-ink/8 bg-white/95 px-5 pb-3 backdrop-blur md:-mx-7 md:px-7">
+        <header
+          className="sticky top-0 z-10 -mx-5 flex items-center gap-3 border-b border-white/45 px-5 pb-3 pt-4 shadow-[0_8px_24px_rgba(5,13,40,0.04)] md:-mx-7 md:bg-white md:px-7 md:pt-0"
+          style={isMobileSheet ? {
+            backgroundColor: `rgba(255, 255, 255, ${0.72 - sheetProgress * 0.18})`,
+            backdropFilter: `blur(${glassBlur}px) saturate(${150 - sheetProgress * 35}%)`,
+            WebkitBackdropFilter: `blur(${glassBlur}px) saturate(${150 - sheetProgress * 35}%)`,
+          } : undefined}
+        >
+          <span aria-hidden="true" className="absolute left-1/2 top-1.5 h-1.5 w-10 -translate-x-1/2 rounded-full bg-wit-ink/20 md:hidden" />
           <button
             type="button"
             onClick={requestClose}
