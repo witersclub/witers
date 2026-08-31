@@ -19,8 +19,9 @@ export const Route = createFileRoute("/api/social/connect/instagram/start")({
         const nonce = crypto.randomUUID();
         const authUrl = buildInstagramAuthUrl(url.origin, nonce);
         if (typeof authUrl !== "string") {
-          return new Response("Falta configuración de Instagram (INSTAGRAM_APP_ID/SECRET).", {
-            status: 500,
+          return new Response(null, {
+            status: 302,
+            headers: { location: "/panel?social_error=falta_instagram_config" },
           });
         }
 

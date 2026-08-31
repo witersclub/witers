@@ -1265,6 +1265,7 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
   const { t } = useLanguage();
   const qc = useQueryClient();
   const [notice, setNotice] = useState<string | null>(null);
+  const [detailsPlatform, setDetailsPlatform] = useState<SocialPlatform | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pendingPages, setPendingPages] = useState<
     { id: string; name: string; instagramUserId: string | null }[]
@@ -1292,12 +1293,27 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
         })
         .catch(() => {});
     } else if (err) {
-      setNotice(
-        t(
-          "No pudimos conectar la cuenta. Intenta de nuevo.",
-          "We couldn't connect the account. Try again.",
-        ),
-      );
+      const message =
+        err === "falta_instagram_config"
+          ? t(
+              "Instagram aún no está configurado. Contacta a soporte para completar la conexión.",
+              "Instagram is not configured yet. Contact support to finish the connection.",
+            )
+          : err === "estado_instagram"
+            ? t(
+                "La sesión para conectar Instagram expiró. Inténtalo de nuevo.",
+                "The Instagram connection session expired. Try again.",
+              )
+            : err === "intercambio_fallido"
+              ? t(
+                  "Instagram rechazó la conexión. Revisa los permisos de Meta e inténtalo de nuevo.",
+                  "Instagram rejected the connection. Check Meta permissions and try again.",
+                )
+              : t(
+                  "No pudimos conectar la cuenta. Intenta de nuevo.",
+                  "We couldn't connect the account. Try again.",
+                );
+      setNotice(message);
     }
     if (connected || pick || err) {
       const url = new URL(window.location.href);
@@ -1324,7 +1340,17 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
   }
 
   async function disconnect(platform: SocialPlatform) {
-    await fetch(`/api/social/connections?platform=${platform}`, { method: "DELETE" });
+    const label = platform === "instagram" ? "Instagram" : "Facebook";
+    if (!window.confirm(t(`¿Desconectar ${label}? Podrás volver a conectarlo después.`, `Disconnect ${label}? You can reconnect it later.`))) {
+      return;
+    }
+    const response = await fetch(`/api/social/connections?platform=${platform}`, { method: "DELETE" });
+    if (!response.ok) {
+      setNotice(t("No pudimos desconectar la cuenta. Intenta de nuevo.", "We couldn't disconnect the account. Try again."));
+      return;
+    }
+    setDetailsPlatform(null);
+    setNotice(t("Cuenta desconectada.", "Account disconnected."));
     void qc.invalidateQueries({ queryKey: ["social-connections"] });
   }
 
@@ -1342,8 +1368,9 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
       return (
         <button
           type="button"
-          onClick={() => disconnect(platform)}
-          title={t(`Desconectar ${label}`, `Disconnect ${label}`)}
+          onClick={() => setDetailsPlatform(platform)}
+          aria-label={t(`Ver información de ${label}`, `View ${label} information`)}
+          title={t(`Ver información de ${label}`, `View ${label} information`)}
           className="flex h-11 items-center gap-2 rounded-full border border-wit-ink/10 bg-white px-3 text-xs font-bold text-wit-ink shadow-[0_2px_8px_rgba(5,13,40,0.03)]"
         >
           <PillIcon className={platform === "instagram" ? "h-4 w-4 text-wit-pink" : "h-4 w-4 text-[#1877f2]"} strokeWidth={2.2} />
@@ -1389,6 +1416,64 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
               </button>
             ))}
           </div>
+        </div>
+      ) : null}
+      {detailsPlatform && connections[detailsPlatform] ? (
+        <div
+          className="fixed inset-0 z-[75] flex items-end bg-wit-ink/15 p-4 backdrop-blur-[2px] sm:items-center sm:justify-center"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setDetailsPlatform(null);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="social-account-title"
+            className="w-full max-w-sm rounded-[28px] border border-white/70 bg-white p-5 shadow-[0_18px_50px_rgba(5,13,40,0.18)] sm:rounded-3xl"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                {detailsPlatform === "instagram" ? (
+                  <Instagram className="h-6 w-6 text-wit-pink" strokeWidth={2.2} />
+                ) : (
+                  <Facebook className="h-6 w-6 text-[#1877f2]" strokeWidth={2.2} />
+                )}
+                <div>
+                  <h3 id="social-account-title" className="text-base font-extrabold text-wit-ink">
+                    {detailsPlatform === "instagram" ? "Instagram" : "Facebook"}
+                  </h3>
+                  <p className="mt-0.5 text-sm font-semibold text-wit-gray">
+                    {connections[detailsPlatform]?.name ?? (detailsPlatform === "instagram" ? "Instagram" : "Facebook")}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailsPlatform(null)}
+                aria-label={t("Cerrar", "Close")}
+                className="grid h-11 w-11 place-items-center rounded-full text-wit-gray transition hover:bg-wit-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mt-5 rounded-2xl bg-wit-bg px-4 py-3">
+              <p className="text-sm font-bold text-wit-ink">{t("Cuenta conectada", "Connected account")}</p>
+              <p className="mt-1 text-xs leading-relaxed text-wit-gray">
+                {t(
+                  "Esta cuenta se usará cuando selecciones esta red para publicar contenido.",
+                  "This account will be used when you choose this network to publish content.",
+                )}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void disconnect(detailsPlatform)}
+              className="mt-4 w-full rounded-full border border-red-200 px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+            >
+              {t("Desconectar cuenta", "Disconnect account")}
+            </button>
+          </section>
         </div>
       ) : null}
     </div>

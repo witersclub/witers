@@ -35,11 +35,11 @@ export const Route = createFileRoute("/api/social/connect/instagram/callback")({
         const state = url.searchParams.get("state");
         const cookieNonce = readCookie(request, "wit_ig_oauth_state");
         if (!code || !state || !cookieNonce || state !== cookieNonce) {
-          return redirect("/panel?social_error=1");
+          return redirect("/panel?social_error=estado_instagram");
         }
 
         const identity = await exchangeCodeForInstagramIdentity(code, url.origin);
-        if (!identity.ok) return redirect("/panel?social_error=1");
+        if (!identity.ok) return redirect(`/panel?social_error=${identity.error}`);
 
         const { ciphertext, iv } = await encryptToken(identity.data.accessToken);
         await upsertSocialConnection(
