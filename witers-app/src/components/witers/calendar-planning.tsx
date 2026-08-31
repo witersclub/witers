@@ -25,6 +25,7 @@ import {
   Loader2,
   PenLine,
   Send,
+  Sparkles,
   Upload,
   Video as VideoIcon,
   X,
@@ -176,12 +177,14 @@ function CalendarWizard({
   monthLabel,
   onClose,
   onCreated,
+  initialBrandMindOpen = false,
 }: {
   targetYear: number;
   targetMonth: number;
   monthLabel: string;
   onClose: () => void;
   onCreated: () => void;
+  initialBrandMindOpen?: boolean;
 }) {
   const { t } = useLanguage();
   const [messages, setMessages] = useState<WitMessage[]>([
@@ -199,7 +202,7 @@ function CalendarWizard({
   const [chatError, setChatError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [brandMindOpen, setBrandMindOpen] = useState(false);
+  const [brandMindOpen, setBrandMindOpen] = useState(initialBrandMindOpen);
   const [brandAssets, setBrandAssets] = useState<
     { id: string; original_name: string; kind: string; use_in_planning: number }[]
   >([]);
@@ -2022,6 +2025,7 @@ function MonthlyProgrammingSheet({
 export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
   const { t } = useLanguage();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [openBrandMindFromHeader, setOpenBrandMindFromHeader] = useState(false);
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -2108,6 +2112,18 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
         <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink sm:text-3xl">
           {t("Planificación", "Planning")}
         </h1>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+        <button
+          type="button"
+          onClick={() => {
+            setOpenBrandMindFromHeader(true);
+            setWizardOpen(true);
+          }}
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-wit-blue/15 bg-wit-blue/[0.05] px-4 py-2.5 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 sm:w-auto"
+        >
+          <Sparkles className="h-4 w-4" strokeWidth={2.2} />
+          {t("Mente de marca", "Brand mind")}
+        </button>
         <button
           type="button"
           disabled={replanning}
@@ -2121,6 +2137,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
             ? t("Cargando...", "Loading...")
             : t("Planificar contenido", "Plan content")}
         </button>
+        </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <div className="flex min-w-0 items-center gap-1 rounded-2xl bg-white/75 p-1 shadow-sm">
@@ -2452,10 +2469,12 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                 targetYear={year}
                 targetMonth={month}
                 monthLabel={monthLabel}
-                onClose={() => setWizardOpen(false)}
+                initialBrandMindOpen={openBrandMindFromHeader}
+                onClose={() => { setWizardOpen(false); setOpenBrandMindFromHeader(false); }}
                 onCreated={() => {
                   void qc.invalidateQueries({ queryKey: ["calendar-entries"] });
                   setWizardOpen(false);
+                  setOpenBrandMindFromHeader(false);
                 }}
               />
             </div>,
