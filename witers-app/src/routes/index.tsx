@@ -50,12 +50,16 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div className="wit-page min-h-dvh overflow-x-clip">
-      <SiteHeader landing />
+      <SiteHeader />
       <Hero />
+      <Testimonios />
       <HowItWorks />
       <Capabilities />
       <DevicesSection />
       <MarcasQueConfian />
+      <PruebaInteractiva />
+      <CampanasTeaser />
+      <PanelPreview />
       <SinglePlan />
       <Faq />
       <CtaFinal />
