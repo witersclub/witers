@@ -2108,18 +2108,32 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
 
   return (
     <div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink sm:text-3xl">
           {t("Planificación", "Planning")}
         </h1>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
         <button
           type="button"
           onClick={() => {
             setOpenBrandMindFromHeader(true);
             setWizardOpen(true);
           }}
-          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-wit-blue/15 bg-wit-blue/[0.05] px-4 py-2.5 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 sm:w-auto"
+          aria-label={t("Mente de marca", "Brand mind")}
+          title={t("Mente de marca", "Brand mind")}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-blue/[0.06] text-wit-blue transition-colors hover:bg-wit-blue/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 md:hidden"
+        >
+          <Sparkles className="h-[18px] w-[18px]" strokeWidth={2.2} />
+        </button>
+        </div>
+        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+        <button
+          type="button"
+          onClick={() => {
+            setOpenBrandMindFromHeader(true);
+            setWizardOpen(true);
+          }}
+          className="hidden min-h-11 items-center justify-center gap-2 rounded-full border border-wit-blue/15 bg-wit-blue/[0.05] px-4 py-2.5 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 md:flex"
         >
           <Sparkles className="h-4 w-4" strokeWidth={2.2} />
           {t("Mente de marca", "Brand mind")}
@@ -2130,7 +2144,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           onClick={() =>
             entries.length > 0 ? setConfirmingReplan(true) : setWizardOpen(true)
           }
-          className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] transition-all hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-11 sm:w-auto"
+          className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] transition-all hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 md:min-h-11 md:w-auto"
         >
           <span className="text-lg leading-none">+</span>
           {replanning
