@@ -1099,8 +1099,8 @@ function PanelContent() {
                           </p>
                           <p className="mt-1 text-sm text-white/70">
                             {t(
-                              "Elige entre Essential, Grow o Scale — desde $5,999 MXN al mes.",
-                              "Choose Essential, Grow, or Scale — starting at $5,999 MXN a month.",
+                              "Elige entre Essential, Grow o Scale — desde $599 MXN al mes.",
+                              "Choose Essential, Grow, or Scale — starting at $599 MXN a month.",
                             )}
                           </p>
                         </div>

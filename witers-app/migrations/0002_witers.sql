@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS memberships (
   user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
   status TEXT NOT NULL DEFAULT 'pending', -- pending | active | canceled
   plan TEXT NOT NULL DEFAULT 'premium',
-  price_mxn INTEGER NOT NULL DEFAULT 5999,
+  price_mxn INTEGER NOT NULL DEFAULT 599,
   requests_quota INTEGER NOT NULL DEFAULT 50,
   requests_used INTEGER NOT NULL DEFAULT 0,
   activated_at TEXT,
@@ -67,4 +67,3 @@ CREATE TABLE IF NOT EXISTS request_results (
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_requests_user ON design_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_results_request ON request_results(request_id);
-

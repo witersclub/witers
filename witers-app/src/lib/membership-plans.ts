@@ -31,8 +31,8 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
     tagline: "Impulsa el inicio de tu marca",
     descripcion:
       "Ideal para emprendedores y pequeñas empresas que desean construir una imagen profesional y comenzar a atraer más clientes.",
-    precioPromo: 5999.9,
-    precioRegular: 8571.29,
+    precioPromo: 599,
+    precioRegular: 855.71,
     requestsQuota: 10,
     videoRequestsQuota: 0,
     carouselRequestsQuota: 0,

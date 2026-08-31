@@ -53,7 +53,7 @@ export function computeChargeAmount(
 }
 
 // MXN, like every other currency Stripe supports at 2 decimals, is charged
-// in centavos — $5,999.90 MXN is amount: 599990, not 5999.90 or 5999.
+// in centavos — $599.00 MXN is amount: 59900, not 599.00 or 599.
 export function pesosToCentavos(pesos: number): number {
   return Math.round(pesos * 100);
 }
