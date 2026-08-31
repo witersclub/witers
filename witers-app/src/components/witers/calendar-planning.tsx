@@ -1172,6 +1172,7 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
         {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
         </div>
       </div>
+      </div>
     </div>,
     document.body,
   );
