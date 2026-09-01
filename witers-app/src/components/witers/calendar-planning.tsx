@@ -3358,8 +3358,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
         ) : null}
       </div>
       <div className="mt-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <ConnectionsStrip className="min-w-0" />
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {entries.length > 0 ? (
             <p className="shrink-0 text-xs font-bold text-wit-gray">
               <span className="text-wit-ink">

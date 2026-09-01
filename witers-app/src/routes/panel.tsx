@@ -64,6 +64,7 @@ import {
 
 import { WitersLogo, WMark } from "../components/witers/brand";
 import { PlanificacionPanel } from "../components/witers/calendar-planning";
+import { SocialConnectionsSelector } from "../components/witers/social-connections-selector";
 import { ChatBubble, ChatIntakeFlow, PhotosAnswerBubble } from "../components/witers/chat-intake";
 import { HelpChatButton } from "../components/witers/help-chat";
 import { MicButton } from "../components/witers/mic-button";
@@ -963,6 +964,7 @@ function PanelContent() {
                         <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>{" "}
                         👋
                       </h1>
+                      <SocialConnectionsSelector />
                     </div>
                     <p className="mt-1 text-sm font-medium text-wit-gray">
                       {t("Planifica y solicita tu contenido", "Plan and request your content")}
@@ -1048,12 +1050,13 @@ function PanelContent() {
                     same reasoning as the desktop block above. */}
                 <div className="lg:hidden">
                   <div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink md:text-3xl">
                         {t("Hola,", "Hi,")}{" "}
                         <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>{" "}
                         👋
                       </h1>
+                      <SocialConnectionsSelector />
                     </div>
                     <p className="mt-1 text-sm font-medium text-wit-gray">
                       {t("Planifica y solicita tu contenido", "Plan and request your content")}
