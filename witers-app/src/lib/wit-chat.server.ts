@@ -313,6 +313,9 @@ function buildCalendarSystemPrompt(
     brand.businessType
       ? `Categoría de negocio: ${brand.businessType}.`
       : "No se especificó categoría de negocio.",
+    brand.hasLogo
+      ? "La marca tiene un logotipo oficial disponible para el cierre de video; úsalo, nunca lo recrees ni lo sustituyas."
+      : "La marca no tiene un logotipo oficial disponible; no inventes uno.",
   ];
   if (brand.brandMemory) {
     brandLines.push(
@@ -392,7 +395,13 @@ function buildCalendarSystemPrompt(
     "dato o situación relevante), Deseo (beneficio, transformación o prueba concreta) y Acción " +
     "(llamado a la acción). Divídelo en escenas o tomas numeradas y para cada una describe qué se " +
     "ve y qué se dice (diálogo, narración en off o texto en pantalla), identificando la etapa AIDA " +
-    "cuando corresponda. Un video de 20-40 segundos normalmente son 3-5 escenas — sé así de concreto, " +
+    "cuando corresponda. Incluye subtítulos minimalistas, elegantes y de alta legibilidad durante el " +
+    "video: máximo dos líneas, sincronizados con el mensaje hablado, con alto contraste, sin adornos " +
+    "excesivos y alineados a la tipografía/colores de la marca. Después de la escena de Acción/CTA, " +
+    "si existe logotipo oficial, agrega una escena final de 1-2 segundos con el logotipo centrado, " +
+    "limpio y profesional; debe entrar suavemente y cerrar con un desvanecimiento (fade-out), nunca " +
+    "con un corte brusco. Describe estas indicaciones de edición explícitamente en el guion. Un video " +
+    "de 20-40 segundos normalmente son 3-5 escenas — sé así de concreto, " +
     "nunca dejes el brief como 'un video mostrando el proceso de trabajo' sin guion. El cliente no siempre tendrá metraje " +
     "propio — el equipo puede resolver con stock o IA usando exactamente este guion, así que debe " +
     "quedar completo por su cuenta.\n\n" +
@@ -570,7 +579,7 @@ const CALENDAR_TOOLS = [
                 brief: {
                   type: "string",
                   description:
-                    "Imagen: brief profesional y completo — mensaje principal y cualquier texto en pantalla redactado tal cual, nunca solo el tema. Video: un guion real en estructura AIDA (Atención, Interés, Deseo, Acción), dividido en escenas/tomas numeradas, con qué se ve y qué se dice en cada una. Carrusel: solo un resumen corto de una frase para la tarjeta del calendario — el contenido real de las 4 láminas va en el campo slides, no aquí.",
+                    "Imagen: brief profesional y completo — mensaje principal y cualquier texto en pantalla redactado tal cual, nunca solo el tema. Video: un guion real en estructura AIDA (Atención, Interés, Deseo, Acción), dividido en escenas/tomas numeradas, con qué se ve y qué se dice en cada una; incluye subtítulos minimalistas y un cierre posterior al CTA con logotipo oficial, entrada suave y fade-out si la marca tiene logo. Carrusel: solo un resumen corto de una frase para la tarjeta del calendario — el contenido real de las 4 láminas va en el campo slides, no aquí.",
                 },
                 slides: {
                   type: "array",
