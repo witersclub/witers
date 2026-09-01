@@ -94,6 +94,25 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
           .bind(user.id, monthStart, monthEnd)
           .all<{ scheduled_date: string; title: string }>();
 
+        const existingEntries = existingRows.results ?? [];
+        // `expectedEntries` represents the user's intent to fill the whole
+        // month. It must not ask Wit to recreate dates that are already on
+        // the calendar: only the still-empty dates are required. Count dates
+        // rather than rows so an exceptional day with more than one piece
+        // does not make the remaining quota negative.
+        const occupiedDates = new Set(existingEntries.map((entry) => entry.scheduled_date)).size;
+        const remainingExpectedEntries = parsed.data.expectedEntries
+          ? Math.max(0, parsed.data.expectedEntries - occupiedDates)
+          : undefined;
+
+        if (parsed.data.expectedEntries && remainingExpectedEntries === 0) {
+          return json({
+            ok: true,
+            kind: "message" as const,
+            text: "Tu calendario ya tiene contenido para todas las fechas de este mes.",
+          });
+        }
+
         const result = await runWitCalendarChat(
           parsed.data.messages,
           {
@@ -110,11 +129,14 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
           },
           {
             ...monthContext({ year, month }),
-            existingEntries: (existingRows.results ?? []).map((r) => ({
+            existingEntries: existingEntries.map((r) => ({
               date: r.scheduled_date,
               title: r.title,
             })),
-            expectedEntries: parsed.data.expectedEntries,
+            // Do not require a new tool call if every date is already
+            // occupied. In the usual case (e.g. 3 of 30 dates planned), Wit
+            // is required to return precisely the remaining 27 pieces.
+            expectedEntries: remainingExpectedEntries || undefined,
           },
         );
 
