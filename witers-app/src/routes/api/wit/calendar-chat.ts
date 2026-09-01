@@ -146,23 +146,54 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
         };
 
         // A complete monthly plan with full video scripts and carousel slides
-        // can exceed one model response. Generate small date-constrained
-        // batches and merge them before the client sees any plan, keeping the
-        // interaction atomic while ensuring every empty date is filled.
-        if (remainingExpectedEntries && remainingExpectedEntries > 10) {
+        // is too large to safely demand in one response, especially when a
+        // Mente de marca document is also part of the context. Generate small
+        // date-constrained batches and retry only dates missing from a partial
+        // batch. The client still receives one atomic plan and nothing is
+        // written to the calendar until they confirm it.
+        if (remainingExpectedEntries) {
           const entries: CalendarEntryDraft[] = [];
           let knownEntries = existingEntries.map((entry) => ({ date: entry.scheduled_date, title: entry.title }));
-          for (const dateBatch of batches(remainingDates, 10)) {
+          for (const dateBatch of batches(remainingDates, 5)) {
             const batchResult = await runWitCalendarChat(parsed.data.messages, brand, {
               ...context,
               existingEntries: knownEntries,
               expectedEntries: dateBatch.length,
               exactDates: dateBatch,
+              allowPartial: true,
             });
             if (!batchResult.ok) return json(batchResult, { status: 502 });
             if (batchResult.kind === "message") return json(batchResult);
-            entries.push(...batchResult.entries);
-            knownEntries = [...knownEntries, ...batchResult.entries.map((entry) => ({ date: entry.date, title: entry.title }))];
+
+            // Keep at most one valid entry per exact requested date. If the
+            // model stopped early (or a carousel was incomplete), ask it only
+            // for the missing date rather than throwing away the whole month.
+            const byDate = new Map(
+              batchResult.entries
+                .filter((entry) => dateBatch.includes(entry.date))
+                .map((entry) => [entry.date, entry]),
+            );
+            for (const date of dateBatch.filter((candidate) => !byDate.has(candidate))) {
+              const retry = await runWitCalendarChat(parsed.data.messages, brand, {
+                ...context,
+                existingEntries: knownEntries,
+                expectedEntries: 1,
+                exactDates: [date],
+              });
+              if (!retry.ok) return json(retry, { status: 502 });
+              if (retry.kind === "message") return json(retry);
+              const entry = retry.entries.find((candidate) => candidate.date === date);
+              if (!entry) return json({ ok: false, error: "plan_incompleto" }, { status: 502 });
+              byDate.set(date, entry);
+            }
+            const completedBatch = dateBatch.map((date) => byDate.get(date)).filter(
+              (entry): entry is CalendarEntryDraft => Boolean(entry),
+            );
+            entries.push(...completedBatch);
+            knownEntries = [
+              ...knownEntries,
+              ...completedBatch.map((entry) => ({ date: entry.date, title: entry.title })),
+            ];
           }
           return json({ ok: true, kind: "done" as const, entries });
         }

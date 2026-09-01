@@ -325,9 +325,16 @@ function buildCalendarSystemPrompt(
     );
   }
   if (brand.brandAssets?.length) {
-    const textAssets = brand.brandAssets.filter((a) => a.textContent).map(
-      (a) => `Archivo ${a.kind} “${a.originalName}”: ${a.textContent}`,
-    );
+    // Calendar plans can need many detailed tool entries. Keep the Mente de
+    // marca useful without allowing a large document (or several documents)
+    // to consume the model context reserved for those entries.
+    let remainingBrandText = 6_000;
+    const textAssets = brand.brandAssets.filter((a) => a.textContent).flatMap((a) => {
+      if (!a.textContent || remainingBrandText <= 0) return [];
+      const excerpt = a.textContent.slice(0, remainingBrandText).trim();
+      remainingBrandText -= excerpt.length;
+      return excerpt ? [`Archivo ${a.kind} “${a.originalName}”: ${excerpt}`] : [];
+    });
     const visualAssets = brand.brandAssets.filter((a) => !a.textContent).map(
       (a) => `${a.kind}: ${a.originalName}`,
     );
@@ -959,6 +966,9 @@ export async function runWitCalendarChat(
     existingEntries?: { date: string; title: string }[];
     expectedEntries?: number;
     exactDates?: string[];
+    // A partially formed carousel/video must not discard the valid dates
+    // around it. The route retries only the missing exact dates afterwards.
+    allowPartial?: boolean;
   },
 ): Promise<WitCalendarChatResult> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -1057,11 +1067,11 @@ export async function runWitCalendarChat(
           (e.format !== "carrusel" || e.slides?.length === 4),
       );
       if (entries.length === 0) return { ok: false, error: "respuesta_invalida" };
-      if (opts.expectedEntries && entries.length !== opts.expectedEntries) {
+      if (!opts.allowPartial && opts.expectedEntries && entries.length !== opts.expectedEntries) {
         console.info("[wit-chat] incomplete calendar plan", { expected: opts.expectedEntries, received: entries.length });
         return { ok: false, error: "plan_incompleto" };
       }
-      if (opts.exactDates) {
+      if (!opts.allowPartial && opts.exactDates) {
         const receivedDates = new Set(entries.map((entry) => entry.date));
         const datesMatch = receivedDates.size === opts.exactDates.length && opts.exactDates.every((date) => receivedDates.has(date));
         if (!datesMatch) {
