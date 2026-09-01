@@ -149,11 +149,11 @@ function Hero() {
         <div className="max-w-xl text-center lg:text-left">
           <span className="inline-flex rounded-full border border-wit-blue/15 bg-white px-3.5 py-2 text-[11px] font-extrabold uppercase tracking-[0.2em] text-wit-blue shadow-sm">{t("Todo en un solo lugar", "Everything in one place")}</span>
           <h1 className="mt-6 text-[clamp(2.55rem,7vw,5.5rem)] font-extrabold leading-[0.98] tracking-[-0.06em] text-wit-ink">
-            {t("Planifica, crea y publica", "Plan, create and publish")}<br />
-            {t("todo un mes de contenido.", "a whole month of content.")}<br />
-            <span className="wit-underline text-wit-blue">{t("En minutos.", "In minutes.")}</span>
+            {t("Todo el contenido", "All your content")}<br />
+            {t("de tu marca,", "for your brand,")}<br />
+            <span className="wit-underline text-wit-blue">{t("listo para el mes.", "ready for the month.")}</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-wit-gray sm:text-lg lg:mx-0">{t("Tu estrategia, tus piezas, tus redes y tu calendario trabajando juntos para hacer crecer tu marca.", "Your strategy, pieces, social networks and calendar working together to grow your brand.")}</p>
+          <p className="mx-auto mt-6 max-w-lg text-base leading-relaxed text-wit-gray sm:text-lg lg:mx-0">{t("Planea, crea, aprueba y programa tus publicaciones desde un solo lugar.", "Plan, create, approve and schedule your posts from one place.")}</p>
           <div className="mt-8 flex flex-col items-center gap-4 lg:items-start">
             <Link to={signedIn ? "/panel" : "/registro"} onClick={() => trackCtaClick("Empezar ahora (hero landing)")} className="wit-brand-gradient group inline-flex items-center gap-2 rounded-full px-7 py-4 text-sm font-extrabold uppercase tracking-[0.08em] text-white shadow-[0_16px_35px_rgba(77,55,231,0.24)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]">
               {t("Empezar ahora", "Start now")} <span aria-hidden="true" className="text-lg leading-none">↗</span>
