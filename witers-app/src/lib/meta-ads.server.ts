@@ -208,8 +208,9 @@ type AdCreativeField = { creative?: { image_url?: string; thumbnail_url?: string
 export async function getCampaignInsight(
   campaignId: string,
   range?: { since: string; until: string },
+  accessTokenOverride?: string | null,
 ): Promise<{ ok: true; data: CampaignInsight } | { ok: false; error: string }> {
-  const config = getMetaConfig();
+  const config = accessTokenOverride ? { accessToken: accessTokenOverride } : getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
 
   const [campaignRes, insightsRes, adsRes] = await Promise.all([
@@ -311,8 +312,9 @@ export type AdDetail = {
 export async function getCampaignAdDetails(
   campaignId: string,
   range?: { since: string; until: string },
+  accessTokenOverride?: string | null,
 ): Promise<{ ok: true; data: AdDetail[] } | { ok: false; error: string }> {
-  const config = getMetaConfig();
+  const config = accessTokenOverride ? { accessToken: accessTokenOverride } : getMetaConfig();
   if ("error" in config) return { ok: false, error: config.error };
 
   const [adsRes, insightsRes] = await Promise.all([

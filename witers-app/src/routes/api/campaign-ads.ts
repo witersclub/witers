@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { getCampaignAdDetails } from "../../lib/meta-ads.server";
+import { getMetaAdOAuthAccessToken } from "../../lib/meta-ad-account-connection.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
 // Per-ad breakdown for one of the member's own campaigns — the drill-down
@@ -33,7 +34,8 @@ export const Route = createFileRoute("/api/campaign-ads")({
           .first<{ meta_campaign_id: string }>();
         if (!row) return json({ ok: false, error: "no_encontrada" }, { status: 404 });
 
-        const details = await getCampaignAdDetails(row.meta_campaign_id, range);
+        const oauthAccessToken = await getMetaAdOAuthAccessToken(user.id);
+        const details = await getCampaignAdDetails(row.meta_campaign_id, range, oauthAccessToken);
         if (!details.ok) return json({ ok: false, error: details.error }, { status: 502 });
 
         return json({ ok: true, ads: details.data });

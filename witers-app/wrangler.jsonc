@@ -11,9 +11,9 @@
   //   6. npx wrangler secret put ADMIN_EDIT_PIN  (code the admin panel asks for before editing a user)
   //   7. npx wrangler secret put STRIPE_SECRET_KEY  (membership checkout — must match the
   //      mode, test vs live, of STRIPE_PUBLISHABLE_KEY below, or Elements/PaymentIntents fail)
-  //   8. npx wrangler secret put META_PUBLISH_APP_ID      (Meta App for the "connect your
-  //      Facebook Page to publish" flow — separate from FACEBOOK_APP_ID, which is only
-  //      "Sign in with Facebook", and from META_ACCESS_TOKEN, the shared ads-read token)
+  //   8. npx wrangler secret put META_PUBLISH_APP_ID      (Meta App for connecting Facebook
+  //      publishing and advertising accounts — separate from FACEBOOK_APP_ID, which is only
+  //      "Sign in with Facebook". Register /api/meta/ad-account/callback as a valid OAuth URI)
   //   9. npx wrangler secret put META_PUBLISH_APP_SECRET
   //  10. npx wrangler secret put TOKEN_ENCRYPTION_KEY     (32 bytes hex — `openssl rand -hex 32` —
   //      encrypts the OAuth tokens saved in social_connections; see token-crypto.server.ts)
@@ -34,19 +34,17 @@
   "assets": {
     "directory": "./dist/client",
     "binding": "ASSETS",
-    "not_found_handling": "none"
+    "not_found_handling": "none",
   },
 
-  // There is no shared/default Meta ad account — every client pautas from
-  // THEIR OWN ad account. The client adds WITERS's Business Portfolio as a
-  // partner (Analyst access) from their own Business Manager; once
-  // accepted, that ad account shows up in WITERS's own Business Manager
-  // account list, staff copies its id from there, and pastes it into that
-  // client's brand profile via the admin panel (see
-  // /api/admin/update-brand-profile). The same META_ACCESS_TOKEN (a
-  // Secret, not a var — see meta-ads.server.ts) then reads that account
-  // too; only the ad account id varies per client, never the token. No
-  // per-client Meta OAuth/App Review is involved in this flow.
+  // There is no shared/default Meta ad account — every client advertises
+  // from THEIR OWN account. The dedicated OAuth flow lets the client choose
+  // it, stores its numeric id on their brand profile, and keeps the OAuth
+  // token AES-GCM encrypted in meta_ad_account_connections. Legacy accounts
+  // configured by an admin can still use META_ACCESS_TOKEN; in that case the
+  // WITERS System User needs Advertiser access (not only Analyst access).
+  // Meta App Review may be required before non-admin/test users can grant
+  // ads_read, ads_management and business_management.
   //
   // STRIPE_PUBLISHABLE_KEY is here (not a dashboard-only var) because
   // `wrangler deploy` overwrites a Worker's plain-text vars with exactly
@@ -61,16 +59,16 @@
   "vars": {
     "HF_ENV": "prod",
     "APP_SLUG": "witers",
-    "STRIPE_PUBLISHABLE_KEY": "pk_live_51TwAPHFJxTCgIYcaf7mdWiLQ8gMow4H3cWHV5v7rccOGunKwz6l8XMjaIa7IWsPvnUlgwTXY7ioKrzA3pEsAhV2a00mAMn6hqP"
+    "STRIPE_PUBLISHABLE_KEY": "pk_live_51TwAPHFJxTCgIYcaf7mdWiLQ8gMow4H3cWHV5v7rccOGunKwz6l8XMjaIa7IWsPvnUlgwTXY7ioKrzA3pEsAhV2a00mAMn6hqP",
   },
 
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "witers-db",
-      "database_id": "1637cd44-7a20-4d8b-bc18-6c1214d52d9c"
-    }
+      "database_id": "1637cd44-7a20-4d8b-bc18-6c1214d52d9c",
+    },
   ],
 
-  "r2_buckets": [{ "binding": "STORAGE", "bucket_name": "witers-assets" }]
+  "r2_buckets": [{ "binding": "STORAGE", "bucket_name": "witers-assets" }],
 }

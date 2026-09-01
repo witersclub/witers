@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { getCampaignInsight } from "../../lib/meta-ads.server";
+import { getMetaAdOAuthAccessToken } from "../../lib/meta-ad-account-connection.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
 type CampaignRow = {
@@ -42,10 +43,11 @@ export const Route = createFileRoute("/api/campaigns")({
           )
           .bind(user.id)
           .all<CampaignRow>();
+        const oauthAccessToken = await getMetaAdOAuthAccessToken(user.id);
 
         const campaigns = await Promise.all(
           (rows.results ?? []).map(async (row) => {
-            const insight = await getCampaignInsight(row.meta_campaign_id, range);
+            const insight = await getCampaignInsight(row.meta_campaign_id, range, oauthAccessToken);
             return {
               id: row.id,
               name: insight.ok ? insight.data.name : null,

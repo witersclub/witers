@@ -28,10 +28,9 @@ export type BrandProfile = {
   // (see /api/admin/update-brand-profile), never by the client. Null blocks
   // "Quiero pautar" for them; there's no shared/default Page fallback.
   meta_page_id: string | null;
-  // The client's OWN Meta ad account id (numeric, no "act_" prefix) — set
-  // only by an admin once the client has added WITERS's Business Portfolio
-  // as a partner on it. Null means staff can't pull live campaigns for the
-  // Campañas dashboard yet (see /api/admin/meta-campaigns).
+  // The client's OWN Meta ad account id (numeric, no "act_" prefix), chosen
+  // through the dedicated Meta Ads OAuth flow or set by an admin. Creating
+  // ads still requires WITERS's Business Portfolio to have access to it.
   meta_ad_account_id: string | null;
 };
 

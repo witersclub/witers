@@ -42,6 +42,9 @@ import { Route as ApiRequestsRouteImport } from './routes/api/requests'
 import { Route as ApiRequestRevisionRouteImport } from './routes/api/request-revision'
 import { Route as ApiRequestChangeRouteImport } from './routes/api/request-change'
 import { Route as ApiPurchasePackRouteImport } from './routes/api/purchase-pack'
+import { Route as ApiMetaLocationSearchRouteImport } from './routes/api/meta-location-search'
+import { Route as ApiMetaInterestSuggestionsRouteImport } from './routes/api/meta-interest-suggestions'
+import { Route as ApiMetaInterestSearchRouteImport } from './routes/api/meta-interest-search'
 import { Route as ApiHelpChatRouteImport } from './routes/api/help-chat'
 import { Route as ApiGeocodeRouteImport } from './routes/api/geocode'
 import { Route as ApiGeoPriceRouteImport } from './routes/api/geo-price'
@@ -52,11 +55,12 @@ import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as ApiCarouselRequestsRouteImport } from './routes/api/carousel-requests'
 import { Route as ApiCarouselRequestCloseRouteImport } from './routes/api/carousel-request-close'
 import { Route as ApiCarouselRequestChangeRouteImport } from './routes/api/carousel-request-change'
+import { Route as ApiCampaignsCreateRouteImport } from './routes/api/campaigns-create'
 import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ApiCampaignAdsRouteImport } from './routes/api/campaign-ads'
+import { Route as ApiCalendarEntriesScheduleRouteImport } from './routes/api/calendar-entries-schedule'
 import { Route as ApiCalendarEntriesRequestRouteImport } from './routes/api/calendar-entries-request'
 import { Route as ApiCalendarEntriesPublishRouteImport } from './routes/api/calendar-entries-publish'
-import { Route as ApiCalendarEntriesScheduleRouteImport } from './routes/api/calendar-entries-schedule'
 import { Route as ApiCalendarEntriesCaptionRouteImport } from './routes/api/calendar-entries-caption'
 import { Route as ApiCalendarEntriesRouteImport } from './routes/api/calendar-entries'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
@@ -132,6 +136,10 @@ import { Route as ApiSocialConnectStartRouteImport } from './routes/api/social/c
 import { Route as ApiSocialConnectPendingRouteImport } from './routes/api/social/connect/pending'
 import { Route as ApiSocialConnectFinalizeRouteImport } from './routes/api/social/connect/finalize'
 import { Route as ApiSocialConnectCallbackRouteImport } from './routes/api/social/connect/callback'
+import { Route as ApiMetaAdAccountStartRouteImport } from './routes/api/meta/ad-account/start'
+import { Route as ApiMetaAdAccountPendingRouteImport } from './routes/api/meta/ad-account/pending'
+import { Route as ApiMetaAdAccountFinalizeRouteImport } from './routes/api/meta/ad-account/finalize'
+import { Route as ApiMetaAdAccountCallbackRouteImport } from './routes/api/meta/ad-account/callback'
 import { Route as ApiAuthGoogleStartRouteImport } from './routes/api/auth/google/start'
 import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
 import { Route as ApiAuthFacebookStartRouteImport } from './routes/api/auth/facebook/start'
@@ -304,6 +312,22 @@ const ApiPurchasePackRoute = ApiPurchasePackRouteImport.update({
   path: '/api/purchase-pack',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMetaLocationSearchRoute = ApiMetaLocationSearchRouteImport.update({
+  id: '/api/meta-location-search',
+  path: '/api/meta-location-search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMetaInterestSuggestionsRoute =
+  ApiMetaInterestSuggestionsRouteImport.update({
+    id: '/api/meta-interest-suggestions',
+    path: '/api/meta-interest-suggestions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiMetaInterestSearchRoute = ApiMetaInterestSearchRouteImport.update({
+  id: '/api/meta-interest-search',
+  path: '/api/meta-interest-search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHelpChatRoute = ApiHelpChatRouteImport.update({
   id: '/api/help-chat',
   path: '/api/help-chat',
@@ -355,6 +379,11 @@ const ApiCarouselRequestChangeRoute =
     path: '/api/carousel-request-change',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCampaignsCreateRoute = ApiCampaignsCreateRouteImport.update({
+  id: '/api/campaigns-create',
+  path: '/api/campaigns-create',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCampaignsRoute = ApiCampaignsRouteImport.update({
   id: '/api/campaigns',
   path: '/api/campaigns',
@@ -365,6 +394,12 @@ const ApiCampaignAdsRoute = ApiCampaignAdsRouteImport.update({
   path: '/api/campaign-ads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCalendarEntriesScheduleRoute =
+  ApiCalendarEntriesScheduleRouteImport.update({
+    id: '/api/calendar-entries-schedule',
+    path: '/api/calendar-entries-schedule',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiCalendarEntriesRequestRoute =
   ApiCalendarEntriesRequestRouteImport.update({
     id: '/api/calendar-entries-request',
@@ -775,6 +810,28 @@ const ApiSocialConnectCallbackRoute =
     path: '/api/social/connect/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiMetaAdAccountStartRoute = ApiMetaAdAccountStartRouteImport.update({
+  id: '/api/meta/ad-account/start',
+  path: '/api/meta/ad-account/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMetaAdAccountPendingRoute = ApiMetaAdAccountPendingRouteImport.update({
+  id: '/api/meta/ad-account/pending',
+  path: '/api/meta/ad-account/pending',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMetaAdAccountFinalizeRoute =
+  ApiMetaAdAccountFinalizeRouteImport.update({
+    id: '/api/meta/ad-account/finalize',
+    path: '/api/meta/ad-account/finalize',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiMetaAdAccountCallbackRoute =
+  ApiMetaAdAccountCallbackRouteImport.update({
+    id: '/api/meta/ad-account/callback',
+    path: '/api/meta/ad-account/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAuthGoogleStartRoute = ApiAuthGoogleStartRouteImport.update({
   id: '/api/auth/google/start',
   path: '/api/auth/google/start',
@@ -837,8 +894,10 @@ export interface FileRoutesByFullPath {
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
   '/api/calendar-entries-publish': typeof ApiCalendarEntriesPublishRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
+  '/api/calendar-entries-schedule': typeof ApiCalendarEntriesScheduleRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
+  '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-request-close': typeof ApiCarouselRequestCloseRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
@@ -849,6 +908,9 @@ export interface FileRoutesByFullPath {
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/help-chat': typeof ApiHelpChatRoute
+  '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
+  '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
+  '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -931,6 +993,10 @@ export interface FileRoutesByFullPath {
   '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/meta/ad-account/callback': typeof ApiMetaAdAccountCallbackRoute
+  '/api/meta/ad-account/finalize': typeof ApiMetaAdAccountFinalizeRoute
+  '/api/meta/ad-account/pending': typeof ApiMetaAdAccountPendingRoute
+  '/api/meta/ad-account/start': typeof ApiMetaAdAccountStartRoute
   '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
@@ -967,8 +1033,10 @@ export interface FileRoutesByTo {
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
   '/api/calendar-entries-publish': typeof ApiCalendarEntriesPublishRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
+  '/api/calendar-entries-schedule': typeof ApiCalendarEntriesScheduleRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
+  '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-request-close': typeof ApiCarouselRequestCloseRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
@@ -979,6 +1047,9 @@ export interface FileRoutesByTo {
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/help-chat': typeof ApiHelpChatRoute
+  '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
+  '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
+  '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -1061,6 +1132,10 @@ export interface FileRoutesByTo {
   '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/meta/ad-account/callback': typeof ApiMetaAdAccountCallbackRoute
+  '/api/meta/ad-account/finalize': typeof ApiMetaAdAccountFinalizeRoute
+  '/api/meta/ad-account/pending': typeof ApiMetaAdAccountPendingRoute
+  '/api/meta/ad-account/start': typeof ApiMetaAdAccountStartRoute
   '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
@@ -1098,8 +1173,10 @@ export interface FileRoutesById {
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
   '/api/calendar-entries-publish': typeof ApiCalendarEntriesPublishRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
+  '/api/calendar-entries-schedule': typeof ApiCalendarEntriesScheduleRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
   '/api/campaigns': typeof ApiCampaignsRoute
+  '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-request-close': typeof ApiCarouselRequestCloseRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
@@ -1110,6 +1187,9 @@ export interface FileRoutesById {
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/help-chat': typeof ApiHelpChatRoute
+  '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
+  '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
+  '/api/meta-location-search': typeof ApiMetaLocationSearchRoute
   '/api/purchase-pack': typeof ApiPurchasePackRoute
   '/api/request-change': typeof ApiRequestChangeRoute
   '/api/request-revision': typeof ApiRequestRevisionRoute
@@ -1192,6 +1272,10 @@ export interface FileRoutesById {
   '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
   '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
+  '/api/meta/ad-account/callback': typeof ApiMetaAdAccountCallbackRoute
+  '/api/meta/ad-account/finalize': typeof ApiMetaAdAccountFinalizeRoute
+  '/api/meta/ad-account/pending': typeof ApiMetaAdAccountPendingRoute
+  '/api/meta/ad-account/start': typeof ApiMetaAdAccountStartRoute
   '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
@@ -1230,8 +1314,10 @@ export interface FileRouteTypes {
     | '/api/calendar-entries-caption'
     | '/api/calendar-entries-publish'
     | '/api/calendar-entries-request'
+    | '/api/calendar-entries-schedule'
     | '/api/campaign-ads'
     | '/api/campaigns'
+    | '/api/campaigns-create'
     | '/api/carousel-request-change'
     | '/api/carousel-request-close'
     | '/api/carousel-requests'
@@ -1242,6 +1328,9 @@ export interface FileRouteTypes {
     | '/api/geo-price'
     | '/api/geocode'
     | '/api/help-chat'
+    | '/api/meta-interest-search'
+    | '/api/meta-interest-suggestions'
+    | '/api/meta-location-search'
     | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
@@ -1324,6 +1413,10 @@ export interface FileRouteTypes {
     | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
     | '/api/auth/google/start'
+    | '/api/meta/ad-account/callback'
+    | '/api/meta/ad-account/finalize'
+    | '/api/meta/ad-account/pending'
+    | '/api/meta/ad-account/start'
     | '/api/social/connect/callback'
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
@@ -1360,8 +1453,10 @@ export interface FileRouteTypes {
     | '/api/calendar-entries-caption'
     | '/api/calendar-entries-publish'
     | '/api/calendar-entries-request'
+    | '/api/calendar-entries-schedule'
     | '/api/campaign-ads'
     | '/api/campaigns'
+    | '/api/campaigns-create'
     | '/api/carousel-request-change'
     | '/api/carousel-request-close'
     | '/api/carousel-requests'
@@ -1372,6 +1467,9 @@ export interface FileRouteTypes {
     | '/api/geo-price'
     | '/api/geocode'
     | '/api/help-chat'
+    | '/api/meta-interest-search'
+    | '/api/meta-interest-suggestions'
+    | '/api/meta-location-search'
     | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
@@ -1454,6 +1552,10 @@ export interface FileRouteTypes {
     | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
     | '/api/auth/google/start'
+    | '/api/meta/ad-account/callback'
+    | '/api/meta/ad-account/finalize'
+    | '/api/meta/ad-account/pending'
+    | '/api/meta/ad-account/start'
     | '/api/social/connect/callback'
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
@@ -1490,8 +1592,10 @@ export interface FileRouteTypes {
     | '/api/calendar-entries-caption'
     | '/api/calendar-entries-publish'
     | '/api/calendar-entries-request'
+    | '/api/calendar-entries-schedule'
     | '/api/campaign-ads'
     | '/api/campaigns'
+    | '/api/campaigns-create'
     | '/api/carousel-request-change'
     | '/api/carousel-request-close'
     | '/api/carousel-requests'
@@ -1502,6 +1606,9 @@ export interface FileRouteTypes {
     | '/api/geo-price'
     | '/api/geocode'
     | '/api/help-chat'
+    | '/api/meta-interest-search'
+    | '/api/meta-interest-suggestions'
+    | '/api/meta-location-search'
     | '/api/purchase-pack'
     | '/api/request-change'
     | '/api/request-revision'
@@ -1584,6 +1691,10 @@ export interface FileRouteTypes {
     | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
     | '/api/auth/google/start'
+    | '/api/meta/ad-account/callback'
+    | '/api/meta/ad-account/finalize'
+    | '/api/meta/ad-account/pending'
+    | '/api/meta/ad-account/start'
     | '/api/social/connect/callback'
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
@@ -1621,8 +1732,10 @@ export interface RootRouteChildren {
   ApiCalendarEntriesCaptionRoute: typeof ApiCalendarEntriesCaptionRoute
   ApiCalendarEntriesPublishRoute: typeof ApiCalendarEntriesPublishRoute
   ApiCalendarEntriesRequestRoute: typeof ApiCalendarEntriesRequestRoute
+  ApiCalendarEntriesScheduleRoute: typeof ApiCalendarEntriesScheduleRoute
   ApiCampaignAdsRoute: typeof ApiCampaignAdsRoute
   ApiCampaignsRoute: typeof ApiCampaignsRoute
+  ApiCampaignsCreateRoute: typeof ApiCampaignsCreateRoute
   ApiCarouselRequestChangeRoute: typeof ApiCarouselRequestChangeRoute
   ApiCarouselRequestCloseRoute: typeof ApiCarouselRequestCloseRoute
   ApiCarouselRequestsRoute: typeof ApiCarouselRequestsRoute
@@ -1633,6 +1746,9 @@ export interface RootRouteChildren {
   ApiGeoPriceRoute: typeof ApiGeoPriceRoute
   ApiGeocodeRoute: typeof ApiGeocodeRoute
   ApiHelpChatRoute: typeof ApiHelpChatRoute
+  ApiMetaInterestSearchRoute: typeof ApiMetaInterestSearchRoute
+  ApiMetaInterestSuggestionsRoute: typeof ApiMetaInterestSuggestionsRoute
+  ApiMetaLocationSearchRoute: typeof ApiMetaLocationSearchRoute
   ApiPurchasePackRoute: typeof ApiPurchasePackRoute
   ApiRequestChangeRoute: typeof ApiRequestChangeRoute
   ApiRequestRevisionRoute: typeof ApiRequestRevisionRoute
@@ -1715,6 +1831,10 @@ export interface RootRouteChildren {
   ApiAuthFacebookStartRoute: typeof ApiAuthFacebookStartRoute
   ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
   ApiAuthGoogleStartRoute: typeof ApiAuthGoogleStartRoute
+  ApiMetaAdAccountCallbackRoute: typeof ApiMetaAdAccountCallbackRoute
+  ApiMetaAdAccountFinalizeRoute: typeof ApiMetaAdAccountFinalizeRoute
+  ApiMetaAdAccountPendingRoute: typeof ApiMetaAdAccountPendingRoute
+  ApiMetaAdAccountStartRoute: typeof ApiMetaAdAccountStartRoute
   ApiSocialConnectCallbackRoute: typeof ApiSocialConnectCallbackRoute
   ApiSocialConnectFinalizeRoute: typeof ApiSocialConnectFinalizeRoute
   ApiSocialConnectPendingRoute: typeof ApiSocialConnectPendingRoute
@@ -1956,6 +2076,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPurchasePackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/meta-location-search': {
+      id: '/api/meta-location-search'
+      path: '/api/meta-location-search'
+      fullPath: '/api/meta-location-search'
+      preLoaderRoute: typeof ApiMetaLocationSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/meta-interest-suggestions': {
+      id: '/api/meta-interest-suggestions'
+      path: '/api/meta-interest-suggestions'
+      fullPath: '/api/meta-interest-suggestions'
+      preLoaderRoute: typeof ApiMetaInterestSuggestionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/meta-interest-search': {
+      id: '/api/meta-interest-search'
+      path: '/api/meta-interest-search'
+      fullPath: '/api/meta-interest-search'
+      preLoaderRoute: typeof ApiMetaInterestSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/help-chat': {
       id: '/api/help-chat'
       path: '/api/help-chat'
@@ -2026,6 +2167,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCarouselRequestChangeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/campaigns-create': {
+      id: '/api/campaigns-create'
+      path: '/api/campaigns-create'
+      fullPath: '/api/campaigns-create'
+      preLoaderRoute: typeof ApiCampaignsCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/campaigns': {
       id: '/api/campaigns'
       path: '/api/campaigns'
@@ -2040,6 +2188,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCampaignAdsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/calendar-entries-schedule': {
+      id: '/api/calendar-entries-schedule'
+      path: '/api/calendar-entries-schedule'
+      fullPath: '/api/calendar-entries-schedule'
+      preLoaderRoute: typeof ApiCalendarEntriesScheduleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/calendar-entries-request': {
       id: '/api/calendar-entries-request'
       path: '/api/calendar-entries-request'
@@ -2052,13 +2207,6 @@ declare module '@tanstack/react-router' {
       path: '/api/calendar-entries-publish'
       fullPath: '/api/calendar-entries-publish'
       preLoaderRoute: typeof ApiCalendarEntriesPublishRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/calendar-entries-schedule': {
-      id: '/api/calendar-entries-schedule'
-      path: '/api/calendar-entries-schedule'
-      fullPath: '/api/calendar-entries-schedule'
-      preLoaderRoute: typeof ApiCalendarEntriesScheduleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/calendar-entries-caption': {
@@ -2586,6 +2734,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSocialConnectCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/meta/ad-account/start': {
+      id: '/api/meta/ad-account/start'
+      path: '/api/meta/ad-account/start'
+      fullPath: '/api/meta/ad-account/start'
+      preLoaderRoute: typeof ApiMetaAdAccountStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/meta/ad-account/pending': {
+      id: '/api/meta/ad-account/pending'
+      path: '/api/meta/ad-account/pending'
+      fullPath: '/api/meta/ad-account/pending'
+      preLoaderRoute: typeof ApiMetaAdAccountPendingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/meta/ad-account/finalize': {
+      id: '/api/meta/ad-account/finalize'
+      path: '/api/meta/ad-account/finalize'
+      fullPath: '/api/meta/ad-account/finalize'
+      preLoaderRoute: typeof ApiMetaAdAccountFinalizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/meta/ad-account/callback': {
+      id: '/api/meta/ad-account/callback'
+      path: '/api/meta/ad-account/callback'
+      fullPath: '/api/meta/ad-account/callback'
+      preLoaderRoute: typeof ApiMetaAdAccountCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/google/start': {
       id: '/api/auth/google/start'
       path: '/api/auth/google/start'
@@ -2660,8 +2836,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCalendarEntriesCaptionRoute: ApiCalendarEntriesCaptionRoute,
   ApiCalendarEntriesPublishRoute: ApiCalendarEntriesPublishRoute,
   ApiCalendarEntriesRequestRoute: ApiCalendarEntriesRequestRoute,
+  ApiCalendarEntriesScheduleRoute: ApiCalendarEntriesScheduleRoute,
   ApiCampaignAdsRoute: ApiCampaignAdsRoute,
   ApiCampaignsRoute: ApiCampaignsRoute,
+  ApiCampaignsCreateRoute: ApiCampaignsCreateRoute,
   ApiCarouselRequestChangeRoute: ApiCarouselRequestChangeRoute,
   ApiCarouselRequestCloseRoute: ApiCarouselRequestCloseRoute,
   ApiCarouselRequestsRoute: ApiCarouselRequestsRoute,
@@ -2672,6 +2850,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGeoPriceRoute: ApiGeoPriceRoute,
   ApiGeocodeRoute: ApiGeocodeRoute,
   ApiHelpChatRoute: ApiHelpChatRoute,
+  ApiMetaInterestSearchRoute: ApiMetaInterestSearchRoute,
+  ApiMetaInterestSuggestionsRoute: ApiMetaInterestSuggestionsRoute,
+  ApiMetaLocationSearchRoute: ApiMetaLocationSearchRoute,
   ApiPurchasePackRoute: ApiPurchasePackRoute,
   ApiRequestChangeRoute: ApiRequestChangeRoute,
   ApiRequestRevisionRoute: ApiRequestRevisionRoute,
@@ -2754,6 +2935,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthFacebookStartRoute: ApiAuthFacebookStartRoute,
   ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
   ApiAuthGoogleStartRoute: ApiAuthGoogleStartRoute,
+  ApiMetaAdAccountCallbackRoute: ApiMetaAdAccountCallbackRoute,
+  ApiMetaAdAccountFinalizeRoute: ApiMetaAdAccountFinalizeRoute,
+  ApiMetaAdAccountPendingRoute: ApiMetaAdAccountPendingRoute,
+  ApiMetaAdAccountStartRoute: ApiMetaAdAccountStartRoute,
   ApiSocialConnectCallbackRoute: ApiSocialConnectCallbackRoute,
   ApiSocialConnectFinalizeRoute: ApiSocialConnectFinalizeRoute,
   ApiSocialConnectPendingRoute: ApiSocialConnectPendingRoute,

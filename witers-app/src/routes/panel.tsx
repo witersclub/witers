@@ -182,6 +182,8 @@ type BrandProfile = {
   // Facebook Page this client pautas from — set only by an admin. Null
   // means "Quiero pautar" stays blocked for them (see PautarButton).
   meta_page_id: string | null;
+  // Selected by the client through the dedicated Meta Ads connection.
+  meta_ad_account_id: string | null;
 };
 
 type ResultItem = { id: string; kind: string; image_url: string | null; r2_key: string | null };
@@ -349,7 +351,10 @@ function UpgradeTeaser({
         <p className="mt-4 text-lg font-bold text-wit-ink">{title}</p>
         <p className="mt-2 text-sm text-wit-gray">{body}</p>
         <p className="mt-6 text-sm font-semibold text-wit-blue">
-          {t("El equipo de WITERS puede habilitar esta función para tu cuenta.", "The WITERS team can enable this feature for your account.")}
+          {t(
+            "El equipo de WITERS puede habilitar esta función para tu cuenta.",
+            "The WITERS team can enable this feature for your account.",
+          )}
         </p>
         <button
           type="button"
@@ -757,7 +762,9 @@ function PanelContent() {
         title: row.title,
         status: row.status,
         createdAt: row.created_at,
-        thumbnail: result?.image_url ?? (result?.r2_key ? `/api/file?key=${encodeURIComponent(result.r2_key)}` : null),
+        thumbnail:
+          result?.image_url ??
+          (result?.r2_key ? `/api/file?key=${encodeURIComponent(result.r2_key)}` : null),
       };
     }),
     ...videoRows.map((row) => ({
@@ -766,7 +773,9 @@ function PanelContent() {
       title: row.title,
       status: row.status,
       createdAt: row.created_at,
-      thumbnail: row.delivered_key ? `/api/file?key=${encodeURIComponent(row.delivered_key)}` : null,
+      thumbnail: row.delivered_key
+        ? `/api/file?key=${encodeURIComponent(row.delivered_key)}`
+        : null,
     })),
     ...carouselRows.map((row) => {
       const slide = parseSlides(row).find((item) => item.delivered_key);
@@ -776,7 +785,9 @@ function PanelContent() {
         title: row.title,
         status: row.status,
         createdAt: row.created_at,
-        thumbnail: slide?.delivered_key ? `/api/file?key=${encodeURIComponent(slide.delivered_key)}` : null,
+        thumbnail: slide?.delivered_key
+          ? `/api/file?key=${encodeURIComponent(slide.delivered_key)}`
+          : null,
       };
     }),
   ]
@@ -949,14 +960,12 @@ function PanelContent() {
                     <div className="flex flex-wrap items-center gap-2">
                       <h1 className="text-3xl font-extrabold tracking-tighter text-wit-ink">
                         {t("Hola,", "Hi,")}{" "}
-                        <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span> 👋
+                        <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>{" "}
+                        👋
                       </h1>
                     </div>
                     <p className="mt-1 text-sm font-medium text-wit-gray">
-                      {t(
-                        "Planifica y solicita tu contenido",
-                        "Plan and request your content",
-                      )}
+                      {t("Planifica y solicita tu contenido", "Plan and request your content")}
                     </p>
                   </div>
 
@@ -968,7 +977,11 @@ function PanelContent() {
                     <div className="space-y-6">
                       <HomeRequestsCard
                         rows={recentRequests}
-                        loading={requests.isLoading || videoRequests.isLoading || carouselRequests.isLoading}
+                        loading={
+                          requests.isLoading ||
+                          videoRequests.isLoading ||
+                          carouselRequests.isLoading
+                        }
                         onOpen={(kind) => setRequestSheetKind(kind)}
                         onViewAll={() => setRequestSheetKind("todas")}
                       />
@@ -977,11 +990,18 @@ function PanelContent() {
                         onClick={() => setCreateSheetOpen(true)}
                         className="wit-brand-gradient flex min-h-[100px] w-full items-center gap-4 rounded-3xl px-5 text-left text-white transition-transform hover:-translate-y-0.5 active:scale-[0.99]"
                       >
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/18 text-2xl font-medium">+</span>
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/18 text-2xl font-medium">
+                          +
+                        </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block text-base font-extrabold">{t("Crear contenido", "Create content")}</span>
+                          <span className="block text-base font-extrabold">
+                            {t("Crear contenido", "Create content")}
+                          </span>
                           <span className="mt-1 block text-sm leading-snug text-white/80">
-                            {t("Cuéntanos qué necesitas y nosotros lo hacemos realidad.", "Tell us what you need and we'll make it happen.")}
+                            {t(
+                              "Cuéntanos qué necesitas y nosotros lo hacemos realidad.",
+                              "Tell us what you need and we'll make it happen.",
+                            )}
                           </span>
                         </span>
                         <ChevronRight className="h-5 w-5 shrink-0" strokeWidth={2.5} />
@@ -992,7 +1012,10 @@ function PanelContent() {
                         active={active}
                         planName={getPlan(membership?.plan).nombre}
                         imageUsed={membership?.requests_used ?? 0}
-                        imageTotal={(membership?.requests_quota ?? 20) + (membership?.bonus_requests_quota ?? 0)}
+                        imageTotal={
+                          (membership?.requests_quota ?? 20) +
+                          (membership?.bonus_requests_quota ?? 0)
+                        }
                         videoUsed={membership?.video_requests_used ?? 0}
                         videoTotal={membership?.video_requests_quota ?? 0}
                         carouselUsed={membership?.carousel_requests_used ?? 0}
@@ -1003,8 +1026,18 @@ function PanelContent() {
                       />
                       {!active ? (
                         <div className="rounded-3xl bg-wit-navy p-6 text-white">
-                          <p className="text-lg font-bold">{t("Tu acceso está pendiente de activación.", "Your access is pending activation.")}</p>
-                          <p className="mt-1 text-sm text-white/70">{t("El equipo de WITERS habilitará tu cuenta cuando esté lista.", "The WITERS team will enable your account when it is ready.")}</p>
+                          <p className="text-lg font-bold">
+                            {t(
+                              "Tu acceso está pendiente de activación.",
+                              "Your access is pending activation.",
+                            )}
+                          </p>
+                          <p className="mt-1 text-sm text-white/70">
+                            {t(
+                              "El equipo de WITERS habilitará tu cuenta cuando esté lista.",
+                              "The WITERS team will enable your account when it is ready.",
+                            )}
+                          </p>
                         </div>
                       ) : null}
                     </div>
@@ -1018,14 +1051,12 @@ function PanelContent() {
                     <div className="flex flex-wrap items-center gap-2">
                       <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink md:text-3xl">
                         {t("Hola,", "Hi,")}{" "}
-                        <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span> 👋
+                        <span className="text-wit-blue">{me.data.user?.name?.split(" ")[0]}</span>{" "}
+                        👋
                       </h1>
                     </div>
                     <p className="mt-1 text-sm font-medium text-wit-gray">
-                      {t(
-                        "Planifica y solicita tu contenido",
-                        "Plan and request your content",
-                      )}
+                      {t("Planifica y solicita tu contenido", "Plan and request your content")}
                     </p>
                   </div>
 
@@ -1036,7 +1067,9 @@ function PanelContent() {
                   <div className="mt-7 space-y-6">
                     <HomeRequestsCard
                       rows={recentRequests}
-                      loading={requests.isLoading || videoRequests.isLoading || carouselRequests.isLoading}
+                      loading={
+                        requests.isLoading || videoRequests.isLoading || carouselRequests.isLoading
+                      }
                       onOpen={(kind) => setRequestSheetKind(kind)}
                       onViewAll={() => setRequestSheetKind("todas")}
                     />
@@ -1045,11 +1078,18 @@ function PanelContent() {
                       onClick={() => setCreateSheetOpen(true)}
                       className="wit-brand-gradient flex min-h-[100px] w-full items-center gap-4 rounded-3xl px-5 text-left text-white transition-transform active:scale-[0.99]"
                     >
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/18 text-2xl font-medium">+</span>
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/18 text-2xl font-medium">
+                        +
+                      </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-base font-extrabold">{t("Crear contenido", "Create content")}</span>
+                        <span className="block text-base font-extrabold">
+                          {t("Crear contenido", "Create content")}
+                        </span>
                         <span className="mt-1 block text-sm leading-snug text-white/80">
-                          {t("Cuéntanos qué necesitas y nosotros lo hacemos realidad.", "Tell us what you need and we'll make it happen.")}
+                          {t(
+                            "Cuéntanos qué necesitas y nosotros lo hacemos realidad.",
+                            "Tell us what you need and we'll make it happen.",
+                          )}
                         </span>
                       </span>
                       <ChevronRight className="h-5 w-5 shrink-0" strokeWidth={2.5} />
@@ -1058,7 +1098,9 @@ function PanelContent() {
                       active={active}
                       planName={getPlan(membership?.plan).nombre}
                       imageUsed={membership?.requests_used ?? 0}
-                      imageTotal={(membership?.requests_quota ?? 20) + (membership?.bonus_requests_quota ?? 0)}
+                      imageTotal={
+                        (membership?.requests_quota ?? 20) + (membership?.bonus_requests_quota ?? 0)
+                      }
                       videoUsed={membership?.video_requests_used ?? 0}
                       videoTotal={membership?.video_requests_quota ?? 0}
                       carouselUsed={membership?.carousel_requests_used ?? 0}
@@ -1216,7 +1258,22 @@ function PanelContent() {
               </div>
             ) : section === "campanas" ? (
               <div className="mt-8">
-                <CampanasPanel companyName={brandProfile?.company_name ?? null} />
+                <CampanasPanel
+                  companyName={brandProfile?.company_name ?? null}
+                  metaAdAccountId={brandProfile?.meta_ad_account_id ?? null}
+                  deliveredPieces={rows
+                    .filter((row) => row.status === "completada" || row.status === "cerrada")
+                    .map((row) => {
+                      const result = parseResults(row).find((item) => item.kind !== "draft");
+                      return result
+                        ? { id: row.id, title: row.title, previewUrl: result.image_url }
+                        : null;
+                    })
+                    .filter(
+                      (piece): piece is { id: string; title: string; previewUrl: string | null } =>
+                        Boolean(piece),
+                    )}
+                />
               </div>
             ) : (
               <div className="mt-8">
@@ -2861,8 +2918,306 @@ function formatEsShortDate(iso: string): string {
 // Real campaign list now — refreshes every time this mounts, and every 60s
 // while it's open, matching the "se actualiza sola, no empujado al
 // instante" explanation given for how Meta itself reports ad performance.
-function CampanasPanel({ companyName }: { companyName: string | null }) {
+type DeliveredCampaignPiece = { id: string; title: string; previewUrl: string | null };
+type MetaAdAccountOption = {
+  account_id: string;
+  name: string;
+  account_status: number;
+  currency: string;
+};
+
+function CampaignBuilderSheet({
+  pieces,
+  onClose,
+  onCreated,
+}: {
+  pieces: DeliveredCampaignPiece[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const { t } = useLanguage();
+  const [requestId, setRequestId] = useState(pieces[0]?.id ?? "");
+  const [objective, setObjective] = useState<"interaccion" | "trafico" | "ventas">("interaccion");
+  const [dailyBudgetMxn, setDailyBudgetMxn] = useState(100);
+  const [durationDays, setDurationDays] = useState(7);
+  const [ageMin, setAgeMin] = useState(18);
+  const [ageMax, setAgeMax] = useState(65);
+  const [message, setMessage] = useState(pieces[0]?.title ?? "");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const selectedPiece = pieces.find((piece) => piece.id === requestId);
+
+  useEffect(() => {
+    if (selectedPiece && (!message || pieces.some((piece) => piece.title === message))) {
+      setMessage(selectedPiece.title);
+    }
+  }, [message, pieces, requestId, selectedPiece]);
+
+  async function submit() {
+    setError(null);
+    if (!requestId || !message.trim()) {
+      setError(
+        t(
+          "Selecciona una pieza y escribe el texto del anuncio.",
+          "Select a piece and write the ad copy.",
+        ),
+      );
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/campaigns-create", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          objective,
+          dailyBudgetMxn,
+          durationDays,
+          ageMin,
+          ageMax,
+          interestIds: [],
+          adMessages: [message.trim()],
+          whatsappNumber: objective === "ventas" ? whatsappNumber.trim() : undefined,
+          websiteUrl: objective === "trafico" && websiteUrl.trim() ? websiteUrl.trim() : undefined,
+        }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        message?: string;
+      };
+      if (!response.ok || !data.ok) {
+        const labels: Record<string, string> = {
+          pagina_no_conectada: t(
+            "Conecta primero una página de Facebook desde las cuentas sociales.",
+            "Connect a Facebook Page from social accounts first.",
+          ),
+          cuenta_publicitaria_no_conectada: t(
+            "Conecta primero tu cuenta publicitaria de Meta.",
+            "Connect your Meta ad account first.",
+          ),
+          falta_whatsapp: t("Escribe el número de WhatsApp.", "Enter the WhatsApp number."),
+          sin_pieza_final: t(
+            "La pieza seleccionada no tiene un archivo final.",
+            "The selected piece has no final file.",
+          ),
+        };
+        setError(
+          data.message ??
+            labels[data.error ?? ""] ??
+            data.error ??
+            t("No pudimos crear la campaña.", "We couldn't create the campaign."),
+        );
+        return;
+      }
+      onCreated();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-wit-ink/25 p-0 backdrop-blur-[2px] sm:items-center sm:p-5">
+      <div className="max-h-[94dvh] w-full overflow-y-auto rounded-t-[28px] bg-white p-5 shadow-2xl sm:max-w-2xl sm:rounded-[28px] sm:p-7">
+        <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-wit-ink/15 sm:hidden" />
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-wit-blue">Meta Ads</p>
+            <h2 className="mt-1 text-2xl font-extrabold text-wit-ink">
+              {t("Iniciar campaña publicitaria", "Start advertising campaign")}
+            </h2>
+            <p className="mt-1 text-sm text-wit-gray">
+              {t(
+                "La campaña se creará pausada. Podrás revisarla en Meta antes de gastar.",
+                "The campaign will be created paused. You can review it in Meta before spending.",
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-wit-gray hover:bg-wit-ink/5"
+            aria-label={t("Cerrar", "Close")}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {pieces.length === 0 ? (
+          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            {t(
+              "Necesitas al menos una pieza de imagen entregada para crear una campaña.",
+              "You need at least one delivered image to create a campaign.",
+            )}
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+            <label className="sm:col-span-2">
+              <span className="mb-2 block text-sm font-bold text-wit-ink">
+                {t("Pieza a promocionar", "Piece to promote")}
+              </span>
+              <select
+                value={requestId}
+                onChange={(event) => setRequestId(event.target.value)}
+                className="h-12 w-full rounded-xl border border-wit-ink/10 bg-white px-3 text-sm text-wit-ink outline-none focus:border-wit-blue"
+              >
+                {pieces.map((piece) => (
+                  <option key={piece.id} value={piece.id}>
+                    {piece.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="mb-2 block text-sm font-bold text-wit-ink">
+                {t("Objetivo", "Objective")}
+              </span>
+              <select
+                value={objective}
+                onChange={(event) => setObjective(event.target.value as typeof objective)}
+                className="h-12 w-full rounded-xl border border-wit-ink/10 bg-white px-3 text-sm text-wit-ink"
+              >
+                <option value="interaccion">{t("Interacción", "Engagement")}</option>
+                <option value="trafico">{t("Tráfico", "Traffic")}</option>
+                <option value="ventas">{t("Ventas por WhatsApp", "WhatsApp sales")}</option>
+              </select>
+            </label>
+            <label>
+              <span className="mb-2 block text-sm font-bold text-wit-ink">
+                {t("Presupuesto diario (MXN)", "Daily budget (MXN)")}
+              </span>
+              <input
+                type="number"
+                min={20}
+                value={dailyBudgetMxn}
+                onChange={(event) => setDailyBudgetMxn(Number(event.target.value))}
+                className="h-12 w-full rounded-xl border border-wit-ink/10 px-3 text-sm"
+              />
+            </label>
+            <label>
+              <span className="mb-2 block text-sm font-bold text-wit-ink">
+                {t("Duración (días)", "Duration (days)")}
+              </span>
+              <input
+                type="number"
+                min={1}
+                max={90}
+                value={durationDays}
+                onChange={(event) => setDurationDays(Number(event.target.value))}
+                className="h-12 w-full rounded-xl border border-wit-ink/10 px-3 text-sm"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label>
+                <span className="mb-2 block text-sm font-bold text-wit-ink">
+                  {t("Edad mínima", "Min age")}
+                </span>
+                <input
+                  type="number"
+                  min={13}
+                  max={65}
+                  value={ageMin}
+                  onChange={(event) => setAgeMin(Number(event.target.value))}
+                  className="h-12 w-full rounded-xl border border-wit-ink/10 px-3 text-sm"
+                />
+              </label>
+              <label>
+                <span className="mb-2 block text-sm font-bold text-wit-ink">
+                  {t("Máxima", "Max")}
+                </span>
+                <input
+                  type="number"
+                  min={13}
+                  max={65}
+                  value={ageMax}
+                  onChange={(event) => setAgeMax(Number(event.target.value))}
+                  className="h-12 w-full rounded-xl border border-wit-ink/10 px-3 text-sm"
+                />
+              </label>
+            </div>
+            <label className="sm:col-span-2">
+              <span className="mb-2 block text-sm font-bold text-wit-ink">
+                {t("Texto del anuncio", "Ad copy")}
+              </span>
+              <textarea
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                maxLength={500}
+                rows={4}
+                className="w-full resize-none rounded-xl border border-wit-ink/10 p-3 text-sm outline-none focus:border-wit-blue"
+              />
+            </label>
+            {objective === "ventas" ? (
+              <label className="sm:col-span-2">
+                <span className="mb-2 block text-sm font-bold text-wit-ink">WhatsApp</span>
+                <input
+                  value={whatsappNumber}
+                  onChange={(event) => setWhatsappNumber(event.target.value)}
+                  placeholder="521..."
+                  className="h-12 w-full rounded-xl border border-wit-ink/10 px-3 text-sm"
+                />
+              </label>
+            ) : null}
+            {objective === "trafico" ? (
+              <label className="sm:col-span-2">
+                <span className="mb-2 block text-sm font-bold text-wit-ink">
+                  {t("Sitio web (opcional)", "Website (optional)")}
+                </span>
+                <input
+                  value={websiteUrl}
+                  onChange={(event) => setWebsiteUrl(event.target.value)}
+                  placeholder="https://"
+                  className="h-12 w-full rounded-xl border border-wit-ink/10 px-3 text-sm"
+                />
+              </label>
+            ) : null}
+          </div>
+        )}
+        {error ? (
+          <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>
+        ) : null}
+        <button
+          type="button"
+          onClick={submit}
+          disabled={submitting || pieces.length === 0}
+          className="witers-gradient mt-6 flex h-13 w-full items-center justify-center gap-2 rounded-2xl px-5 font-bold text-white disabled:opacity-40"
+        >
+          {submitting ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Megaphone className="h-5 w-5" />
+          )}
+          {submitting
+            ? t("Creando campaña pausada...", "Creating paused campaign...")
+            : t("Crear campaña pausada", "Create paused campaign")}
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function CampanasPanel({
+  companyName,
+  metaAdAccountId,
+  deliveredPieces,
+}: {
+  companyName: string | null;
+  metaAdAccountId: string | null;
+  deliveredPieces: DeliveredCampaignPiece[];
+}) {
+  const { t } = useLanguage();
+  const queryClient = useQueryClient();
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [accountPicker, setAccountPicker] = useState<{
+    pendingId: string;
+    accounts: MetaAdAccountOption[];
+  } | null>(null);
+  const [connectionMessage, setConnectionMessage] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [openCampaign, setOpenCampaign] = useState<Campaign | null>(null);
   // null = "todo el tiempo" — same date-range filter as the per-campaign
@@ -2885,6 +3240,160 @@ function CampanasPanel({ companyName }: { companyName: string | null }) {
     },
     refetchInterval: 60_000,
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pendingId = params.get("meta_ads_pick");
+    const connected = params.get("meta_ads_connected");
+    const connectionError = params.get("meta_ads_error");
+    if (connected) {
+      setConnectionMessage(
+        t("Cuenta publicitaria conectada correctamente.", "Ad account connected successfully."),
+      );
+      void queryClient.invalidateQueries({ queryKey: ["brand-profile"] });
+    }
+    if (connectionError) {
+      const messages: Record<string, string> = {
+        estado: t("La conexión expiró. Intenta nuevamente.", "The connection expired. Try again."),
+        oauth: t(
+          "Meta no pudo completar la autorización.",
+          "Meta could not complete authorization.",
+        ),
+        sin_cuentas: t(
+          "No encontramos cuentas publicitarias disponibles para este usuario de Meta.",
+          "No available ad accounts were found for this Meta user.",
+        ),
+      };
+      setConnectionMessage(
+        messages[connectionError] ??
+          t("No pudimos conectar Meta Ads.", "We couldn't connect Meta Ads."),
+      );
+    }
+    if (pendingId) {
+      void fetch(`/api/meta/ad-account/pending?id=${encodeURIComponent(pendingId)}`, {
+        credentials: "include",
+      })
+        .then((response) => response.json())
+        .then((data: { ok?: boolean; accounts?: MetaAdAccountOption[] }) => {
+          if (data.ok && data.accounts) setAccountPicker({ pendingId, accounts: data.accounts });
+        });
+    }
+    if (pendingId || connected || connectionError) {
+      params.delete("meta_ads_pick");
+      params.delete("meta_ads_connected");
+      params.delete("meta_ads_error");
+      window.history.replaceState(
+        {},
+        "",
+        `${window.location.pathname}${params.size ? `?${params}` : ""}`,
+      );
+    }
+  }, [queryClient, t]);
+
+  async function chooseAccount(accountId: string) {
+    if (!accountPicker) return;
+    const response = await fetch("/api/meta/ad-account/finalize", {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pendingId: accountPicker.pendingId, accountId }),
+    });
+    if (!response.ok) {
+      setConnectionMessage(
+        t("No pudimos guardar esa cuenta publicitaria.", "We couldn't save that ad account."),
+      );
+      return;
+    }
+    setAccountPicker(null);
+    setConnectionMessage(
+      t("Cuenta publicitaria conectada correctamente.", "Ad account connected successfully."),
+    );
+    await queryClient.invalidateQueries({ queryKey: ["brand-profile"] });
+  }
+
+  const campaignAction = metaAdAccountId ? (
+    <button
+      type="button"
+      onClick={() => setBuilderOpen(true)}
+      className="witers-gradient flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white shadow-sm"
+    >
+      <Plus className="h-4 w-4" /> {t("Iniciar campaña publicitaria", "Start advertising campaign")}
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={() => window.location.assign("/api/meta/ad-account/start")}
+      className="flex items-center gap-2 rounded-full border border-wit-blue/25 bg-white px-4 py-2.5 text-sm font-bold text-wit-blue hover:bg-wit-blue/5"
+    >
+      <Link2 className="h-4 w-4" />{" "}
+      {t("Conectar cuenta publicitaria de Meta", "Connect Meta ad account")}
+    </button>
+  );
+  const campaignOverlays = (
+    <>
+      {builderOpen ? (
+        <CampaignBuilderSheet
+          pieces={deliveredPieces}
+          onClose={() => setBuilderOpen(false)}
+          onCreated={() => {
+            setBuilderOpen(false);
+            setConnectionMessage(
+              t(
+                "Campaña creada en estado pausado. Revísala antes de activarla.",
+                "Campaign created paused. Review it before activating it.",
+              ),
+            );
+            void queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+          }}
+        />
+      ) : null}
+      {accountPicker
+        ? createPortal(
+            <div className="fixed inset-0 z-[85] flex items-center justify-center bg-wit-ink/30 p-4 backdrop-blur-sm">
+              <div className="w-full max-w-md rounded-[26px] bg-white p-6 shadow-2xl">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.15em] text-wit-blue">
+                      Meta Ads
+                    </p>
+                    <h2 className="mt-1 text-xl font-extrabold text-wit-ink">
+                      {t("Elige tu cuenta publicitaria", "Choose your ad account")}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAccountPicker(null)}
+                    className="rounded-full p-2 text-wit-gray hover:bg-wit-ink/5"
+                    aria-label={t("Cerrar", "Close")}
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="mt-5 space-y-2">
+                  {accountPicker.accounts.map((account) => (
+                    <button
+                      key={account.account_id}
+                      type="button"
+                      onClick={() => void chooseAccount(account.account_id)}
+                      className="flex w-full items-center justify-between rounded-2xl border border-wit-ink/10 p-4 text-left hover:border-wit-blue/40 hover:bg-wit-blue/[0.03]"
+                    >
+                      <span>
+                        <strong className="block text-sm text-wit-ink">{account.name}</strong>
+                        <span className="mt-0.5 block text-xs text-wit-gray">
+                          act_{account.account_id} · {account.currency}
+                        </span>
+                      </span>
+                      <ChevronRight className="h-5 w-5 text-wit-blue" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
   const rows = campaigns.data?.campaigns ?? [];
   // Meta never really deletes a campaign either — "eliminar" in Ads
   // Manager just flips its status to ARCHIVED/DELETED, same data kept for
@@ -2964,35 +3473,57 @@ function CampanasPanel({ companyName }: { companyName: string | null }) {
 
   if (campaigns.isLoading) {
     return (
-      <div className="space-y-4">
-        {[0, 1].map((i) => (
-          <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />
-        ))}
-      </div>
+      <>
+        <div className="space-y-4">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-24 animate-pulse rounded-2xl bg-white" />
+          ))}
+        </div>
+        {campaignOverlays}
+      </>
     );
   }
 
   if (liveRows.length === 0 && archivedRows.length === 0) {
     return (
-      <div className="wit-glass flex flex-col items-center gap-4 rounded-3xl px-6 py-20 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
-          {CAMPAIGN_ICON}
-        </span>
-        <p className="text-lg font-bold text-wit-ink">
-          {t("Aún no tienes campañas", "You don't have any campaigns yet")}
-        </p>
-        <p className="max-w-sm text-sm text-wit-gray">
-          {t(
-            "Contáctanos para pautar tu primera campaña en Meta — nosotros la configuramos y aquí verás sus resultados en vivo.",
-            "Contact us to launch your first campaign on Meta — we set it up and you'll see its live results here.",
-          )}
-        </p>
-      </div>
+      <>
+        {connectionMessage ? (
+          <p className="mb-4 rounded-2xl border border-wit-blue/15 bg-wit-blue/5 px-4 py-3 text-sm font-medium text-wit-ink">
+            {connectionMessage}
+          </p>
+        ) : null}
+        <div className="wit-glass flex flex-col items-center gap-4 rounded-3xl px-6 py-20 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
+            {CAMPAIGN_ICON}
+          </span>
+          <p className="text-lg font-bold text-wit-ink">
+            {t("Aún no tienes campañas", "You don't have any campaigns yet")}
+          </p>
+          <p className="max-w-sm text-sm text-wit-gray">
+            {metaAdAccountId
+              ? t(
+                  "Elige una pieza entregada y crea tu primera campaña en Meta.",
+                  "Choose a delivered piece and create your first Meta campaign.",
+                )
+              : t(
+                  "Conecta la cuenta publicitaria de tu marca para comenzar.",
+                  "Connect your brand's ad account to get started.",
+                )}
+          </p>
+          {campaignAction}
+        </div>
+        {campaignOverlays}
+      </>
     );
   }
 
   return (
     <div className="space-y-4">
+      {connectionMessage ? (
+        <p className="rounded-2xl border border-wit-blue/15 bg-wit-blue/5 px-4 py-3 text-sm font-medium text-wit-ink">
+          {connectionMessage}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Suspense fallback={<div className="h-9 w-40 animate-pulse rounded-full bg-white/70" />}>
           <CampaignDateRangePicker range={range} onChange={setRange} />
@@ -3010,6 +3541,7 @@ function CampanasPanel({ companyName }: { companyName: string | null }) {
           )}
           {t("Hacer reporte", "Generate report")}
         </button>
+        <div className="sm:ml-auto">{campaignAction}</div>
       </div>
       {liveRows.length === 0 ? (
         <div className="wit-glass flex flex-col items-center gap-4 rounded-3xl px-6 py-14 text-center">
@@ -3070,6 +3602,7 @@ function CampanasPanel({ companyName }: { companyName: string | null }) {
             document.body,
           )
         : null}
+      {campaignOverlays}
     </div>
   );
 }
@@ -3911,7 +4444,9 @@ function BrandMindCard() {
   const { t } = useLanguage();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [assets, setAssets] = useState<{ id: string; original_name: string; kind: string; use_in_planning: number }[]>([]);
+  const [assets, setAssets] = useState<
+    { id: string; original_name: string; kind: string; use_in_planning: number }[]
+  >([]);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -3924,7 +4459,10 @@ function BrandMindCard() {
     setError(null);
     try {
       if (file.type.startsWith("video/")) {
-        const upload = await fetch(`/api/upload-video-raw?brandAsset=1&filename=${encodeURIComponent(file.name)}`, { method: "POST", headers: { "content-type": file.type }, body: file });
+        const upload = await fetch(
+          `/api/upload-video-raw?brandAsset=1&filename=${encodeURIComponent(file.name)}`,
+          { method: "POST", headers: { "content-type": file.type }, body: file },
+        );
         if (!upload.ok) throw new Error("upload");
         await load();
         return;
@@ -3933,24 +4471,135 @@ function BrandMindCard() {
       if (!key) throw new Error("upload");
       const extraction = await extractBrandDocumentText(file);
       const textContent = extraction.text;
-      const res = await fetch("/api/brand-profile", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "add_asset", key, originalName: file.name, kind: textContent ? "strategy" : file.type === "application/pdf" ? "manual" : "reference", mimeType: file.type || "application/octet-stream", sizeBytes: file.size, textContent }) });
+      const res = await fetch("/api/brand-profile", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "add_asset",
+          key,
+          originalName: file.name,
+          kind: textContent ? "strategy" : file.type === "application/pdf" ? "manual" : "reference",
+          mimeType: file.type || "application/octet-stream",
+          sizeBytes: file.size,
+          textContent,
+        }),
+      });
       if (!res.ok) throw new Error("save");
       await load();
       void qc.invalidateQueries({ queryKey: ["brand-profile"] });
-      if (!extraction.readable) setError(t("Archivo guardado como referencia visual. Para que Wit lea el contenido, usa .txt, .md, .json o .docx.", "File saved as a visual reference. For Wit to read its content, use .txt, .md, .json, or .docx."));
+      if (!extraction.readable)
+        setError(
+          t(
+            "Archivo guardado como referencia visual. Para que Wit lea el contenido, usa .txt, .md, .json o .docx.",
+            "File saved as a visual reference. For Wit to read its content, use .txt, .md, .json, or .docx.",
+          ),
+        );
     } catch {
       setError(t("No pudimos cargar este archivo.", "We couldn't upload this file."));
     }
   }
-  return <>
-    <button type="button" onClick={() => { setOpen(true); void load(); }} className="wit-glass flex min-h-56 flex-col items-start rounded-3xl p-7 text-left shadow-[0_20px_60px_rgba(5,13,40,0.07)] transition-transform hover:-translate-y-0.5">
-      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue"><Sparkles className="h-6 w-6" /></span>
-      <p className="mt-5 text-lg font-bold text-wit-ink">{t("Mente de marca", "Brand mind")}</p>
-      <p className="mt-1 text-sm leading-relaxed text-wit-gray">{t("Tu manual, estrategia y referencias para que Wit cree con el contexto correcto.", "Your manual, strategy, and references so Wit creates with the right context.")}</p>
-      <span className="mt-auto pt-5 text-sm font-bold text-wit-blue">{t("Abrir biblioteca", "Open library")} <ChevronRight className="inline h-4 w-4" /></span>
-    </button>
-    {open ? createPortal(<div className="fixed inset-0 z-[80] flex items-end bg-wit-ink/25 p-0 backdrop-blur-[2px]" role="dialog" aria-modal="true"><div className="w-full rounded-t-[30px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-3 md:mx-auto md:mb-8 md:max-w-xl md:rounded-[30px]"><div className="mx-auto h-1.5 w-10 rounded-full bg-wit-ink/15" /><div className="mt-4 flex items-start justify-between"><div><h2 className="text-xl font-extrabold text-wit-ink">{t("Mente de marca", "Brand mind")}</h2><p className="mt-1 text-sm text-wit-gray">{t("Archivos que Wit puede usar al planificar y crear.", "Files Wit can use while planning and creating.")}</p></div><button type="button" onClick={() => setOpen(false)} className="rounded-full bg-wit-mist p-2 text-wit-ink" aria-label={t("Cerrar", "Close")}><X className="h-5 w-5" /></button></div><label onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void add(event.dataTransfer.files?.[0] ?? null); }} className="mt-5 flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-wit-blue/35 bg-wit-blue/[0.03] py-4 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.07]"><Plus className="h-4 w-4" />{t("Cargar o arrastrar archivo", "Upload or drop a file")}<span className="text-[11px] font-medium text-wit-gray">{t("Suelta el archivo aquí", "Drop the file here")}</span><input type="file" className="sr-only" accept="image/png,image/jpeg,image/webp,application/pdf,.doc,.docs,.docx,.md,.markdown,.txt,.text,application/json,video/mp4,video/quicktime,video/webm,video/x-m4v" onChange={(e) => void add(e.target.files?.[0] ?? null)} /></label><div className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">{assets.length ? assets.map((asset) => <div key={asset.id} className="flex items-center gap-3 rounded-2xl border border-wit-ink/10 px-4 py-3"><FileText className="h-4 w-4 text-wit-blue" /><span className="min-w-0 flex-1 truncate text-sm font-semibold text-wit-ink">{asset.original_name}</span><span className="text-xs capitalize text-wit-gray">{asset.kind}</span></div>) : <p className="rounded-2xl bg-wit-mist/50 p-5 text-center text-sm text-wit-gray">{t("Aún no has cargado archivos.", "You haven't uploaded files yet.")}</p>}</div>{error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}</div></div>, document.body) : null}
-  </>;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(true);
+          void load();
+        }}
+        className="wit-glass flex min-h-56 flex-col items-start rounded-3xl p-7 text-left shadow-[0_20px_60px_rgba(5,13,40,0.07)] transition-transform hover:-translate-y-0.5"
+      >
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
+          <Sparkles className="h-6 w-6" />
+        </span>
+        <p className="mt-5 text-lg font-bold text-wit-ink">{t("Mente de marca", "Brand mind")}</p>
+        <p className="mt-1 text-sm leading-relaxed text-wit-gray">
+          {t(
+            "Tu manual, estrategia y referencias para que Wit cree con el contexto correcto.",
+            "Your manual, strategy, and references so Wit creates with the right context.",
+          )}
+        </p>
+        <span className="mt-auto pt-5 text-sm font-bold text-wit-blue">
+          {t("Abrir biblioteca", "Open library")} <ChevronRight className="inline h-4 w-4" />
+        </span>
+      </button>
+      {open
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[80] flex items-end bg-wit-ink/25 p-0 backdrop-blur-[2px]"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="w-full rounded-t-[30px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-3 md:mx-auto md:mb-8 md:max-w-xl md:rounded-[30px]">
+                <div className="mx-auto h-1.5 w-10 rounded-full bg-wit-ink/15" />
+                <div className="mt-4 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-wit-ink">
+                      {t("Mente de marca", "Brand mind")}
+                    </h2>
+                    <p className="mt-1 text-sm text-wit-gray">
+                      {t(
+                        "Archivos que Wit puede usar al planificar y crear.",
+                        "Files Wit can use while planning and creating.",
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="rounded-full bg-wit-mist p-2 text-wit-ink"
+                    aria-label={t("Cerrar", "Close")}
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <label
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    void add(event.dataTransfer.files?.[0] ?? null);
+                  }}
+                  className="mt-5 flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-wit-blue/35 bg-wit-blue/[0.03] py-4 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.07]"
+                >
+                  <Plus className="h-4 w-4" />
+                  {t("Cargar o arrastrar archivo", "Upload or drop a file")}
+                  <span className="text-[11px] font-medium text-wit-gray">
+                    {t("Suelta el archivo aquí", "Drop the file here")}
+                  </span>
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept="image/png,image/jpeg,image/webp,application/pdf,.doc,.docs,.docx,.md,.markdown,.txt,.text,application/json,video/mp4,video/quicktime,video/webm,video/x-m4v"
+                    onChange={(e) => void add(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <div className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">
+                  {assets.length ? (
+                    assets.map((asset) => (
+                      <div
+                        key={asset.id}
+                        className="flex items-center gap-3 rounded-2xl border border-wit-ink/10 px-4 py-3"
+                      >
+                        <FileText className="h-4 w-4 text-wit-blue" />
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-wit-ink">
+                          {asset.original_name}
+                        </span>
+                        <span className="text-xs capitalize text-wit-gray">{asset.kind}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="rounded-2xl bg-wit-mist/50 p-5 text-center text-sm text-wit-gray">
+                      {t("Aún no has cargado archivos.", "You haven't uploaded files yet.")}
+                    </p>
+                  )}
+                </div>
+                {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
 }
 
 /* ---------- Wit conversation (request creation) ---------- */
@@ -5669,16 +6318,24 @@ function HomeRequestsCard({
           {t("Mis solicitudes", "My requests")}
         </h2>
         <button type="button" onClick={onViewAll} className="text-xs font-bold text-wit-blue">
-          {t("Ver todas", "View all")} <ChevronRight className="inline h-3.5 w-3.5" strokeWidth={2.5} />
+          {t("Ver todas", "View all")}{" "}
+          <ChevronRight className="inline h-3.5 w-3.5" strokeWidth={2.5} />
         </button>
       </div>
       <div className="mt-3 divide-y divide-wit-ink/6">
         {loading ? (
-          [0, 1, 2].map((index) => <div key={index} className="h-20 animate-pulse bg-wit-mist/30" />)
+          [0, 1, 2].map((index) => (
+            <div key={index} className="h-20 animate-pulse bg-wit-mist/30" />
+          ))
         ) : rows.length ? (
           rows.map((row) => {
             const status = homeRequestStatus(row.status, t);
-            const Icon = row.kind === "videos" ? VideoIcon : row.kind === "carruseles" ? GalleryHorizontal : ImageIcon;
+            const Icon =
+              row.kind === "videos"
+                ? VideoIcon
+                : row.kind === "carruseles"
+                  ? GalleryHorizontal
+                  : ImageIcon;
             return (
               <button
                 key={`${row.kind}-${row.id}`}
@@ -5687,7 +6344,12 @@ function HomeRequestsCard({
                 className="flex min-h-[76px] w-full items-center gap-3 py-2 text-left"
               >
                 {row.thumbnail ? (
-                  <img src={row.thumbnail} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+                  <img
+                    src={row.thumbnail}
+                    alt=""
+                    loading="lazy"
+                    className="h-14 w-14 shrink-0 rounded-xl object-cover"
+                  />
                 ) : (
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-wit-mist/55">
                     <Icon className="h-5 w-5 text-wit-blue/65" strokeWidth={2} />
@@ -5696,14 +6358,19 @@ function HomeRequestsCard({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-bold text-wit-ink">{row.title}</span>
                   <span className="mt-1 block text-xs text-wit-gray">
-                    {new Date(`${row.createdAt.replace(" ", "T")}Z`).toLocaleDateString(t("es-MX", "en-US"), {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
+                    {new Date(`${row.createdAt.replace(" ", "T")}Z`).toLocaleDateString(
+                      t("es-MX", "en-US"),
+                      {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      },
+                    )}
                   </span>
                 </span>
-                <span className={`hidden rounded-full px-2.5 py-1 text-[11px] font-bold min-[360px]:inline ${status.cls}`}>
+                <span
+                  className={`hidden rounded-full px-2.5 py-1 text-[11px] font-bold min-[360px]:inline ${status.cls}`}
+                >
                   {status.label}
                 </span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-wit-gray" strokeWidth={2.4} />
@@ -5747,16 +6414,40 @@ function ThisMonthCard({
 }) {
   const { t } = useLanguage();
   const quotas = [
-    { icon: ImageIcon, used: imageUsed, total: imageTotal, label: t("Imágenes", "Images"), cls: "text-wit-blue bg-wit-blue/10" },
-    { icon: VideoIcon, used: videoUsed, total: videoTotal, label: t("Videos", "Videos"), cls: "text-wit-pink bg-wit-pink/10" },
-    { icon: GalleryHorizontal, used: carouselUsed, total: carouselTotal, label: t("Carruseles", "Carousels"), cls: "text-emerald-600 bg-emerald-50" },
+    {
+      icon: ImageIcon,
+      used: imageUsed,
+      total: imageTotal,
+      label: t("Imágenes", "Images"),
+      cls: "text-wit-blue bg-wit-blue/10",
+    },
+    {
+      icon: VideoIcon,
+      used: videoUsed,
+      total: videoTotal,
+      label: t("Videos", "Videos"),
+      cls: "text-wit-pink bg-wit-pink/10",
+    },
+    {
+      icon: GalleryHorizontal,
+      used: carouselUsed,
+      total: carouselTotal,
+      label: t("Carruseles", "Carousels"),
+      cls: "text-emerald-600 bg-emerald-50",
+    },
   ];
   return (
     <section className="rounded-3xl border border-wit-ink/5 bg-white p-5 shadow-[0_8px_24px_rgba(5,13,40,0.04)]">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-wit-ink">{t("Este mes", "This month")}</h2>
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-          {active ? t(`${planName} activa`, `${planName} active`) : t("Sin membresía", "No membership")}
+        <h2 className="text-xs font-extrabold uppercase tracking-[0.16em] text-wit-ink">
+          {t("Este mes", "This month")}
+        </h2>
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-bold ${active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+        >
+          {active
+            ? t(`${planName} activa`, `${planName} active`)
+            : t("Sin membresía", "No membership")}
         </span>
       </div>
       <div className="mt-5 grid grid-cols-3 gap-2">
@@ -5764,23 +6455,39 @@ function ThisMonthCard({
           const Icon = item.icon;
           return (
             <div key={item.label} className="min-w-0 text-center">
-              <span className={`mx-auto flex h-9 w-9 items-center justify-center rounded-xl ${item.cls}`}>
+              <span
+                className={`mx-auto flex h-9 w-9 items-center justify-center rounded-xl ${item.cls}`}
+              >
                 <Icon className="h-4 w-4" strokeWidth={2.1} />
               </span>
-              <p className="mt-2 text-sm font-extrabold text-wit-ink">{Math.max(0, item.used)}/{item.total}</p>
+              <p className="mt-2 text-sm font-extrabold text-wit-ink">
+                {Math.max(0, item.used)}/{item.total}
+              </p>
               <p className="truncate text-[10px] font-semibold text-wit-gray">{item.label}</p>
             </div>
           );
         })}
       </div>
-      <button type="button" onClick={onOpenCampaigns} className="mt-5 grid w-full grid-cols-2 divide-x divide-wit-ink/8 border-t border-wit-ink/8 pt-4 text-left">
+      <button
+        type="button"
+        onClick={onOpenCampaigns}
+        className="mt-5 grid w-full grid-cols-2 divide-x divide-wit-ink/8 border-t border-wit-ink/8 pt-4 text-left"
+      >
         <span className="pr-4">
-          <span className="block text-lg font-extrabold text-wit-ink">{reach.toLocaleString("es-MX")}</span>
-          <span className="text-[11px] font-medium text-wit-gray">{t("Personas alcanzadas", "People reached")}</span>
+          <span className="block text-lg font-extrabold text-wit-ink">
+            {reach.toLocaleString("es-MX")}
+          </span>
+          <span className="text-[11px] font-medium text-wit-gray">
+            {t("Personas alcanzadas", "People reached")}
+          </span>
         </span>
         <span className="pl-4">
-          <span className="block text-lg font-extrabold text-wit-ink">{messages.toLocaleString("es-MX")}</span>
-          <span className="text-[11px] font-medium text-wit-gray">{t("Mensajes recibidos", "Messages received")}</span>
+          <span className="block text-lg font-extrabold text-wit-ink">
+            {messages.toLocaleString("es-MX")}
+          </span>
+          <span className="text-[11px] font-medium text-wit-gray">
+            {t("Mensajes recibidos", "Messages received")}
+          </span>
         </span>
       </button>
     </section>
@@ -5800,7 +6507,9 @@ function CreateContentSheet({
 }) {
   const { t } = useLanguage();
   const sheetRef = useRef<HTMLDivElement>(null);
-  const pointerRef = useRef<{ id: number; startY: number; lastY: number; lastAt: number } | null>(null);
+  const pointerRef = useRef<{ id: number; startY: number; lastY: number; lastAt: number } | null>(
+    null,
+  );
   const [offset, setOffset] = useState(typeof window === "undefined" ? 1000 : window.innerHeight);
   const [dragging, setDragging] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -5812,7 +6521,10 @@ function CreateContentSheet({
     if (closing) return;
     setClosing(true);
     setOffset(sheetRef.current?.getBoundingClientRect().height ?? window.innerHeight);
-    window.setTimeout(onClose, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 360);
+    window.setTimeout(
+      onClose,
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 360,
+    );
   }
   function select(action: () => void) {
     onClose();
@@ -5820,7 +6532,12 @@ function CreateContentSheet({
   }
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0 || closing) return;
-    pointerRef.current = { id: event.pointerId, startY: event.clientY, lastY: event.clientY, lastAt: performance.now() };
+    pointerRef.current = {
+      id: event.pointerId,
+      startY: event.clientY,
+      lastY: event.clientY,
+      lastAt: performance.now(),
+    };
   }
   function onPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
     const pointer = pointerRef.current;
@@ -5838,22 +6555,49 @@ function CreateContentSheet({
     const pointer = pointerRef.current;
     if (!pointer || pointer.id !== event.pointerId) return;
     const delta = Math.max(0, event.clientY - pointer.startY);
-    const velocity = Math.max(0, event.clientY - pointer.lastY) / Math.max(1, performance.now() - pointer.lastAt);
+    const velocity =
+      Math.max(0, event.clientY - pointer.lastY) / Math.max(1, performance.now() - pointer.lastAt);
     pointerRef.current = null;
     if (!dragging) return;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     setDragging(false);
-    if (delta > (sheetRef.current?.getBoundingClientRect().height ?? window.innerHeight) * 0.25 || velocity > 0.6) dismiss();
+    if (
+      delta > (sheetRef.current?.getBoundingClientRect().height ?? window.innerHeight) * 0.25 ||
+      velocity > 0.6
+    )
+      dismiss();
     else setOffset(0);
   }
-  const progress = Math.min(1, Math.max(0, offset / (sheetRef.current?.getBoundingClientRect().height ?? window.innerHeight)));
+  const progress = Math.min(
+    1,
+    Math.max(0, offset / (sheetRef.current?.getBoundingClientRect().height ?? window.innerHeight)),
+  );
   const options = [
-    { label: t("Imagen", "Image"), icon: ImageIcon, color: "bg-wit-blue/10 text-wit-blue", action: onImage },
-    { label: t("Video", "Video"), icon: VideoIcon, color: "bg-wit-pink/10 text-wit-pink", action: onVideo },
-    { label: t("Carrusel", "Carousel"), icon: GalleryHorizontal, color: "bg-emerald-50 text-emerald-600", action: onCarousel },
+    {
+      label: t("Imagen", "Image"),
+      icon: ImageIcon,
+      color: "bg-wit-blue/10 text-wit-blue",
+      action: onImage,
+    },
+    {
+      label: t("Video", "Video"),
+      icon: VideoIcon,
+      color: "bg-wit-pink/10 text-wit-pink",
+      action: onVideo,
+    },
+    {
+      label: t("Carrusel", "Carousel"),
+      icon: GalleryHorizontal,
+      color: "bg-emerald-50 text-emerald-600",
+      action: onCarousel,
+    },
   ];
   return createPortal(
-    <div className="fixed inset-0 z-[60] bg-wit-ink/15 backdrop-blur-[2px]" style={{ opacity: 1 - progress * 0.8 }} onMouseDown={(event) => event.target === event.currentTarget && dismiss()}>
+    <div
+      className="fixed inset-0 z-[60] bg-wit-ink/15 backdrop-blur-[2px]"
+      style={{ opacity: 1 - progress * 0.8 }}
+      onMouseDown={(event) => event.target === event.currentTarget && dismiss()}
+    >
       <div
         ref={sheetRef}
         role="dialog"
@@ -5869,18 +6613,53 @@ function CreateContentSheet({
         <span aria-hidden="true" className="mx-auto block h-1.5 w-10 rounded-full bg-wit-ink/20" />
         <div className="mt-5 flex items-start justify-between gap-4">
           <div>
-            <h2 id="create-content-title" className="text-xl font-extrabold text-wit-ink">{t("¿Qué quieres crear?", "What do you want to create?")}</h2>
-            <p className="mt-1 text-sm text-wit-gray">{t("También puedes contarnos qué necesitas y nosotros elegimos el formato.", "You can also tell us what you need and we'll choose the format.")}</p>
+            <h2 id="create-content-title" className="text-xl font-extrabold text-wit-ink">
+              {t("¿Qué quieres crear?", "What do you want to create?")}
+            </h2>
+            <p className="mt-1 text-sm text-wit-gray">
+              {t(
+                "También puedes contarnos qué necesitas y nosotros elegimos el formato.",
+                "You can also tell us what you need and we'll choose the format.",
+              )}
+            </p>
           </div>
-          <button type="button" onClick={dismiss} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist" aria-label={t("Cerrar", "Close")}><X className="h-5 w-5" /></button>
+          <button
+            type="button"
+            onClick={dismiss}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist"
+            aria-label={t("Cerrar", "Close")}
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
         <div className="mt-6 grid grid-cols-3 gap-3">
           {options.map((option) => {
             const Icon = option.icon;
-            return <button key={option.label} type="button" onClick={() => select(option.action)} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-wit-ink/8 bg-white text-xs font-bold text-wit-ink active:scale-[0.98]"><span className={`flex h-10 w-10 items-center justify-center rounded-xl ${option.color}`}><Icon className="h-5 w-5" /></span>{option.label}</button>;
+            return (
+              <button
+                key={option.label}
+                type="button"
+                onClick={() => select(option.action)}
+                className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-wit-ink/8 bg-white text-xs font-bold text-wit-ink active:scale-[0.98]"
+              >
+                <span
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${option.color}`}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                {option.label}
+              </button>
+            );
           })}
         </div>
-        <button type="button" onClick={() => select(onImage)} className="mt-5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 text-sm font-bold text-white"><Sparkles className="h-4 w-4" />{t("Hacer una solicitud", "Make a request")}</button>
+        <button
+          type="button"
+          onClick={() => select(onImage)}
+          className="mt-5 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 text-sm font-bold text-white"
+        >
+          <Sparkles className="h-4 w-4" />
+          {t("Hacer una solicitud", "Make a request")}
+        </button>
       </div>
     </div>,
     document.body,
@@ -5912,14 +6691,46 @@ function MobileRequestsSheet({
   return createPortal(
     <div className="fixed inset-0 z-[60] bg-white pt-[env(safe-area-inset-top)]">
       <header className="flex h-16 items-center gap-3 border-b border-wit-ink/8 px-5">
-        <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full text-wit-ink hover:bg-wit-mist" aria-label={t("Volver", "Back")}><ArrowLeft className="h-5 w-5" /></button>
-        <h2 className="flex-1 text-base font-extrabold text-wit-ink">{t("Mis solicitudes", "My requests")}</h2>
-        <button type="button" onClick={onCreate} className="text-sm font-bold text-wit-blue">{t("Crear", "Create")}</button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-11 w-11 items-center justify-center rounded-full text-wit-ink hover:bg-wit-mist"
+          aria-label={t("Volver", "Back")}
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <h2 className="flex-1 text-base font-extrabold text-wit-ink">
+          {t("Mis solicitudes", "My requests")}
+        </h2>
+        <button type="button" onClick={onCreate} className="text-sm font-bold text-wit-blue">
+          {t("Crear", "Create")}
+        </button>
       </header>
       <div className="h-[calc(100dvh-4rem-env(safe-area-inset-top))] overflow-y-auto px-5 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-5">
-        {(kind === "todas" || kind === "imagenes") ? <section><h3 className="mb-3 text-xs font-extrabold uppercase tracking-[0.15em] text-wit-gray">{t("Imágenes", "Images")}</h3><RequestList rows={imageRows} loading={imageLoading} onNew={onCreate} /></section> : null}
-        {(kind === "todas" || kind === "videos") ? <section className={kind === "todas" ? "mt-8" : ""}><h3 className="mb-3 text-xs font-extrabold uppercase tracking-[0.15em] text-wit-gray">{t("Videos", "Videos")}</h3><VideoRequestList rows={videoRows} loading={videoLoading} /></section> : null}
-        {(kind === "todas" || kind === "carruseles") ? <section className={kind === "todas" ? "mt-8" : ""}><h3 className="mb-3 text-xs font-extrabold uppercase tracking-[0.15em] text-wit-gray">{t("Carruseles", "Carousels")}</h3><CarouselRequestList rows={carouselRows} loading={carouselLoading} /></section> : null}
+        {kind === "todas" || kind === "imagenes" ? (
+          <section>
+            <h3 className="mb-3 text-xs font-extrabold uppercase tracking-[0.15em] text-wit-gray">
+              {t("Imágenes", "Images")}
+            </h3>
+            <RequestList rows={imageRows} loading={imageLoading} onNew={onCreate} />
+          </section>
+        ) : null}
+        {kind === "todas" || kind === "videos" ? (
+          <section className={kind === "todas" ? "mt-8" : ""}>
+            <h3 className="mb-3 text-xs font-extrabold uppercase tracking-[0.15em] text-wit-gray">
+              {t("Videos", "Videos")}
+            </h3>
+            <VideoRequestList rows={videoRows} loading={videoLoading} />
+          </section>
+        ) : null}
+        {kind === "todas" || kind === "carruseles" ? (
+          <section className={kind === "todas" ? "mt-8" : ""}>
+            <h3 className="mb-3 text-xs font-extrabold uppercase tracking-[0.15em] text-wit-gray">
+              {t("Carruseles", "Carousels")}
+            </h3>
+            <CarouselRequestList rows={carouselRows} loading={carouselLoading} />
+          </section>
+        ) : null}
       </div>
     </div>,
     document.body,
