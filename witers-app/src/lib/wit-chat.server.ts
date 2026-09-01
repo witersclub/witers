@@ -75,6 +75,10 @@ export type WitCalendarChatResult =
   | { ok: true; kind: "done"; entries: CalendarEntryDraft[] }
   | { ok: false; error: string };
 
+export type WitCalendarEntryExpansionResult =
+  | { ok: true; title: string; brief: string; slides?: CarouselSlideDraft[] }
+  | { ok: false; error: string };
+
 function buildSystemPrompt(brand: WitBrandContext): string {
   const brandLines = [
     `Nombre de la marca: ${brand.companyName}.`,
@@ -99,17 +103,23 @@ function buildSystemPrompt(brand: WitBrandContext): string {
     // Keep the source material bounded and high-signal. A pile of complete
     // manuals can otherwise crowd the active conversation out of context.
     let remainingBrandText = 12_000;
-    const textAssets = brand.brandAssets.filter((a) => a.textContent).flatMap((a) => {
-      if (!a.textContent || remainingBrandText <= 0) return [];
-      const excerpt = a.textContent.slice(0, remainingBrandText).trim();
-      remainingBrandText -= excerpt.length;
-      return excerpt ? [`Archivo ${a.kind} “${a.originalName}”:\n${excerpt}`] : [];
-    });
-    const visualAssets = brand.brandAssets.filter((a) => !a.textContent).map(
-      (a) => `${a.kind}: ${a.originalName}`,
-    );
-    if (textAssets.length) brandLines.push(`Información aportada en Mente de marca (fuente de verdad para esta planificación):\n${textAssets.join("\n\n")}`);
-    if (visualAssets.length) brandLines.push(`Archivos de referencia disponibles: ${visualAssets.join(", ")}.`);
+    const textAssets = brand.brandAssets
+      .filter((a) => a.textContent)
+      .flatMap((a) => {
+        if (!a.textContent || remainingBrandText <= 0) return [];
+        const excerpt = a.textContent.slice(0, remainingBrandText).trim();
+        remainingBrandText -= excerpt.length;
+        return excerpt ? [`Archivo ${a.kind} “${a.originalName}”:\n${excerpt}`] : [];
+      });
+    const visualAssets = brand.brandAssets
+      .filter((a) => !a.textContent)
+      .map((a) => `${a.kind}: ${a.originalName}`);
+    if (textAssets.length)
+      brandLines.push(
+        `Información aportada en Mente de marca (fuente de verdad para esta planificación):\n${textAssets.join("\n\n")}`,
+      );
+    if (visualAssets.length)
+      brandLines.push(`Archivos de referencia disponibles: ${visualAssets.join(", ")}.`);
   }
 
   return (
@@ -218,17 +228,23 @@ function buildCarouselSystemPrompt(brand: WitBrandContext): string {
   }
   if (brand.brandAssets?.length) {
     let remainingBrandText = 12_000;
-    const textAssets = brand.brandAssets.filter((a) => a.textContent).flatMap((a) => {
-      if (!a.textContent || remainingBrandText <= 0) return [];
-      const excerpt = a.textContent.slice(0, remainingBrandText).trim();
-      remainingBrandText -= excerpt.length;
-      return excerpt ? [`Archivo ${a.kind} “${a.originalName}”:\n${excerpt}`] : [];
-    });
-    const visualAssets = brand.brandAssets.filter((a) => !a.textContent).map(
-      (a) => `${a.kind}: ${a.originalName}`,
-    );
-    if (textAssets.length) brandLines.push(`Información aportada en Mente de marca (fuente de verdad para esta planificación):\n${textAssets.join("\n\n")}`);
-    if (visualAssets.length) brandLines.push(`Archivos de referencia disponibles: ${visualAssets.join(", ")}.`);
+    const textAssets = brand.brandAssets
+      .filter((a) => a.textContent)
+      .flatMap((a) => {
+        if (!a.textContent || remainingBrandText <= 0) return [];
+        const excerpt = a.textContent.slice(0, remainingBrandText).trim();
+        remainingBrandText -= excerpt.length;
+        return excerpt ? [`Archivo ${a.kind} “${a.originalName}”:\n${excerpt}`] : [];
+      });
+    const visualAssets = brand.brandAssets
+      .filter((a) => !a.textContent)
+      .map((a) => `${a.kind}: ${a.originalName}`);
+    if (textAssets.length)
+      brandLines.push(
+        `Información aportada en Mente de marca (fuente de verdad para esta planificación):\n${textAssets.join("\n\n")}`,
+      );
+    if (visualAssets.length)
+      brandLines.push(`Archivos de referencia disponibles: ${visualAssets.join(", ")}.`);
   }
 
   return (
@@ -330,18 +346,24 @@ function buildCalendarSystemPrompt(
     // Calendar plans can need many detailed tool entries. Keep the Mente de
     // marca useful without allowing a large document (or several documents)
     // to consume the model context reserved for those entries.
-    let remainingBrandText = 6_000;
-    const textAssets = brand.brandAssets.filter((a) => a.textContent).flatMap((a) => {
-      if (!a.textContent || remainingBrandText <= 0) return [];
-      const excerpt = a.textContent.slice(0, remainingBrandText).trim();
-      remainingBrandText -= excerpt.length;
-      return excerpt ? [`Archivo ${a.kind} “${a.originalName}”: ${excerpt}`] : [];
-    });
-    const visualAssets = brand.brandAssets.filter((a) => !a.textContent).map(
-      (a) => `${a.kind}: ${a.originalName}`,
-    );
-    if (textAssets.length) brandLines.push(`Información aportada en Mente de marca:\n${textAssets.join("\n")}`);
-    if (visualAssets.length) brandLines.push(`Archivos de referencia disponibles: ${visualAssets.join(", ")}.`);
+    // The monthly planner needs to respond quickly. The full source stays
+    // available when a specific piece is expanded for production later.
+    let remainingBrandText = 2_000;
+    const textAssets = brand.brandAssets
+      .filter((a) => a.textContent)
+      .flatMap((a) => {
+        if (!a.textContent || remainingBrandText <= 0) return [];
+        const excerpt = a.textContent.slice(0, remainingBrandText).trim();
+        remainingBrandText -= excerpt.length;
+        return excerpt ? [`Archivo ${a.kind} “${a.originalName}”: ${excerpt}`] : [];
+      });
+    const visualAssets = brand.brandAssets
+      .filter((a) => !a.textContent)
+      .map((a) => `${a.kind}: ${a.originalName}`);
+    if (textAssets.length)
+      brandLines.push(`Información aportada en Mente de marca:\n${textAssets.join("\n")}`);
+    if (visualAssets.length)
+      brandLines.push(`Archivos de referencia disponibles: ${visualAssets.join(", ")}.`);
   }
 
   return (
@@ -385,41 +407,11 @@ function buildCalendarSystemPrompt(
     "repetir el mismo formato todos los días. Usa video con moderación (como mucho una vez por " +
     "semana): el cliente tiene que subir su propio material de video para esa pieza, así que no " +
     "conviene saturar el mes de video.\n\n" +
-    "MUY IMPORTANTE — cada pieza debe quedar PROFESIONAL, con contenido real y completo, nunca " +
-    "solo el tema o el ángulo — tan completa que se pueda enviar a producción tal cual, sin otra " +
-    "conversación. Esto aplica a los tres formatos, cada uno con su propio nivel de profundidad " +
-    "esperado:\n" +
-    "- Imagen: el campo brief describe exactamente qué debe mostrar la pieza — el mensaje " +
-    "principal, cualquier texto que deba aparecer en la imagen redactado tal cual (no 'un texto " +
-    "llamativo', sino el texto real), y el contexto necesario para que el diseñador no tenga que " +
-    "inventar el contenido por su cuenta.\n" +
-    "- Carrusel: NO metas el contenido de las láminas dentro de brief — usa el campo slides. " +
-    "brief queda como un resumen corto de una frase (para la tarjeta del calendario); slides " +
-    "lleva exactamente 4 objetos {title, brief}, uno por lámina, con la misma estructura y nivel " +
-    "de detalle que usarías si estuvieras armando el carrusel en una conversación aparte: lámina " +
-    "1 = gancho, láminas 2 y 3 = desarrollo (cada una con su propio punto real y concreto para " +
-    "ese negocio, nunca un título genérico como 'tip 1' sin desarrollarlo), lámina 4 = cierre con " +
-    "llamado a la acción. Cada brief de lámina debe ser autosuficiente para un diseñador que solo " +
-    "vea esa lámina.\n" +
-    "- Video: el campo brief debe incluir un GUION real, no solo la idea del video — usa siempre " +
-    "la estructura AIDA: Atención (gancho claro en los primeros 2-3 segundos), Interés (problema, " +
-    "dato o situación relevante), Deseo (beneficio, transformación o prueba concreta) y Acción " +
-    "(llamado a la acción). Divídelo en escenas o tomas numeradas y para cada una describe qué se " +
-    "ve y qué se dice (diálogo, narración en off o texto en pantalla), identificando la etapa AIDA " +
-    "cuando corresponda. Incluye subtítulos minimalistas y elegantes durante el " +
-    "video: máximo una línea por aparición, sincronizados con el mensaje hablado, con una sombra " +
-    "sutil o una placa muy ligera para legibilidad; evita contraste duro, bloques opacos y adornos " +
-    "excesivos, y alínéalos a la tipografía/colores de la marca. Después de la escena de Acción/CTA, " +
-    "si existe logotipo oficial, agrega una escena final de 1-2 segundos con el logotipo centrado, " +
-    "limpio y profesional; debe entrar suavemente y cerrar con un desvanecimiento (fade-out), nunca " +
-    "con un corte brusco. Describe estas indicaciones de edición explícitamente en el guion. Un video " +
-    "de 20-40 segundos normalmente son 3-5 escenas — sé así de concreto, " +
-    "nunca dejes el brief como 'un video mostrando el proceso de trabajo' sin guion. El cliente no siempre tendrá metraje " +
-    "propio — el equipo puede resolver con stock o IA usando exactamente este guion, así que debe " +
-    "quedar completo por su cuenta.\n\n" +
-    "En los tres casos, quien reciba la pieza (un diseñador, o Wit en una conversación aparte) " +
-    "debe poder trabajarla directo, sin tener que volver a preguntar de qué trata o inventar el " +
-    "contenido por su cuenta.\n\n" +
+    "Para esta primera entrega crea una ficha de calendario clara y compacta, no el guion de producción completo. " +
+    "La pieza se expandirá al abrirse. title máximo 65 caracteres y brief máximo 260 caracteres. " +
+    "Imagen: idea visual, mensaje y CTA. Carrusel: resumen y exactamente 4 láminas concisas (gancho, dos puntos, CTA). " +
+    "Video: AIDA resumido en cuatro frases (Atención, Interés, Deseo, Acción), sin escenas extensas. " +
+    "No uses markdown ni textos de relleno.\n\n" +
     "Reglas de seguridad, nunca las rompas:\n" +
     "- NUNCA inventes precios, descuentos o datos concretos del negocio que el cliente no haya " +
     "mencionado explícitamente.\n" +
@@ -582,7 +574,8 @@ const CALENDAR_TOOLS = [
                 slot: {
                   type: "integer",
                   enum: [1, 2],
-                  description: "Turno de publicación en esa fecha. Usa 1 salvo que se soliciten dos piezas ese día.",
+                  description:
+                    "Turno de publicación en esa fecha. Usa 1 salvo que se soliciten dos piezas ese día.",
                 },
                 format: {
                   type: "string",
@@ -596,7 +589,7 @@ const CALENDAR_TOOLS = [
                 brief: {
                   type: "string",
                   description:
-                    "Imagen: brief profesional y completo — mensaje principal y cualquier texto en pantalla redactado tal cual, nunca solo el tema. Video: un guion real en estructura AIDA (Atención, Interés, Deseo, Acción), dividido en escenas/tomas numeradas, con qué se ve y qué se dice en cada una; incluye subtítulos minimalistas de máximo una línea, con sombra sutil o placa muy ligera y sin contraste duro, además de un cierre posterior al CTA con logotipo oficial, entrada suave y fade-out si la marca tiene logo. Carrusel: solo un resumen corto de una frase para la tarjeta del calendario — el contenido real de las 4 láminas va en el campo slides, no aquí.",
+                    "Ficha compacta de producción para el calendario (máximo 260 caracteres). Imagen: idea, mensaje y CTA. Video: AIDA resumido. Carrusel: resumen; sus 4 láminas van en slides.",
                 },
                 slides: {
                   type: "array",
@@ -625,6 +618,46 @@ const CALENDAR_TOOLS = [
           },
         },
         required: ["entries"],
+      },
+    },
+  },
+];
+
+const CALENDAR_ENTRY_EXPANSION_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "submit_production_details",
+      description: "Entrega el brief final de producción de esta única pieza.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Título claro de la pieza." },
+          brief: {
+            type: "string",
+            description:
+              "Brief final. Imagen: composición, copy exacto y CTA. Video: guion AIDA con 3-5 escenas, qué se ve/dice, subtítulos y cierre de logo. Carrusel: resumen breve; sus láminas van en slides.",
+          },
+          slides: {
+            type: "array",
+            minItems: 4,
+            maxItems: 4,
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                brief: {
+                  type: "string",
+                  description: "Contenido final, claro y autosuficiente de la lámina.",
+                },
+              },
+              required: ["title", "brief"],
+            },
+            description:
+              "Obligatorio solo para carrusel: 4 láminas, gancho, desarrollo, desarrollo y CTA.",
+          },
+        },
+        required: ["title", "brief"],
       },
     },
   },
@@ -766,7 +799,7 @@ export async function runWitChat(
     : TOOLS;
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 60_000);
+  const timer = setTimeout(() => controller.abort(), 28_000);
   let response: Response;
   try {
     response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -779,6 +812,7 @@ export async function runWitChat(
       body: JSON.stringify({
         model: OPENAI_TEXT_MODEL,
         temperature: 0.6,
+        max_tokens: 1800,
         messages: [{ role: "system", content: buildSystemPrompt(brand) }, ...history],
         tools,
         tool_choice: "auto",
@@ -985,7 +1019,7 @@ export async function runWitCalendarChat(
   if (!apiKey) return { ok: false, error: "falta_openai_api_key" };
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 60_000);
+  const timer = setTimeout(() => controller.abort(), 28_000);
   let response: Response;
   try {
     response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -998,6 +1032,7 @@ export async function runWitCalendarChat(
       body: JSON.stringify({
         model: OPENAI_TEXT_MODEL,
         temperature: 0.6,
+        max_tokens: 1800,
         messages: [{ role: "system", content: buildCalendarSystemPrompt(brand, opts) }, ...history],
         tools: CALENDAR_TOOLS,
         tool_choice: "auto",
@@ -1080,14 +1115,22 @@ export async function runWitCalendarChat(
       );
       if (entries.length === 0) return { ok: false, error: "respuesta_invalida" };
       if (!opts.allowPartial && opts.expectedEntries && entries.length !== opts.expectedEntries) {
-        console.info("[wit-chat] incomplete calendar plan", { expected: opts.expectedEntries, received: entries.length });
+        console.info("[wit-chat] incomplete calendar plan", {
+          expected: opts.expectedEntries,
+          received: entries.length,
+        });
         return { ok: false, error: "plan_incompleto" };
       }
       if (!opts.allowPartial && opts.exactDates) {
         const receivedDates = new Set(entries.map((entry) => entry.date));
-        const datesMatch = receivedDates.size === opts.exactDates.length && opts.exactDates.every((date) => receivedDates.has(date));
+        const datesMatch =
+          receivedDates.size === opts.exactDates.length &&
+          opts.exactDates.every((date) => receivedDates.has(date));
         if (!datesMatch) {
-          console.info("[wit-chat] calendar batch used unexpected dates", { expected: opts.exactDates, received: [...receivedDates] });
+          console.info("[wit-chat] calendar batch used unexpected dates", {
+            expected: opts.exactDates,
+            received: [...receivedDates],
+          });
           return { ok: false, error: "plan_incompleto" };
         }
       }
@@ -1100,4 +1143,96 @@ export async function runWitCalendarChat(
   const calendarText = message.content?.trim();
   if (!calendarText) return { ok: false, error: "sin_resultado" };
   return { ok: true, kind: "message", text: calendarText };
+}
+
+// The monthly planner deliberately stores a compact, fast-to-generate
+// outline. This expands one selected entry only when the client opens it,
+// keeping the calendar responsive while preserving WITERS' production bar.
+export async function runWitCalendarEntryExpansion(
+  entry: Pick<CalendarEntryDraft, "format" | "title" | "brief" | "slides">,
+  brand: WitBrandContext,
+): Promise<WitCalendarEntryExpansionResult> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { ok: false, error: "falta_openai_api_key" };
+
+  const brandContext = [
+    `Marca: ${brand.companyName}.`,
+    brand.businessType ? `Categoría: ${brand.businessType}.` : "",
+    brand.brandColors ? `Colores: ${brand.brandColors}.` : "",
+    brand.hasLogo
+      ? "La marca tiene logo: cierra cada video después del CTA con logo, entrada suave y fade-out profesional."
+      : "",
+    brand.brandMemory ? `Aprendizajes de marca: ${brand.brandMemory}` : "",
+    ...(brand.brandAssets ?? [])
+      .filter((asset) => asset.textContent)
+      .map(
+        (asset) => `Mente de marca (${asset.originalName}): ${asset.textContent?.slice(0, 4000)}`,
+      ),
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const system =
+    "Eres Wit, director creativo de WITERS. Convierte la ficha de calendario en un brief final listo para producción. " +
+    "Responde en español y usa solo submit_production_details. No inventes precios, promociones ni datos. " +
+    "Imagen: define composición, copy en pantalla y CTA. Carrusel: entrega exactamente cuatro láminas autosuficientes. " +
+    "Video: usa AIDA en 3-5 escenas; para cada escena indica qué se ve y qué se dice. Exige subtítulos minimalistas de una sola línea, sombra sutil, sin contraste duro; después del CTA, logo con fade-out cuando exista.\n\n" +
+    brandContext;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: OPENAI_TEXT_MODEL,
+        temperature: 0.5,
+        max_tokens: 1800,
+        messages: [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: `Ficha de calendario a desarrollar:\nFormato: ${entry.format}\nTítulo: ${entry.title}\nResumen: ${entry.brief}${entry.slides?.length ? `\nLáminas iniciales: ${JSON.stringify(entry.slides)}` : ""}`,
+          },
+        ],
+        tools: CALENDAR_ENTRY_EXPANSION_TOOLS,
+        tool_choice: { type: "function", function: { name: "submit_production_details" } },
+      }),
+    });
+    if (!response.ok) return { ok: false, error: "openai_error" };
+    const body = (await response.json()) as OpenAiChatResponse;
+    const call = body.choices?.[0]?.message?.tool_calls?.find(
+      (candidate) => candidate.function.name === "submit_production_details",
+    );
+    if (!call) return { ok: false, error: "respuesta_invalida" };
+    const args = JSON.parse(call.function.arguments) as Partial<{
+      title: string;
+      brief: string;
+      slides: Array<Partial<CarouselSlideDraft>>;
+    }>;
+    const slides = args.slides
+      ?.map((slide) => ({ title: slide.title?.trim() || "", brief: slide.brief?.trim() || "" }))
+      .filter((slide) => slide.brief);
+    if (
+      !args.title?.trim() ||
+      !args.brief?.trim() ||
+      (entry.format === "carrusel" && slides?.length !== 4)
+    ) {
+      return { ok: false, error: "respuesta_invalida" };
+    }
+    return {
+      ok: true,
+      title: args.title.trim().slice(0, 120),
+      brief: args.brief.trim().slice(0, 2000),
+      ...(entry.format === "carrusel" ? { slides: slides as CarouselSlideDraft[] } : {}),
+    };
+  } catch (error) {
+    console.warn(
+      "[wit-chat] calendar entry expansion failed",
+      error instanceof Error ? error.name : "unknown",
+    );
+    return { ok: false, error: "tiempo_agotado" };
+  } finally {
+    clearTimeout(timer);
+  }
 }

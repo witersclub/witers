@@ -81,6 +81,7 @@ type CalendarEntry = CalendarEntryDraft & {
   scheduledForUtc: string | null;
   publicationTimezone: string | null;
   publicationPlatforms: SocialPlatform[] | null;
+  productionReady: boolean;
 };
 type WitMessage = {
   role: "user" | "assistant";
@@ -764,6 +765,8 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
   const [dragging, setDragging] = useState(false);
   const [closing, setClosing] = useState(false);
   const [campaignOpen, setCampaignOpen] = useState(false);
+  const [expandingPiece, setExpandingPiece] = useState(false);
+  const expandedEntryRef = useRef<string | null>(null);
 
   async function generateCaption() {
     setGeneratingCaption(true);
@@ -834,6 +837,20 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
     // that would blow away in-progress edits after an unrelated invalidation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id]);
+
+  useEffect(() => {
+    if (entry.productionReady || entry.requestId || expandedEntryRef.current === entry.id) return;
+    expandedEntryRef.current = entry.id;
+    setExpandingPiece(true);
+    void fetch("/api/calendar-entries-expand", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ entryId: entry.id }),
+    })
+      .then(() => qc.invalidateQueries({ queryKey: ["calendar-entries"] }))
+      .catch(() => undefined)
+      .finally(() => setExpandingPiece(false));
+  }, [entry.id, entry.productionReady, entry.requestId, qc]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -1322,6 +1339,12 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
             ) : (
               <p className="mt-3.5 text-sm leading-relaxed text-wit-gray">{entry.brief}</p>
             )}
+            {expandingPiece ? (
+              <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-wit-blue">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {t("Preparando el detalle de producción…", "Preparing production details…")}
+              </p>
+            ) : null}
 
             {editing ? null : (
               <div className="mt-3.5 rounded-2xl border border-wit-ink/5 bg-wit-mist/30 p-3.5">
@@ -3271,10 +3294,16 @@ export function PlanificacionPanel({
                 <Calendar className="h-5 w-5" strokeWidth={2.3} />
               </span>
               <div className="min-w-0">
-                <h2 className="text-lg font-extrabold tracking-tight text-wit-ink">{t("Planificación", "Planning")}</h2>
-                <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-extrabold ${entries.length ? "bg-emerald-50 text-emerald-700" : "bg-wit-blue/[0.07] text-wit-blue"}`}>
+                <h2 className="text-lg font-extrabold tracking-tight text-wit-ink">
+                  {t("Planificación", "Planning")}
+                </h2>
+                <span
+                  className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-extrabold ${entries.length ? "bg-emerald-50 text-emerald-700" : "bg-wit-blue/[0.07] text-wit-blue"}`}
+                >
                   <span>{entries.length ? "✓" : "•"}</span>
-                  {entries.length ? t("Planificación completa", "Planning complete") : t("Lista para planificar", "Ready to plan")}
+                  {entries.length
+                    ? t("Planificación completa", "Planning complete")
+                    : t("Lista para planificar", "Ready to plan")}
                 </span>
               </div>
             </div>
@@ -3292,8 +3321,14 @@ export function PlanificacionPanel({
           </div>
           <p className="mt-4 max-w-sm text-sm font-medium leading-relaxed text-wit-gray">
             {entries.length
-              ? t("Tu contenido y calendario están listos para este mes.", "Your content and calendar are ready for this month.")
-              : t("Cuéntale a Wit qué quieres lograr este mes.", "Tell Wit what you want to achieve this month.")}
+              ? t(
+                  "Tu contenido y calendario están listos para este mes.",
+                  "Your content and calendar are ready for this month.",
+                )
+              : t(
+                  "Cuéntale a Wit qué quieres lograr este mes.",
+                  "Tell Wit what you want to achieve this month.",
+                )}
           </p>
           <div className="mt-5 grid grid-cols-2 gap-2 max-[340px]:grid-cols-1">
             <button
@@ -3303,13 +3338,20 @@ export function PlanificacionPanel({
               className="flex min-h-[54px] items-center justify-center gap-2 rounded-[17px] bg-wit-blue px-3 text-sm font-extrabold text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] transition hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 disabled:opacity-60"
             >
               <RotateCcw className="h-4 w-4" strokeWidth={2.4} />
-              {replanning ? t("Cargando...", "Loading...") : entries.length ? t("Replanear mes", "Replan month") : t("Planificar mes", "Plan month")}
+              {replanning
+                ? t("Cargando...", "Loading...")
+                : entries.length
+                  ? t("Replanear mes", "Replan month")
+                  : t("Planificar mes", "Plan month")}
             </button>
             <button
               type="button"
               onClick={() => {
                 if (onViewPlanning) onViewPlanning();
-                else document.getElementById("calendario-planificacion")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                else
+                  document
+                    .getElementById("calendario-planificacion")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
               className="flex min-h-[54px] items-center justify-center gap-1.5 rounded-[17px] border border-wit-blue/20 bg-white px-3 text-sm font-extrabold text-wit-blue transition hover:bg-wit-blue/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2"
             >
@@ -3319,7 +3361,9 @@ export function PlanificacionPanel({
           </div>
         </section>
       ) : null}
-      <div className={`${homeMobile ? "hidden" : "flex"} flex-col gap-3 md:flex-row md:items-center md:justify-between`}>
+      <div
+        className={`${homeMobile ? "hidden" : "flex"} flex-col gap-3 md:flex-row md:items-center md:justify-between`}
+      >
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink sm:text-3xl">
             {t("Planificación", "Planning")}
@@ -3341,7 +3385,11 @@ export function PlanificacionPanel({
           {entries.length > 0 ? (
             <button
               type="button"
-              onClick={() => document.getElementById("calendario-planificacion")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              onClick={() =>
+                document
+                  .getElementById("calendario-planificacion")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
               className="flex min-h-11 items-center justify-center px-3 py-2 text-sm font-bold text-wit-blue hover:underline"
             >
               {t("Ver planificación completa", "View full plan")}
@@ -3355,7 +3403,9 @@ export function PlanificacionPanel({
               className="flex min-h-11 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.06] disabled:opacity-60"
             >
               <Download className="h-4 w-4" strokeWidth={2.3} />
-              {downloadingPlan ? t("Generando PDF...", "Creating PDF...") : t("Descargar planificación", "Download plan")}
+              {downloadingPlan
+                ? t("Generando PDF...", "Creating PDF...")
+                : t("Descargar planificación", "Download plan")}
             </button>
           ) : null}
           <button
@@ -3521,7 +3571,10 @@ export function PlanificacionPanel({
           {/* Same grid at every size — only the density changes (smaller
               cells/text on a phone) instead of swapping to a separate
               agenda-list layout on mobile. */}
-          <div id="calendario-planificacion" className="wit-glass rounded-3xl p-2.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:p-4">
+          <div
+            id="calendario-planificacion"
+            className="wit-glass rounded-3xl p-2.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:p-4"
+          >
             <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
               {[
                 t("Lun", "Mon"),

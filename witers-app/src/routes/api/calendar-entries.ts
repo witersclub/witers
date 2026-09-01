@@ -19,6 +19,7 @@ type EntryRow = {
   scheduled_for_utc: string | null;
   publication_timezone: string | null;
   publication_platforms: string | null;
+  production_ready_at: string | null;
 };
 
 type SlideDraft = { title?: string; brief: string };
@@ -101,7 +102,7 @@ export const Route = createFileRoute("/api/calendar-entries")({
 
         const rows = await db()
           .prepare(
-            `SELECT e.id, e.scheduled_date, e.slot_index, e.format, e.title, e.brief, e.slides_json,
+            `SELECT e.id, e.scheduled_date, e.slot_index, e.format, e.title, e.brief, e.slides_json, e.production_ready_at,
                     e.request_id, e.caption, s.status AS publication_status,
                     s.scheduled_for_utc, s.timezone AS publication_timezone,
                     s.platforms_json AS publication_platforms
@@ -227,6 +228,7 @@ export const Route = createFileRoute("/api/calendar-entries")({
           publicationPlatforms: e.publication_platforms
             ? (JSON.parse(e.publication_platforms) as ("facebook" | "instagram")[])
             : null,
+          productionReady: Boolean(e.production_ready_at),
         }));
 
         return json({ ok: true, entries: withStatus });

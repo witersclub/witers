@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getBrandProfile } from "../../../lib/brand-profile.server";
 import { getPlanningBrandAssets } from "../../../lib/brand-assets.server";
 import { getBrandMemory } from "../../../lib/brand-memory.server";
-import { runWitCalendarChat, type CalendarEntryDraft } from "../../../lib/wit-chat.server";
+import { runWitCalendarChat } from "../../../lib/wit-chat.server";
 import { db, getSessionUser, json } from "../../../lib/witers-auth.server";
 import { getPlan } from "../../../lib/membership-plans";
 
@@ -71,7 +71,8 @@ function datesInRange(start: string, end: string): string[] {
 
 function batches<T>(items: T[], size: number): T[][] {
   const result: T[][] = [];
-  for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size));
+  for (let index = 0; index < items.length; index += size)
+    result.push(items.slice(index, index + size));
   return result;
 }
 
@@ -126,9 +127,13 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
         const context = monthContext({ year, month });
         const occupiedDates = new Set(existingEntries.map((entry) => entry.scheduled_date));
         const remainingDates = parsed.data.expectedEntries
-          ? datesInRange(context.todayDate, context.monthEndDate).filter((date) => !occupiedDates.has(date))
+          ? datesInRange(context.todayDate, context.monthEndDate).filter(
+              (date) => !occupiedDates.has(date),
+            )
           : [];
-        const remainingExpectedEntries = parsed.data.expectedEntries ? remainingDates.length : undefined;
+        const remainingExpectedEntries = parsed.data.expectedEntries
+          ? remainingDates.length
+          : undefined;
 
         if (parsed.data.expectedEntries && remainingExpectedEntries === 0) {
           return json({
@@ -144,64 +149,44 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
           businessType: profile.business_type,
           hasLogo: Boolean(profile.logo_key),
           brandMemory: await getBrandMemory(user.id),
-          brandAssets: (await getPlanningBrandAssets(user.id, parsed.data.brandAssetIds)).map((asset) => ({
-            originalName: asset.original_name,
-            kind: asset.kind,
-            textContent: asset.text_content ? asset.text_content.slice(0, 6000) : null,
-          })),
+          brandAssets: (await getPlanningBrandAssets(user.id, parsed.data.brandAssetIds)).map(
+            (asset) => ({
+              originalName: asset.original_name,
+              kind: asset.kind,
+              textContent: asset.text_content ? asset.text_content.slice(0, 6000) : null,
+            }),
+          ),
         };
 
-        // A complete monthly plan with full video scripts and carousel slides
-        // is too large to safely demand in one response, especially when a
-        // Mente de marca document is also part of the context. Generate small
-        // date-constrained batches and retry only dates missing from a partial
-        // batch. The client still receives one atomic plan and nothing is
-        // written to the calendar until they confirm it.
+        // A monthly plan is generated in compact, date-constrained batches.
+        // Run them concurrently: doing five OpenAI calls one after another
+        // made a successful request exceed the Worker wall-time limit.
         if (remainingExpectedEntries) {
-          const entries: CalendarEntryDraft[] = [];
-          let knownEntries = existingEntries.map((entry) => ({ date: entry.scheduled_date, title: entry.title }));
-          for (const dateBatch of batches(remainingDates, 5)) {
-            const batchResult = await runWitCalendarChat(parsed.data.messages, brand, {
-              ...context,
-              existingEntries: knownEntries,
-              expectedEntries: dateBatch.length,
-              exactDates: dateBatch,
-              allowPartial: true,
-              maxPostsPerDay: plan.planningSlotsPerDay,
-            });
-            if (!batchResult.ok) return json(batchResult, { status: 502 });
-            if (batchResult.kind === "message") return json(batchResult);
-
-            // Keep at most one valid entry per exact requested date. If the
-            // model stopped early (or a carousel was incomplete), ask it only
-            // for the missing date rather than throwing away the whole month.
-            const byDate = new Map(
-              batchResult.entries
-                .filter((entry) => dateBatch.includes(entry.date))
-                .map((entry) => [entry.date, entry]),
-            );
-            for (const date of dateBatch.filter((candidate) => !byDate.has(candidate))) {
-              const retry = await runWitCalendarChat(parsed.data.messages, brand, {
+          const knownEntries = existingEntries.map((entry) => ({
+            date: entry.scheduled_date,
+            title: entry.title,
+          }));
+          const results = await Promise.all(
+            batches(remainingDates, 5).map((dateBatch) =>
+              runWitCalendarChat(parsed.data.messages, brand, {
                 ...context,
                 existingEntries: knownEntries,
-                expectedEntries: 1,
-                exactDates: [date],
+                expectedEntries: dateBatch.length,
+                exactDates: dateBatch,
                 maxPostsPerDay: plan.planningSlotsPerDay,
-              });
-              if (!retry.ok) return json(retry, { status: 502 });
-              if (retry.kind === "message") return json(retry);
-              const entry = retry.entries.find((candidate) => candidate.date === date);
-              if (!entry) return json({ ok: false, error: "plan_incompleto" }, { status: 502 });
-              byDate.set(date, entry);
-            }
-            const completedBatch = dateBatch.map((date) => byDate.get(date)).filter(
-              (entry): entry is CalendarEntryDraft => Boolean(entry),
-            );
-            entries.push(...completedBatch);
-            knownEntries = [
-              ...knownEntries,
-              ...completedBatch.map((entry) => ({ date: entry.date, title: entry.title })),
-            ];
+              }),
+            ),
+          );
+          const failed = results.find((result) => !result.ok);
+          if (failed && !failed.ok)
+            return json(failed, { status: failed.error === "tiempo_agotado" ? 504 : 502 });
+          const message = results.find((result) => result.ok && result.kind === "message");
+          if (message && message.ok && message.kind === "message") return json(message);
+          const entries = results.flatMap((result) =>
+            result.ok && result.kind === "done" ? result.entries : [],
+          );
+          if (entries.length !== remainingDates.length) {
+            return json({ ok: false, error: "plan_incompleto" }, { status: 502 });
           }
           return json({ ok: true, kind: "done" as const, entries });
         }

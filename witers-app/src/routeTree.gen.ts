@@ -62,6 +62,7 @@ import { Route as ApiCampaignAdsRouteImport } from './routes/api/campaign-ads'
 import { Route as ApiCalendarEntriesScheduleRouteImport } from './routes/api/calendar-entries-schedule'
 import { Route as ApiCalendarEntriesRequestRouteImport } from './routes/api/calendar-entries-request'
 import { Route as ApiCalendarEntriesPublishRouteImport } from './routes/api/calendar-entries-publish'
+import { Route as ApiCalendarEntriesExpandRouteImport } from './routes/api/calendar-entries-expand'
 import { Route as ApiCalendarEntriesCaptionRouteImport } from './routes/api/calendar-entries-caption'
 import { Route as ApiCalendarEntriesRouteImport } from './routes/api/calendar-entries'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
@@ -417,6 +418,12 @@ const ApiCalendarEntriesPublishRoute =
   ApiCalendarEntriesPublishRouteImport.update({
     id: '/api/calendar-entries-publish',
     path: '/api/calendar-entries-publish',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiCalendarEntriesExpandRoute =
+  ApiCalendarEntriesExpandRouteImport.update({
+    id: '/api/calendar-entries-expand',
+    path: '/api/calendar-entries-expand',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiCalendarEntriesCaptionRoute =
@@ -904,6 +911,7 @@ export interface FileRoutesByFullPath {
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
+  '/api/calendar-entries-expand': typeof ApiCalendarEntriesExpandRoute
   '/api/calendar-entries-publish': typeof ApiCalendarEntriesPublishRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/calendar-entries-schedule': typeof ApiCalendarEntriesScheduleRoute
@@ -1045,6 +1053,7 @@ export interface FileRoutesByTo {
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
+  '/api/calendar-entries-expand': typeof ApiCalendarEntriesExpandRoute
   '/api/calendar-entries-publish': typeof ApiCalendarEntriesPublishRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/calendar-entries-schedule': typeof ApiCalendarEntriesScheduleRoute
@@ -1187,6 +1196,7 @@ export interface FileRoutesById {
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
+  '/api/calendar-entries-expand': typeof ApiCalendarEntriesExpandRoute
   '/api/calendar-entries-publish': typeof ApiCalendarEntriesPublishRoute
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/calendar-entries-schedule': typeof ApiCalendarEntriesScheduleRoute
@@ -1330,6 +1340,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
     | '/api/calendar-entries-caption'
+    | '/api/calendar-entries-expand'
     | '/api/calendar-entries-publish'
     | '/api/calendar-entries-request'
     | '/api/calendar-entries-schedule'
@@ -1471,6 +1482,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
     | '/api/calendar-entries-caption'
+    | '/api/calendar-entries-expand'
     | '/api/calendar-entries-publish'
     | '/api/calendar-entries-request'
     | '/api/calendar-entries-schedule'
@@ -1612,6 +1624,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
     | '/api/calendar-entries-caption'
+    | '/api/calendar-entries-expand'
     | '/api/calendar-entries-publish'
     | '/api/calendar-entries-request'
     | '/api/calendar-entries-schedule'
@@ -1754,6 +1767,7 @@ export interface RootRouteChildren {
   ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
   ApiCalendarEntriesRoute: typeof ApiCalendarEntriesRoute
   ApiCalendarEntriesCaptionRoute: typeof ApiCalendarEntriesCaptionRoute
+  ApiCalendarEntriesExpandRoute: typeof ApiCalendarEntriesExpandRoute
   ApiCalendarEntriesPublishRoute: typeof ApiCalendarEntriesPublishRoute
   ApiCalendarEntriesRequestRoute: typeof ApiCalendarEntriesRequestRoute
   ApiCalendarEntriesScheduleRoute: typeof ApiCalendarEntriesScheduleRoute
@@ -2240,6 +2254,13 @@ declare module '@tanstack/react-router' {
       path: '/api/calendar-entries-publish'
       fullPath: '/api/calendar-entries-publish'
       preLoaderRoute: typeof ApiCalendarEntriesPublishRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar-entries-expand': {
+      id: '/api/calendar-entries-expand'
+      path: '/api/calendar-entries-expand'
+      fullPath: '/api/calendar-entries-expand'
+      preLoaderRoute: typeof ApiCalendarEntriesExpandRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/calendar-entries-caption': {
@@ -2874,6 +2895,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
   ApiCalendarEntriesRoute: ApiCalendarEntriesRoute,
   ApiCalendarEntriesCaptionRoute: ApiCalendarEntriesCaptionRoute,
+  ApiCalendarEntriesExpandRoute: ApiCalendarEntriesExpandRoute,
   ApiCalendarEntriesPublishRoute: ApiCalendarEntriesPublishRoute,
   ApiCalendarEntriesRequestRoute: ApiCalendarEntriesRequestRoute,
   ApiCalendarEntriesScheduleRoute: ApiCalendarEntriesScheduleRoute,
@@ -2992,13 +3014,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
