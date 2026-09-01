@@ -57,6 +57,7 @@ import { Route as ApiCarouselRequestCloseRouteImport } from './routes/api/carous
 import { Route as ApiCarouselRequestChangeRouteImport } from './routes/api/carousel-request-change'
 import { Route as ApiCampaignsCreateRouteImport } from './routes/api/campaigns-create'
 import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
+import { Route as ApiCampaignForRequestRouteImport } from './routes/api/campaign-for-request'
 import { Route as ApiCampaignAdsRouteImport } from './routes/api/campaign-ads'
 import { Route as ApiCalendarEntriesScheduleRouteImport } from './routes/api/calendar-entries-schedule'
 import { Route as ApiCalendarEntriesRequestRouteImport } from './routes/api/calendar-entries-request'
@@ -136,6 +137,7 @@ import { Route as ApiSocialConnectStartRouteImport } from './routes/api/social/c
 import { Route as ApiSocialConnectPendingRouteImport } from './routes/api/social/connect/pending'
 import { Route as ApiSocialConnectFinalizeRouteImport } from './routes/api/social/connect/finalize'
 import { Route as ApiSocialConnectCallbackRouteImport } from './routes/api/social/connect/callback'
+import { Route as ApiMetaAdAccountStatusRouteImport } from './routes/api/meta/ad-account/status'
 import { Route as ApiMetaAdAccountStartRouteImport } from './routes/api/meta/ad-account/start'
 import { Route as ApiMetaAdAccountPendingRouteImport } from './routes/api/meta/ad-account/pending'
 import { Route as ApiMetaAdAccountFinalizeRouteImport } from './routes/api/meta/ad-account/finalize'
@@ -387,6 +389,11 @@ const ApiCampaignsCreateRoute = ApiCampaignsCreateRouteImport.update({
 const ApiCampaignsRoute = ApiCampaignsRouteImport.update({
   id: '/api/campaigns',
   path: '/api/campaigns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCampaignForRequestRoute = ApiCampaignForRequestRouteImport.update({
+  id: '/api/campaign-for-request',
+  path: '/api/campaign-for-request',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCampaignAdsRoute = ApiCampaignAdsRouteImport.update({
@@ -810,6 +817,11 @@ const ApiSocialConnectCallbackRoute =
     path: '/api/social/connect/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiMetaAdAccountStatusRoute = ApiMetaAdAccountStatusRouteImport.update({
+  id: '/api/meta/ad-account/status',
+  path: '/api/meta/ad-account/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMetaAdAccountStartRoute = ApiMetaAdAccountStartRouteImport.update({
   id: '/api/meta/ad-account/start',
   path: '/api/meta/ad-account/start',
@@ -896,6 +908,7 @@ export interface FileRoutesByFullPath {
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/calendar-entries-schedule': typeof ApiCalendarEntriesScheduleRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
+  '/api/campaign-for-request': typeof ApiCampaignForRequestRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
@@ -997,6 +1010,7 @@ export interface FileRoutesByFullPath {
   '/api/meta/ad-account/finalize': typeof ApiMetaAdAccountFinalizeRoute
   '/api/meta/ad-account/pending': typeof ApiMetaAdAccountPendingRoute
   '/api/meta/ad-account/start': typeof ApiMetaAdAccountStartRoute
+  '/api/meta/ad-account/status': typeof ApiMetaAdAccountStatusRoute
   '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
@@ -1035,6 +1049,7 @@ export interface FileRoutesByTo {
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/calendar-entries-schedule': typeof ApiCalendarEntriesScheduleRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
+  '/api/campaign-for-request': typeof ApiCampaignForRequestRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
@@ -1136,6 +1151,7 @@ export interface FileRoutesByTo {
   '/api/meta/ad-account/finalize': typeof ApiMetaAdAccountFinalizeRoute
   '/api/meta/ad-account/pending': typeof ApiMetaAdAccountPendingRoute
   '/api/meta/ad-account/start': typeof ApiMetaAdAccountStartRoute
+  '/api/meta/ad-account/status': typeof ApiMetaAdAccountStatusRoute
   '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
@@ -1175,6 +1191,7 @@ export interface FileRoutesById {
   '/api/calendar-entries-request': typeof ApiCalendarEntriesRequestRoute
   '/api/calendar-entries-schedule': typeof ApiCalendarEntriesScheduleRoute
   '/api/campaign-ads': typeof ApiCampaignAdsRoute
+  '/api/campaign-for-request': typeof ApiCampaignForRequestRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/campaigns-create': typeof ApiCampaignsCreateRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
@@ -1276,6 +1293,7 @@ export interface FileRoutesById {
   '/api/meta/ad-account/finalize': typeof ApiMetaAdAccountFinalizeRoute
   '/api/meta/ad-account/pending': typeof ApiMetaAdAccountPendingRoute
   '/api/meta/ad-account/start': typeof ApiMetaAdAccountStartRoute
+  '/api/meta/ad-account/status': typeof ApiMetaAdAccountStatusRoute
   '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
@@ -1316,6 +1334,7 @@ export interface FileRouteTypes {
     | '/api/calendar-entries-request'
     | '/api/calendar-entries-schedule'
     | '/api/campaign-ads'
+    | '/api/campaign-for-request'
     | '/api/campaigns'
     | '/api/campaigns-create'
     | '/api/carousel-request-change'
@@ -1417,6 +1436,7 @@ export interface FileRouteTypes {
     | '/api/meta/ad-account/finalize'
     | '/api/meta/ad-account/pending'
     | '/api/meta/ad-account/start'
+    | '/api/meta/ad-account/status'
     | '/api/social/connect/callback'
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
@@ -1455,6 +1475,7 @@ export interface FileRouteTypes {
     | '/api/calendar-entries-request'
     | '/api/calendar-entries-schedule'
     | '/api/campaign-ads'
+    | '/api/campaign-for-request'
     | '/api/campaigns'
     | '/api/campaigns-create'
     | '/api/carousel-request-change'
@@ -1556,6 +1577,7 @@ export interface FileRouteTypes {
     | '/api/meta/ad-account/finalize'
     | '/api/meta/ad-account/pending'
     | '/api/meta/ad-account/start'
+    | '/api/meta/ad-account/status'
     | '/api/social/connect/callback'
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
@@ -1594,6 +1616,7 @@ export interface FileRouteTypes {
     | '/api/calendar-entries-request'
     | '/api/calendar-entries-schedule'
     | '/api/campaign-ads'
+    | '/api/campaign-for-request'
     | '/api/campaigns'
     | '/api/campaigns-create'
     | '/api/carousel-request-change'
@@ -1695,6 +1718,7 @@ export interface FileRouteTypes {
     | '/api/meta/ad-account/finalize'
     | '/api/meta/ad-account/pending'
     | '/api/meta/ad-account/start'
+    | '/api/meta/ad-account/status'
     | '/api/social/connect/callback'
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
@@ -1734,6 +1758,7 @@ export interface RootRouteChildren {
   ApiCalendarEntriesRequestRoute: typeof ApiCalendarEntriesRequestRoute
   ApiCalendarEntriesScheduleRoute: typeof ApiCalendarEntriesScheduleRoute
   ApiCampaignAdsRoute: typeof ApiCampaignAdsRoute
+  ApiCampaignForRequestRoute: typeof ApiCampaignForRequestRoute
   ApiCampaignsRoute: typeof ApiCampaignsRoute
   ApiCampaignsCreateRoute: typeof ApiCampaignsCreateRoute
   ApiCarouselRequestChangeRoute: typeof ApiCarouselRequestChangeRoute
@@ -1835,6 +1860,7 @@ export interface RootRouteChildren {
   ApiMetaAdAccountFinalizeRoute: typeof ApiMetaAdAccountFinalizeRoute
   ApiMetaAdAccountPendingRoute: typeof ApiMetaAdAccountPendingRoute
   ApiMetaAdAccountStartRoute: typeof ApiMetaAdAccountStartRoute
+  ApiMetaAdAccountStatusRoute: typeof ApiMetaAdAccountStatusRoute
   ApiSocialConnectCallbackRoute: typeof ApiSocialConnectCallbackRoute
   ApiSocialConnectFinalizeRoute: typeof ApiSocialConnectFinalizeRoute
   ApiSocialConnectPendingRoute: typeof ApiSocialConnectPendingRoute
@@ -2179,6 +2205,13 @@ declare module '@tanstack/react-router' {
       path: '/api/campaigns'
       fullPath: '/api/campaigns'
       preLoaderRoute: typeof ApiCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/campaign-for-request': {
+      id: '/api/campaign-for-request'
+      path: '/api/campaign-for-request'
+      fullPath: '/api/campaign-for-request'
+      preLoaderRoute: typeof ApiCampaignForRequestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/campaign-ads': {
@@ -2734,6 +2767,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSocialConnectCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/meta/ad-account/status': {
+      id: '/api/meta/ad-account/status'
+      path: '/api/meta/ad-account/status'
+      fullPath: '/api/meta/ad-account/status'
+      preLoaderRoute: typeof ApiMetaAdAccountStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/meta/ad-account/start': {
       id: '/api/meta/ad-account/start'
       path: '/api/meta/ad-account/start'
@@ -2838,6 +2878,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCalendarEntriesRequestRoute: ApiCalendarEntriesRequestRoute,
   ApiCalendarEntriesScheduleRoute: ApiCalendarEntriesScheduleRoute,
   ApiCampaignAdsRoute: ApiCampaignAdsRoute,
+  ApiCampaignForRequestRoute: ApiCampaignForRequestRoute,
   ApiCampaignsRoute: ApiCampaignsRoute,
   ApiCampaignsCreateRoute: ApiCampaignsCreateRoute,
   ApiCarouselRequestChangeRoute: ApiCarouselRequestChangeRoute,
@@ -2939,6 +2980,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMetaAdAccountFinalizeRoute: ApiMetaAdAccountFinalizeRoute,
   ApiMetaAdAccountPendingRoute: ApiMetaAdAccountPendingRoute,
   ApiMetaAdAccountStartRoute: ApiMetaAdAccountStartRoute,
+  ApiMetaAdAccountStatusRoute: ApiMetaAdAccountStatusRoute,
   ApiSocialConnectCallbackRoute: ApiSocialConnectCallbackRoute,
   ApiSocialConnectFinalizeRoute: ApiSocialConnectFinalizeRoute,
   ApiSocialConnectPendingRoute: ApiSocialConnectPendingRoute,

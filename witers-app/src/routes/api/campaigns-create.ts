@@ -86,6 +86,18 @@ export const Route = createFileRoute("/api/campaigns-create")({
         if (reqRow.status !== "completada" && reqRow.status !== "cerrada") {
           return json({ ok: false, error: "solicitud_no_terminada" }, { status: 409 });
         }
+        const recentDuplicate = await db()
+          .prepare(
+            `SELECT id FROM ad_campaigns
+             WHERE user_id = ?1 AND request_id = ?2
+               AND created_at >= datetime('now', '-2 minutes')
+             LIMIT 1`,
+          )
+          .bind(user.id, reqRow.id)
+          .first<{ id: string }>();
+        if (recentDuplicate) {
+          return json({ ok: false, error: "campana_duplicada" }, { status: 409 });
+        }
 
         // No shared/default Page: each client pautas from their own,
         // set only by an admin once it's connected to WITERS's Business
@@ -165,8 +177,9 @@ export const Route = createFileRoute("/api/campaigns-create")({
         await db()
           .prepare(
             `INSERT INTO ad_campaigns
-               (id, request_id, user_id, meta_campaign_id, meta_adset_id, meta_ad_id, objective, daily_budget_cents, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'paused')`,
+               (id, request_id, user_id, meta_campaign_id, meta_adset_id, meta_ad_id,
+                objective, daily_budget_cents, duration_days, status)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'paused')`,
           )
           .bind(
             id,
@@ -180,6 +193,7 @@ export const Route = createFileRoute("/api/campaigns-create")({
             JSON.stringify(result.adIds),
             parsed.data.objective,
             Math.round(parsed.data.dailyBudgetMxn * 100),
+            parsed.data.durationDays,
           )
           .run();
 

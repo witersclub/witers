@@ -23,6 +23,7 @@ import {
   Image as ImageIcon,
   Instagram,
   Loader2,
+  Megaphone,
   PenLine,
   RotateCcw,
   Send,
@@ -34,6 +35,7 @@ import {
 
 import { WMark } from "./brand";
 import { ChatBubble } from "./chat-intake";
+import { CampaignCreationSheet } from "./campaign-creation-sheet";
 import { ASPECT_OPTIONS, AspectRatioPicker } from "./lab-pickers";
 import { MicButton } from "./mic-button";
 import { SlideGallery } from "./slide-gallery";
@@ -68,7 +70,8 @@ type CalendarEntry = CalendarEntryDraft & {
   // Copy sugerido para redes — null hasta que se genera la primera vez
   // que se abre la pieza (ver /api/calendar-entries-caption).
   caption: string | null;
-  publicationStatus: "scheduled" | "publishing" | "published" | "partial" | "error" | "canceled" | null;
+  publicationStatus:
+    "scheduled" | "publishing" | "published" | "partial" | "error" | "canceled" | null;
   scheduledForUtc: string | null;
   publicationTimezone: string | null;
   publicationPlatforms: SocialPlatform[] | null;
@@ -125,12 +128,21 @@ function statusMeta(
 }
 
 function publicationStatusMeta(entry: CalendarEntry, t: (es: string, en: string) => string) {
-  if (entry.publicationStatus === "scheduled") return { label: t("Programada", "Scheduled"), cls: "bg-violet-50 text-violet-700" };
-  if (entry.publicationStatus === "publishing") return { label: t("Publicando", "Publishing"), cls: "bg-amber-50 text-amber-700" };
-  if (entry.publicationStatus === "published") return { label: t("Publicada", "Published"), cls: "bg-emerald-50 text-emerald-700" };
-  if (entry.publicationStatus === "partial") return { label: t("Publicada parcialmente", "Partially published"), cls: "bg-amber-50 text-amber-700" };
-  if (entry.publicationStatus === "error") return { label: t("Error de publicación", "Publishing error"), cls: "bg-red-50 text-red-700" };
-  if (entry.publicationStatus === "canceled") return { label: t("Cancelada", "Canceled"), cls: "bg-wit-mist/50 text-wit-gray" };
+  if (entry.publicationStatus === "scheduled")
+    return { label: t("Programada", "Scheduled"), cls: "bg-violet-50 text-violet-700" };
+  if (entry.publicationStatus === "publishing")
+    return { label: t("Publicando", "Publishing"), cls: "bg-amber-50 text-amber-700" };
+  if (entry.publicationStatus === "published")
+    return { label: t("Publicada", "Published"), cls: "bg-emerald-50 text-emerald-700" };
+  if (entry.publicationStatus === "partial")
+    return {
+      label: t("Publicada parcialmente", "Partially published"),
+      cls: "bg-amber-50 text-amber-700",
+    };
+  if (entry.publicationStatus === "error")
+    return { label: t("Error de publicación", "Publishing error"), cls: "bg-red-50 text-red-700" };
+  if (entry.publicationStatus === "canceled")
+    return { label: t("Cancelada", "Canceled"), cls: "bg-wit-mist/50 text-wit-gray" };
   const designStatus = statusMeta(entry.status, t);
   return { label: designStatus.label, cls: designStatus.badgeClass };
 }
@@ -233,7 +245,9 @@ function CalendarWizard({
       setBrandAssets(assets);
       setSelectedAssetIds(assets.filter((a) => a.use_in_planning === 1).map((a) => a.id));
     } catch {
-      setAssetError(t("No pudimos cargar tus archivos de marca.", "We couldn't load your brand files."));
+      setAssetError(
+        t("No pudimos cargar tus archivos de marca.", "We couldn't load your brand files."),
+      );
     }
   }
 
@@ -241,7 +255,12 @@ function CalendarWizard({
     if (!file) return;
     setAssetError(null);
     if (file.type.startsWith("video/")) {
-      setAssetError(t("Por ahora agrega videos desde Mi marca; aquí puedes usar imágenes, PDF o un archivo de texto de estrategia.", "For now add videos from My brand; here you can use images, PDFs, or a strategy text file."));
+      setAssetError(
+        t(
+          "Por ahora agrega videos desde Mi marca; aquí puedes usar imágenes, PDF o un archivo de texto de estrategia.",
+          "For now add videos from My brand; here you can use images, PDFs, or a strategy text file.",
+        ),
+      );
       return;
     }
     try {
@@ -253,14 +272,34 @@ function CalendarWizard({
       const extraction = await extractBrandDocumentText(file);
       const textContent = extraction.text;
       const save = await fetch("/api/brand-profile", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "add_asset", key: uploaded.key, originalName: file.name, kind: textContent ? "strategy" : file.type === "application/pdf" ? "manual" : "reference", mimeType: file.type || "application/octet-stream", sizeBytes: file.size, textContent }),
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "add_asset",
+          key: uploaded.key,
+          originalName: file.name,
+          kind: textContent ? "strategy" : file.type === "application/pdf" ? "manual" : "reference",
+          mimeType: file.type || "application/octet-stream",
+          sizeBytes: file.size,
+          textContent,
+        }),
       });
       if (!save.ok) throw new Error("save");
       await loadBrandAssets();
-      if (!extraction.readable) setAssetError(t("Archivo guardado como referencia visual. Para que Wit lea el contenido, usa .txt, .md, .json o .docx.", "File saved as a visual reference. For Wit to read its content, use .txt, .md, .json, or .docx."));
+      if (!extraction.readable)
+        setAssetError(
+          t(
+            "Archivo guardado como referencia visual. Para que Wit lea el contenido, usa .txt, .md, .json o .docx.",
+            "File saved as a visual reference. For Wit to read its content, use .txt, .md, .json, or .docx.",
+          ),
+        );
     } catch {
-      setAssetError(t("No pudimos guardar el archivo. Intenta de nuevo.", "We couldn't save the file. Try again."));
+      setAssetError(
+        t(
+          "No pudimos guardar el archivo. Intenta de nuevo.",
+          "We couldn't save the file. Try again.",
+        ),
+      );
     }
   }
 
@@ -272,7 +311,11 @@ function CalendarWizard({
       // promise executable: a five-day partial answer must never look like
       // a completed monthly plan.
       const asksForFullMonth = next.some(
-        (m) => m.role === "user" && /(?:todo el mes|mes completo|todos los d[ií]as|diario|entire month|whole month|every day)/i.test(m.content),
+        (m) =>
+          m.role === "user" &&
+          /(?:todo el mes|mes completo|todos los d[ií]as|diario|entire month|whole month|every day)/i.test(
+            m.content,
+          ),
       );
       const daysInTargetMonth = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
       const res = await fetch("/api/wit/calendar-chat", {
@@ -408,8 +451,37 @@ function CalendarWizard({
         </p>
       </div>
 
-      <button type="button" onClick={() => { setBrandMindOpen(true); void loadBrandAssets(); }} className="mb-1 flex w-full items-center justify-between rounded-2xl border border-wit-blue/10 bg-wit-blue/[0.04] px-4 py-3 text-left transition-colors hover:bg-wit-blue/[0.08]">
-        <span className="flex items-center gap-2.5"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-wit-blue shadow-sm"><FileText className="h-4 w-4" /></span><span><span className="block text-sm font-bold text-wit-ink">{t("Mente de marca", "Brand mind")}</span><span className="block text-xs text-wit-gray">{selectedAssetIds.length ? t(`${selectedAssetIds.length} archivos activos para este plan`, `${selectedAssetIds.length} files active for this plan`) : t("Agrega contexto para que Wit conozca tu marca", "Add context so Wit knows your brand")}</span></span></span><ChevronRight className="h-4 w-4 text-wit-blue" /></button>
+      <button
+        type="button"
+        onClick={() => {
+          setBrandMindOpen(true);
+          void loadBrandAssets();
+        }}
+        className="mb-1 flex w-full items-center justify-between rounded-2xl border border-wit-blue/10 bg-wit-blue/[0.04] px-4 py-3 text-left transition-colors hover:bg-wit-blue/[0.08]"
+      >
+        <span className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-wit-blue shadow-sm">
+            <FileText className="h-4 w-4" />
+          </span>
+          <span>
+            <span className="block text-sm font-bold text-wit-ink">
+              {t("Mente de marca", "Brand mind")}
+            </span>
+            <span className="block text-xs text-wit-gray">
+              {selectedAssetIds.length
+                ? t(
+                    `${selectedAssetIds.length} archivos activos para este plan`,
+                    `${selectedAssetIds.length} files active for this plan`,
+                  )
+                : t(
+                    "Agrega contexto para que Wit conozca tu marca",
+                    "Add context so Wit knows your brand",
+                  )}
+            </span>
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 text-wit-blue" />
+      </button>
 
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-3 py-4">
@@ -538,17 +610,105 @@ function CalendarWizard({
           </form>
         </div>
       ) : null}
-      {brandMindOpen ? createPortal(
-        <div className="fixed inset-0 z-[90] flex items-end bg-wit-ink/20 p-0 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label={t("Mente de marca", "Brand mind")}>
-          <div className="w-full rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-3 shadow-2xl md:mx-auto md:mb-8 md:max-w-lg md:rounded-[28px]">
-            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-wit-ink/15" />
-            <div className="flex items-center justify-between"><div><p className="text-lg font-extrabold text-wit-ink">{t("Mente de marca", "Brand mind")}</p><p className="mt-0.5 text-sm text-wit-gray">{t("Elige qué archivos debe considerar Wit en este plan.", "Choose which files Wit should consider for this plan.")}</p></div><button type="button" onClick={() => setBrandMindOpen(false)} aria-label={t("Cerrar", "Close")} className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-mist text-wit-ink"><X className="h-5 w-5" /></button></div>
-            <label onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void uploadBrandAsset(event.dataTransfer.files?.[0] ?? null); }} className="mt-5 flex min-h-20 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-wit-blue/35 bg-wit-blue/[0.03] px-4 py-3 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.07]"><Upload className="h-4 w-4" />{t("Cargar o arrastrar archivo", "Upload or drop a file")}<span className="text-[11px] font-medium text-wit-gray">{t("Suelta el archivo aquí", "Drop the file here")}</span><input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,.doc,.docs,.docx,.md,.markdown,.txt,.text,application/json" onChange={(e) => void uploadBrandAsset(e.target.files?.[0] ?? null)} /></label>
-            <div className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">{brandAssets.length ? brandAssets.map((asset) => <label key={asset.id} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-wit-ink/8 px-3 py-3"><input type="checkbox" checked={selectedAssetIds.includes(asset.id)} onChange={(e) => setSelectedAssetIds((current) => e.target.checked ? [...current, asset.id] : current.filter((id) => id !== asset.id))} className="h-4 w-4 accent-[#315BFF]" /><FileText className="h-4 w-4 shrink-0 text-wit-blue" /><span className="min-w-0 flex-1 truncate text-sm font-semibold text-wit-ink">{asset.original_name}</span><span className="text-xs capitalize text-wit-gray">{asset.kind}</span></label>) : <p className="rounded-2xl bg-wit-mist/50 px-4 py-5 text-center text-sm text-wit-gray">{t("Aún no tienes archivos. Sube tu manual, estrategia o referencias.", "You don't have files yet. Upload your manual, strategy, or references.")}</p>}</div>
-            {assetError ? <p className="mt-3 text-sm text-red-600">{assetError}</p> : null}
-            <button type="button" onClick={() => setBrandMindOpen(false)} className="mt-5 w-full rounded-2xl bg-wit-blue py-3.5 text-sm font-bold text-white">{t("Usar en esta planificación", "Use in this plan")}</button>
-          </div>
-        </div>, document.body) : null}
+      {brandMindOpen
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[90] flex items-end bg-wit-ink/20 p-0 backdrop-blur-[2px]"
+              role="dialog"
+              aria-modal="true"
+              aria-label={t("Mente de marca", "Brand mind")}
+            >
+              <div className="w-full rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-3 shadow-2xl md:mx-auto md:mb-8 md:max-w-lg md:rounded-[28px]">
+                <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-wit-ink/15" />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-lg font-extrabold text-wit-ink">
+                      {t("Mente de marca", "Brand mind")}
+                    </p>
+                    <p className="mt-0.5 text-sm text-wit-gray">
+                      {t(
+                        "Elige qué archivos debe considerar Wit en este plan.",
+                        "Choose which files Wit should consider for this plan.",
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBrandMindOpen(false)}
+                    aria-label={t("Cerrar", "Close")}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-mist text-wit-ink"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <label
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    void uploadBrandAsset(event.dataTransfer.files?.[0] ?? null);
+                  }}
+                  className="mt-5 flex min-h-20 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-wit-blue/35 bg-wit-blue/[0.03] px-4 py-3 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.07]"
+                >
+                  <Upload className="h-4 w-4" />
+                  {t("Cargar o arrastrar archivo", "Upload or drop a file")}
+                  <span className="text-[11px] font-medium text-wit-gray">
+                    {t("Suelta el archivo aquí", "Drop the file here")}
+                  </span>
+                  <input
+                    className="sr-only"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,application/pdf,.doc,.docs,.docx,.md,.markdown,.txt,.text,application/json"
+                    onChange={(e) => void uploadBrandAsset(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <div className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">
+                  {brandAssets.length ? (
+                    brandAssets.map((asset) => (
+                      <label
+                        key={asset.id}
+                        className="flex cursor-pointer items-center gap-3 rounded-2xl border border-wit-ink/8 px-3 py-3"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedAssetIds.includes(asset.id)}
+                          onChange={(e) =>
+                            setSelectedAssetIds((current) =>
+                              e.target.checked
+                                ? [...current, asset.id]
+                                : current.filter((id) => id !== asset.id),
+                            )
+                          }
+                          className="h-4 w-4 accent-[#315BFF]"
+                        />
+                        <FileText className="h-4 w-4 shrink-0 text-wit-blue" />
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-wit-ink">
+                          {asset.original_name}
+                        </span>
+                        <span className="text-xs capitalize text-wit-gray">{asset.kind}</span>
+                      </label>
+                    ))
+                  ) : (
+                    <p className="rounded-2xl bg-wit-mist/50 px-4 py-5 text-center text-sm text-wit-gray">
+                      {t(
+                        "Aún no tienes archivos. Sube tu manual, estrategia o referencias.",
+                        "You don't have files yet. Upload your manual, strategy, or references.",
+                      )}
+                    </p>
+                  )}
+                </div>
+                {assetError ? <p className="mt-3 text-sm text-red-600">{assetError}</p> : null}
+                <button
+                  type="button"
+                  onClick={() => setBrandMindOpen(false)}
+                  className="mt-5 w-full rounded-2xl bg-wit-blue py-3.5 text-sm font-bold text-white"
+                >
+                  {t("Usar en esta planificación", "Use in this plan")}
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -585,16 +745,19 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
   const sheetRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<number | null>(null);
-  const pointerRef = useRef<{ id: number; startY: number; lastY: number; lastAt: number } | null>(null);
+  const pointerRef = useRef<{ id: number; startY: number; lastY: number; lastAt: number } | null>(
+    null,
+  );
   const draggingRef = useRef(false);
   const [isMobileSheet, setIsMobileSheet] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
   );
-  const [sheetOffset, setSheetOffset] = useState(
-    () => (typeof window !== "undefined" ? window.innerHeight : 1000),
+  const [sheetOffset, setSheetOffset] = useState(() =>
+    typeof window !== "undefined" ? window.innerHeight : 1000,
   );
   const [dragging, setDragging] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [campaignOpen, setCampaignOpen] = useState(false);
 
   async function generateCaption() {
     setGeneratingCaption(true);
@@ -647,6 +810,19 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
     setCaptionCopied(false);
     setEditingCaption(false);
     setCaptionDraft(entry.caption ?? "");
+    const params = new URLSearchParams(window.location.search);
+    const shouldResumeCampaign =
+      params.get("campaign") === "1" && params.get("campaign_entry") === entry.id;
+    setCampaignOpen(shouldResumeCampaign);
+    if (shouldResumeCampaign) {
+      params.delete("campaign");
+      params.delete("campaign_entry");
+      window.history.replaceState(
+        {},
+        "",
+        `${window.location.pathname}${params.size ? `?${params.toString()}` : ""}`,
+      );
+    }
     if (!entry.caption) void generateCaption();
     // Only re-run on a day switch, not on every refetch of the same entry —
     // that would blow away in-progress edits after an unrelated invalidation.
@@ -664,15 +840,28 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [onClose, saving, savingCaption, editing, editingCaption, captionDraft, captionText, editTitle, editBrief]);
+  }, [
+    onClose,
+    saving,
+    savingCaption,
+    editing,
+    editingCaption,
+    captionDraft,
+    captionText,
+    editTitle,
+    editBrief,
+  ]);
 
   useEffect(() => {
     sheetRef.current?.focus();
   }, []);
 
-  useEffect(() => () => {
-    if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
@@ -721,7 +910,9 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
       setEditingCaption(false);
       void qc.invalidateQueries({ queryKey: ["calendar-entries"] });
     } catch {
-      setCaptionError(t("No pudimos guardar el copy. Intenta de nuevo.", "We couldn't save the copy. Try again."));
+      setCaptionError(
+        t("No pudimos guardar el copy. Intenta de nuevo.", "We couldn't save the copy. Try again."),
+      );
     } finally {
       setSavingCaption(false);
     }
@@ -854,7 +1045,16 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
   function requestClose() {
     const copyDirty = editingCaption && captionDraft.trim() !== (captionText ?? "");
     const pieceDirty = editing && (editTitle !== entry.title || editBrief !== entry.brief);
-    if ((copyDirty || pieceDirty) && !window.confirm(t("Tienes cambios sin guardar. ¿Cerrar de todos modos?", "You have unsaved changes. Close anyway?"))) return;
+    if (
+      (copyDirty || pieceDirty) &&
+      !window.confirm(
+        t(
+          "Tienes cambios sin guardar. ¿Cerrar de todos modos?",
+          "You have unsaved changes. Close anyway?",
+        ),
+      )
+    )
+      return;
     finishClose();
   }
 
@@ -908,7 +1108,9 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
 
   const publicationMeta = publicationStatusMeta(entry, t);
   const previewHref = entry.deliveredVideoHref ?? entry.deliveredImages?.[0] ?? null;
-  const sheetHeight = sheetRef.current?.getBoundingClientRect().height || (typeof window !== "undefined" ? window.innerHeight : 1000);
+  const sheetHeight =
+    sheetRef.current?.getBoundingClientRect().height ||
+    (typeof window !== "undefined" ? window.innerHeight : 1000);
   const sheetProgress = isMobileSheet ? Math.min(1, Math.max(0, sheetOffset / sheetHeight)) : 0;
   const glassBlur = 20 - sheetProgress * 11;
   const backdropOpacity = isMobileSheet ? 0.15 * (1 - sheetProgress) : 0.55;
@@ -935,22 +1137,33 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
         onPointerMove={onSheetPointerMove}
         onPointerUp={onSheetPointerEnd}
         onPointerCancel={onSheetPointerEnd}
-        className={`absolute inset-0 isolate flex h-[100dvh] flex-col overflow-hidden rounded-t-[28px] bg-white/90 outline-none motion-reduce:transition-none md:inset-x-4 md:top-[4vh] md:mx-auto md:h-[92dvh] md:max-w-3xl md:rounded-3xl md:bg-white md:shadow-[0_30px_80px_rgba(5,13,40,0.32)] ${(dragging || closing) ? "will-change-transform transition-none" : "transition-transform duration-[430ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:duration-0"}`}
-        style={isMobileSheet ? {
-          transform: `translate3d(0, ${sheetOffset}px, 0)`,
-          backdropFilter: `blur(${12 - sheetProgress * 4}px) saturate(${120 - sheetProgress * 12}%)`,
-          WebkitBackdropFilter: `blur(${12 - sheetProgress * 4}px) saturate(${120 - sheetProgress * 12}%)`,
-        } : undefined}
+        className={`absolute inset-0 isolate flex h-[100dvh] flex-col overflow-hidden rounded-t-[28px] bg-white/90 outline-none motion-reduce:transition-none md:inset-x-4 md:top-[4vh] md:mx-auto md:h-[92dvh] md:max-w-3xl md:rounded-3xl md:bg-white md:shadow-[0_30px_80px_rgba(5,13,40,0.32)] ${dragging || closing ? "will-change-transform transition-none" : "transition-transform duration-[430ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:duration-0"}`}
+        style={
+          isMobileSheet
+            ? {
+                transform: `translate3d(0, ${sheetOffset}px, 0)`,
+                backdropFilter: `blur(${12 - sheetProgress * 4}px) saturate(${120 - sheetProgress * 12}%)`,
+                WebkitBackdropFilter: `blur(${12 - sheetProgress * 4}px) saturate(${120 - sheetProgress * 12}%)`,
+              }
+            : undefined
+        }
       >
         <header
           className="relative z-10 flex shrink-0 items-center gap-3 border-b border-white/55 px-5 pb-3 pt-[calc(1.25rem+env(safe-area-inset-top))] shadow-[0_8px_24px_rgba(5,13,40,0.04)] md:bg-white md:px-7 md:pb-3 md:pt-6"
-          style={isMobileSheet ? {
-            backgroundColor: `rgba(255, 255, 255, ${0.86 - sheetProgress * 0.1})`,
-            backdropFilter: `blur(${glassBlur}px) saturate(${150 - sheetProgress * 35}%)`,
-            WebkitBackdropFilter: `blur(${glassBlur}px) saturate(${150 - sheetProgress * 35}%)`,
-          } : undefined}
+          style={
+            isMobileSheet
+              ? {
+                  backgroundColor: `rgba(255, 255, 255, ${0.86 - sheetProgress * 0.1})`,
+                  backdropFilter: `blur(${glassBlur}px) saturate(${150 - sheetProgress * 35}%)`,
+                  WebkitBackdropFilter: `blur(${glassBlur}px) saturate(${150 - sheetProgress * 35}%)`,
+                }
+              : undefined
+          }
         >
-          <span aria-hidden="true" className="absolute left-1/2 top-[calc(env(safe-area-inset-top)+0.45rem)] h-1.5 w-10 -translate-x-1/2 rounded-full bg-wit-ink/20 md:hidden" />
+          <span
+            aria-hidden="true"
+            className="absolute left-1/2 top-[calc(env(safe-area-inset-top)+0.45rem)] h-1.5 w-10 -translate-x-1/2 rounded-full bg-wit-ink/20 md:hidden"
+          />
           <button
             type="button"
             onClick={requestClose}
@@ -963,7 +1176,9 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
             <h2 id="calendar-entry-detail-title" className="text-base font-extrabold text-wit-ink">
               {t("Detalle de publicación", "Post details")}
             </h2>
-            <p className="text-xs font-semibold capitalize text-wit-gray">{formatDayLabel(entry.date, t)}</p>
+            <p className="text-xs font-semibold capitalize text-wit-gray">
+              {formatDayLabel(entry.date, t)}
+            </p>
           </div>
         </header>
 
@@ -972,297 +1187,440 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:px-7 md:pb-28"
         >
           <div className="pt-4">
-
-      {entry.status === "lista" && entry.format === "video" && entry.deliveredVideoHref ? (
-        <div className="mt-3 overflow-hidden rounded-2xl border border-wit-ink/5 bg-black">
-          <video
-            controls
-            preload="metadata"
-            className="block max-h-[48dvh] w-full object-contain"
-            src={entry.deliveredVideoHref}
-          />
-        </div>
-      ) : entry.status === "lista" && entry.deliveredImages?.length ? (
-        // Sin relación de aspecto forzada — la pieza puede ser 1:1, 3:4,
-        // 9:16, etc., y forzarla a un cuadro cuadrado con object-cover
-        // recortaba y ocultaba parte del contenido real. La imagen se
-        // muestra a su proporción real, con el ancho de la columna como
-        // único límite.
-        <div className="mt-3 flex justify-center overflow-hidden rounded-2xl border border-wit-ink/5 bg-wit-mist/20">
-          <SlideGallery
-            key={entry.id}
-            images={entry.deliveredImages}
-            alt={entry.title}
-            className="relative"
-            imageClassName="block max-h-[48dvh] w-full object-contain"
-          />
-        </div>
-      ) : (
-        <div className="mt-3 flex aspect-square items-center justify-center rounded-2xl border border-wit-ink/5 bg-gradient-to-br from-wit-mist/80 to-white/40">
-          <Icon className="h-10 w-10 text-wit-blue/45" strokeWidth={1.6} />
-        </div>
-      )}
-      {previewHref ? (
-        <button
-          type="button"
-          onClick={() => window.open(previewHref, "_blank", "noopener,noreferrer")}
-          className="mt-2 text-xs font-bold text-wit-blue hover:text-wit-blue-deep"
-        >
-          {t("Ampliar vista previa", "Expand preview")}
-        </button>
-      ) : null}
-
-      {editing ? (
-        <input
-          value={editTitle}
-          onChange={(e) => setEditTitle(e.target.value)}
-          maxLength={120}
-          className="mt-3.5 w-full rounded-xl border border-wit-ink/15 px-3 py-2 text-lg font-extrabold tracking-tight text-wit-ink outline-none focus:border-wit-blue"
-        />
-      ) : (
-        <h3 className="mt-3.5 text-lg font-extrabold tracking-tight text-wit-ink">{entry.title}</h3>
-      )}
-
-      <div className="mt-2.5 flex flex-wrap gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-wit-mist/50 px-2.5 py-1 text-xs font-bold text-wit-gray">
-          <Icon className="h-3 w-3" strokeWidth={2.4} />
-          {formatLabel(entry.format, t)}
-        </span>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${publicationMeta.cls}`}>
-          {publicationMeta.label}
-        </span>
-      </div>
-      {entry.publicationStatus === "scheduled" && entry.scheduledForUtc ? (
-        <p className="mt-2 text-xs font-semibold text-violet-700">
-          {new Intl.DateTimeFormat(t("es-MX", "en-US"), {
-            dateStyle: "long",
-            timeStyle: "short",
-            timeZone: entry.publicationTimezone ?? undefined,
-          }).format(new Date(`${entry.scheduledForUtc.replace(" ", "T")}Z`))}
-          {entry.publicationTimezone ? ` — ${entry.publicationTimezone}` : ""}
-        </p>
-      ) : null}
-
-      {editing ? (
-        entry.format === "carrusel" ? (
-          <div className="mt-3.5 space-y-2.5">
-            {editSlides.map((slide, si) => (
-              <div key={si} className="rounded-xl bg-wit-mist/30 p-3">
-                <p className="text-xs font-bold text-wit-blue">
-                  {t(`Lámina ${si + 1}`, `Slide ${si + 1}`)}
-                </p>
-                <input
-                  value={slide.title}
-                  onChange={(e) =>
-                    setEditSlides((prev) =>
-                      prev.map((s, i) => (i === si ? { ...s, title: e.target.value } : s)),
-                    )
-                  }
-                  maxLength={120}
-                  placeholder={t("Título de la lámina", "Slide title")}
-                  className="mt-1.5 w-full rounded-lg border border-wit-ink/15 px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-wit-blue"
-                />
-                <textarea
-                  value={slide.brief}
-                  onChange={(e) =>
-                    setEditSlides((prev) =>
-                      prev.map((s, i) => (i === si ? { ...s, brief: e.target.value } : s)),
-                    )
-                  }
-                  rows={2}
-                  maxLength={2000}
-                  placeholder={t("Qué debe decir esta lámina", "What this slide should say")}
-                  className="mt-1.5 w-full resize-none rounded-lg border border-wit-ink/15 px-2.5 py-1.5 text-xs outline-none focus:border-wit-blue"
+            {entry.status === "lista" && entry.format === "video" && entry.deliveredVideoHref ? (
+              <div className="mt-3 overflow-hidden rounded-2xl border border-wit-ink/5 bg-black">
+                <video
+                  controls
+                  preload="metadata"
+                  className="block max-h-[48dvh] w-full object-contain"
+                  src={entry.deliveredVideoHref}
                 />
               </div>
-            ))}
-          </div>
-        ) : (
-          <textarea
-            value={editBrief}
-            onChange={(e) => setEditBrief(e.target.value)}
-            rows={7}
-            maxLength={2000}
-            className="mt-3.5 w-full resize-none rounded-xl border border-wit-ink/15 px-3 py-2 text-sm leading-relaxed outline-none focus:border-wit-blue"
-          />
-        )
-      ) : entry.format === "carrusel" && entry.slides?.length ? (
-        <ol className="mt-3.5 space-y-1.5">
-          {entry.slides.map((slide, si) => (
-            <li key={si} className="text-sm leading-relaxed text-wit-gray">
-              <span className="font-semibold text-wit-ink">
-                {si + 1}. {slide.title}
-              </span>{" "}
-              — {slide.brief}
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="mt-3.5 text-sm leading-relaxed text-wit-gray">{entry.brief}</p>
-      )}
-
-      {editing ? null : (
-        <div className="mt-3.5 rounded-2xl border border-wit-ink/5 bg-wit-mist/30 p-3.5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-wit-gray">
-              {t("Copy para la publicación", "Post copy")}
-            </p>
-            {captionText && !editingCaption ? (
+            ) : entry.status === "lista" && entry.deliveredImages?.length ? (
+              // Sin relación de aspecto forzada — la pieza puede ser 1:1, 3:4,
+              // 9:16, etc., y forzarla a un cuadro cuadrado con object-cover
+              // recortaba y ocultaba parte del contenido real. La imagen se
+              // muestra a su proporción real, con el ancho de la columna como
+              // único límite.
+              <div className="mt-3 flex justify-center overflow-hidden rounded-2xl border border-wit-ink/5 bg-wit-mist/20">
+                <SlideGallery
+                  key={entry.id}
+                  images={entry.deliveredImages}
+                  alt={entry.title}
+                  className="relative"
+                  imageClassName="block max-h-[48dvh] w-full object-contain"
+                />
+              </div>
+            ) : (
+              <div className="mt-3 flex aspect-square items-center justify-center rounded-2xl border border-wit-ink/5 bg-gradient-to-br from-wit-mist/80 to-white/40">
+                <Icon className="h-10 w-10 text-wit-blue/45" strokeWidth={1.6} />
+              </div>
+            )}
+            {previewHref ? (
               <button
                 type="button"
-                onClick={() => {
-                  setCaptionDraft(captionText);
-                  setEditingCaption(true);
-                }}
-                className="flex items-center gap-1 text-xs font-bold text-wit-blue hover:text-wit-blue-deep"
+                onClick={() => window.open(previewHref, "_blank", "noopener,noreferrer")}
+                className="mt-2 text-xs font-bold text-wit-blue hover:text-wit-blue-deep"
               >
-                <PenLine className="h-3.5 w-3.5" />
-                {t("Editar", "Edit")}
+                {t("Ampliar vista previa", "Expand preview")}
               </button>
             ) : null}
-          </div>
-          {generatingCaption ? (
-            <p className="mt-2 text-sm text-wit-gray">
-              {t("Generando copy...", "Generating copy...")}
-            </p>
-          ) : captionText && editingCaption ? (
-            <>
-              <textarea
-                value={captionDraft}
-                onChange={(event) => setCaptionDraft(event.target.value)}
-                rows={8}
-                maxLength={5000}
-                className="mt-2 w-full resize-none rounded-xl border border-wit-ink/15 bg-white px-3 py-2 text-sm leading-relaxed text-wit-ink outline-none focus:border-wit-blue focus:ring-2 focus:ring-wit-blue/15"
+
+            {editing ? (
+              <input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                maxLength={120}
+                className="mt-3.5 w-full rounded-xl border border-wit-ink/15 px-3 py-2 text-lg font-extrabold tracking-tight text-wit-ink outline-none focus:border-wit-blue"
               />
-              <p className="mt-1 text-right text-[11px] font-medium text-wit-gray">{captionDraft.length}/5000</p>
-              <div className="mt-2 flex gap-2">
-                <button type="button" onClick={() => setEditingCaption(false)} disabled={savingCaption} className="min-h-11 flex-1 rounded-full border border-wit-ink/15 bg-white px-3 text-xs font-bold text-wit-ink disabled:opacity-50">
+            ) : (
+              <h3 className="mt-3.5 text-lg font-extrabold tracking-tight text-wit-ink">
+                {entry.title}
+              </h3>
+            )}
+
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-wit-mist/50 px-2.5 py-1 text-xs font-bold text-wit-gray">
+                <Icon className="h-3 w-3" strokeWidth={2.4} />
+                {formatLabel(entry.format, t)}
+              </span>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${publicationMeta.cls}`}>
+                {publicationMeta.label}
+              </span>
+            </div>
+            {entry.publicationStatus === "scheduled" && entry.scheduledForUtc ? (
+              <p className="mt-2 text-xs font-semibold text-violet-700">
+                {new Intl.DateTimeFormat(t("es-MX", "en-US"), {
+                  dateStyle: "long",
+                  timeStyle: "short",
+                  timeZone: entry.publicationTimezone ?? undefined,
+                }).format(new Date(`${entry.scheduledForUtc.replace(" ", "T")}Z`))}
+                {entry.publicationTimezone ? ` — ${entry.publicationTimezone}` : ""}
+              </p>
+            ) : null}
+
+            {editing ? (
+              entry.format === "carrusel" ? (
+                <div className="mt-3.5 space-y-2.5">
+                  {editSlides.map((slide, si) => (
+                    <div key={si} className="rounded-xl bg-wit-mist/30 p-3">
+                      <p className="text-xs font-bold text-wit-blue">
+                        {t(`Lámina ${si + 1}`, `Slide ${si + 1}`)}
+                      </p>
+                      <input
+                        value={slide.title}
+                        onChange={(e) =>
+                          setEditSlides((prev) =>
+                            prev.map((s, i) => (i === si ? { ...s, title: e.target.value } : s)),
+                          )
+                        }
+                        maxLength={120}
+                        placeholder={t("Título de la lámina", "Slide title")}
+                        className="mt-1.5 w-full rounded-lg border border-wit-ink/15 px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-wit-blue"
+                      />
+                      <textarea
+                        value={slide.brief}
+                        onChange={(e) =>
+                          setEditSlides((prev) =>
+                            prev.map((s, i) => (i === si ? { ...s, brief: e.target.value } : s)),
+                          )
+                        }
+                        rows={2}
+                        maxLength={2000}
+                        placeholder={t("Qué debe decir esta lámina", "What this slide should say")}
+                        className="mt-1.5 w-full resize-none rounded-lg border border-wit-ink/15 px-2.5 py-1.5 text-xs outline-none focus:border-wit-blue"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <textarea
+                  value={editBrief}
+                  onChange={(e) => setEditBrief(e.target.value)}
+                  rows={7}
+                  maxLength={2000}
+                  className="mt-3.5 w-full resize-none rounded-xl border border-wit-ink/15 px-3 py-2 text-sm leading-relaxed outline-none focus:border-wit-blue"
+                />
+              )
+            ) : entry.format === "carrusel" && entry.slides?.length ? (
+              <ol className="mt-3.5 space-y-1.5">
+                {entry.slides.map((slide, si) => (
+                  <li key={si} className="text-sm leading-relaxed text-wit-gray">
+                    <span className="font-semibold text-wit-ink">
+                      {si + 1}. {slide.title}
+                    </span>{" "}
+                    — {slide.brief}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-3.5 text-sm leading-relaxed text-wit-gray">{entry.brief}</p>
+            )}
+
+            {editing ? null : (
+              <div className="mt-3.5 rounded-2xl border border-wit-ink/5 bg-wit-mist/30 p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-wit-gray">
+                    {t("Copy para la publicación", "Post copy")}
+                  </p>
+                  {captionText && !editingCaption ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCaptionDraft(captionText);
+                        setEditingCaption(true);
+                      }}
+                      className="flex items-center gap-1 text-xs font-bold text-wit-blue hover:text-wit-blue-deep"
+                    >
+                      <PenLine className="h-3.5 w-3.5" />
+                      {t("Editar", "Edit")}
+                    </button>
+                  ) : null}
+                </div>
+                {generatingCaption ? (
+                  <p className="mt-2 text-sm text-wit-gray">
+                    {t("Generando copy...", "Generating copy...")}
+                  </p>
+                ) : captionText && editingCaption ? (
+                  <>
+                    <textarea
+                      value={captionDraft}
+                      onChange={(event) => setCaptionDraft(event.target.value)}
+                      rows={8}
+                      maxLength={5000}
+                      className="mt-2 w-full resize-none rounded-xl border border-wit-ink/15 bg-white px-3 py-2 text-sm leading-relaxed text-wit-ink outline-none focus:border-wit-blue focus:ring-2 focus:ring-wit-blue/15"
+                    />
+                    <p className="mt-1 text-right text-[11px] font-medium text-wit-gray">
+                      {captionDraft.length}/5000
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingCaption(false)}
+                        disabled={savingCaption}
+                        className="min-h-11 flex-1 rounded-full border border-wit-ink/15 bg-white px-3 text-xs font-bold text-wit-ink disabled:opacity-50"
+                      >
+                        {t("Cancelar", "Cancel")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveCaption}
+                        disabled={
+                          savingCaption ||
+                          !captionDraft.trim() ||
+                          captionDraft.trim() === captionText
+                        }
+                        className="min-h-11 flex-1 rounded-full bg-wit-blue px-3 text-xs font-bold text-white disabled:opacity-50"
+                      >
+                        {savingCaption
+                          ? t("Guardando...", "Saving...")
+                          : t("Guardar cambios", "Save changes")}
+                      </button>
+                    </div>
+                  </>
+                ) : captionText ? (
+                  <>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-wit-ink">
+                      {captionText}
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={copyCaption}
+                        className="rounded-full border border-wit-ink/15 bg-white px-3.5 py-1.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30"
+                      >
+                        {captionCopied
+                          ? t("Copy copiado", "Copy copied")
+                          : t("Copiar texto", "Copy text")}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={generatingCaption}
+                        onClick={generateCaption}
+                        className="rounded-full border border-wit-ink/15 bg-white px-3.5 py-1.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30 disabled:opacity-50"
+                      >
+                        {t("Regenerar", "Regenerate")}
+                      </button>
+                    </div>
+                  </>
+                ) : captionError ? (
+                  <div className="mt-2">
+                    <p className="text-xs text-red-600">{captionError}</p>
+                    <button
+                      type="button"
+                      onClick={generateCaption}
+                      className="mt-1 text-sm font-semibold text-wit-blue hover:underline"
+                    >
+                      {t("Reintentar", "Try again")}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={generateCaption}
+                    className="mt-2 text-sm font-semibold text-wit-blue hover:underline"
+                  >
+                    {t("Generar copy", "Generate copy")}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {editing ? null : <PublishSection entry={entry} />}
+            {editing ? null : (
+              <section className="mt-4 rounded-2xl border border-wit-blue/12 bg-wit-blue/[0.025] p-3.5">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-wit-blue/10 text-wit-blue">
+                    <Megaphone className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-extrabold text-wit-ink">
+                      {t("Promocionar esta pieza", "Promote this piece")}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-wit-gray">
+                      {entry.status !== "lista"
+                        ? t(
+                            "Esta pieza debe estar terminada y aprobada antes de crear una campaña.",
+                            "This piece must be completed and approved before creating a campaign.",
+                          )
+                        : entry.format !== "imagen"
+                          ? t(
+                              "En esta primera versión, la pauta directa está disponible para piezas de imagen.",
+                              "In this first version, direct advertising is available for image pieces.",
+                            )
+                          : t(
+                              "Configura una campaña de Meta en menos de un minuto.",
+                              "Set up a Meta campaign in under a minute.",
+                            )}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={
+                    entry.status !== "lista" || entry.format !== "imagen" || !entry.requestId
+                  }
+                  onClick={() => setCampaignOpen(true)}
+                  className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-4 text-sm font-bold text-white transition-colors hover:bg-wit-blue-deep disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <Megaphone className="h-4 w-4" />
+                  {t("Pautar", "Promote")}
+                </button>
+                {entry.requestId ? <PieceCampaignSummary requestId={entry.requestId} /> : null}
+              </section>
+            )}
+            {editing ? null : <DesignChangeRequest entry={entry} />}
+
+            {entry.status !== "por_planear" ? null : editing ? (
+              <div className="mt-4">
+                {saveError ? <p className="mb-2 text-xs text-red-600">{saveError}</p> : null}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(false)}
+                    disabled={saving}
+                    className="flex-1 rounded-full border border-wit-ink/15 px-4 py-2.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30 disabled:opacity-50"
+                  >
+                    {t("Cancelar", "Cancel")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveEdit}
+                    disabled={saving}
+                    className="flex-1 rounded-full bg-wit-blue px-4 py-2.5 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
+                  >
+                    {saving ? t("Guardando...", "Saving...") : t("Guardar cambios", "Save changes")}
+                  </button>
+                </div>
+              </div>
+            ) : pickingFormat ? (
+              <div className="mt-4">
+                <p className="text-center text-xs font-bold text-wit-gray">
+                  {t("Elige el formato de esta pieza", "Choose this piece's format")}
+                </p>
+                <AspectRatioPicker
+                  options={
+                    entry.format === "video"
+                      ? ASPECT_OPTIONS.filter((opt) => VIDEO_ASPECT_VALUES.has(opt.value))
+                      : undefined
+                  }
+                  onPick={requestNow}
+                />
+                <button
+                  type="button"
+                  onClick={() => setPickingFormat(false)}
+                  className="mt-1 w-full text-center text-xs font-semibold text-wit-gray hover:text-wit-ink"
+                >
                   {t("Cancelar", "Cancel")}
                 </button>
-                <button type="button" onClick={saveCaption} disabled={savingCaption || !captionDraft.trim() || captionDraft.trim() === captionText} className="min-h-11 flex-1 rounded-full bg-wit-blue px-3 text-xs font-bold text-white disabled:opacity-50">
-                  {savingCaption ? t("Guardando...", "Saving...") : t("Guardar cambios", "Save changes")}
-                </button>
               </div>
-            </>
-          ) : captionText ? (
-            <>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-wit-ink">
-                {captionText}
-              </p>
-              <div className="mt-3 flex gap-2">
+            ) : (
+              <div className="mt-4 space-y-2">
                 <button
                   type="button"
-                  onClick={copyCaption}
-                  className="rounded-full border border-wit-ink/15 bg-white px-3.5 py-1.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30"
+                  disabled={requesting}
+                  onClick={() => setPickingFormat(true)}
+                  className="wit-glow-button w-full rounded-full px-6 py-3 text-sm font-bold text-white disabled:opacity-50"
                 >
-                  {captionCopied ? t("Copy copiado", "Copy copied") : t("Copiar texto", "Copy text")}
+                  {requesting
+                    ? t("Enviando...", "Sending...")
+                    : t("Pedir esta pieza a Wit", "Request this piece from Wit")}
                 </button>
                 <button
                   type="button"
-                  disabled={generatingCaption}
-                  onClick={generateCaption}
-                  className="rounded-full border border-wit-ink/15 bg-white px-3.5 py-1.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30 disabled:opacity-50"
+                  onClick={() => setEditing(true)}
+                  className="w-full rounded-full border border-wit-ink/15 px-4 py-2.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30"
                 >
-                  {t("Regenerar", "Regenerate")}
+                  {t("Editar", "Edit")}
                 </button>
               </div>
-            </>
-          ) : captionError ? (
-            <div className="mt-2">
-              <p className="text-xs text-red-600">{captionError}</p>
-              <button
-                type="button"
-                onClick={generateCaption}
-                className="mt-1 text-sm font-semibold text-wit-blue hover:underline"
-              >
-                {t("Reintentar", "Try again")}
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={generateCaption}
-              className="mt-2 text-sm font-semibold text-wit-blue hover:underline"
-            >
-              {t("Generar copy", "Generate copy")}
-            </button>
-          )}
-        </div>
-      )}
-
-      {editing ? null : <PublishSection entry={entry} />}
-      {editing ? null : <DesignChangeRequest entry={entry} />}
-
-      {entry.status !== "por_planear" ? null : editing ? (
-        <div className="mt-4">
-          {saveError ? <p className="mb-2 text-xs text-red-600">{saveError}</p> : null}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setEditing(false)}
-              disabled={saving}
-              className="flex-1 rounded-full border border-wit-ink/15 px-4 py-2.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30 disabled:opacity-50"
-            >
-              {t("Cancelar", "Cancel")}
-            </button>
-            <button
-              type="button"
-              onClick={saveEdit}
-              disabled={saving}
-              className="flex-1 rounded-full bg-wit-blue px-4 py-2.5 text-xs font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
-            >
-              {saving ? t("Guardando...", "Saving...") : t("Guardar cambios", "Save changes")}
-            </button>
+            )}
+            {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
           </div>
         </div>
-      ) : pickingFormat ? (
-        <div className="mt-4">
-          <p className="text-center text-xs font-bold text-wit-gray">
-            {t("Elige el formato de esta pieza", "Choose this piece's format")}
-          </p>
-          <AspectRatioPicker
-            options={
-              entry.format === "video"
-                ? ASPECT_OPTIONS.filter((opt) => VIDEO_ASPECT_VALUES.has(opt.value))
-                : undefined
-            }
-            onPick={requestNow}
-          />
-          <button
-            type="button"
-            onClick={() => setPickingFormat(false)}
-            className="mt-1 w-full text-center text-xs font-semibold text-wit-gray hover:text-wit-ink"
-          >
-            {t("Cancelar", "Cancel")}
-          </button>
-        </div>
-      ) : (
-        <div className="mt-4 space-y-2">
-          <button
-            type="button"
-            disabled={requesting}
-            onClick={() => setPickingFormat(true)}
-            className="wit-glow-button w-full rounded-full px-6 py-3 text-sm font-bold text-white disabled:opacity-50"
-          >
-            {requesting
-              ? t("Enviando...", "Sending...")
-              : t("Pedir esta pieza a Wit", "Request this piece from Wit")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="w-full rounded-full border border-wit-ink/15 px-4 py-2.5 text-xs font-bold text-wit-ink hover:border-wit-ink/30"
-          >
-            {t("Editar", "Edit")}
-          </button>
-        </div>
-      )}
-        {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
-        </div>
       </div>
-      </div>
+      {campaignOpen && entry.requestId ? (
+        <CampaignCreationSheet
+          piece={{
+            requestId: entry.requestId,
+            title: entry.title,
+            caption: captionText,
+            previewUrl: previewHref,
+            format: entry.format,
+          }}
+          onClose={() => setCampaignOpen(false)}
+          onCreated={() => {
+            void qc.invalidateQueries({ queryKey: ["campaign-for-request", entry.requestId] });
+            void qc.invalidateQueries({ queryKey: ["campaigns"] });
+          }}
+        />
+      ) : null}
     </div>,
     document.body,
+  );
+}
+
+type PieceCampaign = {
+  id: string;
+  metaStatus: string;
+  dailyBudgetCents: number | null;
+  durationDays: number | null;
+};
+
+function PieceCampaignSummary({ requestId }: { requestId: string }) {
+  const { t } = useLanguage();
+  const query = useQuery({
+    queryKey: ["campaign-for-request", requestId],
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/campaign-for-request?requestId=${encodeURIComponent(requestId)}`,
+        { credentials: "include" },
+      );
+      return (await response.json()) as { ok: boolean; campaign: PieceCampaign | null };
+    },
+    staleTime: 30_000,
+  });
+  const campaign = query.data?.campaign;
+  if (!campaign) return null;
+  const meta: Record<string, { label: string; cls: string }> = {
+    ACTIVE: { label: t("Activa", "Active"), cls: "bg-emerald-50 text-emerald-700" },
+    PAUSED: { label: t("Pausada", "Paused"), cls: "bg-amber-50 text-amber-700" },
+    IN_PROCESS: { label: t("En revisión", "In review"), cls: "bg-blue-50 text-blue-700" },
+    WITH_ISSUES: {
+      label: t("Requiere atención", "Needs attention"),
+      cls: "bg-orange-50 text-orange-700",
+    },
+    DISAPPROVED: { label: t("Rechazada", "Rejected"), cls: "bg-red-50 text-red-700" },
+    COMPLETED: { label: t("Finalizada", "Completed"), cls: "bg-wit-mist/60 text-wit-gray" },
+  };
+  const status = meta[campaign.metaStatus] ?? {
+    label: campaign.metaStatus,
+    cls: "bg-wit-mist/60 text-wit-gray",
+  };
+  return (
+    <div className="mt-3 border-t border-wit-ink/7 pt-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[11px] font-extrabold uppercase tracking-wider text-wit-gray">
+          {t("Campaña", "Campaign")}
+        </span>
+        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${status.cls}`}>
+          {status.label}
+        </span>
+      </div>
+      <div className="mt-2 flex gap-5 text-xs text-wit-gray">
+        {campaign.dailyBudgetCents != null ? (
+          <span>
+            <b className="text-wit-ink">${(campaign.dailyBudgetCents / 100).toLocaleString()}</b>
+            {t("/día", "/day")}
+          </span>
+        ) : null}
+        {campaign.durationDays ? (
+          <span>
+            <b className="text-wit-ink">{campaign.durationDays}</b> {t("días", "days")}
+          </span>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -1315,27 +1673,52 @@ function DesignChangeRequest({ entry }: { entry: CalendarEntry }) {
       setMessage("");
       void qc.invalidateQueries({ queryKey: ["calendar-entries"] });
     } catch {
-      setError(t("No pudimos enviar la solicitud. Intenta de nuevo.", "We couldn't send the request. Try again."));
+      setError(
+        t(
+          "No pudimos enviar la solicitud. Intenta de nuevo.",
+          "We couldn't send the request. Try again.",
+        ),
+      );
     } finally {
       setSending(false);
     }
   }
   return (
     <section className="mt-4 rounded-2xl border border-wit-ink/8 bg-white p-3.5">
-      <button type="button" onClick={() => setOpen((value) => !value)} className="text-sm font-bold text-wit-ink hover:text-wit-blue">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="text-sm font-bold text-wit-ink hover:text-wit-blue"
+      >
         {t("Solicitar cambio de diseño", "Request a design change")}
       </button>
       {open ? (
         <div className="mt-3 space-y-3">
-          <select value={kind} onChange={(event) => setKind(event.target.value)} className="min-h-11 w-full rounded-xl border border-wit-ink/15 bg-white px-3 text-sm text-wit-ink">
+          <select
+            value={kind}
+            onChange={(event) => setKind(event.target.value)}
+            className="min-h-11 w-full rounded-xl border border-wit-ink/15 bg-white px-3 text-sm text-wit-ink"
+          >
             <option>{t("Cambiar texto de la imagen", "Change image text")}</option>
             <option>{t("Cambiar fotografía", "Change photo")}</option>
             <option>{t("Cambiar colores", "Change colors")}</option>
             <option>{t("Corregir información", "Correct information")}</option>
             <option>{t("Otro cambio", "Other change")}</option>
           </select>
-          <textarea value={message} onChange={(event) => setMessage(event.target.value)} rows={4} required placeholder={t("Describe el cambio que necesitas", "Describe the change you need")} className="w-full resize-none rounded-xl border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue" />
-          <button type="button" onClick={submit} disabled={sending || message.trim().length < 5} className="min-h-11 rounded-full bg-wit-blue px-4 text-xs font-bold text-white disabled:opacity-50">
+          <textarea
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            rows={4}
+            required
+            placeholder={t("Describe el cambio que necesitas", "Describe the change you need")}
+            className="w-full resize-none rounded-xl border border-wit-ink/15 px-3 py-2 text-sm outline-none focus:border-wit-blue"
+          />
+          <button
+            type="button"
+            onClick={submit}
+            disabled={sending || message.trim().length < 5}
+            className="min-h-11 rounded-full bg-wit-blue px-4 text-xs font-bold text-white disabled:opacity-50"
+          >
             {sending ? t("Enviando...", "Sending...") : t("Enviar solicitud", "Send request")}
           </button>
           {error ? <p className="text-xs text-red-600">{error}</p> : null}
@@ -1428,12 +1811,26 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
 
   async function disconnect(platform: SocialPlatform) {
     const label = platform === "instagram" ? "Instagram" : "Facebook";
-    if (!window.confirm(t(`¿Desconectar ${label}? Podrás volver a conectarlo después.`, `Disconnect ${label}? You can reconnect it later.`))) {
+    if (
+      !window.confirm(
+        t(
+          `¿Desconectar ${label}? Podrás volver a conectarlo después.`,
+          `Disconnect ${label}? You can reconnect it later.`,
+        ),
+      )
+    ) {
       return;
     }
-    const response = await fetch(`/api/social/connections?platform=${platform}`, { method: "DELETE" });
+    const response = await fetch(`/api/social/connections?platform=${platform}`, {
+      method: "DELETE",
+    });
     if (!response.ok) {
-      setNotice(t("No pudimos desconectar la cuenta. Intenta de nuevo.", "We couldn't disconnect the account. Try again."));
+      setNotice(
+        t(
+          "No pudimos desconectar la cuenta. Intenta de nuevo.",
+          "We couldn't disconnect the account. Try again.",
+        ),
+      );
       return;
     }
     setDetailsPlatform(null);
@@ -1460,7 +1857,12 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
           title={t(`Ver información de ${label}`, `View ${label} information`)}
           className="flex h-11 items-center gap-2 rounded-full border border-wit-ink/10 bg-white px-3 text-xs font-bold text-wit-ink shadow-[0_2px_8px_rgba(5,13,40,0.03)]"
         >
-          <PillIcon className={platform === "instagram" ? "h-4 w-4 text-wit-pink" : "h-4 w-4 text-[#1877f2]"} strokeWidth={2.2} />
+          <PillIcon
+            className={
+              platform === "instagram" ? "h-4 w-4 text-wit-pink" : "h-4 w-4 text-[#1877f2]"
+            }
+            strokeWidth={2.2}
+          />
           {connection.name ?? label}
           <ChevronDown className="h-3.5 w-3.5 text-wit-gray" strokeWidth={2.2} />
         </button>
@@ -1531,7 +1933,8 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
                     {detailsPlatform === "instagram" ? "Instagram" : "Facebook"}
                   </h3>
                   <p className="mt-0.5 text-sm font-semibold text-wit-gray">
-                    {connections[detailsPlatform]?.name ?? (detailsPlatform === "instagram" ? "Instagram" : "Facebook")}
+                    {connections[detailsPlatform]?.name ??
+                      (detailsPlatform === "instagram" ? "Instagram" : "Facebook")}
                   </p>
                 </div>
               </div>
@@ -1545,7 +1948,9 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
               </button>
             </div>
             <div className="mt-5 rounded-2xl bg-wit-bg px-4 py-3">
-              <p className="text-sm font-bold text-wit-ink">{t("Cuenta conectada", "Connected account")}</p>
+              <p className="text-sm font-bold text-wit-ink">
+                {t("Cuenta conectada", "Connected account")}
+              </p>
               <p className="mt-1 text-xs leading-relaxed text-wit-gray">
                 {t(
                   "Esta cuenta se usará cuando selecciones esta red para publicar contenido.",
@@ -1590,7 +1995,9 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
     queryKey: ["calendar-entry-video-publications", entry.id],
     enabled: entry.status === "lista" && entry.format === "video",
     queryFn: async () => {
-      const res = await fetch(`/api/calendar-entries-publish?entryId=${encodeURIComponent(entry.id)}`);
+      const res = await fetch(
+        `/api/calendar-entries-publish?entryId=${encodeURIComponent(entry.id)}`,
+      );
       const data = (await res.json()) as {
         ok: boolean;
         videoPublications?: {
@@ -1600,7 +2007,7 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
           created_at: string;
         }[];
       };
-      return data.ok ? data.videoPublications ?? [] : [];
+      return data.ok ? (data.videoPublications ?? []) : [];
     },
     refetchInterval: (query) =>
       query.state.data?.some((publication) => publication.status === "processing") ? 10_000 : false,
@@ -1627,12 +2034,15 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
 
   async function publish() {
     if (selected.size === 0) return;
-    if (!window.confirm(
-      t(
-        `¿Publicar ahora en ${Array.from(selected).map(platformLabel).join(" y ")}?`,
-        `Publish now to ${Array.from(selected).map(platformLabel).join(" and ")}?`,
-      ),
-    )) return;
+    if (
+      !window.confirm(
+        t(
+          `¿Publicar ahora en ${Array.from(selected).map(platformLabel).join(" y ")}?`,
+          `Publish now to ${Array.from(selected).map(platformLabel).join(" and ")}?`,
+        ),
+      )
+    )
+      return;
     setPublishing(true);
     setPublishError(null);
     setPublishNotice(null);
@@ -1660,9 +2070,9 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
                 `◌ Processing video for ${platformLabel(platform as SocialPlatform)}. This can take a few minutes.`,
               )
             : t(
-              `✓ Publicado en ${platformLabel(platform as SocialPlatform)}`,
-              `✓ Published to ${platformLabel(platform as SocialPlatform)}`,
-            )
+                `✓ Publicado en ${platformLabel(platform as SocialPlatform)}`,
+                `✓ Published to ${platformLabel(platform as SocialPlatform)}`,
+              )
           : t(
               `✗ Error al publicar en ${platformLabel(platform as SocialPlatform)}${result.error ? `: ${result.error}` : ""}`,
               `✗ Failed to publish to ${platformLabel(platform as SocialPlatform)}${result.error ? `: ${result.error}` : ""}`,
@@ -1722,9 +2132,12 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
 
   async function cancelSchedule() {
     if (!window.confirm(t("¿Cancelar esta programación?", "Cancel this schedule?"))) return;
-    const res = await fetch(`/api/calendar-entries-schedule?entryId=${encodeURIComponent(entry.id)}`, {
-      method: "DELETE",
-    });
+    const res = await fetch(
+      `/api/calendar-entries-schedule?entryId=${encodeURIComponent(entry.id)}`,
+      {
+        method: "DELETE",
+      },
+    );
     if (res.ok) void queryClient.invalidateQueries({ queryKey: ["calendar-entries"] });
   }
 
@@ -1777,45 +2190,96 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
         </p>
       ) : (
         <>
-          <p className="mt-3 text-sm font-bold text-wit-ink">{t("¿Dónde quieres publicar?", "Where do you want to publish?")}</p>
+          <p className="mt-3 text-sm font-bold text-wit-ink">
+            {t("¿Dónde quieres publicar?", "Where do you want to publish?")}
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {(["instagram", "facebook"] as SocialPlatform[]).map((platform) => {
               const connected = Boolean(connections[platform]);
               return (
-              <label key={platform} className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold ${connected ? "text-wit-ink" : "cursor-not-allowed bg-wit-mist/35 text-wit-gray"} ${selected.has(platform) ? "border-wit-blue bg-wit-blue/5" : "border-wit-ink/12 bg-white"}`}>
-                <input
-                  type="checkbox"
-                  checked={selected.has(platform)}
-                  onChange={() => toggle(platform)}
-                  disabled={!connected}
-                  className="h-4 w-4 rounded border-wit-ink/25"
-                />
-                <span>{platform === "instagram" ? "Instagram" : "Facebook"}</span>
-                <span className="max-w-24 truncate text-xs font-medium text-wit-gray">{connections[platform]?.name ?? t("No conectada", "Not connected")}</span>
-              </label>
+                <label
+                  key={platform}
+                  className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold ${connected ? "text-wit-ink" : "cursor-not-allowed bg-wit-mist/35 text-wit-gray"} ${selected.has(platform) ? "border-wit-blue bg-wit-blue/5" : "border-wit-ink/12 bg-white"}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected.has(platform)}
+                    onChange={() => toggle(platform)}
+                    disabled={!connected}
+                    className="h-4 w-4 rounded border-wit-ink/25"
+                  />
+                  <span>{platform === "instagram" ? "Instagram" : "Facebook"}</span>
+                  <span className="max-w-24 truncate text-xs font-medium text-wit-gray">
+                    {connections[platform]?.name ?? t("No conectada", "Not connected")}
+                  </span>
+                </label>
               );
             })}
           </div>
           {entry.publicationStatus === "scheduled" ? (
-            <button type="button" onClick={cancelSchedule} className="mt-3 text-xs font-bold text-red-600 hover:underline">
+            <button
+              type="button"
+              onClick={cancelSchedule}
+              className="mt-3 text-xs font-bold text-red-600 hover:underline"
+            >
               {t("Cancelar programación", "Cancel schedule")}
             </button>
           ) : null}
           {scheduleOpen ? (
             <div className="mt-3 rounded-2xl border border-wit-blue/15 bg-white p-3">
-              <label className="text-xs font-bold text-wit-ink" htmlFor={`schedule-${entry.id}`}>{t("Fecha y hora", "Date and time")}</label>
-              <input id={`schedule-${entry.id}`} type="datetime-local" value={scheduleValue} min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)} onChange={(event) => setScheduleValue(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-xl border border-wit-ink/15 px-3 text-sm" />
-              <p className="mt-2 text-xs text-wit-gray">{t(`Zona horaria: ${timezone}`, `Time zone: ${timezone}`)}</p>
-              <p className="mt-1 text-xs font-medium text-wit-gray">{Array.from(selected).map(platformLabel).join(" · ")}</p>
-              <button type="button" onClick={schedule} disabled={scheduling || !scheduleValue || selected.size === 0} className="mt-3 min-h-11 rounded-full bg-wit-blue px-4 text-xs font-bold text-white disabled:opacity-50">{scheduling ? t("Programando...", "Scheduling...") : t("Confirmar programación", "Confirm schedule")}</button>
+              <label className="text-xs font-bold text-wit-ink" htmlFor={`schedule-${entry.id}`}>
+                {t("Fecha y hora", "Date and time")}
+              </label>
+              <input
+                id={`schedule-${entry.id}`}
+                type="datetime-local"
+                value={scheduleValue}
+                min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+                onChange={(event) => setScheduleValue(event.target.value)}
+                className="mt-1.5 min-h-11 w-full rounded-xl border border-wit-ink/15 px-3 text-sm"
+              />
+              <p className="mt-2 text-xs text-wit-gray">
+                {t(`Zona horaria: ${timezone}`, `Time zone: ${timezone}`)}
+              </p>
+              <p className="mt-1 text-xs font-medium text-wit-gray">
+                {Array.from(selected).map(platformLabel).join(" · ")}
+              </p>
+              <button
+                type="button"
+                onClick={schedule}
+                disabled={scheduling || !scheduleValue || selected.size === 0}
+                className="mt-3 min-h-11 rounded-full bg-wit-blue px-4 text-xs font-bold text-white disabled:opacity-50"
+              >
+                {scheduling
+                  ? t("Programando...", "Scheduling...")
+                  : t("Confirmar programación", "Confirm schedule")}
+              </button>
             </div>
           ) : null}
           <div className="sticky bottom-0 z-10 -mx-3.5 mt-4 flex flex-col gap-2 border-t border-wit-ink/8 bg-white/95 px-3.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:flex-row">
-            <button type="button" disabled={selected.size === 0 || publishing || scheduling} onClick={() => setScheduleOpen((value) => !value)} className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-full border border-wit-blue bg-white px-4 text-sm font-bold text-wit-blue shadow-sm transition-colors hover:bg-wit-blue/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue disabled:opacity-50">
-              <CalendarClock className="h-4 w-4" />{t("Programar", "Schedule")}
+            <button
+              type="button"
+              disabled={selected.size === 0 || publishing || scheduling}
+              onClick={() => setScheduleOpen((value) => !value)}
+              className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-full border border-wit-blue bg-white px-4 text-sm font-bold text-wit-blue shadow-sm transition-colors hover:bg-wit-blue/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue disabled:opacity-50"
+            >
+              <CalendarClock className="h-4 w-4" />
+              {t("Programar", "Schedule")}
             </button>
-            <button type="button" disabled={selected.size === 0 || publishing || scheduling} onClick={publish} className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-wit-pink via-[#775cff] to-wit-blue px-4 text-sm font-bold text-white shadow-[0_8px_20px_rgba(119,92,255,0.22)] transition-transform hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-50">
-              {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{publishing ? t("Publicando...", "Publishing...") : t("Publicar ahora", "Publish now")}
+            <button
+              type="button"
+              disabled={selected.size === 0 || publishing || scheduling}
+              onClick={publish}
+              className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-wit-pink via-[#775cff] to-wit-blue px-4 text-sm font-bold text-white shadow-[0_8px_20px_rgba(119,92,255,0.22)] transition-transform hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-50"
+            >
+              {publishing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              {publishing
+                ? t("Publicando...", "Publishing...")
+                : t("Publicar ahora", "Publish now")}
             </button>
           </div>
           {publishError ? <p className="mt-2 text-xs text-red-600">{publishError}</p> : null}
@@ -1884,12 +2348,17 @@ function MonthlyProgrammingSheet({
     entry.publicationStatus !== "partial" &&
     entry.date < today;
   const publishable = entries.filter(
-    (entry) => entry.status === "lista" && !isFutureScheduled(entry) && entry.publicationStatus !== "published",
+    (entry) =>
+      entry.status === "lista" &&
+      !isFutureScheduled(entry) &&
+      entry.publicationStatus !== "published",
   );
   const expiredEntries = publishable.filter(isExpired);
   const pendingEntries = publishable.filter((entry) => !isExpired(entry));
   const [step, setStep] = useState<0 | 1 | 2 | 3 | 4>(0);
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(publishable.map((entry) => entry.id)));
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(publishable.map((entry) => entry.id)),
+  );
   const [defaultTime, setDefaultTime] = useState("18:00");
   const [useDefaultTime, setUseDefaultTime] = useState(true);
   const [timeOverrides, setTimeOverrides] = useState<Record<string, string>>({});
@@ -1898,12 +2367,17 @@ function MonthlyProgrammingSheet({
   // monthly flow never reads these values or redistributes calendar dates.
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [times, setTimes] = useState<string[]>([]);
-  const [platforms, setPlatforms] = useState<Set<SocialPlatform>>(new Set(["instagram", "facebook"]));
+  const [platforms, setPlatforms] = useState<Set<SocialPlatform>>(
+    new Set(["instagram", "facebook"]),
+  );
   const [plans, setPlans] = useState<MonthlyScheduleItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ ok: number; failed: MonthlyScheduleItem[] } | null>(null);
-  const { data: connections = EMPTY_CONNECTIONS } = useQuery({ queryKey: ["social-connections"], queryFn: fetchConnections });
+  const { data: connections = EMPTY_CONNECTIONS } = useQuery({
+    queryKey: ["social-connections"],
+    queryFn: fetchConnections,
+  });
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -1921,7 +2395,8 @@ function MonthlyProgrammingSheet({
   function toggleSelected(id: string) {
     setSelected((previous) => {
       const next = new Set(previous);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -1930,8 +2405,10 @@ function MonthlyProgrammingSheet({
     const activePlatforms = (["instagram", "facebook"] as SocialPlatform[]).filter(
       (platform) => platforms.has(platform) && connections[platform],
     );
-    if (!chosen.length) return setError(t("Selecciona al menos una pieza.", "Select at least one piece."));
-    if (!activePlatforms.length) return setError(t("Selecciona una red conectada.", "Select a connected network."));
+    if (!chosen.length)
+      return setError(t("Selecciona al menos una pieza.", "Select at least one piece."));
+    if (!activePlatforms.length)
+      return setError(t("Selecciona una red conectada.", "Select a connected network."));
     const nextPlans = chosen.map((entry) => {
       const plannedDate = dateOverrides[entry.id] ?? entry.date;
       const time = timeOverrides[entry.id] ?? defaultTime;
@@ -1941,21 +2418,38 @@ function MonthlyProgrammingSheet({
         time,
         at: scheduledDateTime(plannedDate, time),
         platforms:
-          entry.publicationPlatforms?.filter((platform) => connections[platform]) ?? activePlatforms,
+          entry.publicationPlatforms?.filter((platform) => connections[platform]) ??
+          activePlatforms,
         reprogrammed: plannedDate !== entry.date,
       };
     });
     if (nextPlans.some((plan) => isExpired(plan.entry) && !dateOverrides[plan.entry.id])) {
-      return setError(t("Reprograma las publicaciones con fecha vencida para continuar.", "Reschedule expired posts to continue."));
+      return setError(
+        t(
+          "Reprograma las publicaciones con fecha vencida para continuar.",
+          "Reschedule expired posts to continue.",
+        ),
+      );
     }
     if (nextPlans.some((plan) => !Number.isFinite(plan.at.getTime()) || plan.at <= new Date())) {
-      return setError(t("Todas las fechas y horarios deben ser futuros.", "All dates and times must be in the future."));
+      return setError(
+        t(
+          "Todas las fechas y horarios deben ser futuros.",
+          "All dates and times must be in the future.",
+        ),
+      );
     }
     const conflicts = new Set<string>();
     for (const plan of nextPlans) {
       for (const platform of plan.platforms) {
         const key = `${plan.at.toISOString()}-${platform}`;
-        if (conflicts.has(key)) return setError(t("Dos piezas tienen el mismo horario y red. Ajusta una hora.", "Two pieces have the same time and network. Adjust one time."));
+        if (conflicts.has(key))
+          return setError(
+            t(
+              "Dos piezas tienen el mismo horario y red. Ajusta una hora.",
+              "Two pieces have the same time and network. Adjust one time.",
+            ),
+          );
         conflicts.add(key);
       }
     }
@@ -1971,68 +2465,638 @@ function MonthlyProgrammingSheet({
     for (const plan of plans) {
       try {
         const response = await fetch("/api/calendar-entries-schedule", {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ entryId: plan.entry.id, scheduledForUtc: plan.at.toISOString(), timezone, platforms: plan.platforms, plannedDate: plan.reprogrammed ? plan.plannedDate : undefined }),
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            entryId: plan.entry.id,
+            scheduledForUtc: plan.at.toISOString(),
+            timezone,
+            platforms: plan.platforms,
+            plannedDate: plan.reprogrammed ? plan.plannedDate : undefined,
+          }),
         });
         const data = (await response.json()) as { ok: boolean };
-        if (!response.ok || !data.ok) failed.push(plan); else ok += 1;
-      } catch { failed.push(plan); }
+        if (!response.ok || !data.ok) failed.push(plan);
+        else ok += 1;
+      } catch {
+        failed.push(plan);
+      }
     }
     await qc.invalidateQueries({ queryKey: ["calendar-entries"] });
     setResult({ ok, failed });
     setSaving(false);
     setStep(4);
   }
-  const stepLabel = ["", t("Selecciona el contenido", "Select content"), t("Define tus horarios", "Set your times"), t("Revisar programación", "Review schedule")];
+  const stepLabel = [
+    "",
+    t("Selecciona el contenido", "Select content"),
+    t("Define tus horarios", "Set your times"),
+    t("Revisar programación", "Review schedule"),
+  ];
   return createPortal(
-    <div className="fixed inset-0 z-[80] bg-wit-ink/15 backdrop-blur-[2px]" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section role="dialog" aria-modal="true" aria-label={t("Programa tu contenido del mes", "Schedule your month's content")} className="absolute inset-x-0 bottom-0 flex max-h-[94dvh] flex-col rounded-t-[30px] bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-14px_40px_rgba(5,13,40,0.14)] md:inset-x-4 md:top-[5vh] md:mx-auto md:max-w-2xl md:rounded-3xl md:pb-6">
-        <span aria-hidden="true" className="mx-auto h-1.5 w-10 rounded-full bg-wit-ink/20 md:hidden" />
-        <header className="mt-3 flex items-center justify-between gap-3"><div>{step > 0 && step < 4 ? <p className="text-xs font-bold text-wit-blue">1&nbsp;&nbsp;2&nbsp;&nbsp;3</p> : null}<h2 className="text-lg font-extrabold text-wit-ink">{step === 0 ? t("Programa tu contenido del mes", "Schedule your month's content") : step === 4 ? t("¡Todo listo! 🎉", "All set! 🎉") : stepLabel[step]}</h2></div><button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist" aria-label={t("Cerrar", "Close")}><X className="h-5 w-5" /></button></header>
+    <div
+      className="fixed inset-0 z-[80] bg-wit-ink/15 backdrop-blur-[2px]"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("Programa tu contenido del mes", "Schedule your month's content")}
+        className="absolute inset-x-0 bottom-0 flex max-h-[94dvh] flex-col rounded-t-[30px] bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-14px_40px_rgba(5,13,40,0.14)] md:inset-x-4 md:top-[5vh] md:mx-auto md:max-w-2xl md:rounded-3xl md:pb-6"
+      >
+        <span
+          aria-hidden="true"
+          className="mx-auto h-1.5 w-10 rounded-full bg-wit-ink/20 md:hidden"
+        />
+        <header className="mt-3 flex items-center justify-between gap-3">
+          <div>
+            {step > 0 && step < 4 ? (
+              <p className="text-xs font-bold text-wit-blue">1&nbsp;&nbsp;2&nbsp;&nbsp;3</p>
+            ) : null}
+            <h2 className="text-lg font-extrabold text-wit-ink">
+              {step === 0
+                ? t("Programa tu contenido del mes", "Schedule your month's content")
+                : step === 4
+                  ? t("¡Todo listo! 🎉", "All set! 🎉")
+                  : stepLabel[step]}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist"
+            aria-label={t("Cerrar", "Close")}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </header>
         <div className="min-h-0 flex-1 overflow-y-auto pb-4 pt-5">
           {step === 0 ? (
             <div>
-              <h3 className="text-center text-xl font-extrabold text-wit-ink">{t("Deja listo tu contenido del mes", "Get your month's content ready")}</h3>
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-wit-pink/10 text-wit-pink"><CalendarClock className="h-7 w-7" /></div>
-              <p className="mt-4 text-center text-sm leading-relaxed text-wit-gray">{t("Tus piezas ya tienen una fecha asignada. Elige cuáles quieres dejar programadas y nosotros nos encargamos de publicarlas.", "Your pieces already have a date. Choose which ones to automate and we'll publish them.")}</p>
-              <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-2xl bg-violet-50 p-3"><b className="block text-xl text-violet-700">{scheduledCount}</b><span className="text-[11px] font-semibold text-violet-700">{t("Programadas", "Scheduled")}</span></div>
-                <div className="rounded-2xl bg-wit-pink/10 p-3"><b className="block text-xl text-wit-pink">{pendingEntries.length}</b><span className="text-[11px] font-semibold text-wit-gray">{t("Por programar", "To schedule")}</span></div>
-                <div className="rounded-2xl bg-amber-50 p-3"><b className="block text-xl text-amber-700">{expiredEntries.length}</b><span className="text-[11px] font-semibold text-amber-700">{t("Fecha vencida", "Expired")}</span></div>
+              <h3 className="text-center text-xl font-extrabold text-wit-ink">
+                {t("Deja listo tu contenido del mes", "Get your month's content ready")}
+              </h3>
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-wit-pink/10 text-wit-pink">
+                <CalendarClock className="h-7 w-7" />
               </div>
-              <div className="mt-5 space-y-3 rounded-2xl bg-wit-mist/25 p-4 text-xs text-wit-gray"><p><b className="text-wit-ink">{t("Fechas ya planeadas", "Dates already planned")}</b><br />{t("Las fechas fueron definidas en tu calendario.", "Dates were defined in your calendar.")}</p><p><b className="text-wit-ink">{t("Tú eliges la hora", "You choose the time")}</b><br />{t("Selecciona el horario en que publicaremos.", "Choose the time we will publish.")}</p><p><b className="text-wit-ink">{t("Publicamos por ti", "We publish for you")}</b><br />{t("Nos encargamos de publicar automáticamente en las redes que elijas.", "We'll publish automatically to the networks you choose.")}</p></div>
+              <p className="mt-4 text-center text-sm leading-relaxed text-wit-gray">
+                {t(
+                  "Tus piezas ya tienen una fecha asignada. Elige cuáles quieres dejar programadas y nosotros nos encargamos de publicarlas.",
+                  "Your pieces already have a date. Choose which ones to automate and we'll publish them.",
+                )}
+              </p>
+              <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-2xl bg-violet-50 p-3">
+                  <b className="block text-xl text-violet-700">{scheduledCount}</b>
+                  <span className="text-[11px] font-semibold text-violet-700">
+                    {t("Programadas", "Scheduled")}
+                  </span>
+                </div>
+                <div className="rounded-2xl bg-wit-pink/10 p-3">
+                  <b className="block text-xl text-wit-pink">{pendingEntries.length}</b>
+                  <span className="text-[11px] font-semibold text-wit-gray">
+                    {t("Por programar", "To schedule")}
+                  </span>
+                </div>
+                <div className="rounded-2xl bg-amber-50 p-3">
+                  <b className="block text-xl text-amber-700">{expiredEntries.length}</b>
+                  <span className="text-[11px] font-semibold text-amber-700">
+                    {t("Fecha vencida", "Expired")}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-5 space-y-3 rounded-2xl bg-wit-mist/25 p-4 text-xs text-wit-gray">
+                <p>
+                  <b className="text-wit-ink">
+                    {t("Fechas ya planeadas", "Dates already planned")}
+                  </b>
+                  <br />
+                  {t(
+                    "Las fechas fueron definidas en tu calendario.",
+                    "Dates were defined in your calendar.",
+                  )}
+                </p>
+                <p>
+                  <b className="text-wit-ink">{t("Tú eliges la hora", "You choose the time")}</b>
+                  <br />
+                  {t(
+                    "Selecciona el horario en que publicaremos.",
+                    "Choose the time we will publish.",
+                  )}
+                </p>
+                <p>
+                  <b className="text-wit-ink">{t("Publicamos por ti", "We publish for you")}</b>
+                  <br />
+                  {t(
+                    "Nos encargamos de publicar automáticamente en las redes que elijas.",
+                    "We'll publish automatically to the networks you choose.",
+                  )}
+                </p>
+              </div>
             </div>
           ) : null}
           {step === 1 ? (
             <div className="space-y-2">
-              <p className="text-sm text-wit-gray">{t("Elige las piezas que quieres dejar programadas.", "Choose the pieces you want to schedule.")}</p>
-              {expiredEntries.length ? <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">{t(`${expiredEntries.length} publicaciones tienen la fecha vencida. Podrás asignarles una nueva fecha antes de programarlas.`, `${expiredEntries.length} posts have expired dates. You can assign a new date before scheduling.`)}</p> : null}
-              <label className="flex items-center justify-between rounded-xl bg-wit-mist/30 px-3 py-3 text-sm font-bold text-wit-ink"><span>{t(`Seleccionar todo (${publishable.length})`, `Select all (${publishable.length})`)}</span><input type="checkbox" checked={selected.size === publishable.length} onChange={(event) => setSelected(event.target.checked ? new Set(publishable.map((item) => item.id)) : new Set())} /></label>
-              {publishable.map((entry) => { const Icon = FORMAT_ICON[entry.format]; const expired = isExpired(entry); return <label key={entry.id} className={`flex min-h-[72px] items-center gap-3 rounded-2xl border px-3 ${expired ? "border-amber-200 bg-amber-50/50" : "border-wit-ink/7"}`}><span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-wit-mist/40">{entry.thumbHref ? <img src={entry.thumbHref} alt="" className="h-full w-full object-cover" /> : <Icon className="h-5 w-5 text-wit-blue" />}</span><span className="min-w-0 flex-1"><b className="block truncate text-sm text-wit-ink">{entry.title}</b><span className="block text-xs text-wit-gray">{formatLabel(entry.format, t)} · 📅 {new Intl.DateTimeFormat(t("es-MX", "en-US"), { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${entry.date}T00:00:00Z`))}{expired ? ` · ${t("Fecha vencida", "Expired")}` : ""}</span></span><input type="checkbox" checked={selected.has(entry.id)} onChange={() => toggleSelected(entry.id)} /></label>; })}
+              <p className="text-sm text-wit-gray">
+                {t(
+                  "Elige las piezas que quieres dejar programadas.",
+                  "Choose the pieces you want to schedule.",
+                )}
+              </p>
+              {expiredEntries.length ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  {t(
+                    `${expiredEntries.length} publicaciones tienen la fecha vencida. Podrás asignarles una nueva fecha antes de programarlas.`,
+                    `${expiredEntries.length} posts have expired dates. You can assign a new date before scheduling.`,
+                  )}
+                </p>
+              ) : null}
+              <label className="flex items-center justify-between rounded-xl bg-wit-mist/30 px-3 py-3 text-sm font-bold text-wit-ink">
+                <span>
+                  {t(
+                    `Seleccionar todo (${publishable.length})`,
+                    `Select all (${publishable.length})`,
+                  )}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={selected.size === publishable.length}
+                  onChange={(event) =>
+                    setSelected(
+                      event.target.checked
+                        ? new Set(publishable.map((item) => item.id))
+                        : new Set(),
+                    )
+                  }
+                />
+              </label>
+              {publishable.map((entry) => {
+                const Icon = FORMAT_ICON[entry.format];
+                const expired = isExpired(entry);
+                return (
+                  <label
+                    key={entry.id}
+                    className={`flex min-h-[72px] items-center gap-3 rounded-2xl border px-3 ${expired ? "border-amber-200 bg-amber-50/50" : "border-wit-ink/7"}`}
+                  >
+                    <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-wit-mist/40">
+                      {entry.thumbHref ? (
+                        <img src={entry.thumbHref} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <Icon className="h-5 w-5 text-wit-blue" />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <b className="block truncate text-sm text-wit-ink">{entry.title}</b>
+                      <span className="block text-xs text-wit-gray">
+                        {formatLabel(entry.format, t)} · 📅{" "}
+                        {new Intl.DateTimeFormat(t("es-MX", "en-US"), {
+                          day: "numeric",
+                          month: "short",
+                          timeZone: "UTC",
+                        }).format(new Date(`${entry.date}T00:00:00Z`))}
+                        {expired ? ` · ${t("Fecha vencida", "Expired")}` : ""}
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(entry.id)}
+                      onChange={() => toggleSelected(entry.id)}
+                    />
+                  </label>
+                );
+              })}
             </div>
           ) : null}
           {step === 2 ? (
             <div className="space-y-4">
-              <p className="text-sm leading-relaxed text-wit-gray">{t("Mantendremos las fechas planeadas. Solo elige a qué hora quieres publicar.", "We'll keep planned dates. Just choose what time to publish.")}</p>
-              <div className="grid grid-cols-2 gap-2">{["10:00", "13:00", "18:00"].map((time) => <button key={time} type="button" onClick={() => setDefaultTime(time)} className={`min-h-11 rounded-xl border text-sm font-bold ${defaultTime === time ? "border-wit-pink bg-wit-pink/10 text-wit-pink" : "border-wit-ink/10 text-wit-gray"}`}>{new Date(`2000-01-01T${time}:00`).toLocaleTimeString(t("es-MX", "en-US"), { hour: "numeric", minute: "2-digit" })}</button>)}<label className="flex min-h-11 items-center justify-center rounded-xl border border-wit-ink/10 text-sm font-bold text-wit-gray">{t("Elegir otro", "Choose another")}<input type="time" value={defaultTime} onChange={(event) => setDefaultTime(event.target.value)} className="ml-2 w-20 bg-transparent" /></label></div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-wit-ink"><input type="checkbox" checked={useDefaultTime} onChange={(event) => setUseDefaultTime(event.target.checked)} />{t("Usar este horario para todas", "Use this time for all")}</label>
-              <div className="rounded-2xl border border-wit-ink/8 p-3"><p className="text-sm font-bold text-wit-ink">{t("Redes donde publicar", "Networks to publish")}</p><div className="mt-2 flex flex-wrap gap-2">{(["instagram", "facebook"] as SocialPlatform[]).filter((platform) => connections[platform]).map((platform) => <label key={platform} className="rounded-full border border-wit-ink/10 px-3 py-2 text-xs font-bold text-wit-ink"><input type="checkbox" checked={platforms.has(platform)} onChange={() => setPlatforms((current) => { const next = new Set(current); if (next.has(platform)) next.delete(platform); else next.add(platform); return next; })} /> {platform === "instagram" ? "Instagram" : "Facebook"} · {connections[platform]?.name}</label>)}</div></div>
-              {expiredEntries.filter((entry) => selected.has(entry.id)).length ? <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3"><p className="text-sm font-bold text-amber-800">{t(`Publicaciones con fecha vencida (${expiredEntries.filter((entry) => selected.has(entry.id)).length})`, `Expired posts (${expiredEntries.filter((entry) => selected.has(entry.id)).length})`)}</p>{expiredEntries.filter((entry) => selected.has(entry.id)).map((entry) => <div key={entry.id} className="mt-3 border-t border-amber-200 pt-3"><b className="block text-sm text-wit-ink">{entry.title}</b><span className="text-xs text-amber-800">{t(`Fecha anterior: ${entry.date}`, `Previous date: ${entry.date}`)}</span><div className="mt-2 grid grid-cols-2 gap-2"><input type="date" min={today} value={dateOverrides[entry.id] ?? ""} onChange={(event) => setDateOverrides((value) => ({ ...value, [entry.id]: event.target.value }))} className="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" /><input type="time" value={timeOverrides[entry.id] ?? defaultTime} onChange={(event) => setTimeOverrides((value) => ({ ...value, [entry.id]: event.target.value }))} className="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs" /></div></div>)}</div> : null}
-              {!useDefaultTime ? <div className="space-y-2">{publishable.filter((entry) => selected.has(entry.id) && !isExpired(entry)).map((entry) => <label key={entry.id} className="flex items-center justify-between rounded-xl bg-wit-mist/25 px-3 py-2 text-sm font-semibold text-wit-ink"><span className="truncate pr-3">{entry.title}</span><input type="time" value={timeOverrides[entry.id] ?? defaultTime} onChange={(event) => setTimeOverrides((value) => ({ ...value, [entry.id]: event.target.value }))} className="w-24 bg-transparent text-xs" /></label>)}</div> : null}
+              <p className="text-sm leading-relaxed text-wit-gray">
+                {t(
+                  "Mantendremos las fechas planeadas. Solo elige a qué hora quieres publicar.",
+                  "We'll keep planned dates. Just choose what time to publish.",
+                )}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {["10:00", "13:00", "18:00"].map((time) => (
+                  <button
+                    key={time}
+                    type="button"
+                    onClick={() => setDefaultTime(time)}
+                    className={`min-h-11 rounded-xl border text-sm font-bold ${defaultTime === time ? "border-wit-pink bg-wit-pink/10 text-wit-pink" : "border-wit-ink/10 text-wit-gray"}`}
+                  >
+                    {new Date(`2000-01-01T${time}:00`).toLocaleTimeString(t("es-MX", "en-US"), {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </button>
+                ))}
+                <label className="flex min-h-11 items-center justify-center rounded-xl border border-wit-ink/10 text-sm font-bold text-wit-gray">
+                  {t("Elegir otro", "Choose another")}
+                  <input
+                    type="time"
+                    value={defaultTime}
+                    onChange={(event) => setDefaultTime(event.target.value)}
+                    className="ml-2 w-20 bg-transparent"
+                  />
+                </label>
+              </div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-wit-ink">
+                <input
+                  type="checkbox"
+                  checked={useDefaultTime}
+                  onChange={(event) => setUseDefaultTime(event.target.checked)}
+                />
+                {t("Usar este horario para todas", "Use this time for all")}
+              </label>
+              <div className="rounded-2xl border border-wit-ink/8 p-3">
+                <p className="text-sm font-bold text-wit-ink">
+                  {t("Redes donde publicar", "Networks to publish")}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(["instagram", "facebook"] as SocialPlatform[])
+                    .filter((platform) => connections[platform])
+                    .map((platform) => (
+                      <label
+                        key={platform}
+                        className="rounded-full border border-wit-ink/10 px-3 py-2 text-xs font-bold text-wit-ink"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={platforms.has(platform)}
+                          onChange={() =>
+                            setPlatforms((current) => {
+                              const next = new Set(current);
+                              if (next.has(platform)) next.delete(platform);
+                              else next.add(platform);
+                              return next;
+                            })
+                          }
+                        />{" "}
+                        {platform === "instagram" ? "Instagram" : "Facebook"} ·{" "}
+                        {connections[platform]?.name}
+                      </label>
+                    ))}
+                </div>
+              </div>
+              {expiredEntries.filter((entry) => selected.has(entry.id)).length ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3">
+                  <p className="text-sm font-bold text-amber-800">
+                    {t(
+                      `Publicaciones con fecha vencida (${expiredEntries.filter((entry) => selected.has(entry.id)).length})`,
+                      `Expired posts (${expiredEntries.filter((entry) => selected.has(entry.id)).length})`,
+                    )}
+                  </p>
+                  {expiredEntries
+                    .filter((entry) => selected.has(entry.id))
+                    .map((entry) => (
+                      <div key={entry.id} className="mt-3 border-t border-amber-200 pt-3">
+                        <b className="block text-sm text-wit-ink">{entry.title}</b>
+                        <span className="text-xs text-amber-800">
+                          {t(`Fecha anterior: ${entry.date}`, `Previous date: ${entry.date}`)}
+                        </span>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <input
+                            type="date"
+                            min={today}
+                            value={dateOverrides[entry.id] ?? ""}
+                            onChange={(event) =>
+                              setDateOverrides((value) => ({
+                                ...value,
+                                [entry.id]: event.target.value,
+                              }))
+                            }
+                            className="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs"
+                          />
+                          <input
+                            type="time"
+                            value={timeOverrides[entry.id] ?? defaultTime}
+                            onChange={(event) =>
+                              setTimeOverrides((value) => ({
+                                ...value,
+                                [entry.id]: event.target.value,
+                              }))
+                            }
+                            className="min-h-10 rounded-lg border border-amber-200 bg-white px-2 text-xs"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : null}
+              {!useDefaultTime ? (
+                <div className="space-y-2">
+                  {publishable
+                    .filter((entry) => selected.has(entry.id) && !isExpired(entry))
+                    .map((entry) => (
+                      <label
+                        key={entry.id}
+                        className="flex items-center justify-between rounded-xl bg-wit-mist/25 px-3 py-2 text-sm font-semibold text-wit-ink"
+                      >
+                        <span className="truncate pr-3">{entry.title}</span>
+                        <input
+                          type="time"
+                          value={timeOverrides[entry.id] ?? defaultTime}
+                          onChange={(event) =>
+                            setTimeOverrides((value) => ({
+                              ...value,
+                              [entry.id]: event.target.value,
+                            }))
+                          }
+                          className="w-24 bg-transparent text-xs"
+                        />
+                      </label>
+                    ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
           <div className="hidden">
-          {step === 0 ? <><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-wit-pink/10 text-wit-pink"><CalendarClock className="h-8 w-8" /></div><p className="mt-4 text-center text-sm leading-relaxed text-wit-gray">{t("Organiza todas tus publicaciones del mes en minutos y nosotros nos encargamos del resto.", "Organize all of your month's posts in minutes and we'll handle the rest.")}</p><div className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-wit-mist/35 p-4 text-center"><b className="block text-xl text-wit-ink">{scheduledCount}</b><span className="text-xs text-wit-gray">{t("Ya programadas", "Already scheduled")}</span></div><div className="rounded-2xl bg-wit-pink/8 p-4 text-center"><b className="block text-xl text-wit-ink">{publishable.length}</b><span className="text-xs text-wit-gray">{t("Pendientes", "Pending")}</span></div></div></> : null}
-          {step === 1 ? <div className="space-y-2"><label className="flex items-center justify-between rounded-xl bg-wit-mist/30 px-3 py-3 text-sm font-bold text-wit-ink"><span>{t(`Seleccionar todo (${publishable.length})`, `Select all (${publishable.length})`)}</span><input type="checkbox" checked={selected.size === publishable.length} onChange={(event) => setSelected(event.target.checked ? new Set(publishable.map((item) => item.id)) : new Set())} /></label>{publishable.map((entry) => { const Icon = FORMAT_ICON[entry.format]; return <label key={entry.id} className="flex min-h-16 items-center gap-3 rounded-2xl border border-wit-ink/7 px-3"><span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-wit-mist/40">{entry.thumbHref ? <img src={entry.thumbHref} alt="" className="h-full w-full object-cover" /> : <Icon className="h-5 w-5 text-wit-blue" />}</span><span className="min-w-0 flex-1"><b className="block truncate text-sm text-wit-ink">{entry.title}</b><span className="text-xs text-wit-gray">{formatLabel(entry.format, t)}</span></span><input type="checkbox" checked={selected.has(entry.id)} onChange={() => toggleSelected(entry.id)} /></label>; })}</div> : null}
-          {step === 2 ? <div><p className="text-sm font-bold text-wit-ink">{t("Días de publicación", "Publishing days")}</p><div className="mt-3 grid grid-cols-7 gap-1">{[[1,"Lun"],[2,"Mar"],[3,"Mié"],[4,"Jue"],[5,"Vie"],[6,"Sáb"],[0,"Dom"]].map(([value,label]) => <button key={String(value)} type="button" onClick={() => setWeekdays((current) => current.includes(Number(value)) ? current.filter((day) => day !== Number(value)) : [...current, Number(value)])} className={`min-h-11 rounded-xl text-xs font-bold ${weekdays.includes(Number(value)) ? "wit-brand-gradient text-white" : "bg-wit-mist/40 text-wit-gray"}`}>{label}</button>)}</div><p className="mt-6 text-sm font-bold text-wit-ink">{t("Horarios de publicación", "Publishing times")}</p><div className="mt-3 flex flex-wrap gap-2">{times.map((time, index) => <label key={`${time}-${index}`} className="rounded-xl border border-wit-blue/20 bg-wit-blue/5 px-3 py-2 text-sm font-bold text-wit-blue"><input type="time" value={time} onChange={(event) => setTimes((current) => current.map((item, i) => i === index ? event.target.value : item))} className="bg-transparent" /></label>)}<button type="button" onClick={() => setTimes((current) => [...current, "14:00"])} className="rounded-xl border border-dashed border-wit-ink/20 px-3 py-2 text-sm font-bold text-wit-gray">+ {t("Agregar horario", "Add time")}</button></div><p className="mt-6 text-sm font-bold text-wit-ink">{t("Redes sociales", "Social networks")}</p><div className="mt-2 flex flex-wrap gap-2">{(["instagram", "facebook"] as SocialPlatform[]).map((platform) => <label key={platform} className={`rounded-full border px-3 py-2 text-xs font-bold ${connections[platform] ? "border-wit-ink/10 text-wit-ink" : "opacity-40"}`}><input type="checkbox" disabled={!connections[platform]} checked={platforms.has(platform)} onChange={() => setPlatforms((current) => { const next = new Set(current); if (next.has(platform)) next.delete(platform); else next.add(platform); return next; })} /> {platform === "instagram" ? "Instagram" : "Facebook"} · {connections[platform]?.name ?? t("Sin conectar", "Not connected")}</label>)}</div></div> : null}
+            {step === 0 ? (
+              <>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-wit-pink/10 text-wit-pink">
+                  <CalendarClock className="h-8 w-8" />
+                </div>
+                <p className="mt-4 text-center text-sm leading-relaxed text-wit-gray">
+                  {t(
+                    "Organiza todas tus publicaciones del mes en minutos y nosotros nos encargamos del resto.",
+                    "Organize all of your month's posts in minutes and we'll handle the rest.",
+                  )}
+                </p>
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-wit-mist/35 p-4 text-center">
+                    <b className="block text-xl text-wit-ink">{scheduledCount}</b>
+                    <span className="text-xs text-wit-gray">
+                      {t("Ya programadas", "Already scheduled")}
+                    </span>
+                  </div>
+                  <div className="rounded-2xl bg-wit-pink/8 p-4 text-center">
+                    <b className="block text-xl text-wit-ink">{publishable.length}</b>
+                    <span className="text-xs text-wit-gray">{t("Pendientes", "Pending")}</span>
+                  </div>
+                </div>
+              </>
+            ) : null}
+            {step === 1 ? (
+              <div className="space-y-2">
+                <label className="flex items-center justify-between rounded-xl bg-wit-mist/30 px-3 py-3 text-sm font-bold text-wit-ink">
+                  <span>
+                    {t(
+                      `Seleccionar todo (${publishable.length})`,
+                      `Select all (${publishable.length})`,
+                    )}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={selected.size === publishable.length}
+                    onChange={(event) =>
+                      setSelected(
+                        event.target.checked
+                          ? new Set(publishable.map((item) => item.id))
+                          : new Set(),
+                      )
+                    }
+                  />
+                </label>
+                {publishable.map((entry) => {
+                  const Icon = FORMAT_ICON[entry.format];
+                  return (
+                    <label
+                      key={entry.id}
+                      className="flex min-h-16 items-center gap-3 rounded-2xl border border-wit-ink/7 px-3"
+                    >
+                      <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-wit-mist/40">
+                        {entry.thumbHref ? (
+                          <img
+                            src={entry.thumbHref}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <Icon className="h-5 w-5 text-wit-blue" />
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <b className="block truncate text-sm text-wit-ink">{entry.title}</b>
+                        <span className="text-xs text-wit-gray">
+                          {formatLabel(entry.format, t)}
+                        </span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(entry.id)}
+                        onChange={() => toggleSelected(entry.id)}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            ) : null}
+            {step === 2 ? (
+              <div>
+                <p className="text-sm font-bold text-wit-ink">
+                  {t("Días de publicación", "Publishing days")}
+                </p>
+                <div className="mt-3 grid grid-cols-7 gap-1">
+                  {[
+                    [1, "Lun"],
+                    [2, "Mar"],
+                    [3, "Mié"],
+                    [4, "Jue"],
+                    [5, "Vie"],
+                    [6, "Sáb"],
+                    [0, "Dom"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={String(value)}
+                      type="button"
+                      onClick={() =>
+                        setWeekdays((current) =>
+                          current.includes(Number(value))
+                            ? current.filter((day) => day !== Number(value))
+                            : [...current, Number(value)],
+                        )
+                      }
+                      className={`min-h-11 rounded-xl text-xs font-bold ${weekdays.includes(Number(value)) ? "wit-brand-gradient text-white" : "bg-wit-mist/40 text-wit-gray"}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-6 text-sm font-bold text-wit-ink">
+                  {t("Horarios de publicación", "Publishing times")}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {times.map((time, index) => (
+                    <label
+                      key={`${time}-${index}`}
+                      className="rounded-xl border border-wit-blue/20 bg-wit-blue/5 px-3 py-2 text-sm font-bold text-wit-blue"
+                    >
+                      <input
+                        type="time"
+                        value={time}
+                        onChange={(event) =>
+                          setTimes((current) =>
+                            current.map((item, i) => (i === index ? event.target.value : item)),
+                          )
+                        }
+                        className="bg-transparent"
+                      />
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setTimes((current) => [...current, "14:00"])}
+                    className="rounded-xl border border-dashed border-wit-ink/20 px-3 py-2 text-sm font-bold text-wit-gray"
+                  >
+                    + {t("Agregar horario", "Add time")}
+                  </button>
+                </div>
+                <p className="mt-6 text-sm font-bold text-wit-ink">
+                  {t("Redes sociales", "Social networks")}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(["instagram", "facebook"] as SocialPlatform[]).map((platform) => (
+                    <label
+                      key={platform}
+                      className={`rounded-full border px-3 py-2 text-xs font-bold ${connections[platform] ? "border-wit-ink/10 text-wit-ink" : "opacity-40"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        disabled={!connections[platform]}
+                        checked={platforms.has(platform)}
+                        onChange={() =>
+                          setPlatforms((current) => {
+                            const next = new Set(current);
+                            if (next.has(platform)) next.delete(platform);
+                            else next.add(platform);
+                            return next;
+                          })
+                        }
+                      />{" "}
+                      {platform === "instagram" ? "Instagram" : "Facebook"} ·{" "}
+                      {connections[platform]?.name ?? t("Sin conectar", "Not connected")}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
-          {step === 3 ? <div className="space-y-2"><p className="text-sm font-bold text-wit-ink">{t("Revisar programación", "Review schedule")}</p>{plans.slice(0, 40).map((plan) => <div key={plan.entry.id} className="flex items-center gap-3 rounded-xl bg-wit-mist/25 p-3"><span className="w-24 shrink-0 text-xs font-bold text-wit-blue">{plan.at.toLocaleDateString(t("es-MX", "en-US"), { weekday: "short", day: "numeric", month: "short" })}<br />{plan.at.toLocaleTimeString(t("es-MX", "en-US"), { hour: "2-digit", minute: "2-digit" })}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-wit-ink">{plan.entry.title}</span><span className="text-xs text-wit-gray">{plan.platforms.map((platform) => platform === "instagram" ? "Instagram" : "Facebook").join(" · ")}{plan.reprogrammed ? ` · ${t("Fecha actualizada", "Date updated")}` : ""}</span></span></div>)}</div> : null}
-          {step === 4 && result ? <div className="text-center"><p className="mt-8 text-sm text-wit-gray">{result.failed.length ? t(`${result.ok} piezas programadas; ${result.failed.length} necesitan atención.`, `${result.ok} pieces scheduled; ${result.failed.length} need attention.`) : t(`Has programado ${result.ok} piezas para ${monthLabel}.`, `You scheduled ${result.ok} pieces for ${monthLabel}.`)}</p><div className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-emerald-50 p-4"><b className="block text-xl text-emerald-700">{result.ok}</b><span className="text-xs text-emerald-700">{t("Programadas", "Scheduled")}</span></div><div className="rounded-2xl bg-wit-mist/35 p-4"><b className="block text-xl text-wit-ink">{plans.length ? `${plans[0]?.at.getDate()}–${plans.at(-1)?.at.getDate()}` : "—"}</b><span className="text-xs text-wit-gray">{t("Fechas", "Dates")}</span></div></div></div> : null}
+          {step === 3 ? (
+            <div className="space-y-2">
+              <p className="text-sm font-bold text-wit-ink">
+                {t("Revisar programación", "Review schedule")}
+              </p>
+              {plans.slice(0, 40).map((plan) => (
+                <div
+                  key={plan.entry.id}
+                  className="flex items-center gap-3 rounded-xl bg-wit-mist/25 p-3"
+                >
+                  <span className="w-24 shrink-0 text-xs font-bold text-wit-blue">
+                    {plan.at.toLocaleDateString(t("es-MX", "en-US"), {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })}
+                    <br />
+                    {plan.at.toLocaleTimeString(t("es-MX", "en-US"), {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-wit-ink">
+                      {plan.entry.title}
+                    </span>
+                    <span className="text-xs text-wit-gray">
+                      {plan.platforms
+                        .map((platform) => (platform === "instagram" ? "Instagram" : "Facebook"))
+                        .join(" · ")}
+                      {plan.reprogrammed ? ` · ${t("Fecha actualizada", "Date updated")}` : ""}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {step === 4 && result ? (
+            <div className="text-center">
+              <p className="mt-8 text-sm text-wit-gray">
+                {result.failed.length
+                  ? t(
+                      `${result.ok} piezas programadas; ${result.failed.length} necesitan atención.`,
+                      `${result.ok} pieces scheduled; ${result.failed.length} need attention.`,
+                    )
+                  : t(
+                      `Has programado ${result.ok} piezas para ${monthLabel}.`,
+                      `You scheduled ${result.ok} pieces for ${monthLabel}.`,
+                    )}
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-emerald-50 p-4">
+                  <b className="block text-xl text-emerald-700">{result.ok}</b>
+                  <span className="text-xs text-emerald-700">{t("Programadas", "Scheduled")}</span>
+                </div>
+                <div className="rounded-2xl bg-wit-mist/35 p-4">
+                  <b className="block text-xl text-wit-ink">
+                    {plans.length ? `${plans[0]?.at.getDate()}–${plans.at(-1)?.at.getDate()}` : "—"}
+                  </b>
+                  <span className="text-xs text-wit-gray">{t("Fechas", "Dates")}</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
           {error ? <p className="mt-4 text-sm font-semibold text-red-600">{error}</p> : null}
         </div>
-        <footer className="pt-2">{step === 0 ? <button type="button" onClick={() => setStep(1)} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Revisar y programar", "Review and schedule")}</button> : step === 1 ? <button type="button" onClick={() => setStep(2)} disabled={!selected.size} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white disabled:opacity-50">{t("Continuar", "Continue")}</button> : step === 2 ? <button type="button" onClick={continueToPreview} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Revisar programación", "Review schedule")}</button> : step === 3 ? <button type="button" onClick={confirm} disabled={saving} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white disabled:opacity-50">{saving ? t("Programando contenido...", "Scheduling content...") : t("Confirmar programación", "Confirm scheduling")}</button> : <button type="button" onClick={onClose} className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white">{t("Ver calendario", "View calendar")}</button>}</footer>
+        <footer className="pt-2">
+          {step === 0 ? (
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white"
+            >
+              {t("Revisar y programar", "Review and schedule")}
+            </button>
+          ) : step === 1 ? (
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              disabled={!selected.size}
+              className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white disabled:opacity-50"
+            >
+              {t("Continuar", "Continue")}
+            </button>
+          ) : step === 2 ? (
+            <button
+              type="button"
+              onClick={continueToPreview}
+              className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white"
+            >
+              {t("Revisar programación", "Review schedule")}
+            </button>
+          ) : step === 3 ? (
+            <button
+              type="button"
+              onClick={confirm}
+              disabled={saving}
+              className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white disabled:opacity-50"
+            >
+              {saving
+                ? t("Programando contenido...", "Scheduling content...")
+                : t("Confirmar programación", "Confirm scheduling")}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="wit-brand-gradient min-h-[52px] w-full rounded-full text-sm font-extrabold text-white"
+            >
+              {t("Ver calendario", "View calendar")}
+            </button>
+          )}
+        </footer>
       </section>
-    </div>, document.body);
+    </div>,
+    document.body,
+  );
 }
 
 export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
@@ -2083,11 +3147,26 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entries.map((e) => e.id).join(",")]);
 
+  useEffect(() => {
+    if (!entries.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const campaignEntryId = params.get("campaign_entry");
+    if (
+      params.get("campaign") === "1" &&
+      campaignEntryId &&
+      entries.some((entry) => entry.id === campaignEntryId)
+    ) {
+      setSelectedId(campaignEntryId);
+    }
+  }, [entries]);
+
   const selected = entries.find((e) => e.id === selectedId) ?? null;
   const requestedCount = entries.filter((e) => e.status !== "por_planear").length;
   const pendingCount = entries.length - requestedCount;
   const publishableEntries = entries.filter((entry) => entry.status === "lista");
-  const planningToday = dateKeyInTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
+  const planningToday = dateKeyInTimezone(
+    Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+  );
   const hasFutureSchedule = (entry: CalendarEntry) =>
     entry.publicationStatus === "scheduled" &&
     Boolean(entry.scheduledForUtc) &&
@@ -2096,9 +3175,14 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
     hasFutureSchedule(entry),
   ).length;
   const monthlyExpiredCount = publishableEntries.filter(
-    (entry) => !hasFutureSchedule(entry) && entry.publicationStatus !== "published" && entry.publicationStatus !== "partial" && entry.date < planningToday,
+    (entry) =>
+      !hasFutureSchedule(entry) &&
+      entry.publicationStatus !== "published" &&
+      entry.publicationStatus !== "partial" &&
+      entry.date < planningToday,
   ).length;
-  const monthlyPendingCount = publishableEntries.length - monthlyScheduledCount - monthlyExpiredCount;
+  const monthlyPendingCount =
+    publishableEntries.length - monthlyScheduledCount - monthlyExpiredCount;
   const monthlyProgressPct = publishableEntries.length
     ? Math.round((monthlyScheduledCount / publishableEntries.length) * 100)
     : 0;
@@ -2123,49 +3207,51 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
     <div>
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink sm:text-3xl">
-          {t("Planificación", "Planning")}
-        </h1>
-        <button
-          type="button"
-          onClick={() => {
-            setOpenBrandMindFromHeader(true);
-            setWizardOpen(true);
-          }}
-          aria-label={t("Mente de marca", "Brand mind")}
-          title={t("Mente de marca", "Brand mind")}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-blue/[0.06] text-wit-blue transition-colors hover:bg-wit-blue/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 md:hidden"
-        >
-          <Sparkles className="h-[18px] w-[18px]" strokeWidth={2.2} />
-        </button>
+          <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink sm:text-3xl">
+            {t("Planificación", "Planning")}
+          </h1>
+          <button
+            type="button"
+            onClick={() => {
+              setOpenBrandMindFromHeader(true);
+              setWizardOpen(true);
+            }}
+            aria-label={t("Mente de marca", "Brand mind")}
+            title={t("Mente de marca", "Brand mind")}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-blue/[0.06] text-wit-blue transition-colors hover:bg-wit-blue/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 md:hidden"
+          >
+            <Sparkles className="h-[18px] w-[18px]" strokeWidth={2.2} />
+          </button>
         </div>
         <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
-        <button
-          type="button"
-          onClick={() => {
-            setOpenBrandMindFromHeader(true);
-            setWizardOpen(true);
-          }}
-          className="hidden min-h-11 items-center justify-center gap-2 rounded-full border border-wit-blue/15 bg-wit-blue/[0.05] px-4 py-2.5 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 md:flex"
-        >
-          <Sparkles className="h-4 w-4" strokeWidth={2.2} />
-          {t("Mente de marca", "Brand mind")}
-        </button>
-        <button
-          type="button"
-          disabled={replanning}
-          onClick={() =>
-            entries.length > 0 ? setConfirmingReplan(true) : setWizardOpen(true)
-          }
-          className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] transition-all hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 md:min-h-11 md:w-auto"
-        >
-          {entries.length > 0 ? <RotateCcw className="h-[17px] w-[17px]" strokeWidth={2.5} /> : <span className="text-lg leading-none">+</span>}
-          {replanning
-            ? t("Cargando...", "Loading...")
-            : entries.length > 0
-              ? t("Replanear mes", "Replan month")
-              : t("Planificar contenido", "Plan content")}
-        </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpenBrandMindFromHeader(true);
+              setWizardOpen(true);
+            }}
+            className="hidden min-h-11 items-center justify-center gap-2 rounded-full border border-wit-blue/15 bg-wit-blue/[0.05] px-4 py-2.5 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 md:flex"
+          >
+            <Sparkles className="h-4 w-4" strokeWidth={2.2} />
+            {t("Mente de marca", "Brand mind")}
+          </button>
+          <button
+            type="button"
+            disabled={replanning}
+            onClick={() => (entries.length > 0 ? setConfirmingReplan(true) : setWizardOpen(true))}
+            className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] transition-all hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 md:min-h-11 md:w-auto"
+          >
+            {entries.length > 0 ? (
+              <RotateCcw className="h-[17px] w-[17px]" strokeWidth={2.5} />
+            ) : (
+              <span className="text-lg leading-none">+</span>
+            )}
+            {replanning
+              ? t("Cargando...", "Loading...")
+              : entries.length > 0
+                ? t("Replanear mes", "Replan month")
+                : t("Planificar contenido", "Plan content")}
+          </button>
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -2228,7 +3314,9 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
       {confirmingReplan ? (
         <div className="wit-glass mt-4 flex flex-col gap-3 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-extrabold text-wit-ink">{t(`Replanear ${monthLabel}`, `Replan ${monthLabel}`)}</p>
+            <p className="text-sm font-extrabold text-wit-ink">
+              {t(`Replanear ${monthLabel}`, `Replan ${monthLabel}`)}
+            </p>
             <p className="mt-1 text-sm text-wit-gray">
               {pendingCount > 0
                 ? t(
@@ -2352,7 +3440,11 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                   >
                     {hasThumb ? (
                       <>
-                        <img src={entry!.thumbHref!} alt={entry!.title} className="absolute inset-0 h-full w-full object-cover" />
+                        <img
+                          src={entry!.thumbHref!}
+                          alt={entry!.title}
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
                         <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-black/10" />
                       </>
                     ) : null}
@@ -2375,12 +3467,18 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                           <Icon className="h-2.5 w-2.5" strokeWidth={2.4} />
                         </span>
                       ) : (
-                        <span className={`relative z-10 mt-auto flex flex-col items-start gap-0.5 overflow-hidden rounded-md px-1 py-0.5 text-[8px] font-semibold sm:rounded-lg sm:px-1.5 sm:py-1 ${statusMeta(entry.status, t).badgeClass}`}>
+                        <span
+                          className={`relative z-10 mt-auto flex flex-col items-start gap-0.5 overflow-hidden rounded-md px-1 py-0.5 text-[8px] font-semibold sm:rounded-lg sm:px-1.5 sm:py-1 ${statusMeta(entry.status, t).badgeClass}`}
+                        >
                           <span className="flex items-center gap-1">
-                          <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={2.4} />
-                            <span className="hidden text-[8px] font-bold uppercase tracking-wide sm:inline">{formatLabel(entry.format, t)}</span>
+                            <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={2.4} />
+                            <span className="hidden text-[8px] font-bold uppercase tracking-wide sm:inline">
+                              {formatLabel(entry.format, t)}
+                            </span>
                           </span>
-                          <span className="hidden w-full truncate text-[9px] font-semibold leading-tight sm:inline">{entry.title}</span>
+                          <span className="hidden w-full truncate text-[9px] font-semibold leading-tight sm:inline">
+                            {entry.title}
+                          </span>
                         </span>
                       )
                     ) : isToday ? (
@@ -2424,7 +3522,10 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                   </h2>
                   <p className="mt-2 text-[15px] font-medium leading-snug text-wit-gray sm:text-base">
                     {monthlyPendingCount === 0 && monthlyExpiredCount === 0
-                      ? t(`${monthlyScheduledCount} piezas listas`, `${monthlyScheduledCount} pieces ready`)
+                      ? t(
+                          `${monthlyScheduledCount} piezas listas`,
+                          `${monthlyScheduledCount} pieces ready`,
+                        )
                       : monthlyScheduledCount
                         ? t(
                             `${monthlyScheduledCount} de ${publishableEntries.length} piezas programadas`,
@@ -2502,7 +3603,10 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
                 targetMonth={month}
                 monthLabel={monthLabel}
                 initialBrandMindOpen={openBrandMindFromHeader}
-                onClose={() => { setWizardOpen(false); setOpenBrandMindFromHeader(false); }}
+                onClose={() => {
+                  setWizardOpen(false);
+                  setOpenBrandMindFromHeader(false);
+                }}
                 onCreated={() => {
                   void qc.invalidateQueries({ queryKey: ["calendar-entries"] });
                   setWizardOpen(false);
