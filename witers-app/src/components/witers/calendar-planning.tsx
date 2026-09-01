@@ -36,6 +36,7 @@ import { ChatBubble } from "./chat-intake";
 import { ASPECT_OPTIONS, AspectRatioPicker } from "./lab-pickers";
 import { MicButton } from "./mic-button";
 import { SlideGallery } from "./slide-gallery";
+import { extractBrandDocumentText } from "../../lib/brand-document-text";
 import { useLanguage } from "../../lib/i18n";
 
 // video no soporta 4:3/3:4 (ver el enum real en video-requests.ts) — se le
@@ -238,7 +239,6 @@ function CalendarWizard({
   async function uploadBrandAsset(file: File | null) {
     if (!file) return;
     setAssetError(null);
-    const allowedText = ["text/plain", "text/markdown", "application/json"].includes(file.type) || /\.(md|markdown|txt|text|json)$/i.test(file.name);
     if (file.type.startsWith("video/")) {
       setAssetError(t("Por ahora agrega videos desde Mi marca; aquí puedes usar imágenes, PDF o un archivo de texto de estrategia.", "For now add videos from My brand; here you can use images, PDFs, or a strategy text file."));
       return;
@@ -249,13 +249,15 @@ function CalendarWizard({
       const upload = await fetch("/api/upload-reference", { method: "POST", body: fd });
       const uploaded = (await upload.json()) as { ok: boolean; key?: string };
       if (!uploaded.ok || !uploaded.key) throw new Error("upload");
-      const textContent = allowedText ? (await file.text()).slice(0, 12000) : null;
+      const extraction = await extractBrandDocumentText(file);
+      const textContent = extraction.text;
       const save = await fetch("/api/brand-profile", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "add_asset", key: uploaded.key, originalName: file.name, kind: allowedText ? "strategy" : file.type === "application/pdf" ? "manual" : "reference", mimeType: file.type || "application/octet-stream", sizeBytes: file.size, textContent }),
+        body: JSON.stringify({ action: "add_asset", key: uploaded.key, originalName: file.name, kind: textContent ? "strategy" : file.type === "application/pdf" ? "manual" : "reference", mimeType: file.type || "application/octet-stream", sizeBytes: file.size, textContent }),
       });
       if (!save.ok) throw new Error("save");
       await loadBrandAssets();
+      if (!extraction.readable) setAssetError(t("Archivo guardado como referencia visual. Para que Wit lea el contenido, usa .txt, .md, .json o .docx.", "File saved as a visual reference. For Wit to read its content, use .txt, .md, .json, or .docx."));
     } catch {
       setAssetError(t("No pudimos guardar el archivo. Intenta de nuevo.", "We couldn't save the file. Try again."));
     }
@@ -289,10 +291,20 @@ function CalendarWizard({
         | { ok: false; error: string };
       if (!data.ok) {
         setChatError(
-          t(
-            "Wit no está disponible en este momento. Intenta de nuevo en un momento.",
-            "Wit isn't available right now. Try again in a moment.",
-          ),
+          data.error === "plan_incompleto"
+            ? t(
+                "Wit no alcanzó a completar todas las piezas pendientes. Tu calendario no se modificó; intenta de nuevo para que continúe el plan.",
+                "Wit didn't finish all pending pieces. Your calendar was not changed; try again so it can continue the plan.",
+              )
+            : data.error === "falta_openai_api_key"
+              ? t(
+                  "Wit no está configurado todavía. Revisa la configuración de IA e intenta de nuevo.",
+                  "Wit isn't configured yet. Check the AI configuration and try again.",
+                )
+              : t(
+                  "Wit no está disponible en este momento. Intenta de nuevo en un momento.",
+                  "Wit isn't available right now. Try again in a moment.",
+                ),
         );
         return;
       }

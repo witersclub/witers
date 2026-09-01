@@ -94,6 +94,7 @@ import {
   type CarouselRequestRow,
 } from "../components/witers/carousel-requests";
 import { downloadFileByKey } from "../lib/download-file";
+import { extractBrandDocumentText } from "../lib/brand-document-text";
 import { IMAGE_PACKS } from "../lib/image-packs";
 import { useLanguage, LanguageToggle } from "../lib/i18n";
 import { getPlan } from "../lib/membership-plans";
@@ -4059,12 +4060,13 @@ function BrandMindCard() {
       }
       const key = await uploadReferenceFile(file);
       if (!key) throw new Error("upload");
-      const textContent = (["text/plain", "text/markdown", "application/json"].includes(file.type) || /\.(md|markdown|txt|text|json)$/i.test(file.name))
-        ? (await file.text()).slice(0, 12000) : null;
+      const extraction = await extractBrandDocumentText(file);
+      const textContent = extraction.text;
       const res = await fetch("/api/brand-profile", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "add_asset", key, originalName: file.name, kind: textContent ? "strategy" : file.type === "application/pdf" ? "manual" : "reference", mimeType: file.type || "application/octet-stream", sizeBytes: file.size, textContent }) });
       if (!res.ok) throw new Error("save");
       await load();
       void qc.invalidateQueries({ queryKey: ["brand-profile"] });
+      if (!extraction.readable) setError(t("Archivo guardado como referencia visual. Para que Wit lea el contenido, usa .txt, .md, .json o .docx.", "File saved as a visual reference. For Wit to read its content, use .txt, .md, .json, or .docx."));
     } catch {
       setError(t("No pudimos cargar este archivo.", "We couldn't upload this file."));
     }

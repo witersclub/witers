@@ -95,13 +95,19 @@ function buildSystemPrompt(brand: WitBrandContext): string {
     );
   }
   if (brand.brandAssets?.length) {
-    const textAssets = brand.brandAssets.filter((a) => a.textContent).map(
-      (a) => `Archivo ${a.kind} “${a.originalName}”: ${a.textContent}`,
-    );
+    // Keep the source material bounded and high-signal. A pile of complete
+    // manuals can otherwise crowd the active conversation out of context.
+    let remainingBrandText = 12_000;
+    const textAssets = brand.brandAssets.filter((a) => a.textContent).flatMap((a) => {
+      if (!a.textContent || remainingBrandText <= 0) return [];
+      const excerpt = a.textContent.slice(0, remainingBrandText).trim();
+      remainingBrandText -= excerpt.length;
+      return excerpt ? [`Archivo ${a.kind} “${a.originalName}”:\n${excerpt}`] : [];
+    });
     const visualAssets = brand.brandAssets.filter((a) => !a.textContent).map(
       (a) => `${a.kind}: ${a.originalName}`,
     );
-    if (textAssets.length) brandLines.push(`Información aportada en Mente de marca:\n${textAssets.join("\n")}`);
+    if (textAssets.length) brandLines.push(`Información aportada en Mente de marca (fuente de verdad para esta planificación):\n${textAssets.join("\n\n")}`);
     if (visualAssets.length) brandLines.push(`Archivos de referencia disponibles: ${visualAssets.join(", ")}.`);
   }
 
@@ -210,13 +216,17 @@ function buildCarouselSystemPrompt(brand: WitBrandContext): string {
     );
   }
   if (brand.brandAssets?.length) {
-    const textAssets = brand.brandAssets.filter((a) => a.textContent).map(
-      (a) => `Archivo ${a.kind} “${a.originalName}”: ${a.textContent}`,
-    );
+    let remainingBrandText = 12_000;
+    const textAssets = brand.brandAssets.filter((a) => a.textContent).flatMap((a) => {
+      if (!a.textContent || remainingBrandText <= 0) return [];
+      const excerpt = a.textContent.slice(0, remainingBrandText).trim();
+      remainingBrandText -= excerpt.length;
+      return excerpt ? [`Archivo ${a.kind} “${a.originalName}”:\n${excerpt}`] : [];
+    });
     const visualAssets = brand.brandAssets.filter((a) => !a.textContent).map(
       (a) => `${a.kind}: ${a.originalName}`,
     );
-    if (textAssets.length) brandLines.push(`Información aportada en Mente de marca:\n${textAssets.join("\n")}`);
+    if (textAssets.length) brandLines.push(`Información aportada en Mente de marca (fuente de verdad para esta planificación):\n${textAssets.join("\n\n")}`);
     if (visualAssets.length) brandLines.push(`Archivos de referencia disponibles: ${visualAssets.join(", ")}.`);
   }
 
@@ -292,6 +302,7 @@ function buildCalendarSystemPrompt(
     monthEndDate: string;
     existingEntries?: { date: string; title: string }[];
     expectedEntries?: number;
+    exactDates?: string[];
   },
 ): string {
   const brandLines = [
@@ -343,11 +354,14 @@ function buildCalendarSystemPrompt(
     "Ya conoces estos datos de la marca del cliente, así que NUNCA los preguntes:\n" +
     brandLines.join("\n") +
     "\n\n" +
+    (brand.brandAssets?.some((asset) => asset.textContent)
+      ? "La Mente de marca ya está disponible en tu contexto. Úsala activamente para proponer pilares, tono, público y mensajes; si hablas de ella, di 'con base en tu Mente de marca' y menciona un dato concreto que esté en el material. NUNCA digas que no tienes acceso a los archivos ni que solo puedes usar información genérica. Los archivos sin texto extraíble son referencias visuales y no debes fingir que los leíste.\n\n"
+      : "No hay texto extraíble seleccionado en Mente de marca. Usa los datos del perfil y pide al cliente únicamente los pilares que falten, sin mencionar limitaciones técnicas.\n\n") +
     "Necesitas dos cosas del cliente antes de armar el plan: (1) con qué frecuencia quiere " +
     "publicar (ej. 'una vez por semana', 'tres veces por semana', 'todos los días hábiles') y " +
     "(2) de qué temas o pilares de contenido quiere hablar este mes (ej. promociones, detrás de " +
     "cámaras, testimonios, tips, lanzamientos). Pregúntalas de forma natural, una a la vez si " +
-    "hace falta — nunca las enumeres como formulario. Si el cliente ya te dio ambas cosas en su " +
+    "hace falta — nunca las enumeres como formulario. Si la Mente de marca ya define pilares, propón esos pilares de forma concreta y pide solo la confirmación o el foco del mes; no hagas una pregunta genérica que ignore el material. Si el cliente ya te dio ambas cosas en su " +
     "primer mensaje, no las vuelvas a preguntar.\n\n" +
     "Con la cadencia y los temas ya claros, arma el plan completo tú mismo con criterio " +
     "profesional: calcula las fechas reales del calendario según la cadencia acordada (por " +
@@ -399,6 +413,9 @@ function buildCalendarSystemPrompt(
     "los martes y jueves del mes en esa única llamada, no solo los primeros.\n\n" +
     (opts.expectedEntries
       ? `El cliente pidió exactamente ${opts.expectedEntries} piezas nuevas. Debes entregar exactamente ${opts.expectedEntries} entradas válidas; una respuesta con menos entradas es un plan incompleto y no sirve.\n\n`
+      : "") +
+    (opts.exactDates?.length
+      ? `En esta entrega, las ÚNICAS fechas permitidas son: ${opts.exactDates.join(", ")}. Debes crear una pieza para cada una de esas fechas y para ninguna otra.\n\n`
       : "") +
     "Si en algún momento ves en la conversación un mensaje tuyo que empieza con 'Plan propuesto " +
     "para el mes:' seguido de una lista de fechas, ya le habías propuesto un plan al cliente antes " +
@@ -929,6 +946,7 @@ export async function runWitCalendarChat(
     monthEndDate: string;
     existingEntries?: { date: string; title: string }[];
     expectedEntries?: number;
+    exactDates?: string[];
   },
 ): Promise<WitCalendarChatResult> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -1030,6 +1048,14 @@ export async function runWitCalendarChat(
       if (opts.expectedEntries && entries.length !== opts.expectedEntries) {
         console.info("[wit-chat] incomplete calendar plan", { expected: opts.expectedEntries, received: entries.length });
         return { ok: false, error: "plan_incompleto" };
+      }
+      if (opts.exactDates) {
+        const receivedDates = new Set(entries.map((entry) => entry.date));
+        const datesMatch = receivedDates.size === opts.exactDates.length && opts.exactDates.every((date) => receivedDates.has(date));
+        if (!datesMatch) {
+          console.info("[wit-chat] calendar batch used unexpected dates", { expected: opts.exactDates, received: [...receivedDates] });
+          return { ok: false, error: "plan_incompleto" };
+        }
       }
       return { ok: true, kind: "done", entries };
     } catch {

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getBrandProfile } from "../../../lib/brand-profile.server";
 import { getPlanningBrandAssets } from "../../../lib/brand-assets.server";
 import { getBrandMemory } from "../../../lib/brand-memory.server";
-import { runWitCalendarChat } from "../../../lib/wit-chat.server";
+import { runWitCalendarChat, type CalendarEntryDraft } from "../../../lib/wit-chat.server";
 import { db, getSessionUser, json } from "../../../lib/witers-auth.server";
 
 const schema = z.object({
@@ -57,6 +57,23 @@ function monthContext(target: { year: number; month: number }): {
   return { monthLabel, todayDate: lowerBound, monthEndDate: monthEndIso };
 }
 
+function datesInRange(start: string, end: string): string[] {
+  const dates: string[] = [];
+  const cursor = new Date(`${start}T00:00:00.000Z`);
+  const last = new Date(`${end}T00:00:00.000Z`);
+  while (cursor <= last) {
+    dates.push(iso(cursor));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return dates;
+}
+
+function batches<T>(items: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size));
+  return result;
+}
+
 // Same shape as /api/wit/chat and /api/wit/carousel-chat, but guides the
 // client toward planning the whole month's content calendar at once instead
 // of one piece — see runWitCalendarChat.
@@ -100,10 +117,12 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
         // the calendar: only the still-empty dates are required. Count dates
         // rather than rows so an exceptional day with more than one piece
         // does not make the remaining quota negative.
-        const occupiedDates = new Set(existingEntries.map((entry) => entry.scheduled_date)).size;
-        const remainingExpectedEntries = parsed.data.expectedEntries
-          ? Math.max(0, parsed.data.expectedEntries - occupiedDates)
-          : undefined;
+        const context = monthContext({ year, month });
+        const occupiedDates = new Set(existingEntries.map((entry) => entry.scheduled_date));
+        const remainingDates = parsed.data.expectedEntries
+          ? datesInRange(context.todayDate, context.monthEndDate).filter((date) => !occupiedDates.has(date))
+          : [];
+        const remainingExpectedEntries = parsed.data.expectedEntries ? remainingDates.length : undefined;
 
         if (parsed.data.expectedEntries && remainingExpectedEntries === 0) {
           return json({
@@ -113,32 +132,47 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
           });
         }
 
-        const result = await runWitCalendarChat(
-          parsed.data.messages,
-          {
-            companyName: profile.company_name,
-            brandColors: profile.brand_colors,
-            businessType: profile.business_type,
-            hasLogo: Boolean(profile.logo_key),
-            brandMemory: await getBrandMemory(user.id),
-            brandAssets: (await getPlanningBrandAssets(user.id, parsed.data.brandAssetIds)).map((asset) => ({
-              originalName: asset.original_name,
-              kind: asset.kind,
-              textContent: asset.text_content ? asset.text_content.slice(0, 6000) : null,
-            })),
-          },
-          {
-            ...monthContext({ year, month }),
-            existingEntries: existingEntries.map((r) => ({
-              date: r.scheduled_date,
-              title: r.title,
-            })),
-            // Do not require a new tool call if every date is already
-            // occupied. In the usual case (e.g. 3 of 30 dates planned), Wit
-            // is required to return precisely the remaining 27 pieces.
-            expectedEntries: remainingExpectedEntries || undefined,
-          },
-        );
+        const brand = {
+          companyName: profile.company_name,
+          brandColors: profile.brand_colors,
+          businessType: profile.business_type,
+          hasLogo: Boolean(profile.logo_key),
+          brandMemory: await getBrandMemory(user.id),
+          brandAssets: (await getPlanningBrandAssets(user.id, parsed.data.brandAssetIds)).map((asset) => ({
+            originalName: asset.original_name,
+            kind: asset.kind,
+            textContent: asset.text_content ? asset.text_content.slice(0, 6000) : null,
+          })),
+        };
+
+        // A complete monthly plan with full video scripts and carousel slides
+        // can exceed one model response. Generate small date-constrained
+        // batches and merge them before the client sees any plan, keeping the
+        // interaction atomic while ensuring every empty date is filled.
+        if (remainingExpectedEntries && remainingExpectedEntries > 10) {
+          const entries: CalendarEntryDraft[] = [];
+          let knownEntries = existingEntries.map((entry) => ({ date: entry.scheduled_date, title: entry.title }));
+          for (const dateBatch of batches(remainingDates, 10)) {
+            const batchResult = await runWitCalendarChat(parsed.data.messages, brand, {
+              ...context,
+              existingEntries: knownEntries,
+              expectedEntries: dateBatch.length,
+              exactDates: dateBatch,
+            });
+            if (!batchResult.ok) return json(batchResult, { status: 502 });
+            if (batchResult.kind === "message") return json(batchResult);
+            entries.push(...batchResult.entries);
+            knownEntries = [...knownEntries, ...batchResult.entries.map((entry) => ({ date: entry.date, title: entry.title }))];
+          }
+          return json({ ok: true, kind: "done" as const, entries });
+        }
+
+        const result = await runWitCalendarChat(parsed.data.messages, brand, {
+          ...context,
+          existingEntries: existingEntries.map((r) => ({ date: r.scheduled_date, title: r.title })),
+          expectedEntries: remainingExpectedEntries || undefined,
+          exactDates: remainingExpectedEntries ? remainingDates : undefined,
+        });
 
         if (!result.ok) return json(result, { status: 502 });
         return json(result);
