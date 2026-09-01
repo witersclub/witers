@@ -387,11 +387,13 @@ function buildCalendarSystemPrompt(
     "ese negocio, nunca un título genérico como 'tip 1' sin desarrollarlo), lámina 4 = cierre con " +
     "llamado a la acción. Cada brief de lámina debe ser autosuficiente para un diseñador que solo " +
     "vea esa lámina.\n" +
-    "- Video: el campo brief debe incluir un GUION real, no solo la idea del video — divídelo en " +
-    "escenas o tomas numeradas, y para cada una describe qué se ve y qué se dice (diálogo, " +
-    "narración en off, o texto en pantalla, según aplique), en el orden en que aparecen. Un video " +
-    "de 20-40 segundos normalmente son 3-5 escenas — sé así de concreto, nunca dejes el brief como " +
-    "'un video mostrando el proceso de trabajo' sin guion. El cliente no siempre tendrá metraje " +
+    "- Video: el campo brief debe incluir un GUION real, no solo la idea del video — usa siempre " +
+    "la estructura AIDA: Atención (gancho claro en los primeros 2-3 segundos), Interés (problema, " +
+    "dato o situación relevante), Deseo (beneficio, transformación o prueba concreta) y Acción " +
+    "(llamado a la acción). Divídelo en escenas o tomas numeradas y para cada una describe qué se " +
+    "ve y qué se dice (diálogo, narración en off o texto en pantalla), identificando la etapa AIDA " +
+    "cuando corresponda. Un video de 20-40 segundos normalmente son 3-5 escenas — sé así de concreto, " +
+    "nunca dejes el brief como 'un video mostrando el proceso de trabajo' sin guion. El cliente no siempre tendrá metraje " +
     "propio — el equipo puede resolver con stock o IA usando exactamente este guion, así que debe " +
     "quedar completo por su cuenta.\n\n" +
     "En los tres casos, quien reciba la pieza (un diseñador, o Wit en una conversación aparte) " +
@@ -568,7 +570,7 @@ const CALENDAR_TOOLS = [
                 brief: {
                   type: "string",
                   description:
-                    "Imagen: brief profesional y completo — mensaje principal y cualquier texto en pantalla redactado tal cual, nunca solo el tema. Video: un guion real dividido en escenas/tomas numeradas, con qué se ve y qué se dice en cada una. Carrusel: solo un resumen corto de una frase para la tarjeta del calendario — el contenido real de las 4 láminas va en el campo slides, no aquí.",
+                    "Imagen: brief profesional y completo — mensaje principal y cualquier texto en pantalla redactado tal cual, nunca solo el tema. Video: un guion real en estructura AIDA (Atención, Interés, Deseo, Acción), dividido en escenas/tomas numeradas, con qué se ve y qué se dice en cada una. Carrusel: solo un resumen corto de una frase para la tarjeta del calendario — el contenido real de las 4 láminas va en el campo slides, no aquí.",
                 },
                 slides: {
                   type: "array",
