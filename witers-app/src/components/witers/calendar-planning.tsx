@@ -24,6 +24,7 @@ import {
   Instagram,
   Loader2,
   Megaphone,
+  Music2,
   PenLine,
   RotateCcw,
   Send,
@@ -31,6 +32,7 @@ import {
   Upload,
   Video as VideoIcon,
   X,
+  Youtube,
 } from "lucide-react";
 
 import { WMark } from "./brand";
@@ -1885,10 +1887,40 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
     );
   }
 
+  // These two channels are deliberately visible before their OAuth flows
+  // exist. A disabled button would look broken; this answers the tap with a
+  // clear status while keeping the exact same compact connection area that
+  // will later host their real authorization actions.
+  function UpcomingPill({ icon: PillIcon, label }: { icon: typeof Instagram; label: string }) {
+    return (
+      <button
+        type="button"
+        onClick={() =>
+          setNotice(
+            t(
+              `${label} estará disponible próximamente. Estamos preparando su conexión segura.`,
+              `${label} will be available soon. We're preparing its secure connection.`,
+            ),
+          )
+        }
+        aria-label={t(`Información sobre ${label}`, `Information about ${label}`)}
+        className="flex h-11 items-center gap-2 rounded-full border border-dashed border-wit-ink/15 bg-wit-mist/25 px-3 text-xs font-bold text-wit-gray transition hover:border-wit-blue/35 hover:bg-wit-blue/[0.035] hover:text-wit-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue"
+      >
+        <PillIcon className="h-3.5 w-3.5" strokeWidth={2.2} />
+        {label}
+        <span className="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-wit-blue">
+          {t("Próximamente", "Soon")}
+        </span>
+      </button>
+    );
+  }
+
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       <Pill icon={Instagram} label="Instagram" platform="instagram" />
       <Pill icon={Facebook} label="Facebook" platform="facebook" />
+      <UpcomingPill icon={Music2} label="TikTok" />
+      <UpcomingPill icon={Youtube} label="YouTube" />
       {notice ? <p className="text-xs font-semibold text-wit-gray">{notice}</p> : null}
       {pendingId && pendingPages.length > 0 ? (
         <div className="mt-1 w-full rounded-2xl border border-wit-ink/10 bg-white p-3">
