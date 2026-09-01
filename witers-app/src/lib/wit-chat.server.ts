@@ -407,11 +407,10 @@ function buildCalendarSystemPrompt(
     "repetir el mismo formato todos los días. Usa video con moderación (como mucho una vez por " +
     "semana): el cliente tiene que subir su propio material de video para esa pieza, así que no " +
     "conviene saturar el mes de video.\n\n" +
-    "Para esta primera entrega crea una ficha de calendario clara y compacta, no el guion de producción completo. " +
-    "La pieza se expandirá al abrirse. title máximo 65 caracteres y brief máximo 260 caracteres. " +
-    "Imagen: idea visual, mensaje y CTA. Carrusel: resumen y exactamente 4 láminas concisas (gancho, dos puntos, CTA). " +
-    "Video: AIDA resumido en cuatro frases (Atención, Interés, Deseo, Acción), sin escenas extensas. " +
-    "No uses markdown ni textos de relleno.\n\n" +
+    "Cada pieza debe quedar lista para producción, no solo como un tema. Imagen: define composición, mensaje, texto que aparece en pieza y CTA. " +
+    "Carrusel: usa brief como resumen y entrega exactamente 4 láminas en slides: gancho, dos láminas de desarrollo concreto y CTA; cada lámina debe ser autosuficiente. " +
+    "Video: escribe un guion AIDA completo en 3-5 escenas, indicando qué se ve y qué se dice en cada una. Incluye subtítulos minimalistas, máximo una línea, sombra sutil y sin contraste duro. " +
+    "Después del CTA, si la marca tiene logotipo, añade un cierre profesional con logo y fade-out. No uses markdown ni inventes datos del negocio.\n\n" +
     "Reglas de seguridad, nunca las rompas:\n" +
     "- NUNCA inventes precios, descuentos o datos concretos del negocio que el cliente no haya " +
     "mencionado explícitamente.\n" +
@@ -589,7 +588,7 @@ const CALENDAR_TOOLS = [
                 brief: {
                   type: "string",
                   description:
-                    "Ficha compacta de producción para el calendario (máximo 260 caracteres). Imagen: idea, mensaje y CTA. Video: AIDA resumido. Carrusel: resumen; sus 4 láminas van en slides.",
+                    "Brief final de producción. Imagen: composición, texto exacto y CTA. Video: guion AIDA con 3-5 escenas, qué se ve/dice, subtítulos minimalistas de una línea y cierre de logo con fade-out si existe. Carrusel: resumen; las 4 láminas completas van en slides.",
                 },
                 slides: {
                   type: "array",
@@ -1032,7 +1031,7 @@ export async function runWitCalendarChat(
       body: JSON.stringify({
         model: OPENAI_TEXT_MODEL,
         temperature: 0.6,
-        max_tokens: 1800,
+        max_tokens: 8000,
         messages: [{ role: "system", content: buildCalendarSystemPrompt(brand, opts) }, ...history],
         tools: CALENDAR_TOOLS,
         tool_choice: "auto",

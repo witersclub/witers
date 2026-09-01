@@ -69,13 +69,6 @@ function datesInRange(start: string, end: string): string[] {
   return dates;
 }
 
-function batches<T>(items: T[], size: number): T[][] {
-  const result: T[][] = [];
-  for (let index = 0; index < items.length; index += size)
-    result.push(items.slice(index, index + size));
-  return result;
-}
-
 // Same shape as /api/wit/chat and /api/wit/carousel-chat, but guides the
 // client toward planning the whole month's content calendar at once instead
 // of one piece — see runWitCalendarChat.
@@ -158,37 +151,25 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
           ),
         };
 
-        // A monthly plan is generated in compact, date-constrained batches.
-        // Run them concurrently: doing five OpenAI calls one after another
-        // made a successful request exceed the Worker wall-time limit.
+        // Wit returns the complete remaining plan in a single tool call.
+        // Splitting it into five-day batches was the bug: a valid 21-piece
+        // answer was rejected only because a batch expected five entries.
         if (remainingExpectedEntries) {
-          const knownEntries = existingEntries.map((entry) => ({
-            date: entry.scheduled_date,
-            title: entry.title,
-          }));
-          const results = await Promise.all(
-            batches(remainingDates, 5).map((dateBatch) =>
-              runWitCalendarChat(parsed.data.messages, brand, {
-                ...context,
-                existingEntries: knownEntries,
-                expectedEntries: dateBatch.length,
-                exactDates: dateBatch,
-                maxPostsPerDay: plan.planningSlotsPerDay,
-              }),
-            ),
-          );
-          const failed = results.find((result) => !result.ok);
-          if (failed && !failed.ok)
-            return json(failed, { status: failed.error === "tiempo_agotado" ? 504 : 502 });
-          const message = results.find((result) => result.ok && result.kind === "message");
-          if (message && message.ok && message.kind === "message") return json(message);
-          const entries = results.flatMap((result) =>
-            result.ok && result.kind === "done" ? result.entries : [],
-          );
-          if (entries.length !== remainingDates.length) {
-            return json({ ok: false, error: "plan_incompleto" }, { status: 502 });
+          const result = await runWitCalendarChat(parsed.data.messages, brand, {
+            ...context,
+            existingEntries: existingEntries.map((entry) => ({
+              date: entry.scheduled_date,
+              title: entry.title,
+            })),
+            expectedEntries: remainingExpectedEntries,
+            exactDates: remainingDates,
+            maxPostsPerDay: plan.planningSlotsPerDay,
+          });
+          if (!result.ok) {
+            console.warn("[calendar-chat] complete monthly plan failed", result.error);
+            return json(result, { status: result.error === "tiempo_agotado" ? 504 : 502 });
           }
-          return json({ ok: true, kind: "done" as const, entries });
+          return json(result);
         }
 
         const result = await runWitCalendarChat(parsed.data.messages, brand, {

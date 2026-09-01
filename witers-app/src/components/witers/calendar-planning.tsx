@@ -350,8 +350,18 @@ function CalendarWizard({
             : data.error === "falta_openai_api_key"
               ? t(
                   "Wit no está configurado todavía. Revisa la configuración de IA e intenta de nuevo.",
-                  "Wit isn't configured yet. Check the AI configuration and try again.",
-                )
+                "Wit isn't configured yet. Check the AI configuration and try again.",
+              )
+              : data.error === "tiempo_agotado"
+                ? t(
+                    "Wit tardó más de lo habitual. Tu calendario no se modificó; inténtalo una vez más.",
+                    "Wit took longer than usual. Your calendar was not changed; try once more.",
+                  )
+                : data.error === "openai_error"
+                  ? t(
+                      "Wit no pudo generar el plan en este momento. Tu calendario no se modificó; inténtalo de nuevo.",
+                      "Wit couldn't generate the plan right now. Your calendar was not changed; try again.",
+                    )
               : t(
                   "Wit no está disponible en este momento. Intenta de nuevo en un momento.",
                   "Wit isn't available right now. Try again in a moment.",

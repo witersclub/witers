@@ -278,8 +278,8 @@ export const Route = createFileRoute("/api/calendar-entries")({
         for (const entry of parsed.data.entries) {
           await db()
             .prepare(
-              `INSERT INTO calendar_entries (id, user_id, scheduled_date, slot_index, format, title, brief, slides_json)
-               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
+              `INSERT INTO calendar_entries (id, user_id, scheduled_date, slot_index, format, title, brief, slides_json, production_ready_at)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'))`,
             )
             .bind(
               crypto.randomUUID(),
