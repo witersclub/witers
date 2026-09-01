@@ -1064,7 +1064,14 @@ function PanelContent() {
                   </div>
 
                   <div className="mt-4">
-                    <PlanificacionPanel streakWeeks={streakWeeks} homeMobile />
+                    <PlanificacionPanel
+                      streakWeeks={streakWeeks}
+                      homeMobile
+                      onViewPlanning={() => {
+                        setSection("planificacion");
+                        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+                      }}
+                    />
                   </div>
 
                   <div className="mt-7 space-y-6">

@@ -3140,9 +3140,11 @@ function MonthlyProgrammingSheet({
 export function PlanificacionPanel({
   streakWeeks,
   homeMobile = false,
+  onViewPlanning,
 }: {
   streakWeeks: number;
   homeMobile?: boolean;
+  onViewPlanning?: () => void;
 }) {
   const { t } = useLanguage();
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -3305,7 +3307,10 @@ export function PlanificacionPanel({
             </button>
             <button
               type="button"
-              onClick={() => document.getElementById("calendario-planificacion")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              onClick={() => {
+                if (onViewPlanning) onViewPlanning();
+                else document.getElementById("calendario-planificacion")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
               className="flex min-h-[54px] items-center justify-center gap-1.5 rounded-[17px] border border-wit-blue/20 bg-white px-3 text-sm font-extrabold text-wit-blue transition hover:bg-wit-blue/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2"
             >
               {t("Ver planificación", "View plan")}
