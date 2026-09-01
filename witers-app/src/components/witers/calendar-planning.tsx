@@ -3137,7 +3137,13 @@ function MonthlyProgrammingSheet({
   );
 }
 
-export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
+export function PlanificacionPanel({
+  streakWeeks,
+  homeMobile = false,
+}: {
+  streakWeeks: number;
+  homeMobile?: boolean;
+}) {
   const { t } = useLanguage();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [openBrandMindFromHeader, setOpenBrandMindFromHeader] = useState(false);
@@ -3255,7 +3261,60 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
 
   return (
     <div>
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      {homeMobile ? (
+        <section className="rounded-[24px] border border-[rgba(10,30,80,0.06)] bg-white p-5 shadow-[0_8px_28px_rgba(10,30,80,0.06)]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-wit-blue/[0.08] text-wit-blue">
+                <Calendar className="h-5 w-5" strokeWidth={2.3} />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-lg font-extrabold tracking-tight text-wit-ink">{t("Planificación", "Planning")}</h2>
+                <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-extrabold ${entries.length ? "bg-emerald-50 text-emerald-700" : "bg-wit-blue/[0.07] text-wit-blue"}`}>
+                  <span>{entries.length ? "✓" : "•"}</span>
+                  {entries.length ? t("Planificación completa", "Planning complete") : t("Lista para planificar", "Ready to plan")}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setOpenBrandMindFromHeader(true);
+                setWizardOpen(true);
+              }}
+              aria-label={t("Mente de marca", "Brand mind")}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-wit-blue/[0.06] text-wit-blue transition-colors hover:bg-wit-blue/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue"
+            >
+              <Sparkles className="h-[18px] w-[18px]" strokeWidth={2.2} />
+            </button>
+          </div>
+          <p className="mt-4 max-w-sm text-sm font-medium leading-relaxed text-wit-gray">
+            {entries.length
+              ? t("Tu contenido y calendario están listos para este mes.", "Your content and calendar are ready for this month.")
+              : t("Cuéntale a Wit qué quieres lograr este mes.", "Tell Wit what you want to achieve this month.")}
+          </p>
+          <div className="mt-5 grid grid-cols-2 gap-2 max-[340px]:grid-cols-1">
+            <button
+              type="button"
+              disabled={replanning}
+              onClick={() => (entries.length > 0 ? setConfirmingReplan(true) : setWizardOpen(true))}
+              className="flex min-h-[54px] items-center justify-center gap-2 rounded-[17px] bg-wit-blue px-3 text-sm font-extrabold text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] transition hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 disabled:opacity-60"
+            >
+              <RotateCcw className="h-4 w-4" strokeWidth={2.4} />
+              {replanning ? t("Cargando...", "Loading...") : entries.length ? t("Replanear mes", "Replan month") : t("Planificar mes", "Plan month")}
+            </button>
+            <button
+              type="button"
+              onClick={() => document.getElementById("calendario-planificacion")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="flex min-h-[54px] items-center justify-center gap-1.5 rounded-[17px] border border-wit-blue/20 bg-white px-3 text-sm font-extrabold text-wit-blue transition hover:bg-wit-blue/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2"
+            >
+              {t("Ver planificación", "View plan")}
+              <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+            </button>
+          </div>
+        </section>
+      ) : null}
+      <div className={`${homeMobile ? "hidden" : "flex"} flex-col gap-3 md:flex-row md:items-center md:justify-between`}>
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink sm:text-3xl">
             {t("Planificación", "Planning")}
@@ -3324,7 +3383,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           </button>
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className={`${homeMobile ? "mt-6" : "mt-4"} flex flex-wrap items-center gap-2`}>
         <div className="flex min-w-0 items-center gap-1 rounded-2xl bg-white/75 p-1 shadow-sm">
           <button
             type="button"
