@@ -395,9 +395,10 @@ function buildCalendarSystemPrompt(
     "dato o situación relevante), Deseo (beneficio, transformación o prueba concreta) y Acción " +
     "(llamado a la acción). Divídelo en escenas o tomas numeradas y para cada una describe qué se " +
     "ve y qué se dice (diálogo, narración en off o texto en pantalla), identificando la etapa AIDA " +
-    "cuando corresponda. Incluye subtítulos minimalistas, elegantes y de alta legibilidad durante el " +
-    "video: máximo dos líneas, sincronizados con el mensaje hablado, con alto contraste, sin adornos " +
-    "excesivos y alineados a la tipografía/colores de la marca. Después de la escena de Acción/CTA, " +
+    "cuando corresponda. Incluye subtítulos minimalistas y elegantes durante el " +
+    "video: máximo una línea por aparición, sincronizados con el mensaje hablado, con una sombra " +
+    "sutil o una placa muy ligera para legibilidad; evita contraste duro, bloques opacos y adornos " +
+    "excesivos, y alínéalos a la tipografía/colores de la marca. Después de la escena de Acción/CTA, " +
     "si existe logotipo oficial, agrega una escena final de 1-2 segundos con el logotipo centrado, " +
     "limpio y profesional; debe entrar suavemente y cerrar con un desvanecimiento (fade-out), nunca " +
     "con un corte brusco. Describe estas indicaciones de edición explícitamente en el guion. Un video " +
@@ -579,7 +580,7 @@ const CALENDAR_TOOLS = [
                 brief: {
                   type: "string",
                   description:
-                    "Imagen: brief profesional y completo — mensaje principal y cualquier texto en pantalla redactado tal cual, nunca solo el tema. Video: un guion real en estructura AIDA (Atención, Interés, Deseo, Acción), dividido en escenas/tomas numeradas, con qué se ve y qué se dice en cada una; incluye subtítulos minimalistas y un cierre posterior al CTA con logotipo oficial, entrada suave y fade-out si la marca tiene logo. Carrusel: solo un resumen corto de una frase para la tarjeta del calendario — el contenido real de las 4 láminas va en el campo slides, no aquí.",
+                    "Imagen: brief profesional y completo — mensaje principal y cualquier texto en pantalla redactado tal cual, nunca solo el tema. Video: un guion real en estructura AIDA (Atención, Interés, Deseo, Acción), dividido en escenas/tomas numeradas, con qué se ve y qué se dice en cada una; incluye subtítulos minimalistas de máximo una línea, con sombra sutil o placa muy ligera y sin contraste duro, además de un cierre posterior al CTA con logotipo oficial, entrada suave y fade-out si la marca tiene logo. Carrusel: solo un resumen corto de una frase para la tarjeta del calendario — el contenido real de las 4 láminas va en el campo slides, no aquí.",
                 },
                 slides: {
                   type: "array",
