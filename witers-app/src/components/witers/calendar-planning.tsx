@@ -1443,10 +1443,10 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
                             "Esta pieza debe estar terminada y aprobada antes de crear una campaña.",
                             "This piece must be completed and approved before creating a campaign.",
                           )
-                        : entry.format !== "imagen"
+                        : entry.format !== "imagen" && entry.format !== "video"
                           ? t(
-                              "En esta primera versión, la pauta directa está disponible para piezas de imagen.",
-                              "In this first version, direct advertising is available for image pieces.",
+                              "La pauta directa está disponible para piezas de imagen y video.",
+                              "Direct advertising is available for image and video pieces.",
                             )
                           : t(
                               "Configura una campaña de Meta en menos de un minuto.",
@@ -1458,7 +1458,9 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
                 <button
                   type="button"
                   disabled={
-                    entry.status !== "lista" || entry.format !== "imagen" || !entry.requestId
+                    entry.status !== "lista" ||
+                    (entry.format !== "imagen" && entry.format !== "video") ||
+                    !entry.requestId
                   }
                   onClick={() => setCampaignOpen(true)}
                   className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-4 text-sm font-bold text-white transition-colors hover:bg-wit-blue-deep disabled:cursor-not-allowed disabled:opacity-35"

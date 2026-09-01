@@ -198,6 +198,7 @@ export function CampaignCreationSheet({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           requestId: piece.requestId,
+          format: piece.format,
           objective,
           dailyBudgetMxn,
           durationDays,

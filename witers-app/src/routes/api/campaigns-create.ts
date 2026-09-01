@@ -11,6 +11,10 @@ import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 const schema = z
   .object({
     requestId: z.string().min(1),
+    // The calendar owns the piece format. We still re-check the matching
+    // request below, so this value only selects the appropriate existing
+    // request model; it never grants access to another user's content.
+    format: z.enum(["imagen", "video"]),
     objective: z.enum(["trafico", "interaccion", "ventas"]),
     // Pesos MXN per day (whole or with cents), converted to centavos below
     // — matches how prices already read elsewhere in the app.
@@ -44,6 +48,7 @@ const schema = z
 
 type RequestRow = { id: string; user_id: string; title: string; status: string };
 type ResultRow = { r2_key: string | null; image_url: string | null };
+type VideoRequestRow = RequestRow & { delivered_key: string | null };
 type FacebookConnectionRow = { page_id: string | null };
 
 // "datos_invalidos" alone doesn't say which field or why — this is what
@@ -76,14 +81,27 @@ export const Route = createFileRoute("/api/campaigns-create")({
           );
         }
 
-        const reqRow = await db()
-          .prepare("SELECT id, user_id, title, status FROM design_requests WHERE id = ?1")
-          .bind(parsed.data.requestId)
-          .first<RequestRow>();
+        const reqRow =
+          parsed.data.format === "video"
+            ? await db()
+                .prepare(
+                  "SELECT id, user_id, title, status, delivered_key FROM video_requests WHERE id = ?1",
+                )
+                .bind(parsed.data.requestId)
+                .first<VideoRequestRow>()
+            : await db()
+                .prepare("SELECT id, user_id, title, status FROM design_requests WHERE id = ?1")
+                .bind(parsed.data.requestId)
+                .first<RequestRow>();
         if (!reqRow || reqRow.user_id !== user.id) {
           return json({ ok: false, error: "solicitud_no_existe" }, { status: 404 });
         }
-        if (reqRow.status !== "completada" && reqRow.status !== "cerrada") {
+        if (
+          (parsed.data.format === "video" && reqRow.status !== "completada") ||
+          (parsed.data.format === "imagen" &&
+            reqRow.status !== "completada" &&
+            reqRow.status !== "cerrada")
+        ) {
           return json({ ok: false, error: "solicitud_no_terminada" }, { status: 409 });
         }
         const recentDuplicate = await db()
@@ -122,28 +140,52 @@ export const Route = createFileRoute("/api/campaigns-create")({
         const oauthAccessToken =
           (await getMetaAdOAuthAccessToken(user.id, adAccountId)) ?? undefined;
 
-        const resultRow = await db()
-          .prepare(
-            `SELECT r2_key, image_url FROM request_results
-             WHERE request_id = ?1 AND kind != 'draft'
-             ORDER BY created_at DESC LIMIT 1`,
-          )
-          .bind(reqRow.id)
-          .first<ResultRow>();
-        if (!resultRow?.r2_key) {
+        const resultRow =
+          parsed.data.format === "imagen"
+            ? await db()
+                .prepare(
+                  `SELECT r2_key, image_url FROM request_results
+                   WHERE request_id = ?1 AND kind != 'draft'
+                   ORDER BY created_at DESC LIMIT 1`,
+                )
+                .bind(reqRow.id)
+                .first<ResultRow>()
+            : null;
+        const mediaKey =
+          parsed.data.format === "video"
+            ? (reqRow as VideoRequestRow).delivered_key
+            : resultRow?.r2_key;
+        if (!mediaKey) {
           return json({ ok: false, error: "sin_pieza_final" }, { status: 409 });
         }
 
         const { STORAGE } = bindings();
         if (!STORAGE) return json({ ok: false, error: "sin_storage" }, { status: 500 });
-        const obj = await STORAGE.get(resultRow.r2_key);
+        const obj = await STORAGE.get(mediaKey);
         if (!obj) return json({ ok: false, error: "archivo_no_encontrado" }, { status: 404 });
-        const bytes = await obj.arrayBuffer();
-        // Spreading a large Uint8Array into String.fromCharCode(...) blows
-        // the call stack for real design files (a few hundred KB+) — this
-        // is what "RangeError: Maximum call stack size exceeded" was.
-        const imageBytesBase64 = Buffer.from(bytes).toString("base64");
-        const imageContentType = obj.httpMetadata?.contentType ?? "image/png";
+        const contentType = obj.httpMetadata?.contentType ?? "application/octet-stream";
+        const media =
+          parsed.data.format === "video"
+            ? {
+                kind: "video" as const,
+                // Keep the final cut streaming from R2 to Meta. Videos can
+                // be hundreds of MB, so arrayBuffer()/base64 would exceed a
+                // Worker memory limit before the upload even begins.
+                // R2's Workers stream and the DOM stream declaration use
+                // slightly different `read()` typings, while both are the
+                // same runtime stream accepted by fetch in this Worker.
+                body: obj.body as unknown as ReadableStream,
+                size: obj.size,
+                contentType,
+              }
+            : {
+                kind: "image" as const,
+                // Spreading a large Uint8Array into String.fromCharCode(...)
+                // blows the call stack for real design files. Buffer handles
+                // the conversion safely for the image endpoint.
+                bytesBase64: Buffer.from(await obj.arrayBuffer()).toString("base64"),
+                contentType,
+              };
 
         const result = await createPausedCampaignForRequest({
           adAccountId,
@@ -152,8 +194,7 @@ export const Route = createFileRoute("/api/campaigns-create")({
           objective: parsed.data.objective,
           dailyBudgetCents: Math.round(parsed.data.dailyBudgetMxn * 100),
           durationDays: parsed.data.durationDays,
-          imageBytesBase64,
-          imageContentType,
+          media,
           adMessages: parsed.data.adMessages,
           ageMin: parsed.data.ageMin,
           ageMax: parsed.data.ageMax,

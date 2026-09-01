@@ -255,8 +255,18 @@ export type CreatePausedCampaignInput = {
   dailyBudgetCents: number;
   // How many days the ad set should run before it auto-stops.
   durationDays: number;
-  imageBytesBase64: string;
-  imageContentType: string;
+  // Images use Meta's /adimages endpoint. Video uploads remain streaming
+  // from R2 so a final cut never has to be base64 encoded in Worker memory.
+  media:
+    | { kind: "image"; bytesBase64: string; contentType: string }
+    | {
+        kind: "video";
+        // R2's stream type is supplied by Workers and is intentionally kept
+        // unparameterized here so it can be passed through without copying.
+        body: ReadableStream;
+        size: number;
+        contentType: string;
+      };
   // 1-3 ad copy variants — all included as text options on a single paused
   // ad (Meta's own "multiple text options" template, the same one Ads
   // Manager offers when you add several variations to one ad), which
@@ -303,6 +313,86 @@ export type CreatePausedCampaignResult =
       warning?: string;
     }
   | { ok: false; error: string };
+
+type UploadedAdVideo = { id: string; stillProcessing: boolean };
+
+// Start a Marketing API video session, then stream R2 directly to Meta's
+// resumable-upload host. This prevents a multi-hundred-MB final cut from
+// exhausting Worker memory before an ad is even created.
+async function uploadAdVideo(
+  adAccountId: string,
+  accessToken: string,
+  video: Extract<CreatePausedCampaignInput["media"], { kind: "video" }>,
+): Promise<{ ok: true; data: UploadedAdVideo } | { ok: false; error: string }> {
+  const act = `act_${adAccountId}`;
+  const start = await graphRequest<{ video_id?: string; id?: string; upload_url?: string }>(
+    `/${act}/advideos`,
+    accessToken,
+    { upload_phase: "start", file_size: String(video.size) },
+  );
+  if (!start.ok) return start;
+
+  const videoId = start.data.video_id ?? start.data.id;
+  if (!videoId) return { ok: false, error: "Meta no devolvió el identificador del video." };
+  const suppliedUrl = start.data.upload_url;
+  const uploadUrl =
+    suppliedUrl && /^https:\/\/rupload\.facebook\.com\//.test(suppliedUrl)
+      ? suppliedUrl
+      : `https://rupload.facebook.com/video-upload/${GRAPH_VERSION}/${videoId}`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120_000);
+  let upload: Response;
+  try {
+    upload = await fetch(uploadUrl, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `OAuth ${accessToken}`,
+        offset: "0",
+        file_size: String(video.size),
+        "content-type": "application/octet-stream",
+      },
+      body: video.body as unknown as BodyInit,
+    });
+  } catch {
+    return { ok: false, error: "La carga del video a Meta tardó demasiado." };
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!upload.ok) {
+    const raw = await upload.text().catch(() => "");
+    let detail = "";
+    try {
+      const body = JSON.parse(raw) as GraphError;
+      detail = body.error?.error_user_msg ?? body.error?.message ?? "";
+    } catch {
+      // rupload may answer in plain text/HTML; do not expose it to clients.
+    }
+    return { ok: false, error: detail || "Meta no pudo recibir el video." };
+  }
+
+  // Encoding is asynchronous. Check briefly for the common fast case, but
+  // do not hold the client request indefinitely for a large final cut.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const status = await graphRequest<{ status?: unknown }>(
+      `/${videoId}`,
+      accessToken,
+      { fields: "status" },
+      "GET",
+    );
+    if (!status.ok) break;
+    const state = JSON.stringify(status.data.status ?? "").toLowerCase();
+    if (/(error|failed|expired)/.test(state)) {
+      return { ok: false, error: "Meta no pudo procesar el video." };
+    }
+    if (/(ready|complete|finished)/.test(state)) {
+      return { ok: true, data: { id: videoId, stillProcessing: false } };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+  return { ok: true, data: { id: videoId, stillProcessing: true } };
+}
 
 // Orchestrates campaign → ad set → image upload → one ad per copy variant,
 // all created with status PAUSED. The caller has already confirmed the
@@ -423,10 +513,70 @@ export async function createPausedCampaignForRequest(
     ? "Quitamos la segmentación por intereses porque uno de los identificadores ya no era válido para Meta — la campaña llegó a todo el público en el rango de edad/ubicación elegido en su lugar. "
     : "";
 
+  const link = resolveDestinationLink(objective, pageId, input.whatsappNumber, input.websiteUrl);
+
+  if (input.media.kind === "video") {
+    const videoUpload = await uploadAdVideo(adAccountId, accessToken, input.media);
+    if (!videoUpload.ok) {
+      return {
+        ok: true,
+        campaignId,
+        adsetId: adset.data.id,
+        adIds: [],
+        warning: `${interestNote}La campaña y el conjunto de anuncios se crearon, pero no pudimos subir el video: ${videoUpload.error}`,
+      };
+    }
+    const processingNote = videoUpload.data.stillProcessing
+      ? "Meta continúa procesando el video; el anuncio seguirá en pausa hasta que esté listo. "
+      : "";
+    const videoCreative = await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
+      name: `WITERS — ${input.requestTitle}`,
+      object_story_spec: {
+        page_id: pageId,
+        video_data: {
+          video_id: videoUpload.data.id,
+          message: input.adMessages[0],
+          call_to_action: { type: "LEARN_MORE", value: { link } },
+        },
+      },
+    });
+    if (!videoCreative.ok) {
+      return {
+        ok: true,
+        campaignId,
+        adsetId: adset.data.id,
+        adIds: [],
+        warning: `${interestNote}${processingNote}La campaña y el conjunto de anuncios se crearon, pero el anuncio de video no se pudo generar: ${videoCreative.error}`,
+      };
+    }
+    const videoAd = await graphRequest<{ id: string }>(`/${act}/ads`, accessToken, {
+      name: `WITERS — ${input.requestTitle}`,
+      adset_id: adset.data.id,
+      creative: { creative_id: videoCreative.data.id },
+      status: "PAUSED",
+    });
+    if (!videoAd.ok) {
+      return {
+        ok: true,
+        campaignId,
+        adsetId: adset.data.id,
+        adIds: [],
+        warning: `${interestNote}${processingNote}La campaña y el conjunto de anuncios se crearon, pero el anuncio de video no se pudo generar: ${videoAd.error}`,
+      };
+    }
+    return {
+      ok: true,
+      campaignId,
+      adsetId: adset.data.id,
+      adIds: [videoAd.data.id],
+      warning: droppedInterests || processingNote ? `${interestNote}${processingNote}`.trim() : undefined,
+    };
+  }
+
   const imageUpload = await graphRequest<{ images: Record<string, { hash: string }> }>(
     `/${act}/adimages`,
     accessToken,
-    { bytes: input.imageBytesBase64 },
+    { bytes: input.media.bytesBase64 },
   );
   if (!imageUpload.ok) {
     return {
@@ -447,8 +597,6 @@ export async function createPausedCampaignForRequest(
       warning: `${interestNote}La campaña y el conjunto de anuncios se crearon, pero la imagen no se pudo procesar.`,
     };
   }
-
-  const link = resolveDestinationLink(objective, pageId, input.whatsappNumber, input.websiteUrl);
 
   // A single ad whose creative carries all copy variants as text options —
   // Meta's own "plantilla de mensajes" (the same multiple-text-variations
