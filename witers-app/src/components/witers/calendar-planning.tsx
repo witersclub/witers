@@ -24,6 +24,7 @@ import {
   Instagram,
   Loader2,
   PenLine,
+  RotateCcw,
   Send,
   Sparkles,
   Upload,
@@ -2158,10 +2159,12 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           }
           className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] transition-all hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 md:min-h-11 md:w-auto"
         >
-          <span className="text-lg leading-none">+</span>
+          {entries.length > 0 ? <RotateCcw className="h-[17px] w-[17px]" strokeWidth={2.5} /> : <span className="text-lg leading-none">+</span>}
           {replanning
             ? t("Cargando...", "Loading...")
-            : t("Planificar contenido", "Plan content")}
+            : entries.length > 0
+              ? t("Replanear mes", "Replan month")
+              : t("Planificar contenido", "Plan content")}
         </button>
         </div>
       </div>
@@ -2224,17 +2227,20 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
 
       {confirmingReplan ? (
         <div className="wit-glass mt-4 flex flex-col gap-3 rounded-2xl p-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-wit-ink">
-            {pendingCount > 0
-              ? t(
-                  `Se reemplazarán las ${pendingCount} piezas que aún no has pedido — lo que ya está en diseño o listo no se toca.`,
-                  `This will replace the ${pendingCount} pieces you haven't requested yet — anything already in design or ready stays untouched.`,
-                )
-              : t(
-                  "Vamos a planificar el resto del mes con Wit — lo que ya está en diseño o listo no se toca.",
-                  "Let's plan the rest of the month with Wit — anything already in design or ready stays untouched.",
-                )}
-          </p>
+          <div>
+            <p className="text-sm font-extrabold text-wit-ink">{t(`Replanear ${monthLabel}`, `Replan ${monthLabel}`)}</p>
+            <p className="mt-1 text-sm text-wit-gray">
+              {pendingCount > 0
+                ? t(
+                    `Wit creará una nueva propuesta para las ${pendingCount} piezas pendientes. Las que ya están en diseño o listas se conservan.`,
+                    `Wit will create a new proposal for the ${pendingCount} pending pieces. Pieces already in design or ready are kept.`,
+                  )
+                : t(
+                    "Wit conservará las piezas que ya están en diseño o listas y te ayudará a completar lo que falte.",
+                    "Wit will keep pieces already in design or ready and help you complete what is missing.",
+                  )}
+            </p>
+          </div>
           <div className="flex shrink-0 gap-2">
             <button
               type="button"
