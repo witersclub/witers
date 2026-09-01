@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import process from "node:process";
 import { z } from "zod";
 
 import { applyDiscount, validateDiscountCode } from "../../../lib/discount-codes.server";
@@ -17,9 +18,19 @@ const schema = z.object({
   discountCode: z.string().max(30).optional(),
 });
 
+function selfServiceBillingEnabled(): boolean {
+  return process.env.SELF_SERVICE_BILLING_ENABLED === "true";
+}
+
 async function handlePost(request: Request) {
   const user = await getSessionUser(request);
   if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
+
+  if (!selfServiceBillingEnabled()) {
+    // Keep payment credentials unreachable from the public product while
+    // access is granted manually by the administration team.
+    return json({ ok: false, error: "activacion_solo_admin" }, { status: 403 });
+  }
 
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

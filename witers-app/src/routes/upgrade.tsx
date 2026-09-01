@@ -15,12 +15,36 @@ export const Route = createFileRoute("/upgrade")({
   component: Upgrade,
 });
 
+function selfServiceCheckoutVisible(): boolean {
+  return import.meta.env.VITE_SELF_SERVICE_BILLING_ENABLED === "true";
+}
+
 // Deliberately just the 3 fichas — no hero, no testimonios, no FAQ. A
 // member who already knows WITERS and wants to see the plans side by side
 // shouldn't have to scroll through the homepage's marketing pitch again.
 function Upgrade() {
   const me = useMe();
   const { t } = useLanguage();
+
+  if (!selfServiceCheckoutVisible()) {
+    return (
+      <div className="wit-page flex min-h-dvh flex-col items-center justify-center gap-5 px-5 text-center">
+        <WitersLogo />
+        <h1 className="text-2xl font-extrabold text-wit-ink">
+          {t("Acceso gestionado por WITERS", "Access managed by WITERS")}
+        </h1>
+        <p className="max-w-md text-base leading-relaxed text-wit-gray">
+          {t(
+            "Las activaciones y ajustes de acceso se realizan directamente desde administración.",
+            "Access activations and adjustments are handled directly from administration.",
+          )}
+        </p>
+        <Link to={me.data?.ok ? "/panel" : "/ingresar"} className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep">
+          {me.data?.ok ? t("Ir a mi panel", "Go to my panel") : t("Ingresar", "Log in")}
+        </Link>
+      </div>
+    );
+  }
 
   if (me.isLoading) {
     return (

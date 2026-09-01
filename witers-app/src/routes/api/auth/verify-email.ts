@@ -16,7 +16,6 @@ export const Route = createFileRoute("/api/auth/verify-email")({
       GET: async ({ request }) => {
         const url = new URL(request.url);
         const token = url.searchParams.get("token");
-        const plan = url.searchParams.get("plan");
         if (!token) return redirect("/ingresar?error=token_invalido");
 
         const row = await db()
@@ -42,7 +41,7 @@ export const Route = createFileRoute("/api/auth/verify-email")({
           .run();
 
         const session = await createSession(row.user_id);
-        const dest = plan ? `/checkout?plan=${encodeURIComponent(plan)}` : "/checkout";
+        const dest = "/panel";
         return new Response(null, {
           status: 302,
           headers: {

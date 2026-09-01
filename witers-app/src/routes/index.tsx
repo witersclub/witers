@@ -56,7 +56,6 @@ function Landing() {
       <Capabilities />
       <DevicesSection />
       <MarcasQueConfian />
-      <SinglePlan />
       <Faq />
       <CtaFinal />
       <SiteFooter />
@@ -936,19 +935,19 @@ function Faq() {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
   const faqs: FaqEntry[] = lang === "en"
     ? [
-        { q: "Can I try WITERS before paying?", a: "Create your account to get to know the platform and its onboarding flow. Membership activation and its conditions are shown before checkout." },
+        { q: "How do I get access to WITERS?", a: "Create your account and the WITERS team will enable access from administration when your account is ready." },
         { q: "Which social networks can I connect?", a: "WITERS currently supports the connected Instagram and Facebook accounts available in your panel." },
         { q: "How does scheduling work?", a: "You choose eligible planned pieces and their publishing time. WITERS stores the schedule and publishes through the connected social account." },
-        { q: "What content can I create?", a: "The platform supports image, video, carousel and copy requests, according to your active membership and the availability shown in your panel." },
-        { q: "Can I cancel whenever I want?", a: "You can review the cancellation terms before subscribing and from your account. Cancellation applies according to the terms of the active membership." },
+        { q: "What content can I create?", a: "The platform supports image, video, carousel and copy requests, according to the access enabled for your account." },
+        { q: "How is access enabled?", a: "During this stage, access is enabled directly by the WITERS team from administration." },
         { q: "How do campaigns work?", a: "Campaign tools let you work with Meta Ads from WITERS and review the associated results in your panel." },
       ]
     : [
-        { q: "¿Puedo probar WITERS antes de pagar?", a: "Puedes crear tu cuenta para conocer la plataforma y su flujo de bienvenida. La activación de la membresía y sus condiciones se muestran antes de pagar." },
+        { q: "¿Cómo obtengo acceso a WITERS?", a: "Crea tu cuenta y el equipo de WITERS habilitará el acceso desde administración cuando esté lista." },
         { q: "¿Qué redes sociales puedo conectar?", a: "WITERS admite actualmente las cuentas conectadas de Instagram y Facebook que estén disponibles en tu panel." },
         { q: "¿Cómo funciona la programación?", a: "Eliges las piezas planeadas que son aptas para publicar y su horario. WITERS guarda la programación y publica mediante la cuenta social conectada." },
-        { q: "¿Qué contenido puedo crear?", a: "La plataforma admite solicitudes de imagen, video, carrusel y copy, de acuerdo con tu membresía activa y la disponibilidad mostrada en tu panel." },
-        { q: "¿Puedo cancelar cuando quiera?", a: "Puedes revisar las condiciones de cancelación antes de suscribirte y desde tu cuenta. La cancelación se aplica conforme a los términos de la membresía activa." },
+        { q: "¿Qué contenido puedo crear?", a: "La plataforma admite solicitudes de imagen, video, carrusel y copy, de acuerdo con el acceso habilitado para tu cuenta." },
+        { q: "¿Cómo se habilita el acceso?", a: "Durante esta etapa, el equipo de WITERS habilita el acceso directamente desde administración." },
         { q: "¿Cómo funcionan las campañas?", a: "Las herramientas de campañas permiten trabajar con Meta Ads desde WITERS y revisar los resultados asociados en tu panel." },
       ];
   return (

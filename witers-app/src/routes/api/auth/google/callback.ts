@@ -34,14 +34,12 @@ export const Route = createFileRoute("/api/auth/google/callback")({
           return redirect("/ingresar?error=google");
         }
 
-        let plan: string | undefined;
         try {
           const parsed = JSON.parse(atob(stateParam)) as { nonce?: string; plan?: string };
           const cookieNonce = readCookie(request, "wit_oauth_state");
           if (!parsed.nonce || !cookieNonce || parsed.nonce !== cookieNonce) {
             return redirect("/ingresar?error=google");
           }
-          plan = parsed.plan;
         } catch {
           return redirect("/ingresar?error=google");
         }
@@ -95,7 +93,7 @@ export const Route = createFileRoute("/api/auth/google/callback")({
           .run();
 
         const session = await createSession(id);
-        const dest = plan ? `/checkout?plan=${encodeURIComponent(plan)}` : "/checkout";
+        const dest = "/panel";
         return redirect(dest, sessionCookie(session.token, session.maxAge));
       },
     },

@@ -16,7 +16,6 @@ import type * as LeafletNS from "leaflet";
 import {
   AlertTriangle,
   ArrowLeft,
-  ArrowUpCircle,
   BookOpen,
   Briefcase,
   Building2,
@@ -42,7 +41,6 @@ import {
   Magnet,
   MapPin,
   Megaphone,
-  PackagePlus,
   PawPrint,
   Pencil,
   Plane,
@@ -350,13 +348,9 @@ function UpgradeTeaser({
         </span>
         <p className="mt-4 text-lg font-bold text-wit-ink">{title}</p>
         <p className="mt-2 text-sm text-wit-gray">{body}</p>
-        <Link
-          to="/upgrade"
-          className="mt-6 flex items-center justify-center gap-1.5 rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-wit-blue-deep"
-        >
-          <ArrowUpCircle className="h-4 w-4" strokeWidth={2.4} />
-          {t("Hacer upgrade", "Upgrade")}
-        </Link>
+        <p className="mt-6 text-sm font-semibold text-wit-blue">
+          {t("El equipo de WITERS puede habilitar esta función para tu cuenta.", "The WITERS team can enable this feature for your account.")}
+        </p>
         <button
           type="button"
           onClick={onClose}
@@ -1094,23 +1088,17 @@ function PanelContent() {
                         <div>
                           <p className="text-lg font-bold">
                             {t(
-                              "Activa tu membresía para empezar a crear.",
-                              "Activate your membership to start creating.",
+                              "Tu acceso está pendiente de activación.",
+                              "Your access is pending activation.",
                             )}
                           </p>
                           <p className="mt-1 text-sm text-white/70">
                             {t(
-                              "Elige entre Essential, Grow o Scale — desde $599 MXN al mes.",
-                              "Choose Essential, Grow, or Scale — starting at $599 MXN a month.",
+                              "El equipo de WITERS habilitará tu cuenta cuando esté lista.",
+                              "The WITERS team will enable your account when it is ready.",
                             )}
                           </p>
                         </div>
-                        <Link
-                          to="/upgrade"
-                          className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:brightness-110"
-                        >
-                          {t("Quiero mi membresía", "I want my membership")}
-                        </Link>
                       </div>
                     ) : null}
                   </div>
@@ -2211,16 +2199,13 @@ function MembershipSummaryCard({
         <div className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-5 text-center">
           <p className="text-sm text-wit-gray">
             {t(
-              "Todavía no tienes una membresía activa.",
-              "You don't have an active membership yet.",
+              "Tu acceso está pendiente de activación por el equipo de WITERS.",
+              "Your access is pending activation by the WITERS team.",
             )}
           </p>
-          <Link
-            to="/checkout"
-            className="mt-3 inline-block rounded-full bg-wit-blue px-5 py-2.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
-          >
-            {t("Activar membresía", "Activate membership")}
-          </Link>
+          <p className="mt-3 text-xs font-semibold text-wit-blue">
+            {t("Te avisaremos cuando esté activa.", "We'll let you know when it is active.")}
+          </p>
         </div>
       ) : (
         <div className="mt-5 space-y-4">
@@ -2277,27 +2262,6 @@ function MembershipSummaryCard({
               </div>
             ) : null}
           </div>
-
-          {active && membership.plan !== "scale" ? (
-            <Link
-              to="/upgrade"
-              className="flex w-full items-center justify-center gap-1.5 rounded-full border border-wit-blue/30 bg-wit-blue/5 px-4 py-2.5 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/10"
-            >
-              <ArrowUpCircle className="h-3.5 w-3.5" strokeWidth={2.4} />
-              {t("Upgrade", "Upgrade")}
-            </Link>
-          ) : null}
-
-          {active ? (
-            <button
-              type="button"
-              onClick={() => setPacksOpen(true)}
-              className="flex w-full items-center justify-center gap-1.5 rounded-full border border-wit-blue/25 px-4 py-2.5 text-xs font-bold text-wit-blue transition-colors hover:bg-wit-blue/5"
-            >
-              <PackagePlus className="h-3.5 w-3.5" strokeWidth={2.4} />
-              {t("Comprar paquete de imágenes", "Buy an image pack")}
-            </button>
-          ) : null}
 
           <p className="text-xs text-wit-gray">
             <Link

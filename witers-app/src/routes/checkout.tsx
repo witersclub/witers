@@ -45,12 +45,43 @@ export const Route = createFileRoute("/checkout")({
   component: Checkout,
 });
 
+// The checkout code remains in this route for the next billing phase, but it
+// stays out of the public experience until the matching build variable and
+// server-side Worker flag are intentionally enabled.
+function selfServiceCheckoutVisible(): boolean {
+  return import.meta.env.VITE_SELF_SERVICE_BILLING_ENABLED === "true";
+}
+
 function Checkout() {
   const { t, lang } = useLanguage();
   const me = useMe();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { plan: planId } = Route.useSearch();
+  const [success, setSuccess] = useState<{
+    plan: MembershipPlan;
+    wasSwitch: boolean;
+    amountPaid: number;
+  } | null>(null);
+  if (!selfServiceCheckoutVisible()) {
+    return (
+      <div className="wit-page flex min-h-dvh flex-col items-center justify-center gap-5 px-5 text-center">
+        <WitersLogo />
+        <h1 className="text-2xl font-extrabold text-wit-ink">
+          {t("Acceso gestionado por WITERS", "Access managed by WITERS")}
+        </h1>
+        <p className="max-w-md text-base leading-relaxed text-wit-gray">
+          {t(
+            "Durante esta etapa el acceso se habilita directamente desde administración.",
+            "During this phase, access is enabled directly by administration.",
+          )}
+        </p>
+        <Link to={me.data?.ok ? "/panel" : "/ingresar"} className="rounded-full bg-wit-blue px-6 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep">
+          {me.data?.ok ? t("Ir a mi panel", "Go to my panel") : t("Ingresar", "Log in")}
+        </Link>
+      </div>
+    );
+  }
   const plan = getPlan(planId ?? me.data?.membership?.plan);
   const fmt = (n: number) =>
     "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -82,12 +113,6 @@ function Checkout() {
   // holds the payment page open on a dedicated success screen instead of
   // jumping straight to /panel, so a real charge always gets a visible
   // "this worked" moment before the page changes under the client.
-  const [success, setSuccess] = useState<{
-    plan: MembershipPlan;
-    wasSwitch: boolean;
-    amountPaid: number;
-  } | null>(null);
-
   // Activates the membership in the DB — called once Stripe has confirmed a
   // real charge (paymentIntentId set) or immediately for a free plan
   // switch/downgrade (omitted). paidAmountWithIva is the amount actually

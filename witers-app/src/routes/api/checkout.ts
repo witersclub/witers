@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import process from "node:process";
 import { z } from "zod";
 
 import { applyDiscount, recordDiscountCodeUse } from "../../lib/discount-codes.server";
@@ -14,9 +15,22 @@ const schema = z.object({
   paymentIntentId: z.string().optional(),
 });
 
+// Default off while WITERS is in its managed-access phase. The complete
+// checkout implementation stays below and can be restored simply by setting
+// SELF_SERVICE_BILLING_ENABLED=true in the Worker environment.
+function selfServiceBillingEnabled(): boolean {
+  return process.env.SELF_SERVICE_BILLING_ENABLED === "true";
+}
+
 async function handlePost(request: Request) {
   const user = await getSessionUser(request);
   if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
+
+  if (!selfServiceBillingEnabled()) {
+    // Memberships can only be activated through
+    // /api/admin/activate-membership by an authenticated administrator.
+    return json({ ok: false, error: "activacion_solo_admin" }, { status: 403 });
+  }
 
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

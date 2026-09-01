@@ -33,7 +33,6 @@ export function SiteHeader({ landing = false }: { landing?: boolean }) {
     ? [
         { href: "#producto", label: t("Producto", "Product") },
         { href: "#funciones", label: t("Funciones", "Features") },
-        { href: "#precio", label: t("Precio", "Pricing") },
         { href: "#resultados", label: t("Resultados", "Results") },
       ]
     : [
@@ -42,7 +41,6 @@ export function SiteHeader({ landing = false }: { landing?: boolean }) {
         { href: "/pauta", label: t("Campañas de Meta", "Meta Campaigns") },
         { href: "/nuestra-historia", label: t("Nuestra historia", "Our story") },
         { href: "/nuestra-historia#valores", label: t("Comunidad", "Community") },
-        { href: "/#membresia", label: t("Membresía", "Membership") },
       ];
 
   const ctaLabel = signedIn
@@ -213,9 +211,6 @@ export function SiteFooter() {
               </a>
               <a href="/nuestra-historia" className="hover:text-white">
                 {t("Nuestra historia", "Our story")}
-              </a>
-              <a href="/#membresia" className="hover:text-white">
-                {t("Membresía", "Membership")}
               </a>
               <Link to="/ingresar" className="hover:text-white">
                 {t("Ingresar", "Log in")}
