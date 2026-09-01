@@ -4,7 +4,7 @@
 // actually charged and granted. Safe to import from both client and server
 // code (no secrets, no side effects).
 
-export type PlanId = "essential" | "grow" | "scale";
+export type PlanId = "mensual" | "plus";
 
 export type MembershipPlan = {
   id: PlanId;
@@ -16,83 +16,55 @@ export type MembershipPlan = {
   requestsQuota: number;
   videoRequestsQuota: number;
   carouselRequestsQuota: number;
+  /** Maximum number of pieces Wit may place on the same calendar date. */
+  planningSlotsPerDay: 1 | 2;
   destacada?: boolean;
   beneficios: string[];
 };
 
-// El 30% de descuento aplica solo los primeros 3 meses consecutivos de
-// suscripción — ver /terminos, sección 1.
-export const PROMO_MESES = 3;
+// Billing remains disabled while WITERS is in its administrator-activation
+// phase. These values are nevertheless the single source of truth used by
+// the admin activation UI and by Wit when it plans a calendar.
+export const PROMO_MESES = 0;
 
 export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
-    id: "essential",
-    nombre: "Essential",
-    tagline: "Impulsa el inicio de tu marca",
+    id: "mensual",
+    nombre: "WITERS Mensual",
+    tagline: "Un mes de contenido, listo para tu marca",
     descripcion:
       "Ideal para emprendedores y pequeñas empresas que desean construir una imagen profesional y comenzar a atraer más clientes.",
     precioPromo: 599,
-    precioRegular: 855.71,
-    requestsQuota: 10,
-    videoRequestsQuota: 0,
-    carouselRequestsQuota: 0,
+    precioRegular: 599,
+    requestsQuota: 20,
+    videoRequestsQuota: 5,
+    carouselRequestsQuota: 5,
+    planningSlotsPerDay: 1,
     beneficios: [
-      "10 solicitudes de diseño al mes",
-      "Hasta 2 revisiones por diseño",
-      "2 campañas publicitarias",
-      "Acompañamiento estratégico para tu marca",
-      "Entregas en alta resolución, listas para publicar",
-      "Panel exclusivo para dar seguimiento a cada solicitud",
+      "Hasta 30 piezas de contenido al mes",
+      "Una publicación por día como máximo",
+      "20 imágenes, 5 videos y 5 carruseles",
+      "Planificación mensual con Wit",
     ],
   },
   {
-    id: "grow",
-    nombre: "Grow",
-    tagline: "Acelera el crecimiento de tu negocio",
+    id: "plus",
+    nombre: "WITERS Plus",
+    tagline: "Más ritmo para marcas que publican dos veces al día",
     descripcion:
       "Pensado para empresas que buscan aumentar su presencia digital con una estrategia de contenido más completa.",
-    precioPromo: 12999.9,
-    precioRegular: 18571.29,
-    requestsQuota: 15,
-    videoRequestsQuota: 2,
-    carouselRequestsQuota: 2,
+    precioPromo: 899,
+    precioRegular: 899,
+    requestsQuota: 40,
+    videoRequestsQuota: 10,
+    carouselRequestsQuota: 10,
+    planningSlotsPerDay: 2,
     destacada: true,
     beneficios: [
-      "15 solicitudes de diseño al mes",
-      "Hasta 2 revisiones por diseño",
-      "2 carruseles para redes sociales",
-      "2 videos para redes sociales",
-      "3 campañas publicitarias",
-      "Planeación estratégica de contenido",
-      "Asesoría estratégica personalizada",
-      "Reporte semanal de desempeño",
-      "Panel exclusivo para dar seguimiento a cada solicitud",
-    ],
-  },
-  {
-    id: "scale",
-    nombre: "Scale",
-    tagline: "Escala tu marca con una estrategia integral",
-    descripcion:
-      "La solución más completa para empresas que buscan crecer de forma constante con estrategia, creatividad y análisis.",
-    precioPromo: 16999.9,
-    precioRegular: 24285.57,
-    requestsQuota: 20,
-    videoRequestsQuota: 4,
-    carouselRequestsQuota: 4,
-    beneficios: [
-      "20 solicitudes de diseño al mes",
-      "Hasta 3 revisiones por diseño",
-      "4 carruseles para redes sociales",
-      "4 videos para redes sociales",
-      "4 campañas publicitarias",
-      "Planeación estratégica de contenido",
-      "Asesoría estratégica personalizada",
-      "Reporte semanal de desempeño",
-      "Auditoría mensual de estrategia y resultados",
-      "Reunión mensual de seguimiento estratégico",
-      "Prioridad alta en tiempos de entrega",
-      "Panel exclusivo para dar seguimiento a cada solicitud",
+      "Hasta 60 piezas de contenido al mes",
+      "Hasta dos publicaciones por día",
+      "40 imágenes, 10 videos y 10 carruseles",
+      "Planificación mensual con Wit",
     ],
   },
 ];

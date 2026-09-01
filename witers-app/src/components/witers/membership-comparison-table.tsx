@@ -28,7 +28,7 @@ function Cell({ value }: { value: ComparisonValue }) {
 
 export function MembershipComparisonTable() {
   const { t } = useLanguage();
-  const [activePlan, setActivePlan] = useState<PlanId>("grow");
+const [activePlan, setActivePlan] = useState<PlanId>("plus");
 
   return (
     <div className="mx-auto mt-16 max-w-5xl">

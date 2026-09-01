@@ -24,54 +24,34 @@ export type ComparisonRow = {
 export const COMPARISON_ROWS: ComparisonRow[] = [
   {
     label: "Solicitudes de diseño al mes",
-    values: { essential: "10", grow: "15", scale: "20" },
+    values: { mensual: "30", plus: "60" },
   },
   {
-    label: "Revisiones por diseño",
-    values: { essential: "Hasta 2", grow: "Hasta 2", scale: "Hasta 3" },
+    label: "Publicaciones por día",
+    values: { mensual: "1", plus: "Hasta 2" },
   },
   {
-    label: "Campañas publicitarias",
-    values: { essential: "2", grow: "3", scale: "4" },
+    label: "Imágenes",
+    values: { mensual: "20", plus: "40" },
   },
   {
     label: "Carruseles para redes sociales",
-    values: { essential: null, grow: "2", scale: "4" },
+    values: { mensual: "5", plus: "10" },
   },
   {
     label: "Videos para redes sociales",
-    values: { essential: null, grow: "2", scale: "4" },
-  },
-  {
-    label: "Acompañamiento / asesoría estratégica",
-    values: { essential: "Básico", grow: "Personalizada", scale: "Personalizada" },
+    values: { mensual: "5", plus: "10" },
   },
   {
     label: "Planeación estratégica de contenido",
-    values: { essential: null, grow: true, scale: true },
-  },
-  {
-    label: "Reporte semanal de desempeño",
-    values: { essential: null, grow: true, scale: true },
-  },
-  {
-    label: "Auditoría mensual de estrategia y resultados",
-    values: { essential: null, grow: null, scale: true },
-  },
-  {
-    label: "Reunión mensual de seguimiento estratégico",
-    values: { essential: null, grow: null, scale: true },
-  },
-  {
-    label: "Prioridad alta en tiempos de entrega",
-    values: { essential: null, grow: null, scale: true },
+    values: { mensual: true, plus: true },
   },
   {
     label: "Entregas en alta resolución, listas para publicar",
-    values: { essential: true, grow: true, scale: true },
+    values: { mensual: true, plus: true },
   },
   {
     label: "Panel exclusivo para dar seguimiento a cada solicitud",
-    values: { essential: true, grow: true, scale: true },
+    values: { mensual: true, plus: true },
   },
 ];

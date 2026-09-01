@@ -1332,7 +1332,7 @@ function PanelContent() {
 
       {upgradeTeaser
         ? (() => {
-            const growPlan = getPlan("grow");
+            const growPlan = getPlan("plus");
             const isVideo = upgradeTeaser === "video";
             const growQuota = isVideo
               ? growPlan.videoRequestsQuota

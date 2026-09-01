@@ -2,11 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
+import { getPlan } from "../../lib/membership-plans";
 
 type CalendarFormat = "imagen" | "video" | "carrusel";
 type EntryRow = {
   id: string;
   scheduled_date: string;
+  slot_index: number;
   format: CalendarFormat;
   title: string;
   brief: string;
@@ -52,6 +54,7 @@ const slideSchema = z.object({
 const createEntrySchema = z
   .object({
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    slot: z.number().int().min(1).max(2).default(1),
     format: z.enum(["imagen", "video", "carrusel"]),
     title: z.string().min(1).max(120),
     brief: z.string().min(1).max(2000),
@@ -62,7 +65,7 @@ const createEntrySchema = z
     path: ["slides"],
   });
 const bulkCreateSchema = z.object({
-  entries: z.array(createEntrySchema).min(1).max(60),
+  entries: z.array(createEntrySchema).min(1).max(62),
 });
 
 // Solo título/brief/slides son editables directo — nunca fecha ni formato
@@ -98,14 +101,14 @@ export const Route = createFileRoute("/api/calendar-entries")({
 
         const rows = await db()
           .prepare(
-            `SELECT e.id, e.scheduled_date, e.format, e.title, e.brief, e.slides_json,
+            `SELECT e.id, e.scheduled_date, e.slot_index, e.format, e.title, e.brief, e.slides_json,
                     e.request_id, e.caption, s.status AS publication_status,
                     s.scheduled_for_utc, s.timezone AS publication_timezone,
                     s.platforms_json AS publication_platforms
              FROM calendar_entries e
              LEFT JOIN calendar_entry_schedules s ON s.entry_id = e.id
              WHERE e.user_id = ?1 AND e.scheduled_date BETWEEN ?2 AND ?3
-             ORDER BY e.scheduled_date ASC`,
+             ORDER BY e.scheduled_date ASC, e.slot_index ASC`,
           )
           .bind(user.id, monthStart, monthEnd)
           .all<EntryRow>();
@@ -205,6 +208,7 @@ export const Route = createFileRoute("/api/calendar-entries")({
         const withStatus = entries.map((e) => ({
           id: e.id,
           date: e.scheduled_date,
+          slot: e.slot_index,
           format: e.format,
           title: e.title,
           brief: e.brief,
@@ -235,19 +239,51 @@ export const Route = createFileRoute("/api/calendar-entries")({
         const parsed = bulkCreateSchema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
 
-        // Planning is free — no membership/quota check here. Only actually
+        // Planning is free — no production quota check here. The active plan
+        // does define how many pieces Wit may place on the same date.
+        const membership = await db()
+          .prepare("SELECT plan FROM memberships WHERE user_id = ?1")
+          .bind(user.id)
+          .first<{ plan: string }>();
+        const maxSlots = getPlan(membership?.plan).planningSlotsPerDay;
+        const seenSlots = new Set<string>();
+        for (const entry of parsed.data.entries) {
+          const key = `${entry.date}:${entry.slot}`;
+          if (entry.slot > maxSlots || seenSlots.has(key)) {
+            return json({ ok: false, error: "slot_no_disponible" }, { status: 409 });
+          }
+          seenSlots.add(key);
+        }
+        const plannedDates = [...new Set(parsed.data.entries.map((entry) => entry.date))];
+        const placeholders = plannedDates.map((_, i) => `?${i + 2}`).join(", ");
+        const existing = await db()
+          .prepare(
+            `SELECT scheduled_date, slot_index FROM calendar_entries
+             WHERE user_id = ?1 AND scheduled_date IN (${placeholders})`,
+          )
+          .bind(user.id, ...plannedDates)
+          .all<{ scheduled_date: string; slot_index: number }>();
+        const existingSlots = new Set(
+          (existing.results ?? []).map((row) => `${row.scheduled_date}:${row.slot_index}`),
+        );
+        if (parsed.data.entries.some((entry) => existingSlots.has(`${entry.date}:${entry.slot}`))) {
+          return json({ ok: false, error: "fecha_ya_planeada" }, { status: 409 });
+        }
+
+        // Only actually
         // requesting a planned piece (/api/calendar-entries-request) spends
         // cupo, same as every other request-creation path in this app.
         for (const entry of parsed.data.entries) {
           await db()
             .prepare(
-              `INSERT INTO calendar_entries (id, user_id, scheduled_date, format, title, brief, slides_json)
-               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+              `INSERT INTO calendar_entries (id, user_id, scheduled_date, slot_index, format, title, brief, slides_json)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
             )
             .bind(
               crypto.randomUUID(),
               user.id,
               entry.date,
+              entry.slot,
               entry.format,
               entry.title.trim(),
               entry.brief.trim(),

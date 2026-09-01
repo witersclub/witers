@@ -31,14 +31,9 @@ function useGeoPrice() {
   });
 }
 
-// Essential stays brand blue; Grow (the "middle" tier) reads as platinum —
-// a brushed silver gradient, not another shade of blue — and Scale reads as
-// black, so the three cards feel like a visible step up rather than three
-// blue boxes with different numbers.
 export const TIER_HEADER_BG: Record<string, string> = {
-  essential: "bg-wit-blue",
-  grow: "bg-[linear-gradient(135deg,#aeb6c0,#6b7280_55%,#464b54)]",
-  scale: "bg-[linear-gradient(135deg,#2a2a2d,#000000_60%,#000000)]",
+  mensual: "bg-wit-blue",
+  plus: "bg-[linear-gradient(135deg,#0047ff,#7c3aed_62%,#ec4899)]",
 };
 
 export type PlanCta = {

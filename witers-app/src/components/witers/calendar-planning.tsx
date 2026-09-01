@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Download,
   Facebook,
   FileText,
   Flame,
@@ -42,6 +43,8 @@ import { ASPECT_OPTIONS, AspectRatioPicker } from "./lab-pickers";
 import { MicButton } from "./mic-button";
 import { SlideGallery } from "./slide-gallery";
 import { extractBrandDocumentText } from "../../lib/brand-document-text";
+import { buildCalendarPlanPdf } from "../../lib/calendar-plan-pdf";
+import { downloadPdf } from "../../lib/campaign-report-pdf";
 import { useLanguage } from "../../lib/i18n";
 
 // video no soporta 4:3/3:4 (ver el enum real en video-requests.ts) — se le
@@ -52,6 +55,7 @@ type CalendarFormat = "imagen" | "video" | "carrusel";
 type CalendarSlideDraft = { title: string; brief: string };
 type CalendarEntryDraft = {
   date: string;
+  slot?: number;
   format: CalendarFormat;
   title: string;
   brief: string;
@@ -3143,6 +3147,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
   const [confirmingReplan, setConfirmingReplan] = useState(false);
   const [replanning, setReplanning] = useState(false);
   const [monthlyProgrammingOpen, setMonthlyProgrammingOpen] = useState(false);
+  const [downloadingPlan, setDownloadingPlan] = useState(false);
   const qc = useQueryClient();
 
   const base = new Date();
@@ -3222,6 +3227,17 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
     : 0;
   const grid = buildMonthGrid(year, month);
 
+  async function downloadPlanningPdf() {
+    if (!entries.length || downloadingPlan) return;
+    setDownloadingPlan(true);
+    try {
+      const bytes = buildCalendarPlanPdf({ monthLabel, entries });
+      downloadPdf(bytes, `planificacion-${year}-${String(month).padStart(2, "0")}.pdf`);
+    } finally {
+      setDownloadingPlan(false);
+    }
+  }
+
   async function replan() {
     setReplanning(true);
     try {
@@ -3258,6 +3274,26 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           </button>
         </div>
         <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+          {entries.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => document.getElementById("calendario-planificacion")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="flex min-h-11 items-center justify-center px-3 py-2 text-sm font-bold text-wit-blue hover:underline"
+            >
+              {t("Ver planificación completa", "View full plan")}
+            </button>
+          ) : null}
+          {entries.length > 0 ? (
+            <button
+              type="button"
+              onClick={downloadPlanningPdf}
+              disabled={downloadingPlan}
+              className="flex min-h-11 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.06] disabled:opacity-60"
+            >
+              <Download className="h-4 w-4" strokeWidth={2.3} />
+              {downloadingPlan ? t("Generando PDF...", "Creating PDF...") : t("Descargar planificación", "Download plan")}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => {
@@ -3422,7 +3458,7 @@ export function PlanificacionPanel({ streakWeeks }: { streakWeeks: number }) {
           {/* Same grid at every size — only the density changes (smaller
               cells/text on a phone) instead of swapping to a separate
               agenda-list layout on mobile. */}
-          <div className="wit-glass rounded-3xl p-2.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:p-4">
+          <div id="calendario-planificacion" className="wit-glass rounded-3xl p-2.5 shadow-[0_10px_30px_rgba(5,13,40,0.05)] sm:p-4">
             <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
               {[
                 t("Lun", "Mon"),

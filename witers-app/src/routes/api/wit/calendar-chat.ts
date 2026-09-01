@@ -6,6 +6,7 @@ import { getPlanningBrandAssets } from "../../../lib/brand-assets.server";
 import { getBrandMemory } from "../../../lib/brand-memory.server";
 import { runWitCalendarChat, type CalendarEntryDraft } from "../../../lib/wit-chat.server";
 import { db, getSessionUser, json } from "../../../lib/witers-auth.server";
+import { getPlan } from "../../../lib/membership-plans";
 
 const schema = z.object({
   messages: z
@@ -86,6 +87,11 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
 
         const profile = await getBrandProfile(user.id);
         if (!profile) return json({ ok: false, error: "falta_marca" }, { status: 409 });
+        const membership = await db()
+          .prepare("SELECT plan FROM memberships WHERE user_id = ?1")
+          .bind(user.id)
+          .first<{ plan: string }>();
+        const plan = getPlan(membership?.plan);
 
         const parsed = schema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
@@ -161,6 +167,7 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
               expectedEntries: dateBatch.length,
               exactDates: dateBatch,
               allowPartial: true,
+              maxPostsPerDay: plan.planningSlotsPerDay,
             });
             if (!batchResult.ok) return json(batchResult, { status: 502 });
             if (batchResult.kind === "message") return json(batchResult);
@@ -179,6 +186,7 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
                 existingEntries: knownEntries,
                 expectedEntries: 1,
                 exactDates: [date],
+                maxPostsPerDay: plan.planningSlotsPerDay,
               });
               if (!retry.ok) return json(retry, { status: 502 });
               if (retry.kind === "message") return json(retry);
@@ -203,6 +211,7 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
           existingEntries: existingEntries.map((r) => ({ date: r.scheduled_date, title: r.title })),
           expectedEntries: remainingExpectedEntries || undefined,
           exactDates: remainingExpectedEntries ? remainingDates : undefined,
+          maxPostsPerDay: plan.planningSlotsPerDay,
         });
 
         if (!result.ok) return json(result, { status: 502 });

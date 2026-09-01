@@ -254,9 +254,8 @@ function buildStatusBreakdown(requests: AdminRequest[]) {
 }
 
 const PLAN_CHART_COLORS: Record<string, string> = {
-  essential: "#0047ff",
-  grow: "#8b93a3",
-  scale: "#0a1230",
+  mensual: "#0047ff",
+  plus: "#7c3aed",
 };
 
 function buildPlanBreakdown(users: AdminUser[]) {
@@ -2132,7 +2131,7 @@ function EditUserModal({
   const [activating, setActivating] = useState(false);
   const [activateMsg, setActivateMsg] = useState<string | null>(null);
   const [activatePlan, setActivatePlan] = useState<PlanId>(
-    isPlanId(user.membership_plan) ? user.membership_plan : "essential",
+              isPlanId(user.membership_plan) ? user.membership_plan : "mensual",
   );
   const [email, setEmail] = useState(user.email);
   const [emailBusy, setEmailBusy] = useState(false);

@@ -63,6 +63,7 @@ export type WitCarouselChatResult =
 export type CalendarFormat = "imagen" | "video" | "carrusel";
 export type CalendarEntryDraft = {
   date: string; // YYYY-MM-DD
+  slot?: number;
   format: CalendarFormat;
   title: string;
   brief: string; // imagen/video: brief completo. carrusel: resumen corto — el contenido real vive en slides.
@@ -303,6 +304,7 @@ function buildCalendarSystemPrompt(
     existingEntries?: { date: string; title: string }[];
     expectedEntries?: number;
     exactDates?: string[];
+    maxPostsPerDay?: 1 | 2;
   },
 ): string {
   const brandLines = [
@@ -344,15 +346,18 @@ function buildCalendarSystemPrompt(
 
   return (
     "Eres Wit, el director creativo de IA de WITERS, una agencia de branding por membresía. " +
-    "Estás ayudando a un cliente a planificar TODO su calendario de contenido del mes en una " +
-    "sola conversación corta — no una pieza a la vez, el mes completo. Es una conversación real " +
-    "y natural, no un formulario: sé breve (1-3 frases por turno).\n\n" +
+    "Estás ayudando a un cliente con su planificación de contenido. Puede querer llenar el mes, " +
+    "publicar algunos días o simplemente conversar una idea: sigue su intención, responde sus preguntas " +
+    "directamente y nunca lo fuerces a un formulario. Es una conversación real y natural; sé claro, " +
+    "propositivo y breve (1-3 frases por turno).\n\n" +
     "Idioma: responde siempre en el mismo idioma en el que te escribe el cliente, y redacta " +
     "también en ese idioma los campos de submit_content_calendar (title, brief). Si cambia de " +
     "idioma a mitad de la conversación, sigue tú el idioma de su último mensaje.\n\n" +
     `Mes que se está planificando: ${opts.monthLabel}. Hoy es ${opts.todayDate}; el mes termina ` +
     `el ${opts.monthEndDate}. Todas las fechas que propongas deben estar entre esas dos, ambas ` +
     "incluidas — nunca antes de hoy.\n\n" +
+    `Este cliente puede planificar como máximo ${opts.maxPostsPerDay ?? 1} ${opts.maxPostsPerDay === 2 ? "piezas" : "pieza"} por día. ` +
+    "Es un máximo, no una obligación: respeta siempre la frecuencia que el cliente elija.\n\n" +
     (opts.existingEntries?.length
       ? "Estas fechas de este mes YA tienen una pieza planeada (el cliente ya la pidió o la " +
         "tiene en curso) — NUNCA propongas ninguna de estas fechas de nuevo, ni las cuentes " +
@@ -367,12 +372,11 @@ function buildCalendarSystemPrompt(
     (brand.brandAssets?.some((asset) => asset.textContent)
       ? "La Mente de marca ya está disponible en tu contexto. Úsala activamente para proponer pilares, tono, público y mensajes; si hablas de ella, di 'con base en tu Mente de marca' y menciona un dato concreto que esté en el material. NUNCA digas que no tienes acceso a los archivos ni que solo puedes usar información genérica. Los archivos sin texto extraíble son referencias visuales y no debes fingir que los leíste.\n\n"
       : "No hay texto extraíble seleccionado en Mente de marca. Usa los datos del perfil y pide al cliente únicamente los pilares que falten, sin mencionar limitaciones técnicas.\n\n") +
-    "Necesitas dos cosas del cliente antes de armar el plan: (1) con qué frecuencia quiere " +
-    "publicar (ej. 'una vez por semana', 'tres veces por semana', 'todos los días hábiles') y " +
-    "(2) de qué temas o pilares de contenido quiere hablar este mes (ej. promociones, detrás de " +
-    "cámaras, testimonios, tips, lanzamientos). Pregúntalas de forma natural, una a la vez si " +
-    "hace falta — nunca las enumeres como formulario. Si la Mente de marca ya define pilares, propón esos pilares de forma concreta y pide solo la confirmación o el foco del mes; no hagas una pregunta genérica que ignore el material. Si el cliente ya te dio ambas cosas en su " +
-    "primer mensaje, no las vuelvas a preguntar.\n\n" +
+    "Antes de crear entradas, identifica la cadencia y los temas solo si realmente faltan. El cliente " +
+    "puede decirlos de cualquier manera ('lunes, miércoles y viernes', 'cuando tenga promociones', " +
+    "'llena septiembre') y puede hacer preguntas intermedias: interprétalo con criterio. Pregunta una " +
+    "sola cosa concreta únicamente cuando no puedas inferirla. Si la Mente de marca define pilares, " +
+    "úsalos activamente y pide solo la confirmación o el foco que falte; no repitas preguntas ya resueltas.\n\n" +
     "Con la cadencia y los temas ya claros, arma el plan completo tú mismo con criterio " +
     "profesional: calcula las fechas reales del calendario según la cadencia acordada (por " +
     "ejemplo, tres veces por semana suele leerse como lunes/miércoles/viernes, pero ajústalo con " +
@@ -574,6 +578,11 @@ const CALENDAR_TOOLS = [
                   type: "string",
                   description:
                     "Fecha en formato YYYY-MM-DD, dentro del mes que se está planificando.",
+                },
+                slot: {
+                  type: "integer",
+                  enum: [1, 2],
+                  description: "Turno de publicación en esa fecha. Usa 1 salvo que se soliciten dos piezas ese día.",
                 },
                 format: {
                   type: "string",
@@ -966,6 +975,7 @@ export async function runWitCalendarChat(
     existingEntries?: { date: string; title: string }[];
     expectedEntries?: number;
     exactDates?: string[];
+    maxPostsPerDay?: 1 | 2;
     // A partially formed carousel/video must not discard the valid dates
     // around it. The route retries only the missing exact dates afterwards.
     allowPartial?: boolean;
@@ -1034,6 +1044,7 @@ export async function runWitCalendarChat(
       );
       type RawCalendarEntry = {
         date: string;
+        slot?: number;
         format?: CalendarFormat;
         title: string;
         brief: string;
@@ -1042,6 +1053,7 @@ export async function runWitCalendarChat(
       const mapped: RawCalendarEntry[] = allEntries.map((e) => {
         const raw: RawCalendarEntry = {
           date: e.date?.trim() ?? "",
+          slot: e.slot === 2 ? 2 : 1,
           format: e.format,
           title: e.title?.trim() || "",
           brief: e.brief?.trim() || "",

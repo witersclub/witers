@@ -9,7 +9,7 @@ import { db, json, requireAdminUser } from "../../../lib/witers-auth.server";
 // in person, etc.) and need an admin to flip their membership on by hand.
 const schema = z.object({
   userId: z.string().uuid(),
-  plan: z.string().refine(isPlanId).default("essential"),
+  plan: z.string().refine(isPlanId).default("mensual"),
 });
 
 export const Route = createFileRoute("/api/admin/activate-membership")({
