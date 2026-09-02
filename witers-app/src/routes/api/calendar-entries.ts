@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { isProductionReadyCalendarEntry } from "../../lib/wit-chat.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 import { getPlan } from "../../lib/membership-plans";
 
@@ -240,6 +241,22 @@ export const Route = createFileRoute("/api/calendar-entries")({
 
         const parsed = bulkCreateSchema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
+        if (
+          !parsed.data.entries.every((entry) =>
+            isProductionReadyCalendarEntry({
+              ...entry,
+              ...(entry.slides
+                ? {
+                    slides: entry.slides.map((slide) => ({
+                      title: slide.title?.trim() || "",
+                      brief: slide.brief,
+                    })),
+                  }
+                : {}),
+            }),
+          )
+        )
+          return json({ ok: false, error: "brief_produccion_incompleto" }, { status: 422 });
 
         // Planning is free — no production quota check here. The active plan
         // does define how many pieces Wit may place on the same date.

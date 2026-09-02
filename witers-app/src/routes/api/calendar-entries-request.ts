@@ -1,7 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import { getPlanningBrandAssets } from "../../lib/brand-assets.server";
+import { getBrandMemory } from "../../lib/brand-memory.server";
 import { getBrandProfile } from "../../lib/brand-profile.server";
+import {
+  isProductionReadyCalendarEntry,
+  runWitCalendarEntryExpansion,
+} from "../../lib/wit-chat.server";
 import { createCarouselRequest } from "./carousel-requests";
 import { createImageRequest } from "./requests";
 import { createVideoRequest } from "./video-requests";
@@ -71,6 +77,64 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
         const brand = await getBrandProfile(user.id);
         if (!brand) return json({ ok: false, error: "falta_marca" }, { status: 409 });
 
+        let productionEntry: {
+          format: "imagen" | "video" | "carrusel";
+          title: string;
+          brief: string;
+          slides?: { title: string; brief: string }[];
+        } = {
+          format: entry.format,
+          title: entry.title,
+          brief: entry.brief,
+          ...(entry.slides_json
+            ? {
+                slides: (parseSlides(entry.slides_json) ?? []).map((slide) => ({
+                  title: slide.title?.trim() || "",
+                  brief: slide.brief.trim(),
+                })),
+              }
+            : {}),
+        };
+        // Legacy plans can contain a topic-level outline. Complete that
+        // record before any format reaches production; this is a safety net
+        // for old data, not a second client-facing planning step.
+        if (!isProductionReadyCalendarEntry(productionEntry)) {
+          const expanded = await runWitCalendarEntryExpansion(productionEntry, {
+            companyName: brand.company_name,
+            brandColors: brand.brand_colors,
+            businessType: brand.business_type,
+            hasLogo: Boolean(brand.logo_key),
+            brandMemory: await getBrandMemory(user.id),
+            brandAssets: (await getPlanningBrandAssets(user.id)).map((asset) => ({
+              originalName: asset.original_name,
+              kind: asset.kind,
+              textContent: asset.text_content,
+            })),
+          });
+          if (!expanded.ok)
+            return json({ ok: false, error: "brief_produccion_incompleto" }, { status: 422 });
+          productionEntry = {
+            format: entry.format,
+            title: expanded.title,
+            brief: expanded.brief,
+            ...(entry.format === "carrusel" ? { slides: expanded.slides } : {}),
+          };
+          if (!isProductionReadyCalendarEntry(productionEntry))
+            return json({ ok: false, error: "brief_produccion_incompleto" }, { status: 422 });
+          await db()
+            .prepare(
+              "UPDATE calendar_entries SET title = ?2, brief = ?3, slides_json = ?4, production_ready_at = datetime('now') WHERE id = ?1 AND user_id = ?5 AND request_id IS NULL",
+            )
+            .bind(
+              entry.id,
+              productionEntry.title,
+              productionEntry.brief,
+              entry.format === "carrusel" ? JSON.stringify(productionEntry.slides) : null,
+              user.id,
+            )
+            .run();
+        }
+
         let result: { ok: true; id: string } | { ok: false; error: string; status: number };
         if (entry.format === "imagen") {
           const aspectRatio = IMAGE_CAROUSEL_RATIOS.includes(
@@ -79,9 +143,9 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
             ? (parsed.data.aspectRatio as (typeof IMAGE_CAROUSEL_RATIOS)[number])
             : "3:4";
           result = await createImageRequest(user.id, user.name, {
-            title: entry.title,
+            title: productionEntry.title,
             companyName: brand.company_name,
-            pieceBrief: entry.brief,
+            pieceBrief: productionEntry.brief,
             aspectRatio,
             lang: "es",
             brandColors: brand.brand_colors,
@@ -90,7 +154,7 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
             noLogo: !brand.logo_key,
           });
         } else if (entry.format === "carrusel") {
-          const slides = entry.slides_json ? parseSlides(entry.slides_json) : null;
+          const slides = productionEntry.slides;
           if (!slides || slides.length !== 4) {
             return json({ ok: false, error: "faltan_laminas" }, { status: 409 });
           }
@@ -100,7 +164,7 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
             ? (parsed.data.aspectRatio as (typeof IMAGE_CAROUSEL_RATIOS)[number])
             : "3:4";
           result = await createCarouselRequest(user.id, user.name, {
-            title: entry.title,
+            title: productionEntry.title,
             aspectRatio,
             slides,
           });
@@ -115,12 +179,12 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
           // archivos, para que el equipo lo resuelva con stock/IA. Sigue
           // siendo un solo clic, sin subir nada.
           result = await createVideoRequest(user.id, user.name, {
-            title: entry.title,
-            purpose: entry.brief,
+            title: productionEntry.title,
+            purpose: productionEntry.brief,
             platform: "instagram",
             aspectRatio,
             wantsAiScenes: true,
-            aiScenesNote: entry.brief,
+            aiScenesNote: productionEntry.brief,
             rawFileKeys: [],
           });
         }

@@ -70,6 +70,39 @@ export type CalendarEntryDraft = {
   slides?: CarouselSlideDraft[]; // siempre 4, solo presente cuando format === "carrusel"
 };
 
+// A calendar entry is not merely a topic: it is the production handoff. This
+// guard keeps an incomplete outline from being stored as if it were ready for
+// a designer, particularly for videos where the script is essential.
+export function isProductionReadyCalendarEntry(
+  entry: Pick<CalendarEntryDraft, "format" | "title" | "brief" | "slides">,
+): boolean {
+  const brief = entry.brief.trim();
+  if (!entry.title.trim() || !brief) return false;
+  if (entry.format === "carrusel")
+    return Boolean(
+      entry.slides?.length === 4 &&
+      entry.slides.every(
+        (slide) => slide.title.trim().length > 0 && slide.brief.trim().length >= 20,
+      ),
+    );
+  if (entry.format === "imagen")
+    return (
+      /(?:composici[oó]n|visual)/i.test(brief) &&
+      /(?:texto(?:\s+en\s+(?:pieza|pantalla))?|copy)/i.test(brief) &&
+      /(?:cta|llamado a la acci[oó]n)/i.test(brief)
+    );
+  const sceneCount = new Set(
+    [...brief.matchAll(/(?:escena|scene)\s*(\d+)/gi)].map((match) => match[1]),
+  ).size;
+  return (
+    /(?:concepto|idea central|[aá]ngulo)/i.test(brief) &&
+    sceneCount >= 3 &&
+    /(?:se ve|visual|se muestra)/i.test(brief) &&
+    /(?:se dice|locuci[oó]n|voz en off|texto en pantalla)/i.test(brief) &&
+    /(?:cta|llamado a la acci[oó]n)/i.test(brief)
+  );
+}
+
 export type WitCalendarChatResult =
   | { ok: true; kind: "message"; text: string }
   | { ok: true; kind: "done"; entries: CalendarEntryDraft[] }
@@ -407,9 +440,10 @@ function buildCalendarSystemPrompt(
     "repetir el mismo formato todos los días. Usa video con moderación (como mucho una vez por " +
     "semana): el cliente tiene que subir su propio material de video para esa pieza, así que no " +
     "conviene saturar el mes de video.\n\n" +
-    "Cada pieza debe quedar lista para producción, no solo como un tema. Imagen: define composición, mensaje, texto que aparece en pieza y CTA. " +
-    "Carrusel: usa brief como resumen y entrega exactamente 4 láminas en slides: gancho, dos láminas de desarrollo concreto y CTA; cada lámina debe ser autosuficiente. " +
-    "Video: escribe un guion AIDA completo en 3-5 escenas, indicando qué se ve y qué se dice en cada una. Incluye subtítulos minimalistas, máximo una línea, sombra sutil y sin contraste duro. " +
+    "Cada pieza debe quedar lista para producción, no solo como un tema. Este requisito es obligatorio: una entrada incompleta será rechazada. " +
+    "Imagen: el brief debe incluir literalmente CONCEPTO, COMPOSICIÓN, TEXTO EN PIEZA y CTA. " +
+    "Carrusel: usa brief como resumen y entrega exactamente 4 láminas en slides: gancho, dos láminas de desarrollo concreto y CTA; cada lámina debe ser autosuficiente y contener diseño/copy concreto. " +
+    "Video: el brief debe incluir literalmente CONCEPTO, GUION AIDA, ESCENA 1 a ESCENA 3-5, y en cada escena ‘Se ve:’ y ‘Se dice:’. Incluye SUBTÍTULOS, CTA y CIERRE. " +
     "Después del CTA, si la marca tiene logotipo, añade un cierre profesional con logo y fade-out. No uses markdown ni inventes datos del negocio.\n\n" +
     "Reglas de seguridad, nunca las rompas:\n" +
     "- NUNCA inventes precios, descuentos o datos concretos del negocio que el cliente no haya " +
@@ -1101,7 +1135,7 @@ export async function runWitCalendarChat(
         }
         return raw;
       });
-      const validEntries = mapped.filter(
+      const structurallyValidEntries = mapped.filter(
         (e): e is CalendarEntryDraft =>
           // In date-locked planning the model supplies content for ordered
           // slots, not calendar authority. A malformed echoed date must not
@@ -1117,6 +1151,7 @@ export async function runWitCalendarChat(
           // build from later.
           (e.format !== "carrusel" || e.slides?.length === 4),
       );
+      const validEntries = structurallyValidEntries.filter(isProductionReadyCalendarEntry);
       // Dates are controlled by WITERS, not by the model. The model fills
       // ordered content slots and the server assigns the user-selected dates.
       const entries = opts.exactDates
@@ -1156,9 +1191,8 @@ export async function runWitCalendarChat(
   return { ok: true, kind: "message", text: calendarText };
 }
 
-// The monthly planner deliberately stores a compact, fast-to-generate
-// outline. This expands one selected entry only when the client opens it,
-// keeping the calendar responsive while preserving WITERS' production bar.
+// Legacy recovery for entries created before calendar planning required a
+// complete production brief. New monthly plans arrive production-ready.
 export async function runWitCalendarEntryExpansion(
   entry: Pick<CalendarEntryDraft, "format" | "title" | "brief" | "slides">,
   brand: WitBrandContext,

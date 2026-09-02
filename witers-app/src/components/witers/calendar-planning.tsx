@@ -1057,10 +1057,15 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
                     'Esta pieza se planificó antes de la última actualización y no tiene las 4 láminas listas. Usa "Replanear mes" para regenerarla.',
                     'This piece was planned before the latest update and is missing its 4 slides. Use "Re-plan month" to regenerate it.',
                   )
-                : t(
-                    "No pudimos enviar la solicitud. Intenta de nuevo.",
-                    "We couldn't send the request. Try again.",
-                  ),
+                : data.error === "brief_produccion_incompleto"
+                  ? t(
+                      "No pudimos completar el brief de producción de esta pieza. No se envió ninguna solicitud; intenta nuevamente.",
+                      "We couldn't complete this piece's production brief. No request was sent; please try again.",
+                    )
+                  : t(
+                      "No pudimos enviar la solicitud. Intenta de nuevo.",
+                      "We couldn't send the request. Try again.",
+                    ),
         );
         return;
       }
