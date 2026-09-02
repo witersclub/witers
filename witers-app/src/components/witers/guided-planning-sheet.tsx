@@ -66,21 +66,51 @@ function iso(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-function plannedDates(year: number, month: number, frequency: Frequency, customCount: number) {
-  const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const allowedWeekdays =
-    frequency === "3" ? [1, 3, 5] : frequency === "4" ? [1, 2, 4, 6] : [1, 2, 3, 4, 5];
-  const all = Array.from(
-    { length: days },
-    (_, index) => new Date(Date.UTC(year, month - 1, index + 1)),
-  );
-  if (frequency !== "custom")
-    return all.filter((day) => allowedWeekdays.includes(day.getUTCDay())).map(iso);
-  const amount = Math.max(1, Math.min(days, customCount || 1));
-  if (amount === days) return all.map(iso);
-  return Array.from({ length: amount }, (_, index) =>
-    iso(all[Math.round((index * (days - 1)) / Math.max(1, amount - 1))]),
-  );
+const WEEKDAYS = [
+  { value: 1, short: "Lun" },
+  { value: 2, short: "Mar" },
+  { value: 3, short: "Mié" },
+  { value: 4, short: "Jue" },
+  { value: 5, short: "Vie" },
+  { value: 6, short: "Sáb" },
+  { value: 0, short: "Dom" },
+];
+
+function daysPerWeek(frequency: Frequency, customCount: number) {
+  return frequency === "custom" ? Math.max(1, Math.min(7, customCount || 1)) : Number(frequency);
+}
+
+export function getRecommendedWeekdays(count: number) {
+  const options: Record<number, number[]> = {
+    1: [1],
+    2: [2, 5],
+    3: [1, 3, 5],
+    4: [1, 3, 5, 0],
+    5: [1, 2, 4, 5, 0],
+    6: [1, 2, 3, 4, 5, 0],
+    7: [1, 2, 3, 4, 5, 6, 0],
+  };
+  return options[Math.max(1, Math.min(7, count))] ?? options[7];
+}
+
+export function getDatesForWeekdays({
+  year,
+  month,
+  weekdays,
+}: {
+  year: number;
+  month: number;
+  weekdays: number[];
+}) {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return Array.from({ length: daysInMonth }, (_, index) => {
+    const date = new Date(Date.UTC(year, month - 1, index + 1));
+    return { weekday: date.getUTCDay(), date: iso(date) };
+  })
+    .filter(({ weekday, date }) => weekdays.includes(weekday) && date >= today)
+    .map(({ date }) => date);
 }
 
 function objectiveCopy(objective: Objective, custom: string) {
@@ -117,11 +147,21 @@ export function PlanningLoader({ progress, message }: { progress: number; messag
         <span className="planning-loader-particle planning-loader-particle-b" />
         <span className="planning-loader-particle planning-loader-particle-c">•</span>
         <span className="planning-loader-particle planning-loader-particle-d" />
-        <span className="planning-loader-icon planning-loader-icon-top"><CalendarDays /></span>
-        <span className="planning-loader-icon planning-loader-icon-left"><Video /></span>
-        <span className="planning-loader-icon planning-loader-icon-right"><ImageIcon /></span>
-        <span className="planning-loader-icon planning-loader-icon-bottom"><FileText /></span>
-        <span className="planning-loader-core"><WMark size={56} /></span>
+        <span className="planning-loader-icon planning-loader-icon-top">
+          <CalendarDays />
+        </span>
+        <span className="planning-loader-icon planning-loader-icon-left">
+          <Video />
+        </span>
+        <span className="planning-loader-icon planning-loader-icon-right">
+          <ImageIcon />
+        </span>
+        <span className="planning-loader-icon planning-loader-icon-bottom">
+          <FileText />
+        </span>
+        <span className="planning-loader-core">
+          <WMark size={56} />
+        </span>
       </div>
       <h2 id="guided-planning-title" className="mt-2 text-2xl font-extrabold text-wit-ink">
         Preparando tu planificación
@@ -129,7 +169,10 @@ export function PlanningLoader({ progress, message }: { progress: number; messag
       <p className="mt-2 max-w-xs text-sm leading-relaxed text-wit-gray">
         WITERS está armando un plan personalizado para ti.
       </p>
-      <div className="mt-6 w-full max-w-[270px]" aria-label={`Progreso de generación: ${progress}%`}>
+      <div
+        className="mt-6 w-full max-w-[270px]"
+        aria-label={`Progreso de generación: ${progress}%`}
+      >
         <div className="h-2 overflow-hidden rounded-full bg-wit-mist/80">
           <span
             className="block h-full rounded-full bg-wit-blue transition-[width] duration-700 ease-out"
@@ -139,8 +182,12 @@ export function PlanningLoader({ progress, message }: { progress: number; messag
         <p className="mt-3 text-xs font-bold text-wit-blue">✦ {message}</p>
       </div>
       <div className="mt-5 flex w-full max-w-[320px] items-center gap-3 rounded-[18px] bg-wit-blue/[0.045] px-4 py-3 text-left">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-wit-blue shadow-sm"><Sparkles className="h-4 w-4" /></span>
-        <p className="text-xs font-medium leading-relaxed text-wit-gray">Esto puede tomar unos segundos. Pronto tendrás tu calendario listo.</p>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-wit-blue shadow-sm">
+          <Sparkles className="h-4 w-4" />
+        </span>
+        <p className="text-xs font-medium leading-relaxed text-wit-gray">
+          Esto puede tomar unos segundos. Pronto tendrás tu calendario listo.
+        </p>
       </div>
     </div>
   );
@@ -164,16 +211,18 @@ export function GuidedPlanningSheet({
   const [objective, setObjective] = useState<Objective | null>(null);
   const [otherObjective, setOtherObjective] = useState("");
   const [frequency, setFrequency] = useState<Frequency | null>(null);
-  const [customCount, setCustomCount] = useState(12);
+  const [customCount, setCustomCount] = useState(3);
+  const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const [formats, setFormats] = useState<FormatChoice[]>(["recommended"]);
   const [specialInfo, setSpecialInfo] = useState("");
   const [state, setState] = useState<"form" | "generating" | "success" | "error">("form");
   const [entries, setEntries] = useState<CalendarEntryDraft[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(12);
   const [loadingMessage, setLoadingMessage] = useState(0);
+  const selectedDaysRequired = frequency ? daysPerWeek(frequency, customCount) : 0;
   const dates = useMemo(
-    () => (frequency ? plannedDates(targetYear, targetMonth, frequency, customCount) : []),
-    [customCount, frequency, targetMonth, targetYear],
+    () => getDatesForWeekdays({ year: targetYear, month: targetMonth, weekdays: selectedWeekdays }),
+    [selectedWeekdays, targetMonth, targetYear],
   );
   const canContinue =
     step === 0
@@ -181,8 +230,10 @@ export function GuidedPlanningSheet({
       : step === 1
         ? Boolean(frequency)
         : step === 2
-          ? formats.length > 0
-          : true;
+          ? selectedWeekdays.length === selectedDaysRequired
+          : step === 3
+            ? formats.length > 0
+            : true;
   const formatTotals = entries.reduce<Record<CalendarFormat, number>>(
     (totals, entry) => {
       totals[entry.format] += 1;
@@ -198,7 +249,9 @@ export function GuidedPlanningSheet({
       1900,
     );
     const progressTimer = window.setInterval(() => {
-      setLoadingProgress((current) => Math.min(92, current + Math.max(2, Math.round((94 - current) * 0.15))));
+      setLoadingProgress((current) =>
+        Math.min(92, current + Math.max(2, Math.round((94 - current) * 0.15))),
+      );
     }, 1250);
     return () => {
       window.clearInterval(messageTimer);
@@ -247,7 +300,7 @@ export function GuidedPlanningSheet({
           year: targetYear,
           month: targetMonth,
           expectedEntries: dates.length,
-          plannedDates: dates,
+          targetDates: dates,
         }),
       });
       const data = (await res.json()) as {
@@ -294,24 +347,27 @@ export function GuidedPlanningSheet({
           <div
             className="flex items-center gap-2 pr-10"
             aria-label={t(
-              `Paso ${Math.min(step + 1, 5)} de 5`,
-              `Step ${Math.min(step + 1, 5)} of 5`,
+              `Paso ${Math.min(step + 1, 6)} de 6`,
+              `Step ${Math.min(step + 1, 6)} of 6`,
             )}
           >
-            {Array.from({ length: 5 }, (_, index) => (
+            {Array.from({ length: 6 }, (_, index) => (
               <span
                 key={index}
                 className={`h-2 w-2 rounded-full ${index <= step ? "bg-wit-blue" : "bg-wit-ink/12"}`}
               />
             ))}
             <span className="ml-1 h-px flex-1 bg-wit-ink/8" />
-            <span className="text-xs font-bold text-wit-gray">{Math.min(step + 1, 5)}/5</span>
+            <span className="text-xs font-bold text-wit-gray">{Math.min(step + 1, 6)}/6</span>
           </div>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-5 md:px-8">
           {state === "generating" ? (
             <div className="flex h-full min-h-[440px] flex-col items-center justify-center py-2 text-center">
-              <PlanningLoader progress={loadingProgress} message={t(LOADING_MESSAGES[loadingMessage], LOADING_MESSAGES[loadingMessage])} />
+              <PlanningLoader
+                progress={loadingProgress}
+                message={t(LOADING_MESSAGES[loadingMessage], LOADING_MESSAGES[loadingMessage])}
+              />
             </div>
           ) : state === "success" ? (
             <div className="flex h-full min-h-[360px] flex-col items-center justify-center text-center">
@@ -440,7 +496,6 @@ export function GuidedPlanningSheet({
               </p>
               <div className="mt-6 space-y-2.5">
                 {(["3", "4", "5", "custom"] as Frequency[]).map((value) => {
-                  const count = plannedDates(targetYear, targetMonth, value, customCount).length;
                   const label =
                     value === "custom"
                       ? t("Personalizar", "Customize")
@@ -449,7 +504,10 @@ export function GuidedPlanningSheet({
                     <button
                       key={value}
                       type="button"
-                      onClick={() => setFrequency(value)}
+                      onClick={() => {
+                        setFrequency(value);
+                        setSelectedWeekdays([]);
+                      }}
                       className={`flex min-h-[64px] w-full items-center justify-between rounded-2xl border px-4 text-left ${frequency === value ? "border-wit-blue bg-wit-blue/[0.05]" : "border-wit-ink/8"}`}
                     >
                       <span>
@@ -457,7 +515,7 @@ export function GuidedPlanningSheet({
                         <small className="text-xs text-wit-gray">
                           {value === "custom"
                             ? t("Elegir cantidad", "Choose amount")
-                            : t(`${count} piezas este mes`, `${count} pieces this month`)}
+                            : t(`≈ ${value} veces por semana`, `≈ ${value} times per week`)}
                         </small>
                       </span>
                       {frequency === value ? <Check className="h-5 w-5 text-wit-blue" /> : null}
@@ -467,11 +525,11 @@ export function GuidedPlanningSheet({
               </div>
               {frequency === "custom" ? (
                 <label className="mt-4 block text-sm font-bold text-wit-ink">
-                  {t("Cantidad de piezas", "Number of pieces")}
+                  {t("Días por semana", "Days per week")}
                   <input
                     type="number"
                     min="1"
-                    max={new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate()}
+                    max="7"
                     value={customCount}
                     onChange={(event) => setCustomCount(Number(event.target.value))}
                     className="mt-2 min-h-12 w-full rounded-xl border border-wit-ink/12 px-4 outline-none focus:border-wit-blue"
@@ -480,6 +538,68 @@ export function GuidedPlanningSheet({
               ) : null}
             </div>
           ) : step === 2 ? (
+            <div>
+              <h2
+                id="guided-planning-title"
+                className="text-2xl font-extrabold tracking-tight text-wit-ink"
+              >
+                {t("¿Qué días quieres publicar?", "Which days do you want to post?")}
+              </h2>
+              <p className="mt-2 text-sm text-wit-gray">
+                {t(
+                  `Selecciona ${selectedDaysRequired} días de la semana.`,
+                  `Select ${selectedDaysRequired} days of the week.`,
+                )}
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                {WEEKDAYS.map(({ value, short }) => {
+                  const active = selectedWeekdays.includes(value);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() =>
+                        setSelectedWeekdays((current) =>
+                          active
+                            ? current.filter((day) => day !== value)
+                            : current.length < selectedDaysRequired
+                              ? [...current, value]
+                              : current,
+                        )
+                      }
+                      className={`flex min-h-[58px] items-center justify-center gap-1.5 rounded-2xl border text-sm font-extrabold transition ${active ? "border-wit-blue bg-wit-blue/[0.07] text-wit-blue" : "border-wit-ink/8 text-wit-ink"}`}
+                    >
+                      {short}
+                      {active ? <Check className="h-4 w-4" /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedWeekdays(getRecommendedWeekdays(selectedDaysRequired))}
+                className="mt-4 flex min-h-11 items-center gap-2 text-sm font-bold text-wit-blue"
+              >
+                <Sparkles className="h-4 w-4" />
+                {t("Usar distribución recomendada", "Use recommended distribution")}
+              </button>
+              <p
+                className={`mt-3 text-sm font-bold ${selectedWeekdays.length === selectedDaysRequired ? "text-emerald-600" : "text-wit-gray"}`}
+              >
+                {selectedWeekdays.length} {t("de", "of")} {selectedDaysRequired}{" "}
+                {t("días seleccionados", "days selected")}
+                {selectedWeekdays.length === selectedDaysRequired ? " ✓" : ""}
+              </p>
+              {selectedWeekdays.length ? (
+                <p className="mt-2 text-sm text-wit-gray">
+                  {t(
+                    `Esto creará ${dates.length} publicaciones en ${monthLabel}.`,
+                    `This will create ${dates.length} posts in ${monthLabel}.`,
+                  )}
+                </p>
+              ) : null}
+            </div>
+          ) : step === 3 ? (
             <div>
               <h2
                 id="guided-planning-title"
@@ -540,7 +660,7 @@ export function GuidedPlanningSheet({
                 })}
               </div>
             </div>
-          ) : step === 3 ? (
+          ) : step === 4 ? (
             <div>
               <h2
                 id="guided-planning-title"
@@ -602,9 +722,14 @@ export function GuidedPlanningSheet({
               <dl className="mt-6 divide-y divide-wit-ink/7 overflow-hidden rounded-2xl border border-wit-ink/7 bg-wit-mist/20">
                 {[
                   ["Objetivo", objectiveCopy(objective!, otherObjective), 0],
-                  ["Frecuencia", `${dates.length} piezas`, 1],
-                  ["Formatos", formatCopy(formats), 2],
-                  ["Información especial", specialInfo || "Sin información adicional", 3],
+                  ["Frecuencia", `${selectedDaysRequired} veces por semana`, 1],
+                  [
+                    "Días de publicación",
+                    `${selectedWeekdays.map((day) => WEEKDAYS.find((item) => item.value === day)?.short).join(" · ")} · ${dates.length} fechas`,
+                    2,
+                  ],
+                  ["Formatos", formatCopy(formats), 3],
+                  ["Información especial", specialInfo || "Sin información adicional", 4],
                 ].map(([label, value, edit]) => (
                   <div key={String(label)} className="flex items-center gap-3 px-4 py-3">
                     <dt className="w-28 text-xs font-bold text-wit-gray">{label}</dt>
@@ -636,10 +761,10 @@ export function GuidedPlanningSheet({
             <button
               type="button"
               disabled={!canContinue}
-              onClick={() => (step === 4 ? void generate() : setStep((current) => current + 1))}
+              onClick={() => (step === 5 ? void generate() : setStep((current) => current + 1))}
               className="flex min-h-14 flex-1 items-center justify-center gap-2 rounded-[18px] bg-wit-blue px-5 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(0,71,255,0.18)] disabled:opacity-35"
             >
-              {step === 4 ? (
+              {step === 5 ? (
                 <>
                   <Sparkles className="h-4 w-4" />
                   {t("Generar mi plan", "Generate my plan")}

@@ -34,6 +34,11 @@ const schema = z.object({
     .min(1)
     .max(60)
     .optional(),
+  targetDates: z
+    .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+    .min(1)
+    .max(60)
+    .optional(),
 });
 
 function iso(d: Date): string {
@@ -155,8 +160,9 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
         // does not make the remaining quota negative.
         const context = monthContext({ year, month });
         const occupiedDates = new Set(existingEntries.map((entry) => entry.scheduled_date));
-        const requestedDates = parsed.data.plannedDates
-          ? [...new Set(parsed.data.plannedDates)].filter(
+        const suppliedDates = parsed.data.targetDates ?? parsed.data.plannedDates;
+        const requestedDates = suppliedDates
+          ? [...new Set(suppliedDates)].filter(
               (date) => date >= context.todayDate && date <= context.monthEndDate,
             )
           : datesInRange(context.todayDate, context.monthEndDate);

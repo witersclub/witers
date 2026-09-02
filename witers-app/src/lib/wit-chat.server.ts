@@ -429,7 +429,7 @@ function buildCalendarSystemPrompt(
       ? `El cliente pidió exactamente ${opts.expectedEntries} piezas nuevas. Debes entregar exactamente ${opts.expectedEntries} entradas válidas; una respuesta con menos entradas es un plan incompleto y no sirve.\n\n`
       : "") +
     (opts.exactDates?.length
-      ? `En esta entrega, las ÚNICAS fechas permitidas son: ${opts.exactDates.join(", ")}. Debes crear una pieza para cada una de esas fechas y para ninguna otra.\n\n`
+      ? `Las fechas objetivo fueron seleccionadas por el usuario y son autoritativas: ${opts.exactDates.join(", ")}. Debes crear exactamente una pieza por cada slot de esa lista. No agregues, elimines, reordenes ni infieras fechas; el código asignará las fechas objetivo a los slots en ese orden.\n\n`
       : "") +
     "Si en algún momento ves en la conversación un mensaje tuyo que empieza con 'Plan propuesto " +
     "para el mes:' seguido de una lista de fechas, ya le habías propuesto un plan al cliente antes " +
@@ -1103,7 +1103,10 @@ export async function runWitCalendarChat(
       });
       const validEntries = mapped.filter(
         (e): e is CalendarEntryDraft =>
-          CALENDAR_DATE_RE.test(e.date) &&
+          // In date-locked planning the model supplies content for ordered
+          // slots, not calendar authority. A malformed echoed date must not
+          // discard an otherwise valid piece; WITERS assigns target dates.
+          (opts.exactDates || CALENDAR_DATE_RE.test(e.date)) &&
           (e.format === "imagen" || e.format === "video" || e.format === "carrusel") &&
           e.title.length > 0 &&
           e.brief.length > 0 &&
@@ -1114,18 +1117,12 @@ export async function runWitCalendarChat(
           // build from later.
           (e.format !== "carrusel" || e.slides?.length === 4),
       );
-      // The allowed dates are enforced here rather than by dynamically
-      // mutating the provider's JSON schema. Some provider deployments reject
-      // those dynamic schemas immediately, which was the source of 2-second
-      // 502s. If the model includes additional dates, ignore them safely.
+      // Dates are controlled by WITERS, not by the model. The model fills
+      // ordered content slots and the server assigns the user-selected dates.
       const entries = opts.exactDates
-        ? [
-            ...new Map(
-              validEntries
-                .filter((entry) => opts.exactDates!.includes(entry.date))
-                .map((entry) => [entry.date, entry]),
-            ).values(),
-          ]
+        ? validEntries
+            .slice(0, opts.exactDates.length)
+            .map((entry, index) => ({ ...entry, date: opts.exactDates![index] }))
         : validEntries;
       if (entries.length === 0) return { ok: false, error: "respuesta_invalida" };
       if (!opts.allowPartial && opts.expectedEntries && entries.length !== opts.expectedEntries) {
