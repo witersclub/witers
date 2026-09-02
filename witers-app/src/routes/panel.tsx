@@ -3773,15 +3773,48 @@ function BrandAssetCard({
   );
 }
 
-// Unlike colors/manual, the logo stays fixed once set — there's no upload
-// control here at all. "Solicitar cambio de logotipo" is a placeholder for
-// the support chat this'll eventually hand off to (not built yet); for now
-// it just points the client at email instead of pretending there's a real
-// flow behind it.
 function LogoCard({ fileKey }: { fileKey: string | null }) {
   const { t } = useLanguage();
-  const [requested, setRequested] = useState(false);
+  const qc = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+
+  async function handleFile(file: File | null) {
+    if (!file) return;
+    setError(null);
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setError(t("Usa un archivo PNG, JPG o WebP.", "Use a PNG, JPG, or WebP file."));
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setError(t("El logotipo debe pesar máximo 8 MB.", "The logo must be 8 MB or smaller."));
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const key = await uploadReferenceFile(file);
+      if (!key) throw new Error("upload");
+      const res = await fetch("/api/brand-profile-logo", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
+      const data = (await res.json().catch(() => null)) as { ok?: boolean } | null;
+      if (!data?.ok) throw new Error("save");
+      await qc.invalidateQueries({ queryKey: ["brand-profile"] });
+    } catch {
+      setError(
+        t(
+          "No pudimos actualizar tu logotipo. Intenta de nuevo.",
+          "We couldn't update your logo. Try again.",
+        ),
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
@@ -3827,28 +3860,27 @@ function LogoCard({ fileKey }: { fileKey: string | null }) {
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={() => setRequested(true)}
-        className="mt-4 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
-      >
-        {t("Solicitar cambio de logotipo", "Request a logo change")}
-      </button>
-      {requested ? (
-        <p className="mt-3 rounded-xl bg-wit-ice px-3.5 py-2.5 text-xs text-wit-ink">
-          {t(
-            "Muy pronto vas a poder platicar esto directo con soporte desde aquí. Mientras tanto, escríbenos a",
-            "Soon you'll be able to talk to support about this right here. In the meantime, email us at",
-          )}{" "}
-          <a
-            href="mailto:hola@witers.com"
-            className="font-semibold text-wit-blue hover:text-wit-blue-deep"
-          >
-            hola@witers.com
-          </a>
-          .
+      <label className="mt-4 block">
+        <span className="sr-only">
+          {fileKey ? t("Reemplazar logotipo", "Replace logo") : t("Subir logotipo", "Upload logo")}
+        </span>
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          disabled={uploading}
+          onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
+          className="block w-full text-xs text-wit-gray file:mr-3 file:rounded-full file:border-0 file:bg-wit-blue file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-wit-blue-deep disabled:opacity-50"
+        />
+      </label>
+      <p className="mt-1.5 text-[11px] text-wit-gray">
+        {t("PNG, JPG o WebP, máx. 8 MB", "PNG, JPG, or WebP, max. 8 MB")}
+      </p>
+      {uploading ? (
+        <p className="mt-2 text-xs font-semibold text-wit-blue">
+          {t("Actualizando...", "Updating...")}
         </p>
       ) : null}
+      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
     </div>
   );
 }

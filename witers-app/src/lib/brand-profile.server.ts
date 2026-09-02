@@ -1,10 +1,9 @@
-// One membership, one business: a member's brand identity (company name,
-// brand colors, business category, logo) locks to whatever they submit on
-// their first design request, so the same account can't be stretched
-// across unrelated businesses request by request. Enforced here — in
-// server code shared by every request-creation path (chat, classic form,
-// or a direct API call) — rather than just hidden in one UI, since a UI
-// restriction alone wouldn't actually stop anything.
+// One membership, one business: a member's company name, brand colors and
+// business category lock to their first design request, so the same account
+// can't be stretched across unrelated businesses request by request. A logo
+// is intentionally editable from Mente de marca. These rules are enforced
+// here — in server code shared by every request-creation path (chat, classic
+// form, or a direct API call) — rather than just hidden in one UI.
 import { db } from "./witers-auth.server";
 
 export type BrandProfile = {
@@ -47,8 +46,9 @@ export async function getBrandProfile(userId: string): Promise<BrandProfile | nu
 // wins over newly submitted company name/colors — the caller should use
 // the *returned* values when writing the request, not what the client
 // sent. The one exception is logo_key: if it's still unset (the client's
-// first submission skipped the logo), a real key offered later locks in
-// right then instead of staying open forever.
+// first submission skipped the logo), a real key offered later is saved
+// right then instead of staying empty. Replacements belong to the dedicated
+// authenticated Mente de marca endpoint below.
 export async function resolveBrandProfile(
   userId: string,
   submitted: {
@@ -184,15 +184,26 @@ export async function completeOnboarding(
 
 // Called from the panel's "Activos de marca" section — a member can freely
 // (re)upload their own brand manual any time; there's no business reason
-// to block them from replacing their own asset. Logo is deliberately NOT
-// here: it stays fixed once set, changed only through support (see
-// panel.tsx's LogoCard "Solicitar cambio de logotipo").
+// to block them from replacing their own asset.
 export async function setBrandManual(userId: string, manualKey: string): Promise<void> {
   await db()
     .prepare(
       "UPDATE brand_profiles SET brand_manual_key = ?2, updated_at = datetime('now') WHERE user_id = ?1",
     )
     .bind(userId, manualKey)
+    .run();
+}
+
+// A logo is an active brand asset, not an approval workflow. Members can
+// replace their own logo from Mente de marca; existing requests keep the
+// logo key they were created with, while new production uses this current
+// profile value.
+export async function setBrandLogo(userId: string, logoKey: string): Promise<void> {
+  await db()
+    .prepare(
+      "UPDATE brand_profiles SET logo_key = ?2, updated_at = datetime('now') WHERE user_id = ?1",
+    )
+    .bind(userId, logoKey)
     .run();
 }
 

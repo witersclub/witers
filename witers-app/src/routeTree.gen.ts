@@ -66,6 +66,7 @@ import { Route as ApiCalendarEntriesExpandRouteImport } from './routes/api/calen
 import { Route as ApiCalendarEntriesCaptionRouteImport } from './routes/api/calendar-entries-caption'
 import { Route as ApiCalendarEntriesRouteImport } from './routes/api/calendar-entries'
 import { Route as ApiBrandProfileManualRouteImport } from './routes/api/brand-profile-manual'
+import { Route as ApiBrandProfileLogoRouteImport } from './routes/api/brand-profile-logo'
 import { Route as ApiBrandProfileFontRouteImport } from './routes/api/brand-profile-font'
 import { Route as ApiBrandProfileColorsRouteImport } from './routes/api/brand-profile-colors'
 import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
@@ -440,6 +441,11 @@ const ApiCalendarEntriesRoute = ApiCalendarEntriesRouteImport.update({
 const ApiBrandProfileManualRoute = ApiBrandProfileManualRouteImport.update({
   id: '/api/brand-profile-manual',
   path: '/api/brand-profile-manual',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBrandProfileLogoRoute = ApiBrandProfileLogoRouteImport.update({
+  id: '/api/brand-profile-logo',
+  path: '/api/brand-profile-logo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBrandProfileFontRoute = ApiBrandProfileFontRouteImport.update({
@@ -908,6 +914,7 @@ export interface FileRoutesByFullPath {
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
+  '/api/brand-profile-logo': typeof ApiBrandProfileLogoRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
@@ -1050,6 +1057,7 @@ export interface FileRoutesByTo {
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
+  '/api/brand-profile-logo': typeof ApiBrandProfileLogoRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
@@ -1193,6 +1201,7 @@ export interface FileRoutesById {
   '/api/brand-profile': typeof ApiBrandProfileRoute
   '/api/brand-profile-colors': typeof ApiBrandProfileColorsRoute
   '/api/brand-profile-font': typeof ApiBrandProfileFontRoute
+  '/api/brand-profile-logo': typeof ApiBrandProfileLogoRoute
   '/api/brand-profile-manual': typeof ApiBrandProfileManualRoute
   '/api/calendar-entries': typeof ApiCalendarEntriesRoute
   '/api/calendar-entries-caption': typeof ApiCalendarEntriesCaptionRoute
@@ -1337,6 +1346,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
     | '/api/brand-profile-font'
+    | '/api/brand-profile-logo'
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
     | '/api/calendar-entries-caption'
@@ -1479,6 +1489,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
     | '/api/brand-profile-font'
+    | '/api/brand-profile-logo'
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
     | '/api/calendar-entries-caption'
@@ -1621,6 +1632,7 @@ export interface FileRouteTypes {
     | '/api/brand-profile'
     | '/api/brand-profile-colors'
     | '/api/brand-profile-font'
+    | '/api/brand-profile-logo'
     | '/api/brand-profile-manual'
     | '/api/calendar-entries'
     | '/api/calendar-entries-caption'
@@ -1764,6 +1776,7 @@ export interface RootRouteChildren {
   ApiBrandProfileRoute: typeof ApiBrandProfileRoute
   ApiBrandProfileColorsRoute: typeof ApiBrandProfileColorsRoute
   ApiBrandProfileFontRoute: typeof ApiBrandProfileFontRoute
+  ApiBrandProfileLogoRoute: typeof ApiBrandProfileLogoRoute
   ApiBrandProfileManualRoute: typeof ApiBrandProfileManualRoute
   ApiCalendarEntriesRoute: typeof ApiCalendarEntriesRoute
   ApiCalendarEntriesCaptionRoute: typeof ApiCalendarEntriesCaptionRoute
@@ -2282,6 +2295,13 @@ declare module '@tanstack/react-router' {
       path: '/api/brand-profile-manual'
       fullPath: '/api/brand-profile-manual'
       preLoaderRoute: typeof ApiBrandProfileManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/brand-profile-logo': {
+      id: '/api/brand-profile-logo'
+      path: '/api/brand-profile-logo'
+      fullPath: '/api/brand-profile-logo'
+      preLoaderRoute: typeof ApiBrandProfileLogoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/brand-profile-font': {
@@ -2892,6 +2912,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBrandProfileRoute: ApiBrandProfileRoute,
   ApiBrandProfileColorsRoute: ApiBrandProfileColorsRoute,
   ApiBrandProfileFontRoute: ApiBrandProfileFontRoute,
+  ApiBrandProfileLogoRoute: ApiBrandProfileLogoRoute,
   ApiBrandProfileManualRoute: ApiBrandProfileManualRoute,
   ApiCalendarEntriesRoute: ApiCalendarEntriesRoute,
   ApiCalendarEntriesCaptionRoute: ApiCalendarEntriesCaptionRoute,
