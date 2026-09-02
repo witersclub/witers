@@ -6,6 +6,7 @@
 const TEXT_FILE = /\.(md|markdown|txt|text|json)$/i;
 const DOCX_FILE = /\.docx$/i;
 const MAX_CHARS = 12_000;
+const MAX_TEXT_SOURCE_BYTES = 2 * 1024 * 1024;
 
 function decodeXmlText(xml: string): string {
   return xml
@@ -26,7 +27,13 @@ function findEndOfCentralDirectory(bytes: Uint8Array): number {
   // The ZIP comment may be up to 65,535 bytes, so scan backwards from EOF.
   const start = Math.max(0, bytes.length - 65_557);
   for (let index = bytes.length - 22; index >= start; index -= 1) {
-    if (bytes[index] === 0x50 && bytes[index + 1] === 0x4b && bytes[index + 2] === 0x05 && bytes[index + 3] === 0x06) return index;
+    if (
+      bytes[index] === 0x50 &&
+      bytes[index + 1] === 0x4b &&
+      bytes[index + 2] === 0x05 &&
+      bytes[index + 3] === 0x06
+    )
+      return index;
   }
   return -1;
 }
@@ -52,14 +59,20 @@ async function readDocxDocumentXml(file: File): Promise<string | null> {
     const localOffset = view.getUint32(cursor + 42, true);
     const name = decoder.decode(bytes.subarray(cursor + 46, cursor + 46 + fileNameLength));
 
-    if (name === "word/document.xml" && localOffset + 30 <= bytes.length && view.getUint32(localOffset, true) === 0x04034b50) {
+    if (
+      name === "word/document.xml" &&
+      localOffset + 30 <= bytes.length &&
+      view.getUint32(localOffset, true) === 0x04034b50
+    ) {
       const localNameLength = view.getUint16(localOffset + 26, true);
       const localExtraLength = view.getUint16(localOffset + 28, true);
       const dataStart = localOffset + 30 + localNameLength + localExtraLength;
       const compressed = bytes.slice(dataStart, dataStart + compressedSize);
       if (compression === 0) return decoder.decode(compressed);
       if (compression === 8 && typeof DecompressionStream !== "undefined") {
-        const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+        const stream = new Blob([compressed])
+          .stream()
+          .pipeThrough(new DecompressionStream("deflate-raw"));
         return decoder.decode(await new Response(stream).arrayBuffer());
       }
       return null;
@@ -73,10 +86,20 @@ export type BrandTextExtraction = { text: string | null; readable: boolean };
 
 export async function extractBrandDocumentText(file: File): Promise<BrandTextExtraction> {
   try {
-    if (TEXT_FILE.test(file.name) || ["text/plain", "text/markdown", "application/json"].includes(file.type)) {
-      return { text: (await file.text()).slice(0, MAX_CHARS).trim() || null, readable: true };
+    if (
+      TEXT_FILE.test(file.name) ||
+      ["text/plain", "text/markdown", "application/json"].includes(file.type)
+    ) {
+      return {
+        text:
+          (await file.slice(0, MAX_TEXT_SOURCE_BYTES).text()).slice(0, MAX_CHARS).trim() || null,
+        readable: true,
+      };
     }
-    if (DOCX_FILE.test(file.name) || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    if (
+      DOCX_FILE.test(file.name) ||
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
       const xml = await readDocxDocumentXml(file);
       return { text: xml ? decodeXmlText(xml).slice(0, MAX_CHARS) || null : null, readable: true };
     }

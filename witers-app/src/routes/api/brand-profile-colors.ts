@@ -7,8 +7,7 @@ import { getSessionUser, json } from "../../lib/witers-auth.server";
 const schema = z.object({ colors: z.string().min(1).max(60) });
 
 // Lets a member update their own brand colors from the panel's "Activos de
-// marca" section — freely, any time, no restrictions (unlike the logo,
-// which stays fixed once set — see panel.tsx's LogoCard).
+// marca" section — freely, any time, no restrictions.
 export const Route = createFileRoute("/api/brand-profile-colors")({
   server: {
     handlers: {

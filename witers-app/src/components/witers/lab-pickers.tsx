@@ -208,6 +208,7 @@ export function AspectRatioPicker({
 export function ColorsPicker({
   onPick,
   showInfo = false,
+  initialColors,
 }: {
   onPick: (value: string) => void;
   // Only turned on for the mandatory brand-onboarding chat (see
@@ -215,10 +216,26 @@ export function ColorsPicker({
   // this same picker don't need it, so it defaults off rather than
   // showing up everywhere ColorsPicker is reused.
   showInfo?: boolean;
+  // Mi marca passes the existing palette so editing it never starts from
+  // WITERS blue placeholders.
+  initialColors?: string[];
 }) {
   const { t } = useLanguage();
-  const [count, setCount] = useState<number | null>(null);
-  const [colors, setColors] = useState<string[]>([]);
+  const savedColors = (initialColors ?? []).slice(0, 3);
+  const [count, setCount] = useState<number | null>(savedColors.length || null);
+  const [colors, setColors] = useState<string[]>(savedColors);
+  const [error, setError] = useState<string | null>(null);
+
+  function isHexColor(value: string): boolean {
+    return /^#[0-9a-f]{6}$/i.test(value.trim());
+  }
+
+  function setColor(index: number, value: string) {
+    setError(null);
+    setColors((prev) =>
+      prev.map((color, currentIndex) => (currentIndex === index ? value : color)),
+    );
+  }
 
   if (count === null) {
     return (
@@ -244,6 +261,7 @@ export function ColorsPicker({
               onClick={() => {
                 setCount(n);
                 setColors(Array.from({ length: n }, () => "#0047FF"));
+                setError(null);
               }}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-mist/60 text-sm font-bold text-wit-ink transition-transform hover:scale-105 hover:bg-wit-mist"
             >
@@ -260,15 +278,15 @@ export function ColorsPicker({
       <div className="flex items-center gap-1.5">
         <p className="text-xs font-medium text-wit-gray">
           {t(
-            "👆 Toca cada círculo para elegir tu color — vienen en azul solo de ejemplo.",
-            "👆 Tap each circle to pick your color — they start blue just as an example.",
+            "Elige un color o escribe su código HEX. Los círculos azules son solo un ejemplo.",
+            "Pick a color or enter its HEX code. The blue circles are only an example.",
           )}
         </p>
         {showInfo ? (
           <InfoTooltip
             text={t(
-              "Al tocar un círculo se abre el selector de color de tu navegador o teléfono. El código (por ejemplo #0047FF) aparece debajo — si ya lo conoces, puedes escribirlo ahí directamente. El primer círculo suele ser el color principal de tu marca.",
-              "Tapping a circle opens your browser or phone's color picker. The code (like #0047FF) shows underneath — if you already know it, you can type it in directly. The first circle is usually your brand's main color.",
+              "Al tocar un círculo se abre el selector de color de tu navegador o teléfono. Si ya conoces el código, escríbelo directamente en formato HEX, por ejemplo #0047FF. El primer color suele ser el principal de tu marca.",
+              "Tapping a circle opens your browser or phone's color picker. If you know the code, enter it directly as HEX, for example #0047FF. The first color is usually your brand's primary color.",
             )}
           />
         ) : null}
@@ -279,16 +297,34 @@ export function ColorsPicker({
             <input
               type="color"
               aria-label={`${t("Color", "Color")} ${i + 1}`}
-              value={c}
-              onChange={(ev) =>
-                setColors((prev) => prev.map((x, idx) => (idx === i ? ev.target.value : x)))
-              }
+              value={isHexColor(c) ? c : "#0047FF"}
+              onChange={(ev) => setColor(i, ev.target.value.toUpperCase())}
               className="h-10 w-10 cursor-pointer rounded-full border-2 border-white shadow-[0_2px_8px_rgba(5,13,40,0.15)]"
             />
-            <span className="font-mono text-[10px] text-wit-gray">{c.toUpperCase()}</span>
+            <input
+              type="text"
+              value={c}
+              onChange={(ev) => setColor(i, ev.target.value)}
+              onBlur={() =>
+                setColors((prev) =>
+                  prev.map((color, currentIndex) =>
+                    currentIndex === i && /^[0-9a-f]{6}$/i.test(color.trim())
+                      ? `#${color.trim().toUpperCase()}`
+                      : color.trim().toUpperCase(),
+                  ),
+                )
+              }
+              maxLength={7}
+              placeholder="#0047FF"
+              spellCheck={false}
+              inputMode="text"
+              aria-label={t(`Código HEX del color ${i + 1}`, `HEX code for color ${i + 1}`)}
+              className="w-[68px] rounded-md border border-wit-ink/10 bg-white px-1 py-0.5 text-center font-mono text-[10px] text-wit-ink outline-none focus:border-wit-blue"
+            />
           </label>
         ))}
       </div>
+      {error ? <p className="text-center text-xs font-medium text-red-600">{error}</p> : null}
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -299,7 +335,19 @@ export function ColorsPicker({
         </button>
         <button
           type="button"
-          onClick={() => onPick(colors.map((c) => c.toUpperCase()).join(", "))}
+          onClick={() => {
+            const normalized = colors.map((color) => color.trim().toUpperCase());
+            if (!normalized.every(isHexColor)) {
+              setError(
+                t(
+                  "Escribe cada color en formato HEX, por ejemplo #0047FF.",
+                  "Enter every color in HEX format, for example #0047FF.",
+                ),
+              );
+              return;
+            }
+            onPick(normalized.join(", "));
+          }}
           className="rounded-full bg-wit-blue px-5 py-1.5 text-xs font-bold text-white hover:bg-wit-blue-deep"
         >
           {t("Listo", "Done")}

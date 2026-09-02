@@ -163,8 +163,8 @@ type PreviousAnswers = {
 };
 
 // One membership, one business: once this exists, company_name/brand_colors
-// (and logo_key once given) are locked and reused on every request from
-// here on, in both the chat and the classic form — see /api/requests.
+// are locked and reused on every request from here on, in both the chat and
+// the classic form. The logo remains editable from Mente de marca.
 type BrandProfile = {
   user_id: string;
   company_name: string;
@@ -3939,7 +3939,7 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
 
       {editing ? (
         <div className="mt-5">
-          <ColorsPicker onPick={(v) => void save(v)} />
+          <ColorsPicker initialColors={colorList} onPick={(v) => void save(v)} />
           <button
             type="button"
             onClick={() => setEditing(false)}
@@ -4485,7 +4485,9 @@ function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null })
 function BrandMindCard() {
   const { t } = useLanguage();
   const qc = useQueryClient();
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [assets, setAssets] = useState<
     { id: string; original_name: string; kind: string; use_in_planning: number }[]
   >([]);
@@ -4496,9 +4498,7 @@ function BrandMindCard() {
     const data = (await res.json()) as { ok: boolean; assets?: typeof assets };
     if (data.ok) setAssets(data.assets ?? []);
   }
-  async function add(file: File | null) {
-    if (!file) return;
-    setError(null);
+  async function add(file: File): Promise<"saved" | "reference" | "failed"> {
     try {
       if (file.type.startsWith("video/")) {
         const upload = await fetch(
@@ -4506,8 +4506,7 @@ function BrandMindCard() {
           { method: "POST", headers: { "content-type": file.type }, body: file },
         );
         if (!upload.ok) throw new Error("upload");
-        await load();
-        return;
+        return "saved";
       }
       const key = await uploadReferenceFile(file);
       if (!key) throw new Error("upload");
@@ -4527,17 +4526,48 @@ function BrandMindCard() {
         }),
       });
       if (!res.ok) throw new Error("save");
+      return extraction.readable ? "saved" : "reference";
+    } catch {
+      return "failed";
+    }
+  }
+
+  async function addFiles(files: Iterable<File>) {
+    const selected = Array.from(files);
+    if (!selected.length || uploading) return;
+    setError(null);
+    setUploading(true);
+    let saved = 0;
+    let visualReferences = 0;
+    let failed = 0;
+    try {
+      // Sequential uploads keep folder imports reliable on mobile networks
+      // and avoid simultaneous Worker multipart uploads exhausting memory.
+      for (const file of selected) {
+        const result = await add(file);
+        if (result === "saved") saved += 1;
+        else if (result === "reference") visualReferences += 1;
+        else failed += 1;
+      }
       await load();
       void qc.invalidateQueries({ queryKey: ["brand-profile"] });
-      if (!extraction.readable)
+      if (failed) {
         setError(
           t(
-            "Archivo guardado como referencia visual. Para que Wit lea el contenido, usa .txt, .md, .json o .docx.",
-            "File saved as a visual reference. For Wit to read its content, use .txt, .md, .json, or .docx.",
+            `Se cargaron ${saved + visualReferences} de ${selected.length} archivos. Revisa que cada archivo sea compatible y pese máximo 60 MB.`,
+            `${saved + visualReferences} of ${selected.length} files were uploaded. Check that each file is supported and 60 MB or smaller.`,
           ),
         );
-    } catch {
-      setError(t("No pudimos cargar este archivo.", "We couldn't upload this file."));
+      } else if (visualReferences) {
+        setError(
+          t(
+            `Se cargaron ${selected.length} archivos. ${visualReferences} quedan como referencias visuales; Wit lee texto de .txt, .md, .json y .docx.`,
+            `${selected.length} files were uploaded. ${visualReferences} are visual references; Wit reads text from .txt, .md, .json, and .docx.`,
+          ),
+        );
+      }
+    } finally {
+      setUploading(false);
     }
   }
   return (
@@ -4598,22 +4628,46 @@ function BrandMindCard() {
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => {
                     event.preventDefault();
-                    void add(event.dataTransfer.files?.[0] ?? null);
+                    void addFiles(event.dataTransfer.files);
                   }}
                   className="mt-5 flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-wit-blue/35 bg-wit-blue/[0.03] py-4 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.07]"
                 >
                   <Plus className="h-4 w-4" />
-                  {t("Cargar o arrastrar archivo", "Upload or drop a file")}
+                  {t("Cargar archivos o carpeta", "Upload files or a folder")}
                   <span className="text-[11px] font-medium text-wit-gray">
-                    {t("Suelta el archivo aquí", "Drop the file here")}
+                    {uploading
+                      ? t("Cargando archivos...", "Uploading files...")
+                      : t(
+                          "Hasta 60 MB por archivo. También puedes soltar una carpeta.",
+                          "Up to 60 MB per file. You can also drop a folder.",
+                        )}
                   </span>
                   <input
                     type="file"
                     className="sr-only"
                     accept="image/png,image/jpeg,image/webp,application/pdf,.doc,.docs,.docx,.md,.markdown,.txt,.text,application/json,video/mp4,video/quicktime,video/webm,video/x-m4v"
-                    onChange={(e) => void add(e.target.files?.[0] ?? null)}
+                    multiple
+                    disabled={uploading}
+                    onChange={(e) => void addFiles(e.target.files ?? [])}
                   />
                 </label>
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => folderInputRef.current?.click()}
+                  className="mt-2 text-xs font-semibold text-wit-blue hover:text-wit-blue-deep disabled:opacity-50"
+                >
+                  {t("Seleccionar una carpeta", "Select a folder")}
+                </button>
+                <input
+                  ref={folderInputRef}
+                  type="file"
+                  className="sr-only"
+                  multiple
+                  {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
+                  disabled={uploading}
+                  onChange={(e) => void addFiles(e.target.files ?? [])}
+                />
                 <div className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">
                   {assets.length ? (
                     assets.map((asset) => (

@@ -263,8 +263,10 @@ function CalendarWizard({
   >([]);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
   const [assetError, setAssetError] = useState<string | null>(null);
+  const [assetUploading, setAssetUploading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const brandAssetFolderInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -292,17 +294,9 @@ function CalendarWizard({
     }
   }
 
-  async function uploadBrandAsset(file: File | null) {
-    if (!file) return;
-    setAssetError(null);
+  async function uploadBrandAsset(file: File): Promise<"saved" | "reference" | "failed"> {
     if (file.type.startsWith("video/")) {
-      setAssetError(
-        t(
-          "Por ahora agrega videos desde Mi marca; aquí puedes usar imágenes, PDF o un archivo de texto de estrategia.",
-          "For now add videos from My brand; here you can use images, PDFs, or a strategy text file.",
-        ),
-      );
-      return;
+      return "failed";
     }
     try {
       const fd = new FormData();
@@ -326,21 +320,45 @@ function CalendarWizard({
         }),
       });
       if (!save.ok) throw new Error("save");
+      return extraction.readable ? "saved" : "reference";
+    } catch {
+      return "failed";
+    }
+  }
+
+  async function uploadBrandAssets(files: Iterable<File>) {
+    const selected = Array.from(files);
+    if (!selected.length || assetUploading) return;
+    setAssetError(null);
+    setAssetUploading(true);
+    let saved = 0;
+    let visualReferences = 0;
+    let failed = 0;
+    try {
+      for (const file of selected) {
+        const result = await uploadBrandAsset(file);
+        if (result === "saved") saved += 1;
+        else if (result === "reference") visualReferences += 1;
+        else failed += 1;
+      }
       await loadBrandAssets();
-      if (!extraction.readable)
+      if (failed) {
         setAssetError(
           t(
-            "Archivo guardado como referencia visual. Para que Wit lea el contenido, usa .txt, .md, .json o .docx.",
-            "File saved as a visual reference. For Wit to read its content, use .txt, .md, .json, or .docx.",
+            `Se cargaron ${saved + visualReferences} de ${selected.length} archivos. Revisa que cada uno sea compatible y pese máximo 60 MB.`,
+            `${saved + visualReferences} of ${selected.length} files were uploaded. Check that each one is supported and 60 MB or smaller.`,
           ),
         );
-    } catch {
-      setAssetError(
-        t(
-          "No pudimos guardar el archivo. Intenta de nuevo.",
-          "We couldn't save the file. Try again.",
-        ),
-      );
+      } else if (visualReferences) {
+        setAssetError(
+          t(
+            `Se cargaron ${selected.length} archivos. ${visualReferences} quedan como referencias visuales; Wit lee texto de .txt, .md, .json y .docx.`,
+            `${selected.length} files were uploaded. ${visualReferences} are visual references; Wit reads text from .txt, .md, .json, and .docx.`,
+          ),
+        );
+      }
+    } finally {
+      setAssetUploading(false);
     }
   }
 
@@ -711,22 +729,46 @@ function CalendarWizard({
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => {
                     event.preventDefault();
-                    void uploadBrandAsset(event.dataTransfer.files?.[0] ?? null);
+                    void uploadBrandAssets(event.dataTransfer.files);
                   }}
                   className="mt-5 flex min-h-20 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-wit-blue/35 bg-wit-blue/[0.03] px-4 py-3 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.07]"
                 >
                   <Upload className="h-4 w-4" />
-                  {t("Cargar o arrastrar archivo", "Upload or drop a file")}
+                  {t("Cargar archivos o carpeta", "Upload files or a folder")}
                   <span className="text-[11px] font-medium text-wit-gray">
-                    {t("Suelta el archivo aquí", "Drop the file here")}
+                    {assetUploading
+                      ? t("Cargando archivos...", "Uploading files...")
+                      : t(
+                          "Hasta 60 MB por archivo. También puedes soltar una carpeta.",
+                          "Up to 60 MB per file. You can also drop a folder.",
+                        )}
                   </span>
                   <input
                     className="sr-only"
                     type="file"
                     accept="image/png,image/jpeg,image/webp,application/pdf,.doc,.docs,.docx,.md,.markdown,.txt,.text,application/json"
-                    onChange={(e) => void uploadBrandAsset(e.target.files?.[0] ?? null)}
+                    multiple
+                    disabled={assetUploading}
+                    onChange={(e) => void uploadBrandAssets(e.target.files ?? [])}
                   />
                 </label>
+                <button
+                  type="button"
+                  disabled={assetUploading}
+                  onClick={() => brandAssetFolderInputRef.current?.click()}
+                  className="mt-2 text-xs font-semibold text-wit-blue hover:text-wit-blue-deep disabled:opacity-50"
+                >
+                  {t("Seleccionar una carpeta", "Select a folder")}
+                </button>
+                <input
+                  ref={brandAssetFolderInputRef}
+                  className="sr-only"
+                  type="file"
+                  multiple
+                  {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
+                  disabled={assetUploading}
+                  onChange={(e) => void uploadBrandAssets(e.target.files ?? [])}
+                />
                 <div className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">
                   {brandAssets.length ? (
                     brandAssets.map((asset) => (
