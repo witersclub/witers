@@ -84,6 +84,7 @@ type CalendarEntry = CalendarEntryDraft & {
   publicationPlatforms: SocialPlatform[] | null;
   productionReady: boolean;
 };
+type CalendarProductionState = "ready-for-design" | "in-design" | "ready-to-publish";
 type WitMessage = {
   role: "user" | "assistant";
   content: string;
@@ -133,6 +134,38 @@ function statusMeta(
   if (status === "en_diseno")
     return { label: t("En diseño", "In design"), badgeClass: "bg-wit-blue/10 text-wit-blue" };
   return { label: t("Por planear", "Not requested"), badgeClass: "bg-wit-mist/50 text-wit-gray" };
+}
+
+// One visual production vocabulary for the calendar and the piece detail.
+// Publication/scheduling state intentionally stays separate: a delivered
+// piece may be ready to publish before it is scheduled or actually published.
+function getCalendarProductionState(entry: CalendarEntry): CalendarProductionState {
+  if (entry.status === "lista") return "ready-to-publish";
+  if (entry.status === "en_diseno") return "in-design";
+  return "ready-for-design";
+}
+
+function productionStateMeta(
+  state: CalendarProductionState,
+  t: (es: string, en: string) => string,
+): { label: string; dotClass: string; badgeClass: string } {
+  if (state === "ready-to-publish")
+    return {
+      label: t("Lista para publicar", "Ready to publish"),
+      dotClass: "bg-emerald-500",
+      badgeClass: "bg-emerald-50 text-emerald-700",
+    };
+  if (state === "in-design")
+    return {
+      label: t("En diseño", "In design"),
+      dotClass: "bg-wit-pink",
+      badgeClass: "bg-wit-pink/10 text-wit-pink",
+    };
+  return {
+    label: t("Lista para diseñar", "Ready for design"),
+    dotClass: "bg-wit-blue",
+    badgeClass: "bg-wit-blue/10 text-wit-blue",
+  };
 }
 
 function publicationStatusMeta(entry: CalendarEntry, t: (es: string, en: string) => string) {
@@ -1161,6 +1194,7 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
   }
 
   const publicationMeta = publicationStatusMeta(entry, t);
+  const productionMeta = productionStateMeta(getCalendarProductionState(entry), t);
   const previewHref = entry.deliveredVideoHref ?? entry.deliveredImages?.[0] ?? null;
   const sheetHeight =
     sheetRef.current?.getBoundingClientRect().height ||
@@ -1297,6 +1331,12 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
               <span className="inline-flex items-center gap-1.5 rounded-full bg-wit-mist/50 px-2.5 py-1 text-xs font-bold text-wit-gray">
                 <Icon className="h-3 w-3" strokeWidth={2.4} />
                 {formatLabel(entry.format, t)}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${productionMeta.badgeClass}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${productionMeta.dotClass}`} />
+                {productionMeta.label}
               </span>
               <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${publicationMeta.cls}`}>
                 {publicationMeta.label}
@@ -3618,6 +3658,7 @@ export function PlanificacionPanel({
                 const isToday = cell.date === today;
                 const isSelected = entry && entry.id === selectedId;
                 const hasThumb = Boolean(entry && entry.status === "lista" && entry.thumbHref);
+                const productionState = entry ? getCalendarProductionState(entry) : null;
                 return (
                   <button
                     key={cell.date}
@@ -3628,16 +3669,13 @@ export function PlanificacionPanel({
                       detailTriggerRef.current = event.currentTarget;
                       setSelectedId(entry.id);
                     }}
-                    className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all duration-200 sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${
+                    data-production-state={productionState ?? undefined}
+                    className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all duration-300 sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${productionState ? `calendar-production-cell calendar-production-cell--${productionState}` : ""} ${
                       isSelected
-                        ? "border-2 border-wit-blue bg-white shadow-[0_6px_18px_rgba(0,71,255,0.14)]"
+                        ? "bg-white ring-2 ring-wit-blue ring-offset-1 shadow-[0_6px_18px_rgba(0,71,255,0.14)]"
                         : cell.inMonth
                           ? entry && !hasThumb
-                            ? entry.status === "lista"
-                              ? "border-emerald-200/80 bg-emerald-50/70 hover:border-emerald-300"
-                              : entry.status === "en_diseno"
-                                ? "border-wit-blue/15 bg-wit-blue/[0.045] hover:border-wit-blue/35"
-                                : "border-wit-ink/7 bg-white hover:border-wit-ink/18"
+                            ? "bg-white hover:border-wit-ink/18"
                             : "border-wit-ink/5 bg-white hover:border-wit-ink/15"
                           : "border-transparent bg-wit-mist/10"
                     } ${!entry ? "cursor-default" : "cursor-pointer"}`}
@@ -3691,6 +3729,19 @@ export function PlanificacionPanel({
                       </span>
                     ) : null}
                   </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-t border-wit-ink/5 pt-3 text-[9px] font-semibold text-wit-gray sm:justify-start sm:text-[10px]">
+              {(
+                ["ready-for-design", "in-design", "ready-to-publish"] as CalendarProductionState[]
+              ).map((state) => {
+                const meta = productionStateMeta(state, t);
+                return (
+                  <span key={state} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <span className={`h-2 w-2 rounded-full ${meta.dotClass}`} />
+                    {meta.label}
+                  </span>
                 );
               })}
             </div>

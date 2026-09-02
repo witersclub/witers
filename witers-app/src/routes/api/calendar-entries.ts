@@ -242,12 +242,12 @@ export const Route = createFileRoute("/api/calendar-entries")({
         const parsed = bulkCreateSchema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
         if (
-          !parsed.data.entries.every((entry) =>
+          !parsed.data.entries.every(({ slides, ...entry }) =>
             isProductionReadyCalendarEntry({
               ...entry,
-              ...(entry.slides
+              ...(slides
                 ? {
-                    slides: entry.slides.map((slide) => ({
+                    slides: slides.map((slide) => ({
                       title: slide.title?.trim() || "",
                       brief: slide.brief,
                     })),

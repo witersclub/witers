@@ -29,6 +29,9 @@
 
 :root {
   --witers-gradient: linear-gradient(110deg, #ff2fa8 0%, #cb35db 34%, #7a39e8 66%, #315bff 100%);
+  --production-ready-design: var(--color-wit-blue);
+  --production-in-design: var(--color-wit-pink);
+  --production-ready-publish: #10b981;
 }
 
 .wit-brand-gradient {
@@ -39,12 +42,18 @@
 
 @keyframes witers-gradient {
   0%,
-  100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wit-brand-gradient { animation: none; }
+  .wit-brand-gradient {
+    animation: none;
+  }
 }
 
 @theme inline {
@@ -195,8 +204,79 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(120% 70% at 18% -8%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 55%);
+  background: radial-gradient(
+    120% 70% at 18% -8%,
+    rgba(255, 255, 255, 0.7),
+    rgba(255, 255, 255, 0) 55%
+  );
   pointer-events: none;
+}
+
+/* Calendar production states: the state lives on the perimeter so content,
+   date and thumbnail remain readable. The moving accent exists only while a
+   piece is actively being designed. */
+@property --calendar-production-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.calendar-production-cell {
+  isolation: isolate;
+  border-width: 1.5px;
+  transition:
+    border-color 300ms ease,
+    box-shadow 300ms ease;
+}
+
+.calendar-production-cell--ready-for-design {
+  border-color: var(--production-ready-design);
+}
+
+.calendar-production-cell--ready-to-publish {
+  border-color: var(--production-ready-publish);
+}
+
+.calendar-production-cell--in-design {
+  border-color: color-mix(in srgb, var(--production-in-design) 35%, transparent);
+}
+
+.calendar-production-cell--in-design::after {
+  content: "";
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--calendar-production-angle),
+    transparent 0deg,
+    transparent 286deg,
+    color-mix(in srgb, var(--production-in-design) 74%, transparent) 306deg,
+    #ff9bd4 324deg,
+    var(--production-in-design) 336deg,
+    transparent 356deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: calendar-production-trace 3.2s linear infinite;
+}
+
+@keyframes calendar-production-trace {
+  to {
+    --calendar-production-angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar-production-cell--in-design::after {
+    animation: none;
+    display: none;
+  }
 }
 
 /* Rotating light tracing an unclaimed request's border — a "this is
@@ -312,7 +392,12 @@
   inset: -16px;
   z-index: -1;
   border-radius: 9999px;
-  background: linear-gradient(120deg, var(--color-wit-blue), var(--color-wit-pink), var(--color-wit-blue));
+  background: linear-gradient(
+    120deg,
+    var(--color-wit-blue),
+    var(--color-wit-pink),
+    var(--color-wit-blue)
+  );
   background-size: 200% 200%;
   filter: blur(22px);
   animation:
@@ -410,7 +495,6 @@
   display: none;
 }
 
-
 .wit-navlink {
   position: relative;
 }
@@ -454,12 +538,48 @@
 }
 
 /* Animated story in the public landing hero: idea → creation → publishing. */
-.wit-hero-phone-stage { position: relative; display: flex; min-height: 540px; align-items: center; justify-content: center; }
-.wit-hero-phone-entry { animation: wit-hero-phone-enter 1.05s cubic-bezier(.16,1,.3,1) .15s both; }
-.wit-hero-phone { width: 278px; padding: 7px; border: 7px solid var(--color-wit-ink); border-radius: 2.6rem; background: var(--color-wit-ink); box-shadow: 0 36px 90px rgba(5,13,40,.34); }
-@keyframes wit-hero-phone-enter { from { opacity: 0; transform: translateY(220px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 767px) { .wit-hero-phone-stage { min-height: 485px; margin-top: -.5rem; }.wit-hero-phone { transform: scale(.9); } }
-@media (prefers-reduced-motion: reduce) { .wit-hero-phone-entry { animation: none; } }
+.wit-hero-phone-stage {
+  position: relative;
+  display: flex;
+  min-height: 540px;
+  align-items: center;
+  justify-content: center;
+}
+.wit-hero-phone-entry {
+  animation: wit-hero-phone-enter 1.05s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+.wit-hero-phone {
+  width: 278px;
+  padding: 7px;
+  border: 7px solid var(--color-wit-ink);
+  border-radius: 2.6rem;
+  background: var(--color-wit-ink);
+  box-shadow: 0 36px 90px rgba(5, 13, 40, 0.34);
+}
+@keyframes wit-hero-phone-enter {
+  from {
+    opacity: 0;
+    transform: translateY(220px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 767px) {
+  .wit-hero-phone-stage {
+    min-height: 485px;
+    margin-top: -0.5rem;
+  }
+  .wit-hero-phone {
+    transform: scale(0.9);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wit-hero-phone-entry {
+    animation: none;
+  }
+}
 
 @keyframes wit-float {
   0%,
@@ -506,7 +626,9 @@
   border-radius: 34px;
   color: var(--wit-blue, #0b5cff);
   background: #fff;
-  box-shadow: 0 0 0 12px rgba(11, 92, 255, 0.055), 0 12px 28px rgba(10, 30, 80, 0.11);
+  box-shadow:
+    0 0 0 12px rgba(11, 92, 255, 0.055),
+    0 12px 28px rgba(10, 30, 80, 0.11);
   animation: planning-core-breathe 2.8s ease-in-out infinite;
   will-change: transform;
 }
@@ -526,11 +648,30 @@
   animation: planning-float 3.4s ease-in-out infinite;
   will-change: transform;
 }
-.planning-loader-icon svg { width: 22px; height: 22px; }
-.planning-loader-icon-top { top: 1px; left: calc(50% - 26px); animation-delay: -0.4s; }
-.planning-loader-icon-left { top: calc(50% - 26px); left: 1px; animation-delay: -1.3s; }
-.planning-loader-icon-right { top: calc(50% - 26px); right: 1px; animation-delay: -2.1s; }
-.planning-loader-icon-bottom { bottom: 1px; left: calc(50% - 26px); animation-delay: -2.7s; }
+.planning-loader-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.planning-loader-icon-top {
+  top: 1px;
+  left: calc(50% - 26px);
+  animation-delay: -0.4s;
+}
+.planning-loader-icon-left {
+  top: calc(50% - 26px);
+  left: 1px;
+  animation-delay: -1.3s;
+}
+.planning-loader-icon-right {
+  top: calc(50% - 26px);
+  right: 1px;
+  animation-delay: -2.1s;
+}
+.planning-loader-icon-bottom {
+  bottom: 1px;
+  left: calc(50% - 26px);
+  animation-delay: -2.7s;
+}
 
 .planning-loader-particle {
   position: absolute;
@@ -542,19 +683,78 @@
   animation: planning-particle 3.2s ease-in-out infinite;
   will-change: transform, opacity;
 }
-.planning-loader-particle-b, .planning-loader-particle-d { width: 6px; height: 6px; border-radius: 999px; background: #d83fba; }
-.planning-loader-particle-a { top: 21%; right: 15%; animation-delay: -1.6s; }
-.planning-loader-particle-b { top: 31%; left: 15%; animation-delay: -0.9s; }
-.planning-loader-particle-c { right: 23%; bottom: 21%; color: #7c6cff; animation-delay: -2.2s; }
-.planning-loader-particle-d { bottom: 29%; left: 20%; background: #0b5cff; animation-delay: -2.7s; }
+.planning-loader-particle-b,
+.planning-loader-particle-d {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #d83fba;
+}
+.planning-loader-particle-a {
+  top: 21%;
+  right: 15%;
+  animation-delay: -1.6s;
+}
+.planning-loader-particle-b {
+  top: 31%;
+  left: 15%;
+  animation-delay: -0.9s;
+}
+.planning-loader-particle-c {
+  right: 23%;
+  bottom: 21%;
+  color: #7c6cff;
+  animation-delay: -2.2s;
+}
+.planning-loader-particle-d {
+  bottom: 29%;
+  left: 20%;
+  background: #0b5cff;
+  animation-delay: -2.7s;
+}
 
-@keyframes planning-orbit { to { transform: rotate(360deg); } }
-@keyframes planning-core-breathe { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.04); } }
-@keyframes planning-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.025); } }
-@keyframes planning-particle { 0%, 100% { transform: scale(.8); opacity: .3; } 50% { transform: translateY(-4px) scale(1.15); opacity: 1; } }
+@keyframes planning-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes planning-core-breathe {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+}
+@keyframes planning-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-5px) scale(1.025);
+  }
+}
+@keyframes planning-particle {
+  0%,
+  100% {
+    transform: scale(0.8);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-4px) scale(1.15);
+    opacity: 1;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .planning-loader-ring, .planning-loader-core, .planning-loader-icon, .planning-loader-particle { animation: none; }
+  .planning-loader-ring,
+  .planning-loader-core,
+  .planning-loader-icon,
+  .planning-loader-particle {
+    animation: none;
+  }
 }
 
 /* App-open intro: plain white screen, the (already brand-blue) W fades
@@ -596,7 +796,13 @@
   background: linear-gradient(90deg, #93a6c4 0%, #dce8ff 45%, #7fb2ff 75%, #eef5ff 100%);
 }
 .wit-energy-tip {
-  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #dbe9ff 35%, #6fa3f2 70%, transparent 100%);
+  background: radial-gradient(
+    circle at 35% 35%,
+    #ffffff 0%,
+    #dbe9ff 35%,
+    #6fa3f2 70%,
+    transparent 100%
+  );
   animation: wit-energy-spark 0.9s ease-in-out infinite;
 }
 @keyframes wit-energy-spark {
