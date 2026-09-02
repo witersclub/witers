@@ -75,6 +75,28 @@ function batches<T>(items: T[], size: number): T[][] {
   return result;
 }
 
+async function runWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  task: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex++;
+        results[index] = await task(items[index]);
+      }
+    }),
+  );
+  return results;
+}
+
+function wait(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 // Same shape as /api/wit/chat and /api/wit/carousel-chat, but guides the
 // client toward planning the whole month's content calendar at once instead
 // of one piece — see runWitCalendarChat.
@@ -165,16 +187,30 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
             date: entry.scheduled_date,
             title: entry.title,
           }));
-          const results = await Promise.all(
-            batches(remainingDates, 5).map((exactDates) =>
-              runWitCalendarChat(parsed.data.messages, brand, {
-                ...context,
-                existingEntries: knownEntries,
-                expectedEntries: exactDates.length,
-                exactDates,
-                maxPostsPerDay: plan.planningSlotsPerDay,
-              }),
-            ),
+          const results = await runWithConcurrency(
+            batches(remainingDates, 5),
+            2,
+            async (exactDates) => {
+              // Transient provider throttling must never surface as a red
+              // chat error. Retry this isolated batch automatically.
+              for (let attempt = 0; attempt < 3; attempt += 1) {
+                const result = await runWitCalendarChat(parsed.data.messages, brand, {
+                  ...context,
+                  existingEntries: knownEntries,
+                  expectedEntries: exactDates.length,
+                  exactDates,
+                  maxPostsPerDay: plan.planningSlotsPerDay,
+                });
+                if (
+                  result.ok ||
+                  !["limite_openai", "proveedor_openai", "tiempo_agotado"].includes(result.error)
+                ) {
+                  return result;
+                }
+                if (attempt < 2) await wait(700 * (attempt + 1));
+              }
+              return { ok: false as const, error: "limite_openai" };
+            },
           );
           const failure = results.find((result) => !result.ok);
           if (failure && !failure.ok) {

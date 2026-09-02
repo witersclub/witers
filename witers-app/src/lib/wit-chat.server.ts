@@ -1070,7 +1070,9 @@ export async function runWitCalendarChat(
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
     console.info("[wit-chat] openai failed (calendar)", response.status, detail.slice(0, 500));
-    return { ok: false, error: "openai_error" };
+    if (response.status === 429) return { ok: false, error: "limite_openai" };
+    if (response.status >= 500) return { ok: false, error: "proveedor_openai" };
+    return { ok: false, error: "configuracion_openai" };
   }
 
   const body = (await response.json()) as OpenAiChatResponse;

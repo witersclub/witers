@@ -357,11 +357,26 @@ function CalendarWizard({
                     "Wit tardó más de lo habitual. Tu calendario no se modificó; inténtalo una vez más.",
                     "Wit took longer than usual. Your calendar was not changed; try once more.",
                   )
-                : data.error === "openai_error"
-                  ? t(
+              : data.error === "openai_error"
+                ? t(
                       "Wit no pudo generar el plan en este momento. Tu calendario no se modificó; inténtalo de nuevo.",
                       "Wit couldn't generate the plan right now. Your calendar was not changed; try again.",
                     )
+                  : data.error === "limite_openai"
+                    ? t(
+                        "Wit alcanzó el límite temporal de solicitudes mientras completaba el mes. Reintenta en un momento; tu calendario no se modificó.",
+                        "Wit hit a temporary request limit while completing the month. Try again shortly; your calendar was not changed.",
+                      )
+                    : data.error === "proveedor_openai"
+                      ? t(
+                          "El proveedor de IA no respondió correctamente mientras Wit generaba el plan. Tu calendario no se modificó.",
+                          "The AI provider did not respond correctly while Wit generated the plan. Your calendar was not changed.",
+                        )
+                      : data.error === "configuracion_openai"
+                        ? t(
+                            "La configuración de IA rechazó esta planificación. Registramos el detalle técnico para corregirlo; tu calendario no se modificó.",
+                            "The AI configuration rejected this plan. We recorded the technical detail to fix it; your calendar was not changed.",
+                          )
               : t(
                   "Wit no está disponible en este momento. Intenta de nuevo en un momento.",
                   "Wit isn't available right now. Try again in a moment.",
