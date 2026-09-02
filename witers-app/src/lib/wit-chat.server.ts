@@ -622,6 +622,24 @@ const CALENDAR_TOOLS = [
   },
 ];
 
+// The model previously treated "only these five dates" as a soft prompt and
+// returned the entire month in every batch. Give the function itself the
+// exact allowed dates and entry count, so a detailed batch cannot overflow
+// into the rest of the month.
+function calendarToolsFor(opts: { exactDates?: string[]; expectedEntries?: number }) {
+  const tools = structuredClone(CALENDAR_TOOLS);
+  if (!opts.exactDates?.length) return tools;
+  const entries = tools[0].function.parameters.properties.entries as typeof tools[0]["function"]["parameters"]["properties"]["entries"] & {
+    maxItems?: number;
+    items: { properties: { date: { enum?: string[]; description: string } } };
+  };
+  entries.minItems = opts.expectedEntries ?? opts.exactDates.length;
+  entries.maxItems = opts.expectedEntries ?? opts.exactDates.length;
+  entries.items.properties.date.enum = opts.exactDates;
+  entries.items.properties.date.description = `Fecha permitida. Debe ser una de: ${opts.exactDates.join(", ")}.`;
+  return tools;
+}
+
 const CALENDAR_ENTRY_EXPANSION_TOOLS = [
   {
     type: "function",
@@ -1033,7 +1051,7 @@ export async function runWitCalendarChat(
         temperature: 0.6,
         max_tokens: 8000,
         messages: [{ role: "system", content: buildCalendarSystemPrompt(brand, opts) }, ...history],
-        tools: CALENDAR_TOOLS,
+        tools: calendarToolsFor(opts),
         tool_choice: "auto",
         // A full month's worth of fully-fleshed entries (video scripts,
         // 4-slide carousels) is a large payload — without this, the model
