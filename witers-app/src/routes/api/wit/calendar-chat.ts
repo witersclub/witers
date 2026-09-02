@@ -27,6 +27,13 @@ const schema = z.object({
   month: z.number().int().min(1).max(12).optional(),
   brandAssetIds: z.array(z.string().uuid()).max(30).optional(),
   expectedEntries: z.number().int().min(1).max(60).optional(),
+  // The guided planner selects real calendar days before invoking Wit. This
+  // keeps frequency a user decision instead of making the model infer it.
+  plannedDates: z
+    .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+    .min(1)
+    .max(60)
+    .optional(),
 });
 
 function iso(d: Date): string {
@@ -71,7 +78,8 @@ function datesInRange(start: string, end: string): string[] {
 
 function batches<T>(items: T[], size: number): T[][] {
   const result: T[][] = [];
-  for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size));
+  for (let index = 0; index < items.length; index += size)
+    result.push(items.slice(index, index + size));
   return result;
 }
 
@@ -147,10 +155,13 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
         // does not make the remaining quota negative.
         const context = monthContext({ year, month });
         const occupiedDates = new Set(existingEntries.map((entry) => entry.scheduled_date));
-        const remainingDates = parsed.data.expectedEntries
-          ? datesInRange(context.todayDate, context.monthEndDate).filter(
-              (date) => !occupiedDates.has(date),
+        const requestedDates = parsed.data.plannedDates
+          ? [...new Set(parsed.data.plannedDates)].filter(
+              (date) => date >= context.todayDate && date <= context.monthEndDate,
             )
+          : datesInRange(context.todayDate, context.monthEndDate);
+        const remainingDates = parsed.data.expectedEntries
+          ? requestedDates.filter((date) => !occupiedDates.has(date))
           : [];
         const remainingExpectedEntries = parsed.data.expectedEntries
           ? remainingDates.length

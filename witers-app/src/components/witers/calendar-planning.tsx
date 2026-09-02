@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 
 import { WMark } from "./brand";
+import { GuidedPlanningSheet } from "./guided-planning-sheet";
 import { ChatBubble } from "./chat-intake";
 import { CampaignCreationSheet } from "./campaign-creation-sheet";
 import { ASPECT_OPTIONS, AspectRatioPicker } from "./lab-pickers";
@@ -350,15 +351,15 @@ function CalendarWizard({
             : data.error === "falta_openai_api_key"
               ? t(
                   "Wit no está configurado todavía. Revisa la configuración de IA e intenta de nuevo.",
-                "Wit isn't configured yet. Check the AI configuration and try again.",
-              )
+                  "Wit isn't configured yet. Check the AI configuration and try again.",
+                )
               : data.error === "tiempo_agotado"
                 ? t(
                     "Wit tardó más de lo habitual. Tu calendario no se modificó; inténtalo una vez más.",
                     "Wit took longer than usual. Your calendar was not changed; try once more.",
                   )
-              : data.error === "openai_error"
-                ? t(
+                : data.error === "openai_error"
+                  ? t(
                       "Wit no pudo generar el plan en este momento. Tu calendario no se modificó; inténtalo de nuevo.",
                       "Wit couldn't generate the plan right now. Your calendar was not changed; try again.",
                     )
@@ -377,10 +378,10 @@ function CalendarWizard({
                             "La configuración de IA rechazó esta planificación. Registramos el detalle técnico para corregirlo; tu calendario no se modificó.",
                             "The AI configuration rejected this plan. We recorded the technical detail to fix it; your calendar was not changed.",
                           )
-              : t(
-                  "Wit no está disponible en este momento. Intenta de nuevo en un momento.",
-                  "Wit isn't available right now. Try again in a moment.",
-                ),
+                        : t(
+                            "Wit no está disponible en este momento. Intenta de nuevo en un momento.",
+                            "Wit isn't available right now. Try again in a moment.",
+                          ),
         );
         return;
       }
@@ -3320,67 +3321,52 @@ export function PlanificacionPanel({
               </span>
               <div className="min-w-0">
                 <h2 className="text-lg font-extrabold tracking-tight text-wit-ink">
-                  {t("Planificación", "Planning")}
+                  {t(`Planificación de ${monthName.toLowerCase()}`, `Planning for ${monthName}`)}
                 </h2>
                 <span
                   className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-extrabold ${entries.length ? "bg-emerald-50 text-emerald-700" : "bg-wit-blue/[0.07] text-wit-blue"}`}
                 >
                   <span>{entries.length ? "✓" : "•"}</span>
                   {entries.length
-                    ? t("Planificación completa", "Planning complete")
-                    : t("Lista para planificar", "Ready to plan")}
+                    ? t("Plan listo", "Plan ready")
+                    : t("Sin planificar", "Not planned")}
                 </span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setOpenBrandMindFromHeader(true);
-                setWizardOpen(true);
-              }}
-              aria-label={t("Mente de marca", "Brand mind")}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-wit-blue/[0.06] text-wit-blue transition-colors hover:bg-wit-blue/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue"
+            <span
+              aria-hidden="true"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-wit-blue/[0.06] text-wit-blue"
             >
               <Sparkles className="h-[18px] w-[18px]" strokeWidth={2.2} />
-            </button>
+            </span>
           </div>
           <p className="mt-4 max-w-sm text-sm font-medium leading-relaxed text-wit-gray">
             {entries.length
               ? t(
-                  "Tu contenido y calendario están listos para este mes.",
-                  "Your content and calendar are ready for this month.",
+                  `${entries.length} piezas preparadas para este mes.`,
+                  `${entries.length} pieces prepared for this month.`,
                 )
               : t(
-                  "Cuéntale a Wit qué quieres lograr este mes.",
-                  "Tell Wit what you want to achieve this month.",
+                  "Cuéntale a WITERS qué quieres lograr y armamos tu plan en minutos.",
+                  "Tell WITERS what you want to achieve and we'll build your plan in minutes.",
                 )}
           </p>
-          <div className="mt-5 grid grid-cols-2 gap-2 max-[340px]:grid-cols-1">
-            <button
-              type="button"
-              disabled={replanning}
-              onClick={() => (entries.length > 0 ? setConfirmingReplan(true) : setWizardOpen(true))}
-              className="flex min-h-[54px] items-center justify-center gap-2 rounded-[17px] bg-wit-blue px-3 text-sm font-extrabold text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] transition hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 disabled:opacity-60"
-            >
-              <RotateCcw className="h-4 w-4" strokeWidth={2.4} />
-              {replanning
-                ? t("Cargando...", "Loading...")
-                : entries.length
-                  ? t("Replanear mes", "Replan month")
-                  : t("Planificar mes", "Plan month")}
-            </button>
+          <div className="mt-5">
             <button
               type="button"
               onClick={() => {
-                if (onViewPlanning) onViewPlanning();
-                else
+                if (entries.length && onViewPlanning) onViewPlanning();
+                else if (entries.length)
                   document
                     .getElementById("calendario-planificacion")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                else setWizardOpen(true);
               }}
-              className="flex min-h-[54px] items-center justify-center gap-1.5 rounded-[17px] border border-wit-blue/20 bg-white px-3 text-sm font-extrabold text-wit-blue transition hover:bg-wit-blue/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2"
+              className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-[17px] bg-wit-blue px-3 text-sm font-extrabold text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] transition hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2"
             >
-              {t("Ver planificación", "View plan")}
+              {entries.length
+                ? t("Ver planificación", "View plan")
+                : t("Planificar mes", "Plan month")}
               <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
             </button>
           </div>
@@ -3464,7 +3450,7 @@ export function PlanificacionPanel({
         </div>
       </div>
       <div className={`${homeMobile ? "mt-6" : "mt-4"} flex flex-wrap items-center gap-2`}>
-        <div className="flex min-w-0 items-center gap-1 rounded-2xl bg-white/75 p-1 shadow-sm">
+        <div className="grid h-14 w-full max-w-md grid-cols-[44px_1fr_44px] items-center rounded-2xl border border-wit-ink/[0.06] bg-white px-1 shadow-[0_4px_16px_rgba(10,30,80,0.04)]">
           <button
             type="button"
             onClick={() => setMonthOffset((m) => m - 1)}
@@ -3473,9 +3459,11 @@ export function PlanificacionPanel({
           >
             <ChevronLeft className="h-4 w-4" strokeWidth={2.4} />
           </button>
-          <span className="flex min-w-0 items-center gap-1.5 px-0.5 text-sm font-extrabold text-wit-ink sm:px-1 sm:text-base">
-            <Calendar className="h-4 w-4 text-wit-blue" strokeWidth={2.3} />
-            {monthLabel}
+          <span className="min-w-0 text-center">
+            <span className="block truncate text-base font-extrabold capitalize text-wit-ink">
+              {monthName}
+            </span>
+            <span className="block text-[10px] font-semibold text-wit-gray">{monthYear}</span>
           </span>
           <button
             type="button"
@@ -3808,12 +3796,11 @@ export function PlanificacionPanel({
 
       {wizardOpen
         ? createPortal(
-            <div className="fixed inset-0 z-50 bg-white">
-              <CalendarWizard
+            <>
+              <GuidedPlanningSheet
                 targetYear={year}
                 targetMonth={month}
                 monthLabel={monthLabel}
-                initialBrandMindOpen={openBrandMindFromHeader}
                 onClose={() => {
                   setWizardOpen(false);
                   setOpenBrandMindFromHeader(false);
@@ -3824,7 +3811,7 @@ export function PlanificacionPanel({
                   setOpenBrandMindFromHeader(false);
                 }}
               />
-            </div>,
+            </>,
             document.body,
           )
         : null}
