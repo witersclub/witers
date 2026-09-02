@@ -20,11 +20,12 @@ const ALLOWED_MIME = [
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
-// Word and Markdown are frequently sent by browsers as application/octet-stream
-// or an empty type. Match their extension explicitly without opening this
+// Documents — including PDFs — can arrive from mobile browsers with an empty
+// or generic MIME type. Match their extension explicitly without opening this
 // endpoint to arbitrary binary uploads.
-const DOCUMENT_EXT = /\.(docs?|md|markdown|txt|text)$/i;
+const DOCUMENT_EXT = /\.(pdf|docs?|md|markdown|txt|text)$/i;
 const DOCUMENT_CONTENT_TYPE: Record<string, string> = {
+  pdf: "application/pdf",
   doc: "application/msword",
   docs: "application/msword",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

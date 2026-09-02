@@ -1069,7 +1069,9 @@ function PanelContent() {
                       homeMobile
                       onViewPlanning={() => {
                         setSection("planificacion");
-                        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+                        requestAnimationFrame(() =>
+                          window.scrollTo({ top: 0, behavior: "smooth" }),
+                        );
                       }}
                     />
                   </div>
