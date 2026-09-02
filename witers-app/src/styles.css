@@ -474,6 +474,89 @@
   animation: wit-float 6s ease-in-out infinite;
 }
 
+/* Guided planning: a lightweight orbit, built from transforms only so it
+   remains smooth inside the mobile bottom sheet. */
+.planning-loader {
+  position: relative;
+  width: clamp(220px, 64vw, 280px);
+  aspect-ratio: 1;
+  isolation: isolate;
+}
+
+.planning-loader-ring {
+  position: absolute;
+  inset: 34px;
+  border-radius: 999px;
+  background: conic-gradient(from 20deg, #0b5cff, #6a5cff, #e84ebf, #0b5cff);
+  -webkit-mask: radial-gradient(transparent 61%, #000 62%);
+  mask: radial-gradient(transparent 61%, #000 62%);
+  animation: planning-orbit 7s linear infinite;
+  will-change: transform;
+}
+
+.planning-loader-core {
+  position: absolute;
+  inset: 50%;
+  z-index: 2;
+  display: grid;
+  width: 106px;
+  height: 106px;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  border-radius: 34px;
+  color: var(--wit-blue, #0b5cff);
+  background: #fff;
+  box-shadow: 0 0 0 12px rgba(11, 92, 255, 0.055), 0 12px 28px rgba(10, 30, 80, 0.11);
+  animation: planning-core-breathe 2.8s ease-in-out infinite;
+  will-change: transform;
+}
+
+.planning-loader-icon {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border: 1px solid rgba(10, 30, 80, 0.06);
+  border-radius: 16px;
+  color: var(--wit-blue, #0b5cff);
+  background: #fff;
+  box-shadow: 0 10px 22px rgba(10, 30, 80, 0.1);
+  animation: planning-float 3.4s ease-in-out infinite;
+  will-change: transform;
+}
+.planning-loader-icon svg { width: 22px; height: 22px; }
+.planning-loader-icon-top { top: 1px; left: calc(50% - 26px); animation-delay: -0.4s; }
+.planning-loader-icon-left { top: calc(50% - 26px); left: 1px; animation-delay: -1.3s; }
+.planning-loader-icon-right { top: calc(50% - 26px); right: 1px; animation-delay: -2.1s; }
+.planning-loader-icon-bottom { bottom: 1px; left: calc(50% - 26px); animation-delay: -2.7s; }
+
+.planning-loader-particle {
+  position: absolute;
+  z-index: 1;
+  color: #0b5cff;
+  font-size: 17px;
+  line-height: 1;
+  opacity: 0.72;
+  animation: planning-particle 3.2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.planning-loader-particle-b, .planning-loader-particle-d { width: 6px; height: 6px; border-radius: 999px; background: #d83fba; }
+.planning-loader-particle-a { top: 21%; right: 15%; animation-delay: -1.6s; }
+.planning-loader-particle-b { top: 31%; left: 15%; animation-delay: -0.9s; }
+.planning-loader-particle-c { right: 23%; bottom: 21%; color: #7c6cff; animation-delay: -2.2s; }
+.planning-loader-particle-d { bottom: 29%; left: 20%; background: #0b5cff; animation-delay: -2.7s; }
+
+@keyframes planning-orbit { to { transform: rotate(360deg); } }
+@keyframes planning-core-breathe { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.04); } }
+@keyframes planning-float { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.025); } }
+@keyframes planning-particle { 0%, 100% { transform: scale(.8); opacity: .3; } 50% { transform: translateY(-4px) scale(1.15); opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .planning-loader-ring, .planning-loader-core, .planning-loader-icon, .planning-loader-particle { animation: none; }
+}
+
 /* App-open intro: plain white screen, the (already brand-blue) W fades
    in centered, holds static (like Instagram/TikTok/YouTube's own splash
    — no pulsing glow), then the whole screen fades to reveal the page

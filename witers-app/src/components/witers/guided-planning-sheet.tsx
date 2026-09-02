@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   CalendarDays,
@@ -6,7 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Image as ImageIcon,
-  Loader2,
+  FileText,
   MessageCircle,
   MoreHorizontal,
   ShoppingBag,
@@ -100,6 +100,52 @@ function formatCopy(formats: FormatChoice[]) {
     .join(" · ");
 }
 
+const LOADING_MESSAGES = [
+  "Analizando tus objetivos…",
+  "Organizando las fechas…",
+  "Distribuyendo los formatos…",
+  "Preparando tus ideas…",
+  "Terminando tu planificación…",
+];
+
+export function PlanningLoader({ progress, message }: { progress: number; message: string }) {
+  return (
+    <div className="flex w-full flex-col items-center text-center" role="status" aria-live="polite">
+      <div className="planning-loader" aria-hidden="true">
+        <span className="planning-loader-ring" />
+        <span className="planning-loader-particle planning-loader-particle-a">✦</span>
+        <span className="planning-loader-particle planning-loader-particle-b" />
+        <span className="planning-loader-particle planning-loader-particle-c">•</span>
+        <span className="planning-loader-particle planning-loader-particle-d" />
+        <span className="planning-loader-icon planning-loader-icon-top"><CalendarDays /></span>
+        <span className="planning-loader-icon planning-loader-icon-left"><Video /></span>
+        <span className="planning-loader-icon planning-loader-icon-right"><ImageIcon /></span>
+        <span className="planning-loader-icon planning-loader-icon-bottom"><FileText /></span>
+        <span className="planning-loader-core"><WMark size={56} /></span>
+      </div>
+      <h2 id="guided-planning-title" className="mt-2 text-2xl font-extrabold text-wit-ink">
+        Preparando tu planificación
+      </h2>
+      <p className="mt-2 max-w-xs text-sm leading-relaxed text-wit-gray">
+        WITERS está armando un plan personalizado para ti.
+      </p>
+      <div className="mt-6 w-full max-w-[270px]" aria-label={`Progreso de generación: ${progress}%`}>
+        <div className="h-2 overflow-hidden rounded-full bg-wit-mist/80">
+          <span
+            className="block h-full rounded-full bg-wit-blue transition-[width] duration-700 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p className="mt-3 text-xs font-bold text-wit-blue">✦ {message}</p>
+      </div>
+      <div className="mt-5 flex w-full max-w-[320px] items-center gap-3 rounded-[18px] bg-wit-blue/[0.045] px-4 py-3 text-left">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-wit-blue shadow-sm"><Sparkles className="h-4 w-4" /></span>
+        <p className="text-xs font-medium leading-relaxed text-wit-gray">Esto puede tomar unos segundos. Pronto tendrás tu calendario listo.</p>
+      </div>
+    </div>
+  );
+}
+
 export function GuidedPlanningSheet({
   targetYear,
   targetMonth,
@@ -123,6 +169,8 @@ export function GuidedPlanningSheet({
   const [specialInfo, setSpecialInfo] = useState("");
   const [state, setState] = useState<"form" | "generating" | "success" | "error">("form");
   const [entries, setEntries] = useState<CalendarEntryDraft[]>([]);
+  const [loadingProgress, setLoadingProgress] = useState(12);
+  const [loadingMessage, setLoadingMessage] = useState(0);
   const dates = useMemo(
     () => (frequency ? plannedDates(targetYear, targetMonth, frequency, customCount) : []),
     [customCount, frequency, targetMonth, targetYear],
@@ -143,6 +191,21 @@ export function GuidedPlanningSheet({
     { imagen: 0, video: 0, carrusel: 0 },
   );
 
+  useEffect(() => {
+    if (state !== "generating") return;
+    const messageTimer = window.setInterval(
+      () => setLoadingMessage((current) => (current + 1) % LOADING_MESSAGES.length),
+      1900,
+    );
+    const progressTimer = window.setInterval(() => {
+      setLoadingProgress((current) => Math.min(92, current + Math.max(2, Math.round((94 - current) * 0.15))));
+    }, 1250);
+    return () => {
+      window.clearInterval(messageTimer);
+      window.clearInterval(progressTimer);
+    };
+  }, [state]);
+
   function toggleFormat(format: FormatChoice) {
     if (format === "recommended") {
       setFormats(["recommended"]);
@@ -158,6 +221,8 @@ export function GuidedPlanningSheet({
 
   async function generate() {
     if (!objective || !frequency || !dates.length) return;
+    setLoadingProgress(14);
+    setLoadingMessage(0);
     setState("generating");
     const chosenFormats = formats.includes("recommended")
       ? "una mezcla recomendada de reels, carruseles e imágenes"
@@ -199,6 +264,8 @@ export function GuidedPlanningSheet({
       const saved = (await save.json()) as { ok: boolean };
       if (!saved.ok) throw new Error("save");
       setEntries(data.entries);
+      setLoadingProgress(100);
+      await new Promise((resolve) => window.setTimeout(resolve, 620));
       setState("success");
       onCreated();
     } catch {
@@ -243,25 +310,8 @@ export function GuidedPlanningSheet({
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-5 md:px-8">
           {state === "generating" ? (
-            <div className="flex h-full min-h-[360px] flex-col items-center justify-center text-center">
-              <span className="grid h-20 w-20 place-items-center rounded-[28px] bg-wit-blue/[0.08] text-wit-blue">
-                <WMark size={46} />
-              </span>
-              <h2 id="guided-planning-title" className="mt-6 text-2xl font-extrabold text-wit-ink">
-                {t("Preparando tu planificación", "Preparing your plan")}
-              </h2>
-              <p className="mt-2 max-w-xs text-sm leading-relaxed text-wit-gray">
-                {t(
-                  "WITERS está armando un plan personalizado para ti.",
-                  "WITERS is building a personalized plan for you.",
-                )}
-              </p>
-              <div className="mt-7 h-2 w-56 overflow-hidden rounded-full bg-wit-mist">
-                <span className="block h-full w-2/3 animate-pulse rounded-full bg-wit-blue" />
-              </div>
-              <p className="mt-4 text-xs font-semibold text-wit-blue">
-                {t("Organizando las fechas y formatos…", "Organizing dates and formats…")}
-              </p>
+            <div className="flex h-full min-h-[440px] flex-col items-center justify-center py-2 text-center">
+              <PlanningLoader progress={loadingProgress} message={t(LOADING_MESSAGES[loadingMessage], LOADING_MESSAGES[loadingMessage])} />
             </div>
           ) : state === "success" ? (
             <div className="flex h-full min-h-[360px] flex-col items-center justify-center text-center">
