@@ -202,25 +202,63 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
             batches(remainingDates, 5),
             2,
             async (exactDates) => {
-              // Transient provider throttling must never surface as a red
-              // chat error. Retry this isolated batch automatically.
-              for (let attempt = 0; attempt < 3; attempt += 1) {
+              // A model may complete only part of a detailed batch (most
+              // often when a carousel omits one of its four slides). Keep
+              // every valid date and ask only for the missing ones, never
+              // discard a whole monthly plan because one item was malformed.
+              const collected = new Map<
+                string,
+                {
+                  date: string;
+                  title: string;
+                  format: "imagen" | "video" | "carrusel";
+                  brief: string;
+                  slot?: number;
+                  slides?: { title: string; brief: string }[];
+                }
+              >();
+              let missingDates = exactDates;
+              for (let attempt = 0; attempt < 4 && missingDates.length; attempt += 1) {
                 const result = await runWitCalendarChat(parsed.data.messages, brand, {
                   ...context,
                   existingEntries: knownEntries,
-                  expectedEntries: exactDates.length,
-                  exactDates,
+                  expectedEntries: missingDates.length,
+                  exactDates: missingDates,
                   maxPostsPerDay: plan.planningSlotsPerDay,
+                  allowPartial: true,
                 });
-                if (
-                  result.ok ||
-                  !["limite_openai", "proveedor_openai", "tiempo_agotado"].includes(result.error)
-                ) {
-                  return result;
+                if (!result.ok) {
+                  if (
+                    !["limite_openai", "proveedor_openai", "tiempo_agotado"].includes(result.error)
+                  ) {
+                    return result;
+                  }
+                  if (attempt < 3) await wait(700 * (attempt + 1));
+                  continue;
                 }
-                if (attempt < 2) await wait(700 * (attempt + 1));
+                if (result.kind !== "done") {
+                  if (attempt < 3) await wait(450 * (attempt + 1));
+                  continue;
+                }
+                for (const entry of result.entries) collected.set(entry.date, entry);
+                missingDates = exactDates.filter((date) => !collected.has(date));
+                if (!missingDates.length) {
+                  return {
+                    ok: true as const,
+                    kind: "done" as const,
+                    entries: exactDates.map((date) => collected.get(date)!),
+                  };
+                }
+                if (attempt < 3) await wait(450 * (attempt + 1));
               }
-              return { ok: false as const, error: "limite_openai" };
+              if (missingDates.length) {
+                console.warn("[calendar-chat] batch remained incomplete", {
+                  expected: exactDates,
+                  missing: missingDates,
+                });
+                return { ok: false as const, error: "plan_incompleto" };
+              }
+              return { ok: false as const, error: "plan_incompleto" };
             },
           );
           const failure = results.find((result) => !result.ok);
