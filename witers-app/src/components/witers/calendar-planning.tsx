@@ -3327,6 +3327,18 @@ export function PlanificacionPanel({
   const monthlyProgressPct = publishableEntries.length
     ? Math.round((monthlyScheduledCount / publishableEntries.length) * 100)
     : 0;
+  // The calendar's primary progress is production progress across the full
+  // monthly plan, not just future scheduling. A delivered piece is already
+  // realised work; a published/partial publication is also complete work.
+  const monthlyCompletedCount = entries.filter(
+    (entry) =>
+      entry.status === "lista" ||
+      entry.publicationStatus === "published" ||
+      entry.publicationStatus === "partial",
+  ).length;
+  const monthlyCompletionPct = entries.length
+    ? Math.round((monthlyCompletedCount / entries.length) * 100)
+    : 0;
   const grid = buildMonthGrid(year, month);
 
   async function downloadPlanningPdf() {
@@ -3534,11 +3546,11 @@ export function PlanificacionPanel({
           {entries.length > 0 ? (
             <p className="shrink-0 text-xs font-bold text-wit-gray">
               <span className="text-wit-ink">
-                {monthlyScheduledCount} {t("de", "of")} {publishableEntries.length}{" "}
-                {t("piezas", "pieces")}
+                {monthlyCompletedCount} {t("de", "of")} {entries.length}{" "}
+                {t("piezas realizadas", "pieces completed")}
               </span>
               <span className="text-wit-gray"> · </span>
-              <span className="text-wit-blue">{monthlyProgressPct}%</span>
+              <span className="text-wit-blue">{monthlyCompletionPct}%</span>
             </p>
           ) : null}
         </div>
@@ -3546,7 +3558,7 @@ export function PlanificacionPanel({
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-wit-mist/60">
             <div
               className="wit-brand-gradient h-full rounded-full"
-              style={{ width: `${monthlyProgressPct}%` }}
+              style={{ width: `${monthlyCompletionPct}%` }}
             />
           </div>
         ) : null}
