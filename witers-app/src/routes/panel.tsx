@@ -23,6 +23,7 @@ import {
   Car,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   Crosshair,
   Dumbbell,
   Eye,
@@ -41,6 +42,7 @@ import {
   Magnet,
   MapPin,
   Megaphone,
+  Palette,
   PawPrint,
   Pencil,
   Plane,
@@ -2458,8 +2460,8 @@ function DesktopTopNav({
     {
       active: view === "panel" && section === "activos",
       onClick: () => onSection("activos"),
-      es: "Mi marca",
-      en: "My brand",
+      es: "Brand",
+      en: "Brand",
     },
     {
       active: view === "panel" && section === "campanas",
@@ -2595,7 +2597,7 @@ function PanelBottomNav({
                 className={activosActive ? "text-wit-blue" : "text-wit-gray"}
               />
             }
-            label={t("Mi marca", "My brand")}
+            label={t("Brand", "Brand")}
           />
         </div>
 
@@ -4346,34 +4348,175 @@ function BrandShowcaseManualCard({ hasManual }: { hasManual: boolean }) {
   );
 }
 
+// CAMBIO 05 — "Brand Wallet." Closed by default: a real stacked deck of
+// passes (BrandWalletStack), each just a sliver of the one behind it, tap
+// to fan it open. Fanning it open reveals exactly the grid this component
+// always rendered — every upload/edit card below (BrandMindCard,
+// BrandColorsCard, LogoCard, BrandFontCard, the manual's BrandAssetCard)
+// is completely untouched, same components, same endpoints, same state.
+// Only the presentation in FRONT of that grid is new, so there's zero risk
+// to the actual asset-management logic — worst case the deck itself looks
+// wrong, and the proven grid underneath still works exactly as it did.
 function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null }) {
   const { t } = useLanguage();
   const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
 
   function refresh() {
     void qc.invalidateQueries({ queryKey: ["brand-profile"] });
   }
 
+  if (!open) {
+    return <BrandWalletStack brandProfile={brandProfile} onOpen={() => setOpen(true)} />;
+  }
+
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <BrandMindCard />
-      <BrandColorsCard brandProfile={brandProfile} />
-      <LogoCard fileKey={brandProfile?.logo_key ?? null} />
-      <BrandFontCard brandProfile={brandProfile} />
-      <BrandAssetCard
-        title={t("Manual de marca", "Brand manual")}
-        description={t(
-          "Tus lineamientos de marca — colores, tipografías, uso del logo.",
-          "Your brand guidelines — colors, fonts, logo usage.",
-        )}
-        fileKey={brandProfile?.brand_manual_key ?? null}
-        isPdf={true}
-        onUploaded={refresh}
-        uploadEndpoint="/api/brand-profile-manual"
-        accept="application/pdf"
-        acceptHint={t("PDF, máx. 15 MB", "PDF, max. 15 MB")}
-      />
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="mb-5 flex items-center gap-1.5 text-sm font-bold text-wit-gray hover:text-wit-ink"
+      >
+        <ChevronUp className="h-4 w-4" strokeWidth={2.5} />
+        {t("Ver menos", "Show less")}
+      </button>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <BrandMindCard />
+        <BrandColorsCard brandProfile={brandProfile} />
+        <LogoCard fileKey={brandProfile?.logo_key ?? null} />
+        <BrandFontCard brandProfile={brandProfile} />
+        <BrandAssetCard
+          title={t("Manual de marca", "Brand manual")}
+          description={t(
+            "Tus lineamientos de marca — colores, tipografías, uso del logo.",
+            "Your brand guidelines — colors, fonts, logo usage.",
+          )}
+          fileKey={brandProfile?.brand_manual_key ?? null}
+          isPdf={true}
+          onUploaded={refresh}
+          uploadEndpoint="/api/brand-profile-manual"
+          accept="application/pdf"
+          acceptHint={t("PDF, máx. 15 MB", "PDF, max. 15 MB")}
+        />
+      </div>
     </div>
+  );
+}
+
+// The closed wallet: five passes stacked with only a sliver of each one
+// peeking out above the next, real brand data on the front pass (not a
+// mockup) so it reads as "this is actually your brand," not decoration.
+// Tapping anywhere fans it open into ActivosDeMarca's real grid above.
+function BrandWalletStack({
+  brandProfile,
+  onOpen,
+}: {
+  brandProfile: BrandProfile | null;
+  onOpen: () => void;
+}) {
+  const { t } = useLanguage();
+  const colors = (brandProfile?.brand_colors ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  const accent = colors[0] ?? "#0047FF";
+  const accent2 = colors[1] ?? colors[0] ?? "#6B8CFF";
+
+  // Back to front — the last one renders on top, fully visible and the
+  // one carrying the tap affordance; earlier ones each show only a strip
+  // above it (see the `top`/`zIndex` math below).
+  const passes: { id: string; title: string; subtitle: string; icon: LucideIcon }[] = [
+    {
+      id: "mente",
+      title: t("Mente de marca", "Brand mind"),
+      subtitle: t("Manual, estrategia y referencias", "Manual, strategy, and references"),
+      icon: Sparkles,
+    },
+    {
+      id: "manual",
+      title: t("Manual de marca", "Brand manual"),
+      subtitle: brandProfile?.brand_manual_key
+        ? t("Guardado", "Saved")
+        : t("Sin manual aún", "No manual yet"),
+      icon: FileText,
+    },
+    {
+      id: "tipografia",
+      title: t("Tipografía", "Typography"),
+      subtitle:
+        brandProfile?.library_font ||
+        (brandProfile?.font_keys
+          ? t("Tipografía personalizada", "Custom typography")
+          : t("Sin tipografía aún", "No typography yet")),
+      icon: FileText,
+    },
+    {
+      id: "colores",
+      title: t("Colores de marca", "Brand colors"),
+      subtitle: colors.length
+        ? t(`${colors.length} colores guardados`, `${colors.length} colors saved`)
+        : t("Sin colores aún", "No colors yet"),
+      icon: Palette,
+    },
+    {
+      id: "logo",
+      title: t("Logotipo", "Logo"),
+      subtitle: brandProfile?.logo_key
+        ? t("Guardado", "Saved")
+        : t("Sin logotipo aún", "No logo yet"),
+      icon: ImageIcon,
+    },
+  ];
+  const peek = 16;
+  const cardHeight = 92;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group mx-auto block w-full max-w-sm text-left"
+      aria-label={t("Ver tus tarjetas de marca", "View your brand cards")}
+    >
+      <div className="relative" style={{ height: cardHeight + peek * (passes.length - 1) }}>
+        {passes.map((pass, index) => {
+          const isFront = index === passes.length - 1;
+          const Icon = pass.icon;
+          return (
+            <div
+              key={pass.id}
+              aria-hidden={isFront ? undefined : true}
+              className="absolute inset-x-0 flex items-center gap-3 overflow-hidden rounded-3xl p-4 shadow-[0_14px_36px_rgba(5,13,40,0.16)] transition-transform duration-200 group-hover:-translate-y-0.5"
+              style={{
+                top: index * peek,
+                height: cardHeight,
+                zIndex: index,
+                background: `linear-gradient(135deg, ${accent}, ${accent2})`,
+              }}
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-sm">
+                <Icon className="h-5 w-5" strokeWidth={2.2} />
+              </span>
+              {isFront ? (
+                <div className="min-w-0">
+                  <p className="truncate text-base font-extrabold text-white">{pass.title}</p>
+                  <p className="mt-0.5 truncate text-xs font-medium text-white/80">
+                    {pass.subtitle}
+                  </p>
+                </div>
+              ) : null}
+              {isFront ? (
+                <span className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-white">
+                  <Wallet className="h-4 w-4" strokeWidth={2.2} />
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-4 text-center text-sm font-bold text-wit-blue">
+        {t("Toca para ver tus tarjetas de marca", "Tap to see your brand cards")}
+      </p>
+    </button>
   );
 }
 

@@ -267,9 +267,7 @@ function MiMarcaScreen() {
   return (
     <div className="flex h-full flex-col pt-8">
       <div className="flex-1 space-y-3 overflow-hidden px-4 pb-16">
-        <p className="text-lg font-extrabold tracking-tight text-wit-ink">
-          {t("Mi marca", "My brand")}
-        </p>
+        <p className="text-lg font-extrabold tracking-tight text-wit-ink">{t("Brand", "Brand")}</p>
 
         <div className="wit-glass flex aspect-[4/3] flex-col items-center justify-center gap-2.5 rounded-3xl p-5">
           <span
