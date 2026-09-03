@@ -881,10 +881,11 @@ function PanelContent() {
           <>
             {/* Greeting, quota rings, campaign badges, membership CTA — all
                 of it is "Inicio" content (the quick-glance overview a
-                returning client wants first). Mi marca and Campañas now
-                have their own top-of-section identity (BrandShowcaseCarousel
-                / CampanasPanel's own header), so repeating this here just
-                duplicated Inicio instead of feeling like a different place. */}
+                returning client wants first). Brand and Campañas now have
+                their own top-of-section identity (ActivosDeMarca's wallet
+                stack / CampanasPanel's own header), so repeating this here
+                just duplicated Inicio instead of feeling like a different
+                place. */}
             {section === "creatividad" ? (
               <>
                 {/* Desktop-only (lg+) Inicio header. Planificación (the
@@ -1201,10 +1202,7 @@ function PanelContent() {
               </div>
             ) : section === "activos" ? (
               <div className="mt-8">
-                <BrandShowcaseCarousel brandProfile={brandProfile} />
-                <div className="mt-10">
-                  <ActivosDeMarca brandProfile={brandProfile} />
-                </div>
+                <ActivosDeMarca brandProfile={brandProfile} />
               </div>
             ) : section === "campanas" ? (
               <div className="mt-8">
@@ -4050,304 +4048,6 @@ function BrandAtmosphere({ colors }: { colors: string[] }) {
   );
 }
 
-// A visual-only "wow, this is my brand" showcase — swipeable cards you
-// glance at, not edit. The actual upload/edit controls stay in the plain
-// list below (ActivosDeMarca) unchanged; cramming forms into a
-// swipeable card felt clumsy on mobile, so this stays a pure preview.
-function BrandShowcaseCarousel({ brandProfile }: { brandProfile: BrandProfile | null }) {
-  const { t } = useLanguage();
-  const trackRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const rafRef = useRef<number | null>(null);
-  const [active, setActive] = useState(0);
-
-  const colors = (brandProfile?.brand_colors ?? "")
-    .split(",")
-    .map((c) => c.trim())
-    .filter(Boolean);
-
-  const cards: { id: string; content: ReactNode }[] = [
-    {
-      id: "identidad",
-      content: (
-        <BrandShowcaseIdentityCard
-          companyName={brandProfile?.company_name ?? t("Tu marca", "Your brand")}
-          businessType={brandProfile?.business_type ?? null}
-          colors={colors}
-        />
-      ),
-    },
-    { id: "logo", content: <BrandShowcaseLogoCard fileKey={brandProfile?.logo_key ?? null} /> },
-    { id: "colores", content: <BrandShowcaseColorsCard colors={colors} /> },
-    {
-      id: "tipografia",
-      content: (
-        <BrandShowcaseFontCard
-          fontKeys={(brandProfile?.font_keys ?? "")
-            .split(",")
-            .map((k) => k.trim())
-            .filter(Boolean)}
-          libraryFont={brandProfile?.library_font ?? null}
-          previewText={brandProfile?.company_name ?? t("Tu marca", "Your brand")}
-        />
-      ),
-    },
-    {
-      id: "manual",
-      content: <BrandShowcaseManualCard hasManual={Boolean(brandProfile?.brand_manual_key)} />,
-    },
-  ];
-
-  // The Instagram-stories "cube" feeling — each card tilts in 3D around
-  // the edge it shares with its neighbor as it approaches/leaves center,
-  // instead of just sliding flat. Riding on native scroll-snap (not a
-  // hand-rolled drag/touch implementation) for the actual swipe physics —
-  // this only recomputes each card's rotation from its live scroll
-  // position, rAF-throttled so it stays cheap during the scroll gesture.
-  function updateTilt() {
-    const el = trackRef.current;
-    if (!el) return;
-    const centerX = el.scrollLeft + el.clientWidth / 2;
-    cardRefs.current.forEach((card) => {
-      if (!card) return;
-      const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-      const raw = (cardCenter - centerX) / card.offsetWidth;
-      const offset = Math.max(-1.3, Math.min(1.3, raw));
-      const rotation = offset * -38;
-      const scale = 1 - Math.min(Math.abs(offset), 1) * 0.1;
-      card.style.transformOrigin = offset >= 0 ? "left center" : "right center";
-      card.style.transform = `rotateY(${rotation}deg) scale(${scale})`;
-      card.style.opacity = String(1 - Math.min(Math.abs(offset), 1) * 0.4);
-    });
-  }
-
-  function handleScroll() {
-    const el = trackRef.current;
-    const first = el?.firstElementChild;
-    if (el && first instanceof HTMLElement) {
-      const cardWidth = first.offsetWidth + 16;
-      setActive(Math.round(el.scrollLeft / cardWidth));
-    }
-    if (rafRef.current != null) return;
-    rafRef.current = requestAnimationFrame(() => {
-      updateTilt();
-      rafRef.current = null;
-    });
-  }
-
-  useEffect(() => {
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    updateTilt();
-    window.addEventListener("resize", updateTilt);
-    return () => window.removeEventListener("resize", updateTilt);
-  }, []);
-
-  return (
-    <div>
-      {/* Mobile/narrow: the swipeable cube-tilt carousel — one card
-          centered at a time, which is exactly the layout the tilt math
-          assumes. On a wide viewport several cards are visible at once,
-          and rotating the off-center ones made them visually overlap/fan
-          out instead of reading as a cube — so desktop gets a plain
-          static grid instead (below), no scroll or tilt needed once
-          there's enough room to just show all four side by side. */}
-      <div className="md:hidden">
-        <div
-          ref={trackRef}
-          onScroll={handleScroll}
-          style={{ perspective: "1400px" }}
-          className="flex snap-x snap-mandatory gap-5 overflow-x-auto px-1 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {cards.map((card, i) => (
-            <div
-              key={card.id}
-              ref={(el) => {
-                cardRefs.current[i] = el;
-              }}
-              style={{ backfaceVisibility: "hidden" }}
-              className="w-[96%] shrink-0 snap-center sm:w-[30rem]"
-            >
-              {card.content}
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 flex justify-center gap-1.5">
-          {cards.map((card, i) => (
-            <span
-              key={card.id}
-              className={`h-1.5 rounded-full transition-all ${
-                i === active ? "w-5 bg-wit-blue" : "w-1.5 bg-wit-ink/15"
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="hidden gap-5 md:grid md:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card) => (
-          <div key={card.id}>{card.content}</div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function BrandShowcaseIdentityCard({
-  companyName,
-  businessType,
-  colors,
-}: {
-  companyName: string;
-  businessType: string | null;
-  colors: string[];
-}) {
-  const { t } = useLanguage();
-  const c1 = colors[0] ?? "#0047FF";
-  const c2 = colors[colors.length - 1] ?? "#6B8CFF";
-  // Layered soft-edged radials, sitting BEHIND a wit-glass pane rather than
-  // painted straight on the card — the frost is what turns it into a
-  // diffused wash instead of a flat colored block, and matches the same
-  // liquid-glass look as every other card here (and the header above).
-  // `isolate` keeps the wash contained to this card: wit-glass itself has
-  // no z-index, so a negative one on a child would otherwise escape past
-  // it looking for the next real stacking context up the tree.
-  const wash = `radial-gradient(120% 140% at 8% -10%, ${c1} 0%, transparent 62%), radial-gradient(130% 150% at 100% 115%, ${c2} 0%, transparent 62%)`;
-  return (
-    <div className="relative isolate flex aspect-[4/3] overflow-hidden rounded-3xl shadow-[0_20px_60px_rgba(5,13,40,0.12)]">
-      <div className="absolute inset-0" style={{ background: wash }} />
-      <div className="wit-glass absolute inset-0 rounded-3xl" />
-      <div className="relative z-10 flex h-full w-full flex-col justify-between p-6">
-        <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-wit-gray">
-          {t("Tu marca", "Your brand")}
-        </span>
-        <div>
-          {businessType ? (
-            <span className="mb-2 inline-block rounded-full bg-wit-ink/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-wit-ink">
-              {businessType}
-            </span>
-          ) : null}
-          <p className="text-2xl font-extrabold leading-tight text-wit-ink">{companyName}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BrandShowcaseLogoCard({ fileKey }: { fileKey: string | null }) {
-  const { t } = useLanguage();
-  return (
-    <div className="wit-glass flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-3xl p-6">
-      {fileKey ? (
-        <img
-          src={`/api/file?key=${encodeURIComponent(fileKey)}`}
-          alt={t("Logotipo", "Logo")}
-          className="max-h-28 max-w-full object-contain"
-        />
-      ) : (
-        <p className="text-center text-sm text-wit-gray">
-          {t("Aún no tienes logotipo guardado.", "You don't have a saved logo yet.")}
-        </p>
-      )}
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">
-        {t("Logotipo", "Logo")}
-      </p>
-    </div>
-  );
-}
-
-function BrandShowcaseColorsCard({ colors }: { colors: string[] }) {
-  const { t } = useLanguage();
-  return (
-    <div className="wit-glass flex aspect-[4/3] flex-col justify-between rounded-3xl p-5">
-      {colors.length ? (
-        <div className="grid flex-1 grid-cols-2 gap-2.5">
-          {colors.slice(0, 4).map((c) => (
-            <div
-              key={c}
-              className="flex flex-col justify-end rounded-2xl p-2.5"
-              style={{ background: c }}
-            >
-              <span className="rounded-full bg-black/25 px-2 py-0.5 text-center text-[10px] font-bold uppercase text-white backdrop-blur-sm">
-                {c}
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-center text-sm text-wit-gray">
-            {t("Aún no tienes colores guardados.", "You don't have saved colors yet.")}
-          </p>
-        </div>
-      )}
-      <p className="mt-4 text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">
-        {t("Colores de marca", "Brand colors")}
-      </p>
-    </div>
-  );
-}
-
-function BrandShowcaseFontCard({
-  fontKeys,
-  libraryFont,
-  previewText,
-}: {
-  fontKeys: string[];
-  libraryFont: string | null;
-  previewText: string;
-}) {
-  const { t } = useLanguage();
-
-  useEffect(() => {
-    if (libraryFont) ensureGoogleFontLoaded(libraryFont);
-  }, [libraryFont]);
-
-  return (
-    <div className="wit-glass flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-3xl p-6">
-      {libraryFont ? (
-        <p
-          className="max-w-full truncate text-3xl font-bold text-wit-ink"
-          style={{ fontFamily: `"${libraryFont}", sans-serif` }}
-        >
-          {previewText}
-        </p>
-      ) : fontKeys.length > 0 ? (
-        <CustomFontPreview
-          fontKeys={fontKeys}
-          previewText={previewText}
-          className="max-w-full truncate text-center text-3xl font-bold text-wit-ink"
-        />
-      ) : (
-        <p className="text-center text-sm text-wit-gray">
-          {t("Aún no tienes tipografía guardada.", "You don't have a saved font yet.")}
-        </p>
-      )}
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">
-        {t("Tipografía", "Typography")}
-      </p>
-    </div>
-  );
-}
-
-function BrandShowcaseManualCard({ hasManual }: { hasManual: boolean }) {
-  const { t } = useLanguage();
-  return (
-    <div className="wit-glass flex aspect-[4/3] flex-col items-center justify-center gap-3 rounded-3xl p-6">
-      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
-        <FileText className="h-6 w-6" strokeWidth={2} />
-      </span>
-      <p className="text-center text-sm text-wit-gray">
-        {hasManual
-          ? t("Tu manual de marca está guardado.", "Your brand manual is saved.")
-          : t("Aún no tienes manual de marca.", "You don't have a brand manual yet.")}
-      </p>
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-wit-gray">
-        {t("Manual de marca", "Brand manual")}
-      </p>
-    </div>
-  );
-}
-
 // CAMBIO 05 — "Brand Wallet." Closed by default: a real stacked deck of
 // passes (BrandWalletStack), each just a sliver of the one behind it, tap
 // to fan it open. Fanning it open reveals exactly the grid this component
@@ -4474,7 +4174,7 @@ function BrandWalletStack({
     <button
       type="button"
       onClick={onOpen}
-      className="group mx-auto block w-full max-w-sm text-left"
+      className="wit-wallet-enter group mx-auto block w-full max-w-sm text-left"
       aria-label={t("Ver tus tarjetas de marca", "View your brand cards")}
     >
       <div className="relative" style={{ height: cardHeight + peek * (passes.length - 1) }}>

@@ -1,10 +1,9 @@
-// Three faithful mini-replicas of the real client panel — Inicio, Mi marca,
+// Three faithful mini-replicas of the real client panel — Inicio, Brand,
 // and a campaign's detail view — shown inside iPhone frames on the public
 // homepage, before anyone signs in. Earlier versions of this component were
 // loose approximations (icon grids, invented layouts); this one reuses the
-// exact classNames, component pieces, and copy the real authenticated
-// screens use (see panel.tsx's Inicio block, BrandShowcaseLogoCard/
-// BrandShowcaseColorsCard, and CampaignAdDetailModal) so it reads as an
+// exact classNames and copy the real authenticated screens use (see
+// panel.tsx's Inicio block and CampaignAdDetailModal) so it reads as an
 // actual screenshot, not a stylized stand-in. Data is a single fictional
 // example client ("Boutique Alma") reused across all three screens for a
 // consistent story — never a real client's numbers or logo.
@@ -256,12 +255,11 @@ function InicioScreen() {
   );
 }
 
-// Mirrors "Mi marca" (BrandShowcaseLogoCard + BrandShowcaseColorsCard,
-// panel.tsx) — same wit-glass aspect-[4/3] logo card and colors grid, with
-// the same swipe-carousel dot indicator underneath the logo card the real
-// mobile view shows. The logo itself is a plain placeholder mark (never a
-// real or invented brand's actual logo file) for the same fictional
-// "Boutique Alma" example used across all three screens.
+// A simplified look at "Brand" (panel.tsx) — a logo card and colors grid
+// in the same wit-glass treatment the real screen uses. The logo itself is
+// a plain placeholder mark (never a real or invented brand's actual logo
+// file) for the same fictional "Boutique Alma" example used across all
+// three screens.
 function MiMarcaScreen() {
   const { t } = useLanguage();
   return (

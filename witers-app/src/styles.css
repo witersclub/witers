@@ -573,6 +573,23 @@
   animation-delay: 0.26s;
 }
 
+/* Brand Wallet's closed deck: the whole stack rises up from off-screen,
+   like pulling a card out from the bottom of the frame — a much bigger
+   throw than .wit-rise's subtle 26px settle, on purpose. */
+@keyframes wit-wallet-enter {
+  from {
+    transform: translateY(70vh);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.wit-wallet-enter {
+  animation: wit-wallet-enter 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Animated story in the public landing hero: idea → creation → publishing. */
 .wit-hero-phone-stage {
   position: relative;
@@ -923,7 +940,8 @@
   .wit-splash-mark,
   .wit-energy-tip,
   .wit-energy-complete,
-  .wit-atmosphere-blob {
+  .wit-atmosphere-blob,
+  .wit-wallet-enter {
     animation: none;
   }
   .wit-navlink::after {
