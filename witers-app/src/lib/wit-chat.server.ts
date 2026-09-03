@@ -112,6 +112,31 @@ export type WitCalendarEntryExpansionResult =
   | { ok: true; title: string; brief: string; slides?: CarouselSlideDraft[] }
   | { ok: false; error: string };
 
+// CAMBIO 02 — "Planificar con Wit": a free-text conversation that gets
+// interpreted into the SAME fields guided-planning-sheet.tsx's structured
+// wizard already collects (objectives, frequency, weekdays, formats,
+// specialInfo), never straight into final calendar entries. The client
+// lands back on the wizard's review step to check/correct before the
+// (slower, exact-dates) generation in runWitCalendarChat actually runs —
+// this is a lightweight extraction step in front of that existing engine,
+// not a second way to produce a plan.
+export type PlanningObjective = "messages" | "sales" | "community" | "brand" | "other";
+export type PlanningBrief = {
+  objectives: PlanningObjective[];
+  otherObjective: string;
+  frequencyPerWeek: number; // 1-7
+  weekdays: number[]; // 0=domingo..6=sábado, longitud === frequencyPerWeek
+  formats: CalendarFormat[]; // vacío = mezcla recomendada
+  // Campañas, fechas clave, restricciones, temas e instrucciones extra que
+  // no tienen un campo dedicado en el wizard — igual que el textarea libre
+  // del paso "¿Hay algo importante este mes?", consolidado en un solo texto.
+  specialInfo: string;
+};
+export type WitPlanningChatResult =
+  | { ok: true; kind: "message"; text: string }
+  | { ok: true; kind: "done"; brief: PlanningBrief }
+  | { ok: false; error: string };
+
 function buildSystemPrompt(brand: WitBrandContext): string {
   const brandLines = [
     `Nombre de la marca: ${brand.companyName}.`,
@@ -1280,4 +1305,188 @@ export async function runWitCalendarEntryExpansion(
   } finally {
     clearTimeout(timer);
   }
+}
+
+function buildPlanningBriefSystemPrompt(brand: WitBrandContext): string {
+  const brandLines = [
+    `Marca: ${brand.companyName}.`,
+    brand.businessType ? `Categoría: ${brand.businessType}.` : "",
+    brand.brandMemory ? `Aprendizajes previos de esta marca: ${brand.brandMemory}` : "",
+  ].filter(Boolean);
+  return (
+    "Eres Wit, el director creativo de IA de WITERS. El cliente te va a contar, con sus propias " +
+    "palabras (una frase, un párrafo o instrucciones largas), cómo quiere manejar su contenido " +
+    "este mes — objetivos, prioridades, frecuencia, formatos, fechas importantes, campañas, " +
+    "restricciones, temas o cualquier instrucción adicional.\n\n" +
+    "Idioma: responde siempre en el mismo idioma en el que te escribe el cliente.\n\n" +
+    brandLines.join("\n") +
+    "\n\n" +
+    "Tu único trabajo es interpretar lo que dice y llamar a submit_planning_brief con los campos " +
+    "estructurados — NUNCA generes el plan de contenido en sí ni fechas específicas, eso lo hace " +
+    "otro paso después de que el cliente revise lo que interpretaste.\n\n" +
+    "Sé generoso infiriendo: si el cliente no menciona frecuencia, asume 3 veces por semana " +
+    "(lunes, miércoles y viernes). Si no menciona formatos, deja formats vacío (significa mezcla " +
+    "recomendada). Si menciona una fecha, promoción, lanzamiento, restricción ('no publicar " +
+    "domingos'), campaña o tema, ponlo todo junto y claro en specialInfo, en frases cortas.\n\n" +
+    "Solo tienes permitido hacer UNA pregunta de seguimiento, y solo si el mensaje del cliente es " +
+    "tan vago que ni siquiera puedes inferir un objetivo (ej. un saludo sin contenido) — en ese " +
+    "caso responde con texto normal, sin llamar a la función. Para cualquier otro caso, incluso " +
+    "uno con poca información, haz tu mejor inferencia profesional y llama a submit_planning_brief " +
+    "de inmediato, en el primer turno si es posible. No niegues ni te disculpes por interpretar; " +
+    "el cliente revisa y corrige después."
+  );
+}
+
+const PLANNING_BRIEF_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "submit_planning_brief",
+      description:
+        "Llama a esto en cuanto tengas suficiente información interpretada del mensaje del cliente, casi siempre en el primer turno.",
+      parameters: {
+        type: "object",
+        properties: {
+          objectives: {
+            type: "array",
+            items: { type: "string", enum: ["messages", "sales", "community", "brand", "other"] },
+            minItems: 1,
+            description:
+              "Uno o varios: messages (más mensajes/conversaciones), sales (más ventas), community (crecer comunidad/audiencia), brand (posicionar marca), other (otro objetivo distinto).",
+          },
+          otherObjective: {
+            type: "string",
+            description:
+              "Solo si 'other' está en objectives: describe ese objetivo en pocas palabras.",
+          },
+          frequencyPerWeek: {
+            type: "integer",
+            minimum: 1,
+            maximum: 7,
+            description: "Piezas por semana. Si no se menciona, usa 3.",
+          },
+          weekdays: {
+            type: "array",
+            items: { type: "integer", minimum: 0, maximum: 6 },
+            description:
+              "Días de la semana (0=domingo..6=sábado), debe tener exactamente frequencyPerWeek elementos.",
+          },
+          formats: {
+            type: "array",
+            items: { type: "string", enum: ["imagen", "video", "carrusel"] },
+            description:
+              "Formatos que el cliente priorizó explícitamente. Vacío si no mencionó ninguno.",
+          },
+          specialInfo: {
+            type: "string",
+            description:
+              "Campañas, lanzamientos, fechas clave, restricciones, temas e instrucciones adicionales, en frases cortas. Cadena vacía si no hay nada.",
+          },
+        },
+        required: ["objectives", "frequencyPerWeek", "weekdays", "formats", "specialInfo"],
+        additionalProperties: false,
+      },
+    },
+  },
+];
+
+export async function runWitPlanningBrief(
+  history: WitChatMessage[],
+  brand: WitBrandContext,
+): Promise<WitPlanningChatResult> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { ok: false, error: "falta_openai_api_key" };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
+  let response: Response;
+  try {
+    response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: OPENAI_TEXT_MODEL,
+        temperature: 0.4,
+        max_tokens: 900,
+        messages: [{ role: "system", content: buildPlanningBriefSystemPrompt(brand) }, ...history],
+        tools: PLANNING_BRIEF_TOOLS,
+        tool_choice: "auto",
+      }),
+    });
+  } catch {
+    return { ok: false, error: "tiempo_agotado" };
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    console.info(
+      "[wit-chat] openai failed (planning brief)",
+      response.status,
+      detail.slice(0, 500),
+    );
+    return { ok: false, error: "openai_error" };
+  }
+
+  const body = (await response.json()) as OpenAiChatResponse;
+  const message = body.choices?.[0]?.message;
+  if (!message) return { ok: false, error: "sin_resultado" };
+
+  const call = message.tool_calls?.find((c) => c.function.name === "submit_planning_brief");
+  if (call) {
+    try {
+      const args = JSON.parse(call.function.arguments) as Partial<{
+        objectives: string[];
+        otherObjective: string;
+        frequencyPerWeek: number;
+        weekdays: number[];
+        formats: string[];
+        specialInfo: string;
+      }>;
+      const validObjectives = new Set(["messages", "sales", "community", "brand", "other"]);
+      const objectives = (args.objectives ?? []).filter((o): o is PlanningObjective =>
+        validObjectives.has(o),
+      );
+      if (!objectives.length) return { ok: false, error: "respuesta_invalida" };
+      const validFormats = new Set(["imagen", "video", "carrusel"]);
+      const formats = (args.formats ?? []).filter((f): f is CalendarFormat => validFormats.has(f));
+      const frequencyPerWeek = Math.max(1, Math.min(7, Math.round(args.frequencyPerWeek ?? 3)));
+      // The model's weekdays don't always match its own frequencyPerWeek —
+      // never trust the count blindly: pad with a sane recurring pattern or
+      // trim rather than let the wizard receive a mismatched pair that
+      // would leave its own "días requeridos" check permanently unmet.
+      const weekdayPattern = [1, 3, 5, 0, 2, 4, 6];
+      const weekdaysSet = new Set(
+        (args.weekdays ?? []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6),
+      );
+      for (const day of weekdayPattern) {
+        if (weekdaysSet.size >= frequencyPerWeek) break;
+        weekdaysSet.add(day);
+      }
+      const weekdays = [...weekdaysSet].slice(0, frequencyPerWeek);
+      return {
+        ok: true,
+        kind: "done",
+        brief: {
+          objectives,
+          otherObjective: args.otherObjective?.trim() || "",
+          frequencyPerWeek,
+          weekdays,
+          formats,
+          specialInfo: args.specialInfo?.trim() || "",
+        },
+      };
+    } catch {
+      return { ok: false, error: "respuesta_invalida" };
+    }
+  }
+
+  const text = message.content?.trim();
+  if (!text) return { ok: false, error: "sin_resultado" };
+  return { ok: true, kind: "message", text };
 }

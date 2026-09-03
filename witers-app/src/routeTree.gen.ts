@@ -70,6 +70,7 @@ import { Route as ApiBrandProfileLogoRouteImport } from './routes/api/brand-prof
 import { Route as ApiBrandProfileFontRouteImport } from './routes/api/brand-profile-font'
 import { Route as ApiBrandProfileColorsRouteImport } from './routes/api/brand-profile-colors'
 import { Route as ApiBrandProfileRouteImport } from './routes/api/brand-profile'
+import { Route as ApiWitPlanningChatRouteImport } from './routes/api/wit/planning-chat'
 import { Route as ApiWitChatRouteImport } from './routes/api/wit/chat'
 import { Route as ApiWitCarouselChatRouteImport } from './routes/api/wit/carousel-chat'
 import { Route as ApiWitCalendarChatRouteImport } from './routes/api/wit/calendar-chat'
@@ -461,6 +462,11 @@ const ApiBrandProfileColorsRoute = ApiBrandProfileColorsRouteImport.update({
 const ApiBrandProfileRoute = ApiBrandProfileRouteImport.update({
   id: '/api/brand-profile',
   path: '/api/brand-profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWitPlanningChatRoute = ApiWitPlanningChatRouteImport.update({
+  id: '/api/wit/planning-chat',
+  path: '/api/wit/planning-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWitChatRoute = ApiWitChatRouteImport.update({
@@ -1017,6 +1023,7 @@ export interface FileRoutesByFullPath {
   '/api/wit/calendar-chat': typeof ApiWitCalendarChatRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
+  '/api/wit/planning-chat': typeof ApiWitPlanningChatRoute
   '/api/auth/facebook/callback': typeof ApiAuthFacebookCallbackRoute
   '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
@@ -1160,6 +1167,7 @@ export interface FileRoutesByTo {
   '/api/wit/calendar-chat': typeof ApiWitCalendarChatRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
+  '/api/wit/planning-chat': typeof ApiWitPlanningChatRoute
   '/api/auth/facebook/callback': typeof ApiAuthFacebookCallbackRoute
   '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
@@ -1304,6 +1312,7 @@ export interface FileRoutesById {
   '/api/wit/calendar-chat': typeof ApiWitCalendarChatRoute
   '/api/wit/carousel-chat': typeof ApiWitCarouselChatRoute
   '/api/wit/chat': typeof ApiWitChatRoute
+  '/api/wit/planning-chat': typeof ApiWitPlanningChatRoute
   '/api/auth/facebook/callback': typeof ApiAuthFacebookCallbackRoute
   '/api/auth/facebook/start': typeof ApiAuthFacebookStartRoute
   '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
@@ -1449,6 +1458,7 @@ export interface FileRouteTypes {
     | '/api/wit/calendar-chat'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
+    | '/api/wit/planning-chat'
     | '/api/auth/facebook/callback'
     | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
@@ -1592,6 +1602,7 @@ export interface FileRouteTypes {
     | '/api/wit/calendar-chat'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
+    | '/api/wit/planning-chat'
     | '/api/auth/facebook/callback'
     | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
@@ -1735,6 +1746,7 @@ export interface FileRouteTypes {
     | '/api/wit/calendar-chat'
     | '/api/wit/carousel-chat'
     | '/api/wit/chat'
+    | '/api/wit/planning-chat'
     | '/api/auth/facebook/callback'
     | '/api/auth/facebook/start'
     | '/api/auth/google/callback'
@@ -1879,6 +1891,7 @@ export interface RootRouteChildren {
   ApiWitCalendarChatRoute: typeof ApiWitCalendarChatRoute
   ApiWitCarouselChatRoute: typeof ApiWitCarouselChatRoute
   ApiWitChatRoute: typeof ApiWitChatRoute
+  ApiWitPlanningChatRoute: typeof ApiWitPlanningChatRoute
   ApiAuthFacebookCallbackRoute: typeof ApiAuthFacebookCallbackRoute
   ApiAuthFacebookStartRoute: typeof ApiAuthFacebookStartRoute
   ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
@@ -2323,6 +2336,13 @@ declare module '@tanstack/react-router' {
       path: '/api/brand-profile'
       fullPath: '/api/brand-profile'
       preLoaderRoute: typeof ApiBrandProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/wit/planning-chat': {
+      id: '/api/wit/planning-chat'
+      path: '/api/wit/planning-chat'
+      fullPath: '/api/wit/planning-chat'
+      preLoaderRoute: typeof ApiWitPlanningChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/wit/chat': {
@@ -3015,6 +3035,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiWitCalendarChatRoute: ApiWitCalendarChatRoute,
   ApiWitCarouselChatRoute: ApiWitCarouselChatRoute,
   ApiWitChatRoute: ApiWitChatRoute,
+  ApiWitPlanningChatRoute: ApiWitPlanningChatRoute,
   ApiAuthFacebookCallbackRoute: ApiAuthFacebookCallbackRoute,
   ApiAuthFacebookStartRoute: ApiAuthFacebookStartRoute,
   ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,

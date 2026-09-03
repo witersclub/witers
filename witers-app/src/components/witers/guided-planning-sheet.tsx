@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { WMark } from "./brand";
+import { type PlanningBrief, WitPlanningChat } from "./wit-planning-chat";
 import { useLanguage } from "../../lib/i18n";
 
 type CalendarFormat = "imagen" | "video" | "carrusel";
@@ -225,6 +226,7 @@ export function GuidedPlanningSheet({
   const [formats, setFormats] = useState<FormatChoice[]>(["recommended"]);
   const [specialInfo, setSpecialInfo] = useState("");
   const [state, setState] = useState<"form" | "generating" | "success" | "error">("form");
+  const [witChatOpen, setWitChatOpen] = useState(false);
   const [entries, setEntries] = useState<CalendarEntryDraft[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(12);
   const [loadingMessage, setLoadingMessage] = useState(0);
@@ -267,6 +269,26 @@ export function GuidedPlanningSheet({
       window.clearInterval(progressTimer);
     };
   }, [state]);
+
+  // CAMBIO 02 — what "Planificar con Wit" hands back after the free-text
+  // conversation: fills the exact same state the step-by-step form fills,
+  // then lands on the review step (5) so the client checks/corrects before
+  // generating — Wit's interpretation is a starting point, never final.
+  function applyPlanningBrief(brief: PlanningBrief) {
+    setObjectives(brief.objectives);
+    setOtherObjective(brief.otherObjective);
+    setFrequency(
+      brief.frequencyPerWeek === 3 || brief.frequencyPerWeek === 4 || brief.frequencyPerWeek === 5
+        ? (String(brief.frequencyPerWeek) as Frequency)
+        : "custom",
+    );
+    setCustomCount(brief.frequencyPerWeek);
+    setSelectedWeekdays(brief.weekdays);
+    setFormats(brief.formats.length ? brief.formats : ["recommended"]);
+    setSpecialInfo(brief.specialInfo);
+    setWitChatOpen(false);
+    setStep(5);
+  }
 
   function toggleObjective(objective: Objective) {
     setObjectives((current) =>
@@ -382,6 +404,16 @@ export function GuidedPlanningSheet({
             <span className="ml-1 h-px flex-1 bg-wit-ink/8" />
             <span className="text-xs font-bold text-wit-gray">{Math.min(step + 1, 6)}/6</span>
           </div>
+          {state === "form" ? (
+            <button
+              type="button"
+              onClick={() => setWitChatOpen(true)}
+              className="mt-3 flex items-center gap-1.5 text-xs font-bold text-wit-blue"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {t("Planificar con Wit", "Plan with Wit")}
+            </button>
+          ) : null}
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-5 md:px-8">
           {state === "generating" ? (
@@ -805,6 +837,9 @@ export function GuidedPlanningSheet({
           </footer>
         ) : null}
       </section>
+      {witChatOpen ? (
+        <WitPlanningChat onClose={() => setWitChatOpen(false)} onBriefReady={applyPlanningBrief} />
+      ) : null}
     </div>
   );
   return typeof document === "undefined" ? null : createPortal(content, document.body);
