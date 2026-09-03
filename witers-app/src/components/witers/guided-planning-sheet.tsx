@@ -113,12 +113,21 @@ export function getDatesForWeekdays({
     .map(({ date }) => date);
 }
 
-function objectiveCopy(objective: Objective, custom: string) {
+function objectiveLabel(objective: Objective, custom: string) {
   if (objective === "messages") return "Más mensajes";
   if (objective === "sales") return "Más ventas";
   if (objective === "community") return "Crecer comunidad";
   if (objective === "brand") return "Posicionar marca";
   return custom.trim() || "Objetivo personalizado";
+}
+
+// Multiple objectives can be active at once (see CAMBIO 01) — this is the
+// single place that turns the selected set into the natural-language line
+// Wit reads (generate()) and the plain-text summary shown in the review
+// step, so both always agree on what "3 objetivos" actually means.
+function objectivesCopy(objectives: Objective[], custom: string) {
+  if (!objectives.length) return "";
+  return objectives.map((objective) => objectiveLabel(objective, custom)).join(" · ");
 }
 
 function formatCopy(formats: FormatChoice[]) {
@@ -208,7 +217,7 @@ export function GuidedPlanningSheet({
 }) {
   const { t } = useLanguage();
   const [step, setStep] = useState(0);
-  const [objective, setObjective] = useState<Objective | null>(null);
+  const [objectives, setObjectives] = useState<Objective[]>([]);
   const [otherObjective, setOtherObjective] = useState("");
   const [frequency, setFrequency] = useState<Frequency | null>(null);
   const [customCount, setCustomCount] = useState(3);
@@ -226,7 +235,7 @@ export function GuidedPlanningSheet({
   );
   const canContinue =
     step === 0
-      ? Boolean(objective && (objective !== "other" || otherObjective.trim()))
+      ? objectives.length > 0 && (!objectives.includes("other") || Boolean(otherObjective.trim()))
       : step === 1
         ? Boolean(frequency)
         : step === 2
@@ -259,6 +268,14 @@ export function GuidedPlanningSheet({
     };
   }, [state]);
 
+  function toggleObjective(objective: Objective) {
+    setObjectives((current) =>
+      current.includes(objective)
+        ? current.filter((item) => item !== objective)
+        : [...current, objective],
+    );
+  }
+
   function toggleFormat(format: FormatChoice) {
     if (format === "recommended") {
       setFormats(["recommended"]);
@@ -273,16 +290,21 @@ export function GuidedPlanningSheet({
   }
 
   async function generate() {
-    if (!objective || !frequency || !dates.length) return;
+    if (!objectives.length || !frequency || !dates.length) return;
     setLoadingProgress(14);
     setLoadingMessage(0);
     setState("generating");
     const chosenFormats = formats.includes("recommended")
       ? "una mezcla recomendada de reels, carruseles e imágenes"
       : formatCopy(formats);
+    const objectiveLabels = objectives.map((objective) =>
+      objectiveLabel(objective, otherObjective),
+    );
     const prompt = [
       `Genera el plan de contenido para ${monthLabel}.`,
-      `Objetivo principal: ${objectiveCopy(objective, otherObjective)}.`,
+      objectiveLabels.length > 1
+        ? `Objetivos del mes (los ${objectiveLabels.length} tienen peso simultáneo, no hay uno único principal): ${objectiveLabels.join(", ")}. Distribuye las piezas entre estos objetivos en vez de enfocarte solo en el primero.`
+        : `Objetivo principal: ${objectiveLabels[0]}.`,
       `Frecuencia: ${dates.length} piezas distribuidas durante el mes.`,
       `Formatos prioritarios: ${chosenFormats}.`,
       specialInfo.trim()
@@ -444,34 +466,38 @@ export function GuidedPlanningSheet({
               </h2>
               <p className="mt-2 text-sm text-wit-gray">
                 {t(
-                  "Elige el objetivo principal de tu contenido.",
-                  "Choose your content's main objective.",
+                  "Elige uno o varios objetivos para tu contenido.",
+                  "Choose one or several objectives for your content.",
                 )}
               </p>
               <div className="mt-6 space-y-2.5">
-                {OBJECTIVES.map(({ id, label, description, Icon }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setObjective(id)}
-                    className={`flex min-h-[68px] w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${objective === id ? "border-wit-blue bg-wit-blue/[0.05] shadow-[0_4px_14px_rgba(0,71,255,0.08)]" : "border-wit-ink/8 bg-white hover:border-wit-blue/30"}`}
-                  >
-                    <span
-                      className={`grid h-10 w-10 place-items-center rounded-xl ${objective === id ? "bg-wit-blue text-white" : "bg-wit-mist/70 text-wit-blue"}`}
+                {OBJECTIVES.map(({ id, label, description, Icon }) => {
+                  const active = objectives.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => toggleObjective(id)}
+                      className={`flex min-h-[68px] w-full items-center gap-3 rounded-2xl border p-3 text-left transition ${active ? "border-wit-blue bg-wit-blue/[0.05] shadow-[0_4px_14px_rgba(0,71,255,0.08)]" : "border-wit-ink/8 bg-white hover:border-wit-blue/30"}`}
                     >
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <span>
-                      <strong className="block text-sm text-wit-ink">{t(label, label)}</strong>
-                      <small className="mt-0.5 block text-xs text-wit-gray">
-                        {t(description, description)}
-                      </small>
-                    </span>
-                    {objective === id ? <Check className="ml-auto h-5 w-5 text-wit-blue" /> : null}
-                  </button>
-                ))}
+                      <span
+                        className={`grid h-10 w-10 place-items-center rounded-xl ${active ? "bg-wit-blue text-white" : "bg-wit-mist/70 text-wit-blue"}`}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <span>
+                        <strong className="block text-sm text-wit-ink">{t(label, label)}</strong>
+                        <small className="mt-0.5 block text-xs text-wit-gray">
+                          {t(description, description)}
+                        </small>
+                      </span>
+                      {active ? <Check className="ml-auto h-5 w-5 text-wit-blue" /> : null}
+                    </button>
+                  );
+                })}
               </div>
-              {objective === "other" ? (
+              {objectives.includes("other") ? (
                 <input
                   value={otherObjective}
                   onChange={(event) => setOtherObjective(event.target.value)}
@@ -721,7 +747,7 @@ export function GuidedPlanningSheet({
               </p>
               <dl className="mt-6 divide-y divide-wit-ink/7 overflow-hidden rounded-2xl border border-wit-ink/7 bg-wit-mist/20">
                 {[
-                  ["Objetivo", objectiveCopy(objective!, otherObjective), 0],
+                  ["Objetivos", objectivesCopy(objectives, otherObjective), 0],
                   ["Frecuencia", `${selectedDaysRequired} veces por semana`, 1],
                   [
                     "Días de publicación",
