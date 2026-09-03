@@ -14,6 +14,7 @@ import {
   DndContext,
   DragOverlay,
   MouseSensor,
+  pointerWithin,
   TouchSensor,
   useDraggable,
   useDroppable,
@@ -3339,6 +3340,10 @@ function CalendarDayCell({
   const hasThumb = Boolean(entry && entry.status === "lista" && entry.thumbHref);
   const productionState = entry ? getCalendarProductionState(entry) : null;
   const canDropHere = droppable.isOver && !droppableDisabled;
+  // Dropping on an occupied day swaps the two pieces, not just moves this
+  // one — a distinct color (not the plain "move" blue) so the hover state
+  // itself previews which outcome is about to happen.
+  const willSwap = canDropHere && Boolean(entry);
 
   return (
     <button
@@ -3367,9 +3372,11 @@ function CalendarDayCell({
         opacity: draggable.isDragging ? 0.3 : isMoving ? 0.55 : 1,
         touchAction: entry ? "none" : undefined,
       }}
-      className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all duration-300 sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${productionState ? `calendar-production-cell calendar-production-cell--${productionState}` : ""} ${
+      className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${canDropHere ? "duration-150 scale-[1.04]" : "duration-300"} ${productionState ? `calendar-production-cell calendar-production-cell--${productionState}` : ""} ${
         canDropHere
-          ? "border-wit-blue bg-wit-blue/[0.06] ring-2 ring-wit-blue ring-offset-1"
+          ? willSwap
+            ? "border-wit-pink bg-wit-pink/[0.08] ring-2 ring-wit-pink ring-offset-1"
+            : "border-wit-blue bg-wit-blue/[0.06] ring-2 ring-wit-blue ring-offset-1"
           : isSelected
             ? "bg-white ring-2 ring-wit-blue ring-offset-1 shadow-[0_6px_18px_rgba(0,71,255,0.14)]"
             : cell.inMonth
@@ -3991,6 +3998,15 @@ export function PlanificacionPanel({
             </div>
             <DndContext
               sensors={dndSensors}
+              // Default collisionDetection (rectIntersection) compares the
+              // DRAGGED CARD's rect against each droppable — with a grid
+              // this small, that card can still overlap a cell several rows
+              // away from the actual pointer, which read as "it highlights
+              // the 25th when I'm holding over the 4th." pointerWithin
+              // instead picks whichever droppable the pointer/finger is
+              // literally inside right now, so the highlighted cell always
+              // matches where the hand actually is.
+              collisionDetection={pointerWithin}
               onDragStart={(event) => setActiveDragId(String(event.active.id))}
               onDragEnd={handleDragEnd}
               onDragCancel={() => setActiveDragId(null)}
