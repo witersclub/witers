@@ -289,6 +289,26 @@ export async function getCampaignInsight(
   };
 }
 
+// Flips a campaign between ACTIVE and PAUSED directly from the Campañas
+// tab's own toggle switch — the client's explicit action, not something
+// WITERS does on its own. Meta's campaign-status endpoint is the same one
+// used to switch a freshly-created campaign live (see activateCreatedObjects
+// in meta-ads-create.server.ts); this is the equivalent for a campaign that
+// already exists and is just being turned on/off later.
+export async function setCampaignStatus(
+  campaignId: string,
+  active: boolean,
+  accessTokenOverride?: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const config = accessTokenOverride ? { accessToken: accessTokenOverride } : getMetaConfig();
+  if ("error" in config) return { ok: false, error: config.error };
+  const res = await graphRequest<{ success?: boolean }>(`/${campaignId}`, config.accessToken, {
+    status: active ? "ACTIVE" : "PAUSED",
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
 export type AdDetail = {
   id: string;
   name: string;

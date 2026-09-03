@@ -57,6 +57,7 @@ import { Route as ApiCheckoutRouteImport } from './routes/api/checkout'
 import { Route as ApiCarouselRequestsRouteImport } from './routes/api/carousel-requests'
 import { Route as ApiCarouselRequestCloseRouteImport } from './routes/api/carousel-request-close'
 import { Route as ApiCarouselRequestChangeRouteImport } from './routes/api/carousel-request-change'
+import { Route as ApiCampaignsToggleRouteImport } from './routes/api/campaigns-toggle'
 import { Route as ApiCampaignsCreateRouteImport } from './routes/api/campaigns-create'
 import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
 import { Route as ApiCampaignForRequestRouteImport } from './routes/api/campaign-for-request'
@@ -399,6 +400,11 @@ const ApiCarouselRequestChangeRoute =
     path: '/api/carousel-request-change',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCampaignsToggleRoute = ApiCampaignsToggleRouteImport.update({
+  id: '/api/campaigns-toggle',
+  path: '/api/campaigns-toggle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCampaignsCreateRoute = ApiCampaignsCreateRouteImport.update({
   id: '/api/campaigns-create',
   path: '/api/campaigns-create',
@@ -963,6 +969,7 @@ export interface FileRoutesByFullPath {
   '/api/campaign-for-request': typeof ApiCampaignForRequestRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/campaigns-create': typeof ApiCampaignsCreateRoute
+  '/api/campaigns-toggle': typeof ApiCampaignsToggleRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-request-close': typeof ApiCarouselRequestCloseRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
@@ -1112,6 +1119,7 @@ export interface FileRoutesByTo {
   '/api/campaign-for-request': typeof ApiCampaignForRequestRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/campaigns-create': typeof ApiCampaignsCreateRoute
+  '/api/campaigns-toggle': typeof ApiCampaignsToggleRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-request-close': typeof ApiCarouselRequestCloseRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
@@ -1262,6 +1270,7 @@ export interface FileRoutesById {
   '/api/campaign-for-request': typeof ApiCampaignForRequestRoute
   '/api/campaigns': typeof ApiCampaignsRoute
   '/api/campaigns-create': typeof ApiCampaignsCreateRoute
+  '/api/campaigns-toggle': typeof ApiCampaignsToggleRoute
   '/api/carousel-request-change': typeof ApiCarouselRequestChangeRoute
   '/api/carousel-request-close': typeof ApiCarouselRequestCloseRoute
   '/api/carousel-requests': typeof ApiCarouselRequestsRoute
@@ -1413,6 +1422,7 @@ export interface FileRouteTypes {
     | '/api/campaign-for-request'
     | '/api/campaigns'
     | '/api/campaigns-create'
+    | '/api/campaigns-toggle'
     | '/api/carousel-request-change'
     | '/api/carousel-request-close'
     | '/api/carousel-requests'
@@ -1562,6 +1572,7 @@ export interface FileRouteTypes {
     | '/api/campaign-for-request'
     | '/api/campaigns'
     | '/api/campaigns-create'
+    | '/api/campaigns-toggle'
     | '/api/carousel-request-change'
     | '/api/carousel-request-close'
     | '/api/carousel-requests'
@@ -1711,6 +1722,7 @@ export interface FileRouteTypes {
     | '/api/campaign-for-request'
     | '/api/campaigns'
     | '/api/campaigns-create'
+    | '/api/campaigns-toggle'
     | '/api/carousel-request-change'
     | '/api/carousel-request-close'
     | '/api/carousel-requests'
@@ -1861,6 +1873,7 @@ export interface RootRouteChildren {
   ApiCampaignForRequestRoute: typeof ApiCampaignForRequestRoute
   ApiCampaignsRoute: typeof ApiCampaignsRoute
   ApiCampaignsCreateRoute: typeof ApiCampaignsCreateRoute
+  ApiCampaignsToggleRoute: typeof ApiCampaignsToggleRoute
   ApiCarouselRequestChangeRoute: typeof ApiCarouselRequestChangeRoute
   ApiCarouselRequestCloseRoute: typeof ApiCarouselRequestCloseRoute
   ApiCarouselRequestsRoute: typeof ApiCarouselRequestsRoute
@@ -2310,6 +2323,13 @@ declare module '@tanstack/react-router' {
       path: '/api/carousel-request-change'
       fullPath: '/api/carousel-request-change'
       preLoaderRoute: typeof ApiCarouselRequestChangeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/campaigns-toggle': {
+      id: '/api/campaigns-toggle'
+      path: '/api/campaigns-toggle'
+      fullPath: '/api/campaigns-toggle'
+      preLoaderRoute: typeof ApiCampaignsToggleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/campaigns-create': {
@@ -3045,6 +3065,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCampaignForRequestRoute: ApiCampaignForRequestRoute,
   ApiCampaignsRoute: ApiCampaignsRoute,
   ApiCampaignsCreateRoute: ApiCampaignsCreateRoute,
+  ApiCampaignsToggleRoute: ApiCampaignsToggleRoute,
   ApiCarouselRequestChangeRoute: ApiCarouselRequestChangeRoute,
   ApiCarouselRequestCloseRoute: ApiCarouselRequestCloseRoute,
   ApiCarouselRequestsRoute: ApiCarouselRequestsRoute,

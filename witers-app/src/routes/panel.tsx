@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   lazy,
   Suspense,
@@ -2703,6 +2703,47 @@ function CampaignStat({ label, value }: { label: string; value: string }) {
   );
 }
 
+// Apple-style on/off switch — the only interactive control on a campaign
+// card besides opening its detail. Blue + knob to the right means ACTIVE,
+// gray + knob to the left means PAUSED; e.stopPropagation() keeps a tap on
+// the switch from also opening the card's detail modal underneath it.
+function CampaignToggle({
+  active,
+  toggling,
+  onToggle,
+}: {
+  active: boolean;
+  toggling: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  const { t } = useLanguage();
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
+      aria-label={
+        active ? t("Pausar campaña", "Pause campaign") : t("Activar campaña", "Activate campaign")
+      }
+      onClick={(event) => {
+        event.stopPropagation();
+        if (toggling) return;
+        onToggle(!active);
+      }}
+      disabled={toggling}
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+        active ? "bg-wit-blue" : "bg-wit-ink/20"
+      }`}
+    >
+      <span
+        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${
+          active ? "translate-x-[22px]" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  );
+}
+
 // The per-ad drill-down behind a campaign card. Lives in its own file,
 // lazy-loaded below (see CampaignAdDetailModal's dynamic import) — it pulls
 // in react-day-picker + date-fns for the date-range picker inside it, which
@@ -2722,18 +2763,41 @@ const CampaignDateRangePicker = lazy(
 // a banner) — a campaign can run several different pieces at once, and a
 // single large image both looked blurry (Meta's own thumbnails aren't shot
 // for that size) and hid the rest of what's actually running.
-function CampaignCard({ c, onOpenDetail }: { c: Campaign; onOpenDetail: () => void }) {
+function CampaignCard({
+  c,
+  onOpenDetail,
+  onToggleActive,
+  toggling,
+}: {
+  c: Campaign;
+  onOpenDetail: () => void;
+  onToggleActive: (active: boolean) => void;
+  toggling: boolean;
+}) {
   const { t } = useLanguage();
   const st = CAMPAIGN_STATUS_LABEL[c.metaStatus] ?? {
     es: c.metaStatus,
     en: c.metaStatus,
     cls: "bg-wit-mist/60 text-wit-gray",
   };
+  // The switch only makes sense for a campaign Meta still considers live
+  // (ACTIVE/PAUSED) and whose real status we actually managed to read —
+  // an archived/deleted campaign, or one whose insight fetch itself failed,
+  // falls back to the plain read-only badge instead of a switch that might
+  // not reflect (or be able to change) the truth.
+  const canToggle = !c.insightError && (c.metaStatus === "ACTIVE" || c.metaStatus === "PAUSED");
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onOpenDetail}
-      className="wit-glass block w-full rounded-2xl p-6 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)] transition-colors hover:border-wit-blue/40"
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpenDetail();
+        }
+      }}
+      className="wit-glass block w-full cursor-pointer rounded-2xl p-6 text-left shadow-[0_10px_30px_rgba(5,13,40,0.05)] transition-colors hover:border-wit-blue/40"
     >
       {c.previewImageUrls.length > 0 ? (
         <div className="mb-4 flex flex-wrap gap-2">
@@ -2750,9 +2814,17 @@ function CampaignCard({ c, onOpenDetail }: { c: Campaign; onOpenDetail: () => vo
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base font-bold text-wit-ink">{c.name ?? t("Campaña", "Campaign")}</h3>
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
-          {t(st.es, st.en)}
-        </span>
+        {canToggle ? (
+          <CampaignToggle
+            active={c.metaStatus === "ACTIVE"}
+            toggling={toggling}
+            onToggle={onToggleActive}
+          />
+        ) : (
+          <span className={`rounded-full px-3 py-1 text-xs font-bold ${st.cls}`}>
+            {t(st.es, st.en)}
+          </span>
+        )}
       </div>
       {c.dailyBudgetCents != null ? (
         <p className="mt-1.5 text-xs text-wit-gray">
@@ -2792,7 +2864,7 @@ function CampaignCard({ c, onOpenDetail }: { c: Campaign; onOpenDetail: () => vo
       <p className="mt-4 text-xs font-semibold text-wit-blue">
         {t("Ver detalle por anuncio →", "See per-ad detail →")}
       </p>
-    </button>
+    </div>
   );
 }
 
@@ -3146,6 +3218,35 @@ function CampanasPanel({
     refetchInterval: 60_000,
   });
 
+  // The switch on each card — flips one campaign between ACTIVE/PAUSED on
+  // Meta directly. `variables` (react-query's own record of the in-flight
+  // call's arguments) is what lets a single mutation shared by every card
+  // still show a spinner-like disabled state on only the ONE card being
+  // toggled, not all of them.
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      const res = await fetch("/api/campaigns-toggle", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id, active }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) throw new Error(data.error ?? "meta_error");
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    },
+    onError: () => {
+      setConnectionMessage(
+        t(
+          "No pudimos cambiar el estado de la campaña. Intenta de nuevo.",
+          "We couldn't change the campaign's status. Try again.",
+        ),
+      );
+    },
+  });
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const pendingId = params.get("meta_ads_pick");
@@ -3465,7 +3566,13 @@ function CampanasPanel({
         </div>
       ) : (
         liveRows.map((c) => (
-          <CampaignCard key={c.id} c={c} onOpenDetail={() => setOpenCampaign(c)} />
+          <CampaignCard
+            key={c.id}
+            c={c}
+            onOpenDetail={() => setOpenCampaign(c)}
+            onToggleActive={(active) => toggleMutation.mutate({ id: c.id, active })}
+            toggling={toggleMutation.isPending && toggleMutation.variables?.id === c.id}
+          />
         ))
       )}
       {archivedRows.length > 0 ? (
@@ -3483,7 +3590,13 @@ function CampanasPanel({
           {showArchived ? (
             <div className="mt-4 space-y-4">
               {archivedRows.map((c) => (
-                <CampaignCard key={c.id} c={c} onOpenDetail={() => setOpenCampaign(c)} />
+                <CampaignCard
+                  key={c.id}
+                  c={c}
+                  onOpenDetail={() => setOpenCampaign(c)}
+                  onToggleActive={(active) => toggleMutation.mutate({ id: c.id, active })}
+                  toggling={toggleMutation.isPending && toggleMutation.variables?.id === c.id}
+                />
               ))}
             </div>
           ) : null}
