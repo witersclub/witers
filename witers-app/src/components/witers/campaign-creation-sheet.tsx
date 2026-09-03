@@ -110,6 +110,12 @@ export function CampaignCreationSheet({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // One idempotency key per opened sheet — a real double-submit (network
+  // retry, impatient re-click after a slow response) resends the SAME key,
+  // and the server replays that attempt's outcome instead of creating a
+  // second Meta campaign. A fresh "Pautar" open (new mount) always gets a
+  // new key, same as it should.
+  const idempotencyKeyRef = useRef(crypto.randomUUID());
   const sheetRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pointerRef = useRef<{ id: number; startY: number; lastY: number; lastAt: number } | null>(
@@ -420,6 +426,7 @@ export function CampaignCreationSheet({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           requestId: piece.requestId,
+          idempotencyKey: idempotencyKeyRef.current,
           format: piece.format,
           objective,
           dailyBudgetMxn,
@@ -471,6 +478,10 @@ export function CampaignCreationSheet({
           campana_duplicada: t(
             "Esta campaña ya se está creando. Espera un momento antes de intentarlo otra vez.",
             "This campaign is already being created. Wait a moment before trying again.",
+          ),
+          campana_en_proceso: t(
+            "Esta campaña todavía se está creando. Espera un momento antes de intentarlo otra vez.",
+            "This campaign is still being created. Wait a moment before trying again.",
           ),
           tiempo_agotado: t(
             "Meta tardó demasiado en responder. Intenta nuevamente.",

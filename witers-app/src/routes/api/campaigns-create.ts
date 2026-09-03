@@ -12,6 +12,9 @@ import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 const schema = z
   .object({
     requestId: z.string().min(1),
+    // One per opened "Pautar" sheet (see campaign-creation-sheet.tsx) —
+    // the real idempotency guard below is keyed on this, not on timing.
+    idempotencyKey: z.string().uuid(),
     // The calendar owns the piece format. We still re-check the matching
     // request below, so this value only selects the appropriate existing
     // request model; it never grants access to another user's content.
@@ -129,19 +132,6 @@ export const Route = createFileRoute("/api/campaigns-create")({
         ) {
           return json({ ok: false, error: "solicitud_no_terminada" }, { status: 409 });
         }
-        const recentDuplicate = await db()
-          .prepare(
-            `SELECT id FROM ad_campaigns
-             WHERE user_id = ?1 AND request_id = ?2
-               AND created_at >= datetime('now', '-2 minutes')
-             LIMIT 1`,
-          )
-          .bind(user.id, reqRow.id)
-          .first<{ id: string }>();
-        if (recentDuplicate) {
-          return json({ ok: false, error: "campana_duplicada" }, { status: 409 });
-        }
-
         // No shared/default Page: each client pautas from their own,
         // set only by an admin once it's connected to WITERS's Business
         // Manager (see /api/admin/update-brand-profile).
@@ -231,6 +221,63 @@ export const Route = createFileRoute("/api/campaigns-create")({
                 contentType,
               };
 
+        // Real idempotency guard: reserve a row under this exact key right
+        // before touching Meta at all — everything above this point is a
+        // cheap validation with no side effect to unwind if it fails. A
+        // retried/duplicated request carrying the SAME key hits the UNIQUE
+        // index and gets the first attempt's own outcome back instead of
+        // creating a second Meta campaign — unlike the old "no row in the
+        // last 2 minutes" heuristic this replaces, which two near-
+        // simultaneous requests could both pass, since neither had written
+        // a row yet at the moment it checked.
+        const campaignRowId = crypto.randomUUID();
+        try {
+          await db()
+            .prepare(
+              `INSERT INTO ad_campaigns
+                 (id, request_id, user_id, meta_campaign_id, objective,
+                  daily_budget_cents, duration_days, status, idempotency_key)
+               VALUES (?1, ?2, ?3, '', ?4, ?5, ?6, 'creating', ?7)`,
+            )
+            .bind(
+              campaignRowId,
+              reqRow.id,
+              user.id,
+              parsed.data.objective,
+              Math.round(parsed.data.dailyBudgetMxn * 100),
+              parsed.data.durationDays,
+              parsed.data.idempotencyKey,
+            )
+            .run();
+        } catch {
+          // UNIQUE(idempotency_key) violation — this exact submission was
+          // already attempted. Replay its outcome instead of creating
+          // anything new in Meta.
+          const existing = await db()
+            .prepare(
+              `SELECT id, status, error_message FROM ad_campaigns
+               WHERE idempotency_key = ?1 AND user_id = ?2`,
+            )
+            .bind(parsed.data.idempotencyKey, user.id)
+            .first<{ id: string; status: string; error_message: string | null }>();
+          if (!existing) return json({ ok: false, error: "campana_duplicada" }, { status: 409 });
+          if (existing.status === "creating") {
+            return json({ ok: false, error: "campana_en_proceso" }, { status: 409 });
+          }
+          if (existing.status === "creation_failed") {
+            return json(
+              { ok: false, error: existing.error_message ?? "meta_error" },
+              { status: 502 },
+            );
+          }
+          return json({
+            ok: true,
+            id: existing.id,
+            warning: existing.error_message ?? null,
+            complete: existing.status === "paused",
+          });
+        }
+
         const result = await createPausedCampaignForRequest({
           adAccountId,
           accessToken: oauthAccessToken,
@@ -257,43 +304,57 @@ export const Route = createFileRoute("/api/campaigns-create")({
         });
 
         if (!result.ok) {
+          // Nothing was created in Meta at all (the Campaign call itself
+          // failed) — record that plainly against the reserved row rather
+          // than leaving it stuck at 'creating' forever, and never hide
+          // the real Meta error from the client.
+          await db()
+            .prepare(
+              "UPDATE ad_campaigns SET status = 'creation_failed', error_message = ?2, updated_at = datetime('now') WHERE id = ?1",
+            )
+            .bind(campaignRowId, result.error)
+            .run();
           return json({ ok: false, error: result.error }, { status: 502 });
         }
 
-        const id = crypto.randomUUID();
+        // Complete when the ad set AND at least one ad actually exist —
+        // anything less (Meta created the Campaign/AdSet but the Ad
+        // failed, etc.) is recorded as a partial creation, never silently
+        // upgraded to "paused" as if it were fully usable. The Meta
+        // objects that DID get created are never deleted here (see
+        // meta-ads-create.server.ts) — they're real, paused, and visible
+        // in Ads Manager either way; this just tracks the true state.
+        const complete = Boolean(result.adsetId) && result.adIds.length > 0;
         await db()
           .prepare(
-            `INSERT INTO ad_campaigns
-               (id, request_id, user_id, meta_campaign_id, meta_adset_id, meta_ad_id,
-                objective, daily_budget_cents, duration_days, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'paused')`,
+            `UPDATE ad_campaigns
+             SET meta_campaign_id = ?2, meta_adset_id = ?3, meta_ad_id = ?4,
+                 status = ?5, error_message = ?6, updated_at = datetime('now')
+             WHERE id = ?1`,
           )
           .bind(
-            id,
-            reqRow.id,
-            user.id,
+            campaignRowId,
             result.campaignId,
             result.adsetId,
             // Several ads (one per copy variant) now, so this holds a JSON
             // array instead of a single id — nothing reads it back yet,
             // it's kept for bookkeeping/support lookups in Ads Manager.
             JSON.stringify(result.adIds),
-            parsed.data.objective,
-            Math.round(parsed.data.dailyBudgetMxn * 100),
-            parsed.data.durationDays,
+            complete ? "paused" : "partial_creation",
+            result.warning ?? null,
           )
           .run();
 
         return json({
           ok: true,
-          id,
+          id: campaignRowId,
           warning: result.warning ?? null,
           // A warning doesn't always mean something's missing — e.g. an
           // invalid interest id gets dropped and retried rather than
           // failing the ad set, so campaign+ad set+ad all exist. The
           // client uses this to tell "fully created, minor caveat" apart
           // from "genuinely incomplete, go check Ads Manager."
-          complete: Boolean(result.adsetId) && result.adIds.length > 0,
+          complete,
         });
       },
     },
