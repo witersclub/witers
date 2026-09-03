@@ -3312,6 +3312,23 @@ export function PlanificacionPanel({
   const [monthlyProgrammingOpen, setMonthlyProgrammingOpen] = useState(false);
   const [downloadingPlan, setDownloadingPlan] = useState(false);
   const qc = useQueryClient();
+  // Same query key panel.tsx's own brand-profile fetch uses (see
+  // ActivosDeMarca) — react-query shares the cache across both, so this is
+  // normally a cache hit, not a second network request. Only the company
+  // name is needed here (the PDF's cover), so the response isn't typed
+  // against the full BrandProfile shape.
+  const brandProfileQuery = useQuery({
+    queryKey: ["brand-profile"],
+    queryFn: async () => {
+      try {
+        const res = await fetch("/api/brand-profile", { credentials: "include" });
+        if (!res.ok) return { ok: false, profile: null as { company_name: string } | null };
+        return (await res.json()) as { ok: boolean; profile: { company_name: string } | null };
+      } catch {
+        return { ok: false, profile: null as { company_name: string } | null };
+      }
+    },
+  });
 
   const base = new Date();
   const target = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + monthOffset, 1));
@@ -3406,7 +3423,11 @@ export function PlanificacionPanel({
     if (!entries.length || downloadingPlan) return;
     setDownloadingPlan(true);
     try {
-      const bytes = buildCalendarPlanPdf({ monthLabel, entries });
+      const bytes = buildCalendarPlanPdf({
+        companyName: brandProfileQuery.data?.profile?.company_name ?? null,
+        monthLabel,
+        entries,
+      });
       downloadPdf(bytes, `planificacion-${year}-${String(month).padStart(2, "0")}.pdf`);
     } finally {
       setDownloadingPlan(false);

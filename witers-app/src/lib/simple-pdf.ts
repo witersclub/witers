@@ -38,6 +38,7 @@ const WIN_ANSI_HIGH: Record<number, number> = {
   0x201c: 0x93, // " left double quote
   0x201d: 0x94, // " right double quote
   0x2026: 0x85, // … ellipsis
+  0x2022: 0x95, // • bullet
 };
 
 function winAnsiBytes(s: string): number[] {
@@ -334,4 +335,28 @@ export function truncateToWidth(
     out += ch;
   }
   return out + ellipsis;
+}
+
+// Greedy word-wrap into as many lines as the text needs — unlike
+// truncateToWidth (which throws away everything past one line), this keeps
+// the full text, for paragraph-style copy (the strategic summary, briefs)
+// where nothing here has a native multi-line text primitive of its own.
+// Words longer than maxWidth on their own (rare — a very long URL) are left
+// to overflow that one line rather than broken mid-word.
+export function wrapText(str: string, size: number, bold: boolean, maxWidth: number): string[] {
+  const words = str.split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const lines: string[] = [];
+  let current = words[0];
+  for (const word of words.slice(1)) {
+    const candidate = `${current} ${word}`;
+    if (textWidth(candidate, size, bold) <= maxWidth) {
+      current = candidate;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  lines.push(current);
+  return lines;
 }
