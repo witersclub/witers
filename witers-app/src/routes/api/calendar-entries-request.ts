@@ -11,7 +11,7 @@ import {
 import { createCarouselRequest } from "./carousel-requests";
 import { createImageRequest } from "./requests";
 import { createVideoRequest } from "./video-requests";
-import { db, getSessionUser, json } from "../../lib/witers-auth.server";
+import { db, getMembership, getSessionUser, json } from "../../lib/witers-auth.server";
 
 type EntryRow = {
   id: string;
@@ -188,7 +188,41 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
             rawFileKeys: [],
           });
         }
-        if (!result.ok) return json({ ok: false, error: result.error }, { status: result.status });
+        if (!result.ok) {
+          // "sin_saldo" alone reads as "no requests left at all", but each
+          // format (imagen/video/carrusel) has its own separate quota — a
+          // client can be far from their image quota and still hit this
+          // because they've used up just their (smaller) carousel or video
+          // quota. Send back which one so the UI can say so precisely
+          // instead of implying the whole account is capped.
+          if (result.error === "sin_saldo") {
+            const membership = await getMembership(user.id);
+            const quotaByFormat = {
+              imagen: membership
+                ? { used: membership.requests_used, quota: membership.requests_quota }
+                : null,
+              video: membership
+                ? { used: membership.video_requests_used, quota: membership.video_requests_quota }
+                : null,
+              carrusel: membership
+                ? {
+                    used: membership.carousel_requests_used,
+                    quota: membership.carousel_requests_quota,
+                  }
+                : null,
+            };
+            return json(
+              {
+                ok: false,
+                error: result.error,
+                format: entry.format,
+                ...(quotaByFormat[entry.format] ?? {}),
+              },
+              { status: result.status },
+            );
+          }
+          return json({ ok: false, error: result.error }, { status: result.status });
+        }
 
         await db()
           .prepare(
