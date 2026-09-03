@@ -1,9 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { getBrandProfile } from "../../lib/brand-profile.server";
-import { getPlanningBrandAssets } from "../../lib/brand-assets.server";
-import { getBrandMemory } from "../../lib/brand-memory.server";
+import { buildBrandContext } from "../../lib/brand-context.server";
 import { runWitCalendarEntryExpansion } from "../../lib/wit-chat.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
@@ -46,8 +44,8 @@ export const Route = createFileRoute("/api/calendar-entries-expand")({
           .first<Entry>();
         if (!entry) return json({ ok: false, error: "no_encontrada" }, { status: 404 });
         if (entry.request_id || entry.production_ready_at) return json({ ok: true, cached: true });
-        const profile = await getBrandProfile(user.id);
-        if (!profile) return json({ ok: false, error: "falta_marca" }, { status: 409 });
+        const brand = await buildBrandContext(user.id);
+        if (!brand) return json({ ok: false, error: "falta_marca" }, { status: 409 });
         const result = await runWitCalendarEntryExpansion(
           {
             format: entry.format,
@@ -55,18 +53,7 @@ export const Route = createFileRoute("/api/calendar-entries-expand")({
             brief: entry.brief,
             slides: parseSlides(entry.slides_json),
           },
-          {
-            companyName: profile.company_name,
-            brandColors: profile.brand_colors,
-            businessType: profile.business_type,
-            hasLogo: Boolean(profile.logo_key),
-            brandMemory: await getBrandMemory(user.id),
-            brandAssets: (await getPlanningBrandAssets(user.id)).map((asset) => ({
-              originalName: asset.original_name,
-              kind: asset.kind,
-              textContent: asset.text_content,
-            })),
-          },
+          brand.context,
         );
         if (!result.ok)
           return json(result, { status: result.error === "tiempo_agotado" ? 504 : 502 });

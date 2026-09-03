@@ -1,9 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { getBrandProfile } from "../../../lib/brand-profile.server";
-import { getPlanningBrandAssets } from "../../../lib/brand-assets.server";
-import { getBrandMemory } from "../../../lib/brand-memory.server";
+import { buildBrandContext } from "../../../lib/brand-context.server";
 import { runWitCalendarChat } from "../../../lib/wit-chat.server";
 import { db, getSessionUser, json } from "../../../lib/witers-auth.server";
 import { getPlan } from "../../../lib/membership-plans";
@@ -120,16 +118,21 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
         const user = await getSessionUser(request);
         if (!user) return json({ ok: false, error: "no_sesion" }, { status: 401 });
 
-        const profile = await getBrandProfile(user.id);
-        if (!profile) return json({ ok: false, error: "falta_marca" }, { status: 409 });
+        const parsed = schema.safeParse(await request.json().catch(() => null));
+        if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
+
+        const brand = await buildBrandContext(user.id, {
+          brandAssetIds: parsed.data.brandAssetIds,
+          // A full month's entries share one prompt — cap each asset so a
+          // long strategy doc can't crowd out the rest of the context.
+          maxAssetChars: 6000,
+        });
+        if (!brand) return json({ ok: false, error: "falta_marca" }, { status: 409 });
         const membership = await db()
           .prepare("SELECT plan FROM memberships WHERE user_id = ?1")
           .bind(user.id)
           .first<{ plan: string }>();
         const plan = getPlan(membership?.plan);
-
-        const parsed = schema.safeParse(await request.json().catch(() => null));
-        if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
 
         const now = new Date();
         const year = parsed.data.year ?? now.getUTCFullYear();
@@ -181,21 +184,6 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
           });
         }
 
-        const brand = {
-          companyName: profile.company_name,
-          brandColors: profile.brand_colors,
-          businessType: profile.business_type,
-          hasLogo: Boolean(profile.logo_key),
-          brandMemory: await getBrandMemory(user.id),
-          brandAssets: (await getPlanningBrandAssets(user.id, parsed.data.brandAssetIds)).map(
-            (asset) => ({
-              originalName: asset.original_name,
-              kind: asset.kind,
-              textContent: asset.text_content ? asset.text_content.slice(0, 6000) : null,
-            }),
-          ),
-        };
-
         // The client asked for one complete monthly plan. We create its
         // detailed pieces concurrently in internal date-locked batches, then
         // return one single review payload only when every date is present.
@@ -225,7 +213,7 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
               >();
               let missingDates = exactDates;
               for (let attempt = 0; attempt < 4 && missingDates.length; attempt += 1) {
-                const result = await runWitCalendarChat(parsed.data.messages, brand, {
+                const result = await runWitCalendarChat(parsed.data.messages, brand.context, {
                   ...context,
                   existingEntries: knownEntries,
                   expectedEntries: missingDates.length,
@@ -281,7 +269,7 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
           return json({ ok: true, kind: "done" as const, entries });
         }
 
-        const result = await runWitCalendarChat(parsed.data.messages, brand, {
+        const result = await runWitCalendarChat(parsed.data.messages, brand.context, {
           ...context,
           existingEntries: existingEntries.map((r) => ({ date: r.scheduled_date, title: r.title })),
           expectedEntries: remainingExpectedEntries || undefined,

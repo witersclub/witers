@@ -1,9 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { getPlanningBrandAssets } from "../../lib/brand-assets.server";
-import { getBrandMemory } from "../../lib/brand-memory.server";
-import { getBrandProfile } from "../../lib/brand-profile.server";
+import { buildBrandContext } from "../../lib/brand-context.server";
 import {
   isProductionReadyCalendarEntry,
   runWitCalendarEntryExpansion,
@@ -74,8 +72,9 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
         if (!entry) return json({ ok: false, error: "no_encontrada" }, { status: 404 });
         if (entry.request_id) return json({ ok: false, error: "ya_pedida" }, { status: 409 });
 
-        const brand = await getBrandProfile(user.id);
-        if (!brand) return json({ ok: false, error: "falta_marca" }, { status: 409 });
+        const brandContext = await buildBrandContext(user.id);
+        if (!brandContext) return json({ ok: false, error: "falta_marca" }, { status: 409 });
+        const brand = brandContext.profile;
 
         let productionEntry: {
           format: "imagen" | "video" | "carrusel";
@@ -99,18 +98,10 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
         // record before any format reaches production; this is a safety net
         // for old data, not a second client-facing planning step.
         if (!isProductionReadyCalendarEntry(productionEntry)) {
-          const expanded = await runWitCalendarEntryExpansion(productionEntry, {
-            companyName: brand.company_name,
-            brandColors: brand.brand_colors,
-            businessType: brand.business_type,
-            hasLogo: Boolean(brand.logo_key),
-            brandMemory: await getBrandMemory(user.id),
-            brandAssets: (await getPlanningBrandAssets(user.id)).map((asset) => ({
-              originalName: asset.original_name,
-              kind: asset.kind,
-              textContent: asset.text_content,
-            })),
-          });
+          const expanded = await runWitCalendarEntryExpansion(
+            productionEntry,
+            brandContext.context,
+          );
           if (!expanded.ok)
             return json({ ok: false, error: "brief_produccion_incompleto" }, { status: 422 });
           productionEntry = {
