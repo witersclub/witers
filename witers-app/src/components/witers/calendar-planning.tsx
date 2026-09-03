@@ -3317,6 +3317,7 @@ function CalendarDayCell({
   isSelected,
   isPast,
   isMoving,
+  isLanded,
   onSelect,
   t,
 }: {
@@ -3326,6 +3327,7 @@ function CalendarDayCell({
   isSelected: boolean;
   isPast: boolean;
   isMoving: boolean;
+  isLanded: boolean;
   onSelect: (entry: CalendarEntry, trigger: HTMLButtonElement) => void;
   t: (es: string, en: string) => string;
 }) {
@@ -3372,7 +3374,7 @@ function CalendarDayCell({
         opacity: draggable.isDragging ? 0.3 : isMoving ? 0.55 : 1,
         touchAction: entry ? "none" : undefined,
       }}
-      className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${canDropHere ? "duration-150 scale-[1.04]" : "duration-300"} ${productionState ? `calendar-production-cell calendar-production-cell--${productionState}` : ""} ${
+      className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${canDropHere ? "duration-150 scale-[1.04]" : "duration-300"} ${entry ? "wit-calendar-draggable" : ""} ${isLanded ? "wit-calendar-cell-landed" : ""} ${productionState ? `calendar-production-cell calendar-production-cell--${productionState}` : ""} ${
         canDropHere
           ? willSwap
             ? "border-wit-pink bg-wit-pink/[0.08] ring-2 ring-wit-pink ring-offset-1"
@@ -3462,6 +3464,10 @@ export function PlanificacionPanel({
   // "Deshacer" toast), and the last failed one (drives the inline error).
   const [movingEntryId, setMovingEntryId] = useState<string | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  // Entries to give the "snap into place" pop to on their next render —
+  // both sides of a swap, so the piece that got displaced also visibly
+  // lands, not just the one that was actively dragged.
+  const [landedEntryIds, setLandedEntryIds] = useState<Set<string>>(new Set());
   const [undoMove, setUndoMove] = useState<{
     entryId: string;
     from: { date: string; slot: number };
@@ -3605,7 +3611,11 @@ export function PlanificacionPanel({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ entryId, targetDate: to.date, targetSlot: to.slot }),
       });
-      const data = (await res.json()) as { ok: boolean; error?: string };
+      const data = (await res.json()) as {
+        ok: boolean;
+        error?: string;
+        otherEntryId?: string;
+      };
       if (!data.ok) {
         setDragError(
           data.error === "fecha_pasada"
@@ -3628,6 +3638,9 @@ export function PlanificacionPanel({
       }
       await qc.invalidateQueries({ queryKey: ["calendar-entries", year, month] });
       if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
+      const landed = data.otherEntryId ? [entryId, data.otherEntryId] : [entryId];
+      setLandedEntryIds(new Set(landed));
+      window.setTimeout(() => setLandedEntryIds(new Set()), 420);
       if (isUndo) {
         setUndoMove(null);
         return;
@@ -4023,6 +4036,7 @@ export function PlanificacionPanel({
                       isSelected={Boolean(entry && entry.id === selectedId)}
                       isPast={cell.date < today}
                       isMoving={entry?.id === movingEntryId}
+                      isLanded={Boolean(entry && landedEntryIds.has(entry.id))}
                       onSelect={(selectedEntry, trigger) => {
                         detailTriggerRef.current = trigger;
                         setSelectedId(selectedEntry.id);
@@ -4042,7 +4056,7 @@ export function PlanificacionPanel({
                       if (!dragged) return null;
                       const Icon = FORMAT_ICON[dragged.format];
                       return (
-                        <div className="flex min-h-[50px] w-16 scale-105 flex-col justify-end rounded-lg border border-wit-blue/30 bg-white p-1 shadow-[0_16px_32px_rgba(0,71,255,0.25)] sm:min-h-[76px] sm:w-24 sm:rounded-xl sm:p-1.5">
+                        <div className="flex min-h-[50px] w-16 rotate-3 scale-105 flex-col justify-end rounded-lg border border-wit-blue/30 bg-white p-1 shadow-[0_16px_32px_rgba(0,71,255,0.25)] sm:min-h-[76px] sm:w-24 sm:rounded-xl sm:p-1.5">
                           <span
                             className={`flex items-center gap-1 rounded-md px-1 py-0.5 text-[8px] font-semibold sm:rounded-lg sm:px-1.5 sm:py-1 ${statusMeta(dragged.status, t).badgeClass}`}
                           >

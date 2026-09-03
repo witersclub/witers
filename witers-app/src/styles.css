@@ -279,6 +279,42 @@
   }
 }
 
+/* CAMBIO 03 polish — a day cell holding a piece is picked up with a
+   press-and-hold; iOS Safari's own long-press gesture (the text-selection
+   magnifier loupe, the copy/paste callout menu) fires from that exact same
+   gesture and was popping up instead of, or alongside, the drag. Disabling
+   the native callout/selection here removes that fight — dnd-kit's own
+   TouchSensor delay is what decides whether a drag actually starts, not
+   iOS's built-in gesture. */
+.wit-calendar-draggable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* A short "snap into place" pop for the cell a piece just landed in after
+   a drag — read as a puzzle piece clicking into its slot, not just a
+   plain re-render swap. */
+@keyframes wit-calendar-cell-land {
+  0% {
+    transform: scale(0.9);
+  }
+  55% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.wit-calendar-cell-landed {
+  animation: wit-calendar-cell-land 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .wit-calendar-cell-landed {
+    animation: none;
+  }
+}
+
 /* Rotating light tracing an unclaimed request's border — a "this is
    waiting for someone" nudge in the designer and admin panels. Wraps the
    card in a thin (2px) padded box whose OWN background is the rotating
