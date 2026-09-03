@@ -18,7 +18,6 @@ import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
-  DragOverlay,
   MouseSensor,
   pointerWithin,
   TouchSensor,
@@ -142,6 +141,28 @@ function formatLabel(format: CalendarFormat, t: (es: string, en: string) => stri
   if (format === "video") return t("Video", "Video");
   if (format === "carrusel") return t("Carrusel", "Carousel");
   return t("Imagen", "Image");
+}
+
+// dnd-kit's own <DragOverlay> positions the "lifted" copy by measuring the
+// original cell's rect once at drag start and then translating it by the
+// pointer delta — in this app that measurement has repeatedly landed rows
+// away from the actual touch point (reported by the client on real iOS
+// devices, not reproducible from static review), a known class of dnd-kit
+// bug when the page has any scroll/layout happening around drag start. We
+// sidestep that whole mechanism: the ghost below just reads the pointer's
+// live clientX/clientY directly off the browser event, so its position can
+// never drift from where the finger actually is.
+function getEventPoint(event: Event | undefined): { x: number; y: number } {
+  if (event && "touches" in event) {
+    const touchEvent = event as TouchEvent;
+    const touch = touchEvent.touches[0] ?? touchEvent.changedTouches[0];
+    if (touch) return { x: touch.clientX, y: touch.clientY };
+  }
+  if (event && "clientX" in event) {
+    const pointerEvent = event as MouseEvent;
+    return { x: pointerEvent.clientX, y: pointerEvent.clientY };
+  }
+  return { x: 0, y: 0 };
 }
 
 function statusMeta(
@@ -3311,6 +3332,54 @@ function MonthlyProgrammingSheet({
   );
 }
 
+// Renders the "piece lifted in your fingers" copy that follows the drag,
+// positioned straight off the live pointer position instead of dnd-kit's
+// own <DragOverlay> (see getEventPoint's comment for why). `initialPoint`
+// avoids a one-frame flash at (0,0) before the first pointermove arrives;
+// after that it tracks the browser's own pointer events directly, so it
+// can't desync from the finger the way the built-in overlay did.
+function PointerDragGhost({
+  title,
+  Icon,
+  badgeClass,
+  initialPoint,
+}: {
+  title: string;
+  Icon: typeof ImageIcon;
+  badgeClass: string;
+  initialPoint: { x: number; y: number };
+}) {
+  const [point, setPoint] = useState(initialPoint);
+
+  useEffect(() => {
+    function handlePointerMove(event: PointerEvent) {
+      setPoint({ x: event.clientX, y: event.clientY });
+    }
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    return () => window.removeEventListener("pointermove", handlePointerMove);
+  }, []);
+
+  return createPortal(
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed z-[999] flex min-h-[50px] w-16 flex-col justify-end rounded-lg border border-wit-blue/30 bg-white p-1 shadow-[0_16px_32px_rgba(0,71,255,0.25)] sm:min-h-[76px] sm:w-24 sm:rounded-xl sm:p-1.5"
+      style={{
+        left: point.x,
+        top: point.y,
+        transform: "translate(-50%, -65%) rotate(3deg) scale(1.05)",
+      }}
+    >
+      <span
+        className={`flex items-center gap-1 rounded-md px-1 py-0.5 text-[8px] font-semibold sm:rounded-lg sm:px-1.5 sm:py-1 ${badgeClass}`}
+      >
+        <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={2.4} />
+        <span className="hidden truncate sm:inline">{title}</span>
+      </span>
+    </div>,
+    document.body,
+  );
+}
+
 // CAMBIO 03 — one day cell, draggable (when it holds a piece) AND
 // droppable (always, if it's a valid target) at once — the standard
 // dnd-kit pattern for a "swap two cells" grid. useDraggable/useDroppable
@@ -3475,6 +3544,10 @@ export function PlanificacionPanel({
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [dragOriginDate, setDragOriginDate] = useState<string | null>(null);
   const [hoverDate, setHoverDate] = useState<string | null>(null);
+  // Where PointerDragGhost should render on its very first frame, before
+  // any pointermove has fired — a plain ref since it only needs to be read
+  // once per drag (on mount), not trigger a re-render when it changes.
+  const dragStartPointRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   // Entries to give the "snap into place" pop to on their next render —
   // every piece the reorder actually touched, so the whole cascade visibly
   // lands, not just the one that was actively dragged.
@@ -3696,8 +3769,10 @@ export function PlanificacionPanel({
 
   function handleDragStart(event: {
     active: { id: string | number; data: { current?: unknown } };
+    activatorEvent?: Event;
   }) {
     const data = event.active.data.current as { fromDate: string } | undefined;
+    dragStartPointRef.current = getEventPoint(event.activatorEvent);
     setActiveDragId(String(event.active.id));
     setDragOriginDate(data?.fromDate ?? null);
     setHoverDate(data?.fromDate ?? null);
@@ -4106,29 +4181,27 @@ export function PlanificacionPanel({
                   );
                 })}
               </div>
-              {/* The piece follows the pointer/finger directly instead of the
-                  original cell — a lifted, slightly larger, shadowed copy,
-                  per the "levantar ligeramente + sombra suave" spec. */}
-              <DragOverlay dropAnimation={{ duration: 200, easing: "ease-out" }}>
-                {activeDragId
-                  ? (() => {
-                      const dragged = entries.find((e) => e.id === activeDragId);
-                      if (!dragged) return null;
-                      const Icon = FORMAT_ICON[dragged.format];
-                      return (
-                        <div className="flex min-h-[50px] w-16 rotate-3 scale-105 flex-col justify-end rounded-lg border border-wit-blue/30 bg-white p-1 shadow-[0_16px_32px_rgba(0,71,255,0.25)] sm:min-h-[76px] sm:w-24 sm:rounded-xl sm:p-1.5">
-                          <span
-                            className={`flex items-center gap-1 rounded-md px-1 py-0.5 text-[8px] font-semibold sm:rounded-lg sm:px-1.5 sm:py-1 ${statusMeta(dragged.status, t).badgeClass}`}
-                          >
-                            <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={2.4} />
-                            <span className="hidden truncate sm:inline">{dragged.title}</span>
-                          </span>
-                        </div>
-                      );
-                    })()
-                  : null}
-              </DragOverlay>
             </DndContext>
+            {/* The piece follows the pointer/finger directly instead of the
+                original cell — a lifted, slightly larger, shadowed copy,
+                per the "levantar ligeramente + sombra suave" spec. Reads the
+                live pointer position itself (see PointerDragGhost) instead
+                of going through dnd-kit's own <DragOverlay>. */}
+            {activeDragId
+              ? (() => {
+                  const dragged = entries.find((e) => e.id === activeDragId);
+                  if (!dragged) return null;
+                  return (
+                    <PointerDragGhost
+                      key={activeDragId}
+                      title={dragged.title}
+                      Icon={FORMAT_ICON[dragged.format]}
+                      badgeClass={statusMeta(dragged.status, t).badgeClass}
+                      initialPoint={dragStartPointRef.current}
+                    />
+                  );
+                })()
+              : null}
             {dragError ? (
               <p role="alert" className="mt-2 text-center text-xs font-semibold text-red-600">
                 {dragError}
