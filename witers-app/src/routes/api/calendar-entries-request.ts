@@ -189,34 +189,22 @@ export const Route = createFileRoute("/api/calendar-entries-request")({
           });
         }
         if (!result.ok) {
-          // "sin_saldo" alone reads as "no requests left at all", but each
-          // format (imagen/video/carrusel) has its own separate quota — a
-          // client can be far from their image quota and still hit this
-          // because they've used up just their (smaller) carousel or video
-          // quota. Send back which one so the UI can say so precisely
-          // instead of implying the whole account is capped.
+          // imagen/video/carrusel all spend from the same shared monthly
+          // pool (see createImageRequest in requests.ts) — send the actual
+          // used/quota numbers so the UI can say precisely how full that
+          // pool is instead of a bare "ya no te queda nada".
           if (result.error === "sin_saldo") {
             const membership = await getMembership(user.id);
-            const quotaByFormat = {
-              imagen: membership
-                ? { used: membership.requests_used, quota: membership.requests_quota }
-                : null,
-              video: membership
-                ? { used: membership.video_requests_used, quota: membership.video_requests_quota }
-                : null,
-              carrusel: membership
-                ? {
-                    used: membership.carousel_requests_used,
-                    quota: membership.carousel_requests_quota,
-                  }
-                : null,
-            };
             return json(
               {
                 ok: false,
                 error: result.error,
-                format: entry.format,
-                ...(quotaByFormat[entry.format] ?? {}),
+                ...(membership
+                  ? {
+                      used: membership.requests_used,
+                      quota: membership.requests_quota + membership.bonus_requests_quota,
+                    }
+                  : {}),
               },
               { status: result.status },
             );

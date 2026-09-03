@@ -106,34 +106,19 @@ async function handlePost(request: Request) {
     await db()
       .prepare(
         `UPDATE memberships
-         SET status = 'active', plan = ?2, price_mxn = ?3, requests_quota = ?4, video_requests_quota = ?5,
-             carousel_requests_quota = ?6, activated_at = COALESCE(activated_at, datetime('now'))
+         SET status = 'active', plan = ?2, price_mxn = ?3, requests_quota = ?4,
+             activated_at = COALESCE(activated_at, datetime('now'))
          WHERE id = ?1`,
       )
-      .bind(
-        membershipId,
-        plan.id,
-        price,
-        plan.requestsQuota,
-        plan.videoRequestsQuota,
-        plan.carouselRequestsQuota,
-      )
+      .bind(membershipId, plan.id, price, plan.requestsQuota)
       .run();
   } else {
     await db()
       .prepare(
-        `INSERT INTO memberships (id, user_id, status, plan, price_mxn, requests_quota, video_requests_quota, carousel_requests_quota, activated_at)
-         VALUES (?1, ?2, 'active', ?3, ?4, ?5, ?6, ?7, datetime('now'))`,
+        `INSERT INTO memberships (id, user_id, status, plan, price_mxn, requests_quota, activated_at)
+         VALUES (?1, ?2, 'active', ?3, ?4, ?5, datetime('now'))`,
       )
-      .bind(
-        membershipId,
-        user.id,
-        plan.id,
-        price,
-        plan.requestsQuota,
-        plan.videoRequestsQuota,
-        plan.carouselRequestsQuota,
-      )
+      .bind(membershipId, user.id, plan.id, price, plan.requestsQuota)
       .run();
   }
 

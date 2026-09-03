@@ -85,9 +85,9 @@ const VIDEO_ACCEPT = "video/mp4,video/quicktime,video/webm";
 const MAX_UPLOAD_BYTES = 500 * 1024 * 1024;
 
 // Same landing pattern as panel.tsx's HablaConWitScreen (images) — a big
-// centered call to action, not a form. Shows an upgrade nudge instead of
-// the CTA when the plan doesn't include video at all, and a "used up for
-// this month" message instead when the quota's just exhausted.
+// centered call to action, not a form. Video spends from the same shared
+// monthly pool as imagen/carrusel (see membership-plans.ts) — quotaUsed/
+// quotaTotal are the account's total, not a video-only count.
 export function VideoLandingScreen({
   active,
   quotaUsed,
@@ -109,46 +109,30 @@ export function VideoLandingScreen({
         <VideoIcon className="h-11 w-11 text-wit-blue" strokeWidth={1.5} />
       </div>
       <p className="max-w-xs text-base text-wit-gray">
-        {quotaTotal === 0
+        {remaining <= 0
           ? t(
-              "Los planes Grow y Scale incluyen videos para redes sociales.",
-              "The Grow and Scale plans include videos for social media.",
+              "Ya usaste tus piezas disponibles este mes. Vuelven a estar disponibles en tu próximo ciclo.",
+              "You've used up your available pieces this month. They'll be available again next cycle.",
             )
-          : remaining <= 0
-            ? t(
-                "Ya usaste tus videos disponibles este mes. Vuelven a estar disponibles en tu próximo ciclo.",
-                "You've used up your available videos this month. They'll be available again next cycle.",
-              )
-            : t(
-                "Cuéntanos qué video quieres crear y sube tu metraje — nosotros lo editamos.",
-                "Tell us what video you want to create and upload your footage — we'll edit it.",
-              )}
+          : t(
+              "Cuéntanos qué video quieres crear y sube tu metraje — nosotros lo editamos.",
+              "Tell us what video you want to create and upload your footage — we'll edit it.",
+            )}
       </p>
-      {quotaTotal === 0 ? (
-        <a
-          href="/upgrade"
-          className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
-        >
-          {t("Ver planes", "View plans")}
-        </a>
-      ) : (
-        <button
-          type="button"
-          onClick={onStart}
-          disabled={blocked}
-          className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {t("🎬 Nueva solicitud de video", "🎬 New video request")}
-        </button>
-      )}
-      {quotaTotal > 0 ? (
-        <p className="text-xs font-semibold text-wit-gray">
-          {t(
-            `${quotaUsed} de ${quotaTotal} videos usados este mes.`,
-            `${quotaUsed} of ${quotaTotal} videos used this month.`,
-          )}
-        </p>
-      ) : null}
+      <button
+        type="button"
+        onClick={onStart}
+        disabled={blocked}
+        className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {t("🎬 Nueva solicitud de video", "🎬 New video request")}
+      </button>
+      <p className="text-xs font-semibold text-wit-gray">
+        {t(
+          `${quotaUsed} de ${quotaTotal} piezas usadas este mes.`,
+          `${quotaUsed} of ${quotaTotal} pieces used this month.`,
+        )}
+      </p>
     </div>
   );
 }

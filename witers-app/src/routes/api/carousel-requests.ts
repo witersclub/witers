@@ -37,7 +37,9 @@ export async function createCarouselRequest(
   if (!membership || membership.status !== "active") {
     return { ok: false, error: "sin_membresia", status: 403 };
   }
-  if (membership.carousel_requests_used >= membership.carousel_requests_quota) {
+  // Carrusel spends from the same shared monthly pool as imagen/video —
+  // see createImageRequest in requests.ts and membership-plans.ts.
+  if (membership.requests_used >= membership.requests_quota + membership.bonus_requests_quota) {
     return { ok: false, error: "sin_saldo", status: 403 };
   }
 
@@ -73,9 +75,7 @@ export async function createCarouselRequest(
   }
 
   await db()
-    .prepare(
-      "UPDATE memberships SET carousel_requests_used = carousel_requests_used + 1 WHERE user_id = ?1",
-    )
+    .prepare("UPDATE memberships SET requests_used = requests_used + 1 WHERE user_id = ?1")
     .bind(userId)
     .run();
 

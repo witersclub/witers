@@ -316,59 +316,6 @@ function QuotaRing({
   return <div className="flex flex-col items-center gap-1.5">{content}</div>;
 }
 
-// Opens from tapping a locked quota ring — same centered-card pattern as
-// ImagePacksModal. Copy pulls the plan name/quota straight from
-// membership-plans.ts rather than a hardcoded "Grow, 2 videos" string, so
-// it never drifts if a plan's numbers change.
-function UpgradeTeaser({
-  icon: Icon,
-  colorHex,
-  title,
-  body,
-  onClose,
-}: {
-  icon: LucideIcon;
-  colorHex: string;
-  title: string;
-  body: string;
-  onClose: () => void;
-}) {
-  const { t } = useLanguage();
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-wit-ink/50 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-xs rounded-3xl bg-white p-7 text-center shadow-[0_30px_80px_rgba(5,13,40,0.25)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <span
-          className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
-          style={{ backgroundColor: `${colorHex}1a` }}
-        >
-          <Icon className="h-7 w-7" style={{ color: colorHex }} strokeWidth={2} />
-        </span>
-        <p className="mt-4 text-lg font-bold text-wit-ink">{title}</p>
-        <p className="mt-2 text-sm text-wit-gray">{body}</p>
-        <p className="mt-6 text-sm font-semibold text-wit-blue">
-          {t(
-            "El equipo de WITERS puede habilitar esta función para tu cuenta.",
-            "The WITERS team can enable this feature for your account.",
-          )}
-        </p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-3 text-xs font-semibold text-wit-gray hover:text-wit-ink"
-        >
-          {t("Cerrar", "Close")}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 const PANEL_SPLASH_MS = 1300;
 const PANEL_SPLASH_SESSION_KEY = "wit_panel_splash_shown";
 
@@ -550,9 +497,6 @@ function PanelContent() {
   // to auto-open that one card in "Mis solicitudes" instead of leaving the
   // client to scan the list and find it themselves.
   const [newRequestId, setNewRequestId] = useState<string | null>(null);
-  // Which locked quota ring (if any) the client just tapped — drives the
-  // upgrade teaser popover. null = closed.
-  const [upgradeTeaser, setUpgradeTeaser] = useState<"video" | "carrusel" | null>(null);
   // Read (and clear) once per mount — only the very first chat (chatKey
   // still at its initial value) should inherit these, not a later
   // conversation opened via the button.
@@ -738,12 +682,6 @@ function PanelContent() {
   const active = membership?.status === "active";
   const remaining = membership
     ? membership.requests_quota + membership.bonus_requests_quota - membership.requests_used
-    : 0;
-  const videoRemaining = membership
-    ? membership.video_requests_quota - membership.video_requests_used
-    : 0;
-  const carouselRemaining = membership
-    ? membership.carousel_requests_quota - membership.carousel_requests_used
     : 0;
   const rows = requests.data?.requests ?? [];
   // Same "still being worked on" condition as the rotating-border treatment
@@ -1013,15 +951,11 @@ function PanelContent() {
                       <ThisMonthCard
                         active={active}
                         planName={getPlan(membership?.plan).nombre}
-                        imageUsed={membership?.requests_used ?? 0}
-                        imageTotal={
-                          (membership?.requests_quota ?? 20) +
+                        used={membership?.requests_used ?? 0}
+                        total={
+                          (membership?.requests_quota ?? 30) +
                           (membership?.bonus_requests_quota ?? 0)
                         }
-                        videoUsed={membership?.video_requests_used ?? 0}
-                        videoTotal={membership?.video_requests_quota ?? 0}
-                        carouselUsed={membership?.carousel_requests_used ?? 0}
-                        carouselTotal={membership?.carousel_requests_quota ?? 0}
                         reach={totalReach}
                         messages={totalResultsImpact}
                         onOpenCampaigns={() => setSection("campanas")}
@@ -1109,14 +1043,10 @@ function PanelContent() {
                     <ThisMonthCard
                       active={active}
                       planName={getPlan(membership?.plan).nombre}
-                      imageUsed={membership?.requests_used ?? 0}
-                      imageTotal={
-                        (membership?.requests_quota ?? 20) + (membership?.bonus_requests_quota ?? 0)
+                      used={membership?.requests_used ?? 0}
+                      total={
+                        (membership?.requests_quota ?? 30) + (membership?.bonus_requests_quota ?? 0)
                       }
-                      videoUsed={membership?.video_requests_used ?? 0}
-                      videoTotal={membership?.video_requests_quota ?? 0}
-                      carouselUsed={membership?.carousel_requests_used ?? 0}
-                      carouselTotal={membership?.carousel_requests_quota ?? 0}
                       reach={totalReach}
                       messages={totalResultsImpact}
                       onOpenCampaigns={() => setSection("campanas")}
@@ -1214,8 +1144,11 @@ function PanelContent() {
                           {videoTab === "nueva" ? (
                             <VideoLandingScreen
                               active={active}
-                              quotaUsed={membership?.video_requests_used ?? 0}
-                              quotaTotal={membership?.video_requests_quota ?? 0}
+                              quotaUsed={membership?.requests_used ?? 0}
+                              quotaTotal={
+                                (membership?.requests_quota ?? 30) +
+                                (membership?.bonus_requests_quota ?? 0)
+                              }
                               onStart={() => setVideoWizardOpen(true)}
                             />
                           ) : (
@@ -1245,8 +1178,11 @@ function PanelContent() {
                           {carouselTab === "nueva" ? (
                             <CarouselLandingScreen
                               active={active}
-                              quotaUsed={membership?.carousel_requests_used ?? 0}
-                              quotaTotal={membership?.carousel_requests_quota ?? 0}
+                              quotaUsed={membership?.requests_used ?? 0}
+                              quotaTotal={
+                                (membership?.requests_quota ?? 30) +
+                                (membership?.bonus_requests_quota ?? 0)
+                              }
                               onStart={() => setCarouselWizardOpen(true)}
                             />
                           ) : (
@@ -1342,40 +1278,6 @@ function PanelContent() {
           )
         : null}
 
-      {upgradeTeaser
-        ? (() => {
-            const growPlan = getPlan("plus");
-            const isVideo = upgradeTeaser === "video";
-            const growQuota = isVideo
-              ? growPlan.videoRequestsQuota
-              : growPlan.carouselRequestsQuota;
-            return createPortal(
-              <UpgradeTeaser
-                icon={isVideo ? VideoIcon : GalleryHorizontal}
-                colorHex={isVideo ? "#ff3fb0" : "#10b981"}
-                title={
-                  isVideo
-                    ? t("¿Quieres hacer videos?", "Want to make videos?")
-                    : t("¿Quieres hacer carruseles?", "Want to make carousels?")
-                }
-                body={
-                  isVideo
-                    ? t(
-                        `Con el plan ${growPlan.nombre} puedes crear hasta ${growQuota} videos al mes.`,
-                        `With the ${growPlan.nombre} plan you can create up to ${growQuota} videos a month.`,
-                      )
-                    : t(
-                        `Con el plan ${growPlan.nombre} puedes crear hasta ${growQuota} carruseles al mes.`,
-                        `With the ${growPlan.nombre} plan you can create up to ${growQuota} carousels a month.`,
-                      )
-                }
-                onClose={() => setUpgradeTeaser(null)}
-              />,
-              document.body,
-            );
-          })()
-        : null}
-
       {videoWizardOpen
         ? createPortal(
             <div className="fixed inset-0 z-50 bg-white">
@@ -1400,12 +1302,13 @@ function PanelContent() {
                 disabledReason={
                   !active
                     ? t("Tu membresía no está activa todavía.", "Your membership isn't active yet.")
-                    : (membership?.carousel_requests_quota ?? 0) -
-                          (membership?.carousel_requests_used ?? 0) <=
+                    : (membership?.requests_quota ?? 0) +
+                          (membership?.bonus_requests_quota ?? 0) -
+                          (membership?.requests_used ?? 0) <=
                         0
                       ? t(
-                          "Ya usaste todos tus carruseles disponibles este mes.",
-                          "You've already used all your available carousels this month.",
+                          "Ya usaste todas tus piezas disponibles este mes.",
+                          "You've already used all your available pieces this month.",
                         )
                       : null
                 }
@@ -2219,16 +2122,6 @@ function MembershipSummaryCard({
                 </p>
               ) : null}
             </div>
-            {membership.video_requests_quota > 0 ? (
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
-                  {t("Videos usados", "Videos used")}
-                </p>
-                <p className="mt-0.5 font-wit-mono text-lg font-semibold text-wit-ink">
-                  {membership.video_requests_used}/{membership.video_requests_quota}
-                </p>
-              </div>
-            ) : null}
             {activatedLabel ? (
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-wit-gray">
@@ -6488,48 +6381,30 @@ function HomeRequestsCard({
 function ThisMonthCard({
   active,
   planName,
-  imageUsed,
-  imageTotal,
-  videoUsed,
-  videoTotal,
-  carouselUsed,
-  carouselTotal,
+  used,
+  total,
   reach,
   messages,
   onOpenCampaigns,
 }: {
   active: boolean;
   planName: string;
-  imageUsed: number;
-  imageTotal: number;
-  videoUsed: number;
-  videoTotal: number;
-  carouselUsed: number;
-  carouselTotal: number;
+  used: number;
+  total: number;
   reach: number;
   messages: number;
   onOpenCampaigns: () => void;
 }) {
   const { t } = useLanguage();
-  const quotas = [
-    {
-      icon: ImageIcon,
-      used: imageUsed,
-      total: imageTotal,
-      label: t("Imágenes", "Images"),
-      cls: "text-wit-blue bg-wit-blue/10",
-    },
-    {
-      icon: VideoIcon,
-      used: videoUsed,
-      total: videoTotal,
-      label: t("Videos", "Videos"),
-      cls: "text-wit-pink bg-wit-pink/10",
-    },
+  // El cupo mensual es un solo bolsillo compartido entre imagen, video y
+  // carrusel — no hay un número por formato, solo cuántas piezas del mes
+  // ya se pidieron. Los 3 íconos de abajo son decorativos: muestran qué
+  // formatos incluye el plan, no un contador cada uno.
+  const formats = [
+    { icon: ImageIcon, label: t("Imágenes", "Images"), cls: "text-wit-blue bg-wit-blue/10" },
+    { icon: VideoIcon, label: t("Videos", "Videos"), cls: "text-wit-pink bg-wit-pink/10" },
     {
       icon: GalleryHorizontal,
-      used: carouselUsed,
-      total: carouselTotal,
       label: t("Carruseles", "Carousels"),
       cls: "text-emerald-600 bg-emerald-50",
     },
@@ -6548,23 +6423,29 @@ function ThisMonthCard({
             : t("Sin membresía", "No membership")}
         </span>
       </div>
-      <div className="mt-5 grid grid-cols-3 gap-2">
-        {quotas.map((item) => {
-          const Icon = item.icon;
-          return (
-            <div key={item.label} className="min-w-0 text-center">
+      <div className="mt-5 flex items-center justify-between gap-4">
+        <div>
+          <p className="font-wit-mono text-2xl font-extrabold text-wit-ink">
+            {Math.max(0, used)}/{total}
+          </p>
+          <p className="text-xs font-semibold text-wit-gray">
+            {t("piezas de contenido este mes", "content pieces this month")}
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          {formats.map((item) => {
+            const Icon = item.icon;
+            return (
               <span
-                className={`mx-auto flex h-9 w-9 items-center justify-center rounded-xl ${item.cls}`}
+                key={item.label}
+                title={item.label}
+                className={`flex h-9 w-9 items-center justify-center rounded-xl ${item.cls}`}
               >
                 <Icon className="h-4 w-4" strokeWidth={2.1} />
               </span>
-              <p className="mt-2 text-sm font-extrabold text-wit-ink">
-                {Math.max(0, item.used)}/{item.total}
-              </p>
-              <p className="truncate text-[10px] font-semibold text-wit-gray">{item.label}</p>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
       <button
         type="button"

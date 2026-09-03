@@ -31,16 +31,8 @@ export const COMPARISON_ROWS: ComparisonRow[] = [
     values: { mensual: "1", plus: "Hasta 2" },
   },
   {
-    label: "Imágenes",
-    values: { mensual: "20", plus: "40" },
-  },
-  {
-    label: "Carruseles para redes sociales",
-    values: { mensual: "5", plus: "10" },
-  },
-  {
-    label: "Videos para redes sociales",
-    values: { mensual: "5", plus: "10" },
+    label: "Imágenes, videos y carruseles para redes sociales",
+    values: { mensual: true, plus: true },
   },
   {
     label: "Planeación estratégica de contenido",

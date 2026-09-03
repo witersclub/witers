@@ -12,10 +12,6 @@ export type Me = {
     requests_quota: number;
     requests_used: number;
     bonus_requests_quota: number;
-    video_requests_quota: number;
-    video_requests_used: number;
-    carousel_requests_quota: number;
-    carousel_requests_used: number;
     activated_at: string | null;
   } | null;
 };

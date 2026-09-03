@@ -18,28 +18,19 @@ export type HelpUserContext = {
   membershipStatus: string | null;
   membershipPlan: string | null;
   requestsRemaining: number | null;
-  videoRequestsRemaining: number | null;
-  carouselRequestsRemaining: number | null;
 };
 
 export type HelpChatResult = { ok: true; text: string } | { ok: false; error: string };
 
 function plansKnowledge(): string {
-  return MEMBERSHIP_PLANS.map((p) => {
-    const extras = [
-      p.videoRequestsQuota > 0 ? `${p.videoRequestsQuota} videos/mes` : null,
-      p.carouselRequestsQuota > 0 ? `${p.carouselRequestsQuota} carruseles/mes` : null,
-    ]
-      .filter(Boolean)
-      .join(", ");
-    return (
+  return MEMBERSHIP_PLANS.map(
+    (p) =>
       `- ${p.nombre}: $${p.precioPromo.toLocaleString("es-MX")} MXN/mes de promoción ` +
       `(regular $${p.precioRegular.toLocaleString("es-MX")} MXN/mes, ambos + IVA), ` +
-      `${p.requestsQuota} solicitudes de diseño al mes` +
-      (extras ? `, ${extras}` : "") +
-      `. Beneficios: ${p.beneficios.join("; ")}.`
-    );
-  }).join("\n");
+      `${p.requestsQuota} piezas de contenido al mes (imagen, video o carrusel, ` +
+      `en la mezcla que el cliente quiera), hasta ${p.planningSlotsPerDay} publicación` +
+      `${p.planningSlotsPerDay > 1 ? "es" : ""} por día. Beneficios: ${p.beneficios.join("; ")}.`,
+  ).join("\n");
 }
 
 function buildSystemPrompt(user: HelpUserContext): string {
@@ -49,13 +40,7 @@ function buildSystemPrompt(user: HelpUserContext): string {
       ? `Su plan actual: ${user.membershipPlan} (estado: ${user.membershipStatus ?? "desconocido"}).`
       : "Todavía no tiene una membresía activa.",
     user.requestsRemaining != null
-      ? `Le quedan ${user.requestsRemaining} solicitudes de diseño este mes.`
-      : null,
-    user.videoRequestsRemaining != null && user.videoRequestsRemaining > 0
-      ? `Le quedan ${user.videoRequestsRemaining} solicitudes de video este mes.`
-      : null,
-    user.carouselRequestsRemaining != null && user.carouselRequestsRemaining > 0
-      ? `Le quedan ${user.carouselRequestsRemaining} solicitudes de carrusel este mes.`
+      ? `Le quedan ${user.requestsRemaining} piezas de contenido este mes (cupo compartido entre imagen, video y carrusel).`
       : null,
   ]
     .filter(Boolean)
@@ -81,8 +66,8 @@ function buildSystemPrompt(user: HelpUserContext): string {
     "'Creatividad' en el panel — no es un formulario, Wit hace preguntas y propone opciones.\n" +
     "- Cada solicitud incluye un número de revisiones según el plan (2 en Essential/Grow, 3 en " +
     "Scale) antes de generar un costo extra.\n" +
-    "- Las cuotas (solicitudes, videos, carruseles) son mensuales y no se acumulan al mes " +
-    "siguiente si no se usan.\n" +
+    "- El cupo de piezas es mensual, compartido entre imagen/video/carrusel (no hay un número " +
+    "aparte por formato), y no se acumula al mes siguiente si no se usa.\n" +
     "- Una solicitud pasa por los estados: en proceso, completada (ya se puede ver/descargar) y " +
     "cerrada. Si algo salió mal en una pieza ya cerrada, se puede pedir un cambio desde el " +
     "detalle de esa pieza.\n" +

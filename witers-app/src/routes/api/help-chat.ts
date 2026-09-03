@@ -66,12 +66,6 @@ async function buildUserContext(userId: string): Promise<HelpUserContext> {
     requestsRemaining: membership
       ? membership.requests_quota + membership.bonus_requests_quota - membership.requests_used
       : null,
-    videoRequestsRemaining: membership
-      ? membership.video_requests_quota - membership.video_requests_used
-      : null,
-    carouselRequestsRemaining: membership
-      ? membership.carousel_requests_quota - membership.carousel_requests_used
-      : null,
   };
 }
 

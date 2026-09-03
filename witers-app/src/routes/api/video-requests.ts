@@ -47,7 +47,9 @@ export async function createVideoRequest(
   if (!membership || membership.status !== "active") {
     return { ok: false, error: "sin_membresia", status: 403 };
   }
-  if (membership.video_requests_used >= membership.video_requests_quota) {
+  // Video spends from the same shared monthly pool as imagen/carrusel —
+  // see createImageRequest in requests.ts and membership-plans.ts.
+  if (membership.requests_used >= membership.requests_quota + membership.bonus_requests_quota) {
     return { ok: false, error: "sin_saldo", status: 403 };
   }
   if (data.rawFileKeys.length === 0 && !data.wantsAiScenes) {
@@ -103,9 +105,7 @@ export async function createVideoRequest(
   }
 
   await db()
-    .prepare(
-      "UPDATE memberships SET video_requests_used = video_requests_used + 1 WHERE user_id = ?1",
-    )
+    .prepare("UPDATE memberships SET requests_used = requests_used + 1 WHERE user_id = ?1")
     .bind(userId)
     .run();
 

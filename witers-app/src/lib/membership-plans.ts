@@ -13,9 +13,11 @@ export type MembershipPlan = {
   descripcion: string;
   precioPromo: number;
   precioRegular: number;
+  // One shared monthly pool, spendable on any mix of imagen/video/carrusel
+  // — there is no separate per-format cap. planningSlotsPerDay is the only
+  // other constraint: how many of that pool Wit may place on the same
+  // calendar day.
   requestsQuota: number;
-  videoRequestsQuota: number;
-  carouselRequestsQuota: number;
   /** Maximum number of pieces Wit may place on the same calendar date. */
   planningSlotsPerDay: 1 | 2;
   destacada?: boolean;
@@ -36,14 +38,12 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
       "Ideal para emprendedores y pequeñas empresas que desean construir una imagen profesional y comenzar a atraer más clientes.",
     precioPromo: 599,
     precioRegular: 599,
-    requestsQuota: 20,
-    videoRequestsQuota: 5,
-    carouselRequestsQuota: 5,
+    requestsQuota: 30,
     planningSlotsPerDay: 1,
     beneficios: [
       "Hasta 30 piezas de contenido al mes",
       "Una publicación por día como máximo",
-      "20 imágenes, 5 videos y 5 carruseles",
+      "Imagen, video o carrusel — tú decides la mezcla",
       "Planificación mensual con Wit",
     ],
   },
@@ -55,15 +55,13 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
       "Pensado para empresas que buscan aumentar su presencia digital con una estrategia de contenido más completa.",
     precioPromo: 899,
     precioRegular: 899,
-    requestsQuota: 40,
-    videoRequestsQuota: 10,
-    carouselRequestsQuota: 10,
+    requestsQuota: 60,
     planningSlotsPerDay: 2,
     destacada: true,
     beneficios: [
       "Hasta 60 piezas de contenido al mes",
       "Hasta dos publicaciones por día",
-      "40 imágenes, 10 videos y 10 carruseles",
+      "Imagen, video o carrusel — tú decides la mezcla",
       "Planificación mensual con Wit",
     ],
   },

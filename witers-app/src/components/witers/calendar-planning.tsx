@@ -1105,20 +1105,18 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
   }
 
   function quotaExhaustedMessage(
-    format: "imagen" | "video" | "carrusel" | undefined,
     used: number | undefined,
     quota: number | undefined,
   ): { es: string; en: string } {
-    const formatLabel = { imagen: "imágenes", video: "videos", carrusel: "carruseles" };
-    if (!format || used === undefined || quota === undefined) {
+    if (used === undefined || quota === undefined) {
       return {
         es: "Ya usaste todas tus solicitudes disponibles este mes.",
         en: "You've already used all your available requests this month.",
       };
     }
     return {
-      es: `Ya usaste tus ${quota} ${formatLabel[format]} disponibles este mes (${used}/${quota}). Los demás formatos tienen su propio cupo, así que puedes seguir pidiendo esos.`,
-      en: `You've already used your ${quota} available ${format === "imagen" ? "images" : format === "video" ? "videos" : "carousels"} this month (${used}/${quota}). Other formats have their own quota, so you can keep requesting those.`,
+      es: `Ya usaste tus ${quota} piezas disponibles este mes (${used}/${quota}).`,
+      en: `You've already used your ${quota} available pieces this month (${used}/${quota}).`,
     };
   }
 
@@ -1135,16 +1133,11 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
       const data = (await res.json()) as {
         ok: boolean;
         error?: string;
-        format?: "imagen" | "video" | "carrusel";
         used?: number;
         quota?: number;
       };
       if (!data.ok) {
-        // Cada formato (imagen/video/carrusel) tiene su propio cupo mensual
-        // — decir cuál se agotó y con qué números evita que el cliente
-        // piense que ya no le queda nada del plan cuando solo se acabó,
-        // por ejemplo, el cupo de carruseles.
-        const quotaMessage = quotaExhaustedMessage(data.format, data.used, data.quota);
+        const quotaMessage = quotaExhaustedMessage(data.used, data.quota);
         setError(
           data.error === "sin_saldo"
             ? t(quotaMessage.es, quotaMessage.en)

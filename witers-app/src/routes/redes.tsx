@@ -386,20 +386,16 @@ function Planes() {
                   {t("piezas de diseño al mes", "design pieces per month")}
                 </li>
                 <li className="flex items-baseline gap-2">
-                  <span className="font-extrabold text-wit-blue">
-                    {plan.carouselRequestsQuota > 0 ? plan.carouselRequestsQuota : "—"}
-                  </span>
-                  {plan.carouselRequestsQuota > 0
-                    ? t("carruseles al mes", "carousels per month")
-                    : t("sin carruseles en este plan", "no carousels on this plan")}
+                  <span className="font-extrabold text-wit-blue">{plan.planningSlotsPerDay}</span>
+                  {plan.planningSlotsPerDay > 1
+                    ? t("publicaciones por día", "posts per day")
+                    : t("publicación por día", "post per day")}
                 </li>
-                <li className="flex items-baseline gap-2">
-                  <span className="font-extrabold text-wit-blue">
-                    {plan.videoRequestsQuota > 0 ? plan.videoRequestsQuota : "—"}
-                  </span>
-                  {plan.videoRequestsQuota > 0
-                    ? t("videos al mes", "videos per month")
-                    : t("sin video en este plan", "no video on this plan")}
+                <li className="text-wit-gray">
+                  {t(
+                    "Imagen, video o carrusel — tú decides la mezcla",
+                    "Image, video, or carousel — you choose the mix",
+                  )}
                 </li>
               </ul>
               <a

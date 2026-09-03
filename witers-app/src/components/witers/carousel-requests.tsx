@@ -65,7 +65,10 @@ const STATUS_LABEL: Record<string, { es: string; en: string; cls: string }> = {
 };
 
 // Same landing pattern as VideoLandingScreen (and panel.tsx's
-// HablaConWitScreen for images) — a big centered call to action, not a form.
+// HablaConWitScreen for images) — a big centered call to action, not a
+// form. Carrusel spends from the same shared monthly pool as imagen/video
+// (see membership-plans.ts) — quotaUsed/quotaTotal are the account's
+// total, not a carousel-only count.
 export function CarouselLandingScreen({
   active,
   quotaUsed,
@@ -87,46 +90,30 @@ export function CarouselLandingScreen({
         <GalleryHorizontal className="h-11 w-11 text-wit-blue" strokeWidth={1.5} />
       </div>
       <p className="max-w-xs text-base text-wit-gray">
-        {quotaTotal === 0
+        {remaining <= 0
           ? t(
-              "Los planes Grow y Scale incluyen carruseles para redes sociales.",
-              "The Grow and Scale plans include carousels for social media.",
+              "Ya usaste tus piezas disponibles este mes. Vuelven a estar disponibles en tu próximo ciclo.",
+              "You've used up your available pieces this month. They'll be available again next cycle.",
             )
-          : remaining <= 0
-            ? t(
-                "Ya usaste tus carruseles disponibles este mes. Vuelven a estar disponibles en tu próximo ciclo.",
-                "You've used up your available carousels this month. They'll be available again next cycle.",
-              )
-            : t(
-                "Cuéntale a Wit de qué quieres tu carrusel — él arma las 4 láminas contigo.",
-                "Tell Wit what you want your carousel to be about — he'll build the 4 slides with you.",
-              )}
+          : t(
+              "Cuéntale a Wit de qué quieres tu carrusel — él arma las 4 láminas contigo.",
+              "Tell Wit what you want your carousel to be about — he'll build the 4 slides with you.",
+            )}
       </p>
-      {quotaTotal === 0 ? (
-        <a
-          href="/upgrade"
-          className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97]"
-        >
-          {t("Ver planes", "View plans")}
-        </a>
-      ) : (
-        <button
-          type="button"
-          onClick={onStart}
-          disabled={blocked}
-          className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {t("🖼️ Nuevo carrusel", "🖼️ New carousel")}
-        </button>
-      )}
-      {quotaTotal > 0 ? (
-        <p className="text-xs font-semibold text-wit-gray">
-          {t(
-            `${quotaUsed} de ${quotaTotal} carruseles usados este mes.`,
-            `${quotaUsed} of ${quotaTotal} carousels used this month.`,
-          )}
-        </p>
-      ) : null}
+      <button
+        type="button"
+        onClick={onStart}
+        disabled={blocked}
+        className="wit-glow-button flex items-center gap-2 rounded-full px-8 py-4 text-base font-bold text-white shadow-[0_20px_50px_rgba(255,63,176,0.35)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {t("🖼️ Nuevo carrusel", "🖼️ New carousel")}
+      </button>
+      <p className="text-xs font-semibold text-wit-gray">
+        {t(
+          `${quotaUsed} de ${quotaTotal} piezas usadas este mes.`,
+          `${quotaUsed} of ${quotaTotal} pieces used this month.`,
+        )}
+      </p>
     </div>
   );
 }

@@ -79,13 +79,13 @@ export type Membership = {
   status: string;
   plan: string;
   price_mxn: number;
+  // One shared monthly pool across imagen/video/carrusel — see
+  // membership-plans.ts. The DB still carries the retired
+  // video_requests_quota/carousel_requests_quota/*_used columns (never
+  // dropped, just no longer read) from when each format had its own cap.
   requests_quota: number;
   requests_used: number;
   bonus_requests_quota: number;
-  video_requests_quota: number;
-  video_requests_used: number;
-  carousel_requests_quota: number;
-  carousel_requests_used: number;
   activated_at: string | null;
 };
 
