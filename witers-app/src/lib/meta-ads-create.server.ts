@@ -209,15 +209,28 @@ export async function suggestMetaInterests(
 
 export type CampaignObjective = "trafico" | "interaccion" | "ventas";
 
+// Where a "trafico" ad sends people — Meta's own destination_type family
+// for a visits objective. "website" is its own category; Meta has no
+// value combining it with a Page/profile destination, only a combined
+// value for the two profiles together (both_profiles).
+export type MetaTrafficDestination =
+  "website" | "facebook_page" | "instagram_profile" | "both_profiles";
+
+// Which inbox(es) a messaging ad ("interaccion" or "ventas" — both are
+// pure messaging destinations now, see resolveObjective) can open. A
+// client can pick any non-empty combination of the 3.
+export type MetaMessagingChannel = "whatsapp" | "messenger" | "instagram_direct";
+
 // Maps our 3 client-facing objectives to Meta's real ODAX objective +
-// optimization goal. "Ventas" uses Meta's real Click-to-WhatsApp ad type
-// (destination_type: WHATSAPP, set on the ad set below) — a messaging
-// destination in ODAX, which is why it's OUTCOME_ENGAGEMENT rather than
-// OUTCOME_TRAFFIC even though the client picks "Más mensajes." The ideal
-// optimization_goal for this, CONVERSATIONS, isn't available for numbers
-// hosted on WhatsApp's own Cloud API (the common case today), so this uses
-// IMPRESSIONS instead — the same fallback Meta's own reference payload for
-// this ad type uses.
+// optimization goal. "Interacción" and "Ventas" are BOTH messaging
+// destinations now (destination_type below) — Meta's own "Interacción"
+// objective's "Mensajes" conversion location and its "Ventas" objective's
+// "Mensajes" conversion location are the same underlying mechanism, just
+// framed differently for the client; there's no separate post-engagement
+// mode here anymore. optimization_goal is IMPRESSIONS rather than the
+// ideal CONVERSATIONS because CONVERSATIONS isn't available for numbers
+// hosted on WhatsApp's own Cloud API (the common case today) — the same
+// fallback Meta's own reference payload for this ad type uses.
 function resolveObjective(objective: CampaignObjective): {
   metaObjective: string;
   optimizationGoal: string;
@@ -226,28 +239,80 @@ function resolveObjective(objective: CampaignObjective): {
     case "trafico":
       return { metaObjective: "OUTCOME_TRAFFIC", optimizationGoal: "LINK_CLICKS" };
     case "ventas":
-      return { metaObjective: "OUTCOME_ENGAGEMENT", optimizationGoal: "IMPRESSIONS" };
     case "interaccion":
-      return { metaObjective: "OUTCOME_ENGAGEMENT", optimizationGoal: "POST_ENGAGEMENT" };
+      return { metaObjective: "OUTCOME_ENGAGEMENT", optimizationGoal: "IMPRESSIONS" };
+  }
+}
+
+// Meta's exact destination_type values for a messaging ad set — verified
+// against Meta's own Marketing API Python SDK (facebook/facebook-python-
+// business-sdk, adobjects/adset.py, the DestinationType class), not
+// invented. There's no generic "pick several" flag; each combination of
+// the 3 channels is its own literal enum value.
+export function resolveMessagingDestinationType(channels: MetaMessagingChannel[]): string {
+  const whatsapp = channels.includes("whatsapp");
+  const messenger = channels.includes("messenger");
+  const instagram = channels.includes("instagram_direct");
+  if (whatsapp && messenger && instagram) return "MESSAGING_INSTAGRAM_DIRECT_MESSENGER_WHATSAPP";
+  if (instagram && messenger) return "MESSAGING_INSTAGRAM_DIRECT_MESSENGER";
+  if (instagram && whatsapp) return "MESSAGING_INSTAGRAM_DIRECT_WHATSAPP";
+  if (messenger && whatsapp) return "MESSAGING_MESSENGER_WHATSAPP";
+  if (instagram) return "INSTAGRAM_DIRECT";
+  if (messenger) return "MESSENGER";
+  return "WHATSAPP";
+}
+
+// Same idea for "trafico" — verified from the same SDK source.
+function resolveTrafficDestinationType(destination: MetaTrafficDestination): string {
+  switch (destination) {
+    case "website":
+      return "WEBSITE";
+    case "facebook_page":
+      return "FACEBOOK_PAGE";
+    case "instagram_profile":
+      return "INSTAGRAM_PROFILE";
+    case "both_profiles":
+      return "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE";
   }
 }
 
 function resolveDestinationLink(
   objective: CampaignObjective,
   pageId: string,
+  trafficDestination: MetaTrafficDestination | null,
   websiteUrl: string | null,
 ): string {
-  // Real Click-to-WhatsApp ads still need a link_data.link value even
-  // though Meta resolves the actual destination from
-  // promoted_object.whatsapp_phone_number, not from this URL — this exact
-  // placeholder is the one Meta's own Click-to-WhatsApp reference payload
-  // uses in that field.
-  if (objective === "ventas") return "https://api.whatsapp.com/send";
-  // "Tráfico" can go to the client's own website when they have one —
-  // falls back to their Facebook Page (their "redes") otherwise, same as
-  // every other objective.
-  if (objective === "trafico" && websiteUrl) return websiteUrl;
+  // Real messaging-destination ads still need a link_data.link value even
+  // though Meta resolves the actual destination from destination_type +
+  // promoted_object, not from this URL — this exact placeholder is the
+  // one Meta's own Click-to-WhatsApp reference payload uses in that field,
+  // reused here for every messaging channel since none of them route off
+  // this link either.
+  if (objective === "ventas" || objective === "interaccion") return "https://api.whatsapp.com/send";
+  if (trafficDestination === "website" && websiteUrl) return websiteUrl;
+  // Page/profile destinations don't route off this link either (the
+  // creative's page_id/instagram_actor_id do that) — same harmless
+  // placeholder pattern.
   return `https://www.facebook.com/${pageId}`;
+}
+
+// Resolves the Instagram professional account linked to the client's own
+// connected Facebook Page — the id Meta's ad creative needs as
+// instagram_actor_id for any Instagram-attributed ad (profile visits or
+// Instagram Direct messaging). A long-standing, standard Graph API field,
+// not part of the newer WhatsApp/messaging-destination surface.
+async function resolveInstagramActorId(
+  pageId: string,
+  accessToken: string,
+): Promise<string | null> {
+  const res = await graphRequest<{ instagram_business_account?: { id: string } }>(
+    `/${pageId}`,
+    accessToken,
+    { fields: "instagram_business_account" },
+    "GET",
+  );
+  if (!res.ok) return null;
+  return res.data.instagram_business_account?.id ?? null;
 }
 
 export type CreatePausedCampaignInput = {
@@ -299,10 +364,14 @@ export type CreatePausedCampaignInput = {
   // — required. Callers must confirm it's set before calling this at all;
   // see /api/campaigns-create's "pagina_no_conectada" check.
   pageId: string;
-  // Required only when objective === "ventas".
+  // Required only when objective === "trafico".
+  trafficDestination: MetaTrafficDestination | null;
+  // Required (non-empty) when objective is "interaccion" or "ventas".
+  messagingChannels: MetaMessagingChannel[];
+  // Required only when messagingChannels includes "whatsapp".
   whatsappNumber: string | null;
-  // Optional, only used when objective === "trafico" — the client's own
-  // site. Null/omitted falls back to their Facebook Page as the destination.
+  // Optional, only used when trafficDestination === "website". Null/omitted
+  // falls back to their Facebook Page as the destination.
   websiteUrl: string | null;
 };
 
@@ -417,6 +486,26 @@ export async function createPausedCampaignForRequest(
   const act = `act_${adAccountId}`;
   const { metaObjective, optimizationGoal } = resolveObjective(objective);
 
+  if (objective === "trafico" && !input.trafficDestination) {
+    return { ok: false, error: "falta_destino_trafico" };
+  }
+  if ((objective === "interaccion" || objective === "ventas") && !input.messagingChannels.length) {
+    return { ok: false, error: "falta_canal_mensajeria" };
+  }
+  // Resolved once, before creating anything — a missing Instagram
+  // connection should stop the whole request, not leave a paused
+  // campaign/ad set behind that can never actually deliver to Instagram.
+  const needsInstagram =
+    input.trafficDestination === "instagram_profile" ||
+    input.trafficDestination === "both_profiles" ||
+    input.messagingChannels.includes("instagram_direct");
+  const instagramActorId = needsInstagram
+    ? await resolveInstagramActorId(pageId, accessToken)
+    : null;
+  if (needsInstagram && !instagramActorId) {
+    return { ok: false, error: "instagram_no_conectado" };
+  }
+
   const campaign = await graphRequest<{ id: string }>(`/${act}/campaigns`, accessToken, {
     name: `WITERS — ${input.requestTitle}`,
     objective: metaObjective,
@@ -469,27 +558,34 @@ export async function createPausedCampaignForRequest(
       end_time: endTime.toISOString(),
       billing_event: "IMPRESSIONS",
       optimization_goal: optimizationGoal,
-      // Required whenever optimization_goal is POST_ENGAGEMENT — it needs to
-      // know which Page's post it's optimizing engagement for. Omitting this
-      // for "interacción" campaigns is what used to fail with "Invalid
-      // parameter" on every real attempt.
-      ...(objective === "interaccion" ? { promoted_object: { page_id: pageId } } : {}),
-      // Real Click-to-WhatsApp: destination_type tells Meta the ad clicks
-      // into a WhatsApp conversation rather than a link/Page, and
-      // promoted_object carries WHICH Page + WhatsApp number — both fields
+      // "Interacción" and "Ventas" are both messaging destinations now:
+      // destination_type tells Meta which inbox(es) the ad opens, and
+      // promoted_object carries the Page (always) plus the WhatsApp number
+      // (only when WhatsApp is one of the chosen channels) — both fields
       // are Meta's own documented shape for this ad type, not invented.
-      ...(objective === "ventas"
+      ...(objective === "interaccion" || objective === "ventas"
         ? {
-            destination_type: "WHATSAPP",
-            promoted_object: { page_id: pageId, whatsapp_phone_number: whatsappDigits },
+            destination_type: resolveMessagingDestinationType(input.messagingChannels),
+            promoted_object: {
+              page_id: pageId,
+              ...(input.messagingChannels.includes("whatsapp")
+                ? { whatsapp_phone_number: whatsappDigits }
+                : {}),
+            },
           }
+        : {}),
+      // "Tráfico": destination_type says which surface the ad sends people
+      // to (website / Facebook Page / Instagram profile / both profiles) —
+      // no promoted_object needed here, same as before this feature (the
+      // creative's own page_id/instagram_actor_id carry that instead).
+      ...(objective === "trafico" && input.trafficDestination
+        ? { destination_type: resolveTrafficDestinationType(input.trafficDestination) }
         : {}),
       targeting: {
         // Deliberately left on Meta's automatic placements (Facebook +
         // Instagram + the rest) rather than restricted to Facebook only —
-        // no client has an Instagram account explicitly connected here, but
-        // Instagram delivery is still wanted to see how it performs in
-        // practice for Pages that do have one linked in Meta's own system.
+        // this is about which ad SURFACES can show the ad, separate from
+        // destination_type above (which inbox/page it opens once tapped).
         geo_locations: geoLocations,
         age_min: input.ageMin,
         age_max: input.ageMax,
@@ -535,8 +631,26 @@ export async function createPausedCampaignForRequest(
     ? "Quitamos la segmentación por intereses porque uno de los identificadores ya no era válido para Meta — la campaña llegó a todo el público en el rango de edad/ubicación elegido en su lugar. "
     : "";
 
-  const link = resolveDestinationLink(objective, pageId, input.websiteUrl);
-  const whatsappCallToAction = { type: "WHATSAPP_MESSAGE", value: { app_destination: "WHATSAPP" } };
+  const link = resolveDestinationLink(
+    objective,
+    pageId,
+    input.trafficDestination,
+    input.websiteUrl,
+  );
+  // WHATSAPP_MESSAGE + app_destination is the one call-to-action shape
+  // verified against Meta's own Click-to-WhatsApp reference payload — used
+  // as-is when WhatsApp is the only chosen channel. For every other
+  // messaging combination (Messenger, Instagram Direct, or any mix without
+  // an exact WhatsApp-only match) this falls back to MESSAGE_PAGE, Meta's
+  // long-standing generic "send message" call-to-action — actual routing
+  // to the right inbox(es) is controlled by destination_type on the ad set
+  // above, not by this button, so a generic CTA here is a safe default
+  // rather than a guessed channel-specific one.
+  const isWhatsAppOnly =
+    input.messagingChannels.length === 1 && input.messagingChannels[0] === "whatsapp";
+  const messagingCallToAction = isWhatsAppOnly
+    ? { type: "WHATSAPP_MESSAGE", value: { app_destination: "WHATSAPP" } }
+    : { type: "MESSAGE_PAGE" };
 
   if (input.media.kind === "video") {
     const videoUpload = await uploadAdVideo(adAccountId, accessToken, input.media);
@@ -556,11 +670,14 @@ export async function createPausedCampaignForRequest(
       name: `WITERS — ${input.requestTitle}`,
       object_story_spec: {
         page_id: pageId,
+        ...(instagramActorId ? { instagram_actor_id: instagramActorId } : {}),
         video_data: {
           video_id: videoUpload.data.id,
           message: input.adMessages[0],
           call_to_action:
-            objective === "ventas" ? whatsappCallToAction : { type: "LEARN_MORE", value: { link } },
+            objective === "ventas" || objective === "interaccion"
+              ? messagingCallToAction
+              : { type: "LEARN_MORE", value: { link } },
         },
       },
     });
@@ -623,52 +740,57 @@ export async function createPausedCampaignForRequest(
     };
   }
 
-  // "Ventas" goes straight to a single plain link_data creative with the
-  // WhatsApp call-to-action — Meta's asset_feed_spec (the multi-variant
-  // template used below for the other two objectives) pairs
+  const isMessaging = objective === "ventas" || objective === "interaccion";
+  // Messaging objectives go straight to a single plain link_data creative
+  // with the messaging call-to-action — Meta's asset_feed_spec (the
+  // multi-variant template used below for "trafico") pairs
   // call_to_action_types with a plain link_urls destination, and there's
-  // no verified reference showing it also supports a WhatsApp/app
+  // no verified reference showing it also supports a messaging/app
   // destination the same way; rather than guess at an unverified
   // combination, this uses only the exact shape Meta documents for
   // Click-to-WhatsApp, at the cost of losing the multi-copy-variant
-  // rotation "ventas" ads would otherwise get.
-  let creative =
-    objective === "ventas"
-      ? await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
-          name: `WITERS — ${input.requestTitle}`,
-          object_story_spec: {
-            page_id: pageId,
-            link_data: {
-              image_hash: imageHash,
-              message: input.adMessages[0],
-              link,
-              call_to_action: whatsappCallToAction,
-            },
+  // rotation "trafico" ads get.
+  let creative = isMessaging
+    ? await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
+        name: `WITERS — ${input.requestTitle}`,
+        object_story_spec: {
+          page_id: pageId,
+          ...(instagramActorId ? { instagram_actor_id: instagramActorId } : {}),
+          link_data: {
+            image_hash: imageHash,
+            message: input.adMessages[0],
+            link,
+            call_to_action: messagingCallToAction,
           },
-        })
-      : // A single ad whose creative carries all copy variants as text
-        // options — Meta's own "plantilla de mensajes" (the same
-        // multiple-text-variations feature Ads Manager offers on one ad),
-        // which rotates/tests between them on its own. Tried first; if
-        // this ad account/API version rejects asset_feed_spec, fall back
-        // to one plain ad with just the first variant rather than failing
-        // the whole campaign over it.
-        await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
-          name: `WITERS — ${input.requestTitle}`,
-          object_story_spec: { page_id: pageId },
-          asset_feed_spec: {
-            images: [{ hash: imageHash }],
-            bodies: input.adMessages.map((text) => ({ text })),
-            link_urls: [{ website_url: link }],
-            call_to_action_types: ["LEARN_MORE"],
-            ad_formats: ["SINGLE_IMAGE"],
-          },
-        });
-  if (!creative.ok && objective !== "ventas") {
+        },
+      })
+    : // A single ad whose creative carries all copy variants as text
+      // options — Meta's own "plantilla de mensajes" (the same
+      // multiple-text-variations feature Ads Manager offers on one ad),
+      // which rotates/tests between them on its own. Tried first; if
+      // this ad account/API version rejects asset_feed_spec, fall back
+      // to one plain ad with just the first variant rather than failing
+      // the whole campaign over it.
+      await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
+        name: `WITERS — ${input.requestTitle}`,
+        object_story_spec: {
+          page_id: pageId,
+          ...(instagramActorId ? { instagram_actor_id: instagramActorId } : {}),
+        },
+        asset_feed_spec: {
+          images: [{ hash: imageHash }],
+          bodies: input.adMessages.map((text) => ({ text })),
+          link_urls: [{ website_url: link }],
+          call_to_action_types: ["LEARN_MORE"],
+          ad_formats: ["SINGLE_IMAGE"],
+        },
+      });
+  if (!creative.ok && !isMessaging) {
     creative = await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
       name: `WITERS — ${input.requestTitle}`,
       object_story_spec: {
         page_id: pageId,
+        ...(instagramActorId ? { instagram_actor_id: instagramActorId } : {}),
         link_data: { image_hash: imageHash, message: input.adMessages[0], link },
       },
     });

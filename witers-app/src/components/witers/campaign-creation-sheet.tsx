@@ -36,6 +36,8 @@ type WhatsAppNumber = {
   verifiedName: string | null;
   status: string | null;
 };
+type TrafficDestination = "website" | "facebook_page" | "instagram_profile" | "both_profiles";
+type MessagingChannel = "whatsapp" | "messenger" | "instagram_direct";
 
 const RECOMMENDED_DAILY_MIN = 200;
 const RECOMMENDED_DAILY_MAX = 500;
@@ -61,6 +63,10 @@ export function CampaignCreationSheet({
   const [pendingAccounts, setPendingAccounts] = useState<AccountOption[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [objective, setObjective] = useState<"ventas" | "trafico" | "interaccion">("ventas");
+  const [trafficDestination, setTrafficDestination] = useState<TrafficDestination | null>(null);
+  // Preselecting WhatsApp for "ventas" preserves the wizard's previous
+  // behavior, where the WhatsApp picker was already shown by default.
+  const [messagingChannels, setMessagingChannels] = useState<MessagingChannel[]>(["whatsapp"]);
   const [dailyBudgetMxn, setDailyBudgetMxn] = useState(300);
   const [durationDays, setDurationDays] = useState(7);
   const [customDuration, setCustomDuration] = useState(false);
@@ -169,6 +175,12 @@ export function CampaignCreationSheet({
     }
   }, []);
 
+  function toggleMessagingChannel(channel: MessagingChannel) {
+    setMessagingChannels((current) =>
+      current.includes(channel) ? current.filter((c) => c !== channel) : [...current, channel],
+    );
+  }
+
   function connectMeta() {
     sessionStorage.setItem("witers_pending_campaign_piece", piece.requestId);
     const returnTo = `/panel?campaign_entry=${encodeURIComponent(piece.requestId)}&campaign=1`;
@@ -208,8 +220,26 @@ export function CampaignCreationSheet({
         );
         return;
       }
+      if (objective === "trafico" && !trafficDestination) {
+        setError(t("Elige a dónde quieres llevar a las personas.", "Choose where to send people."));
+        return;
+      }
+      if (objective === "trafico" && trafficDestination === "website" && !websiteUrl.trim()) {
+        setError(t("Escribe la URL de tu sitio web.", "Enter your website URL."));
+        return;
+      }
+      if ((objective === "interaccion" || objective === "ventas") && !messagingChannels.length) {
+        setError(
+          t(
+            "Elige por dónde quieres recibir los mensajes.",
+            "Choose where you want to receive the messages.",
+          ),
+        );
+        return;
+      }
       if (
-        objective === "ventas" &&
+        (objective === "interaccion" || objective === "ventas") &&
+        messagingChannels.includes("whatsapp") &&
         !whatsappNumbers.some((n) => n.displayNumber === whatsappNumber)
       ) {
         setError(
@@ -261,8 +291,18 @@ export function CampaignCreationSheet({
           ageMax,
           interestIds: [],
           adMessages: [message.trim()],
-          whatsappNumber: objective === "ventas" ? whatsappNumber.trim() : undefined,
-          websiteUrl: objective === "trafico" && websiteUrl.trim() ? websiteUrl.trim() : undefined,
+          trafficDestination: objective === "trafico" ? trafficDestination : undefined,
+          messagingChannels:
+            objective === "interaccion" || objective === "ventas" ? messagingChannels : [],
+          whatsappNumber:
+            (objective === "interaccion" || objective === "ventas") &&
+            messagingChannels.includes("whatsapp")
+              ? whatsappNumber.trim()
+              : undefined,
+          websiteUrl:
+            objective === "trafico" && trafficDestination === "website" && websiteUrl.trim()
+              ? websiteUrl.trim()
+              : undefined,
         }),
       });
       const data = (await response.json().catch(() => ({}))) as {
@@ -304,6 +344,18 @@ export function CampaignCreationSheet({
           whatsapp_no_disponible: t(
             "Ese número de WhatsApp ya no está disponible en tu cuenta de Meta. Elige otro.",
             "That WhatsApp number is no longer available on your Meta account. Choose another one.",
+          ),
+          instagram_no_conectado: t(
+            "No encontramos una cuenta de Instagram conectada a tu página de Facebook. Conéctala en Meta Business Suite antes de continuar.",
+            "We couldn't find an Instagram account connected to your Facebook Page. Connect it in Meta Business Suite before continuing.",
+          ),
+          falta_destino_trafico: t(
+            "Elige a dónde quieres llevar a las personas.",
+            "Choose where to send people.",
+          ),
+          falta_canal_mensajeria: t(
+            "Elige por dónde quieres recibir los mensajes.",
+            "Choose where you want to receive the messages.",
           ),
         };
         setError(
@@ -380,6 +432,21 @@ export function CampaignCreationSheet({
     [social.instagram ? "Instagram" : null, social.facebook ? "Facebook" : null]
       .filter(Boolean)
       .join(" · ") || t("Ubicaciones automáticas de Meta", "Meta automatic placements");
+  const trafficDestinationLabel: Record<TrafficDestination, string> = {
+    website: t("Sitio web", "Website"),
+    facebook_page: t("Página de Facebook", "Facebook Page"),
+    instagram_profile: t("Perfil de Instagram", "Instagram profile"),
+    both_profiles: t("Instagram y Facebook", "Instagram and Facebook"),
+  };
+  const messagingChannelLabel: Record<MessagingChannel, string> = {
+    whatsapp: "WhatsApp",
+    messenger: "Messenger",
+    instagram_direct: "Instagram",
+  };
+  const destinationSummary =
+    objective === "trafico"
+      ? (trafficDestination && trafficDestinationLabel[trafficDestination]) || "—"
+      : messagingChannels.map((c) => messagingChannelLabel[c]).join(" · ") || "—";
   const sheetHeight = sheetRef.current?.getBoundingClientRect().height || 1;
   const dragProgress = mobile ? Math.min(1, Math.max(0, offset / sheetHeight)) : 0;
 
@@ -595,6 +662,85 @@ export function CampaignCreationSheet({
                     ))}
                   </div>
                 </fieldset>
+                {objective === "trafico" ? (
+                  <fieldset>
+                    <legend className="text-sm font-extrabold text-wit-ink">
+                      {t(
+                        "¿A dónde quieres llevar a las personas?",
+                        "Where do you want to send people?",
+                      )}
+                    </legend>
+                    <div className="mt-3 grid gap-2">
+                      {(
+                        [
+                          ["website", t("Sitio web", "Website")],
+                          ["instagram_profile", t("Perfil de Instagram", "Instagram profile")],
+                          ["facebook_page", t("Página de Facebook", "Facebook Page")],
+                          ["both_profiles", t("Instagram y Facebook", "Instagram and Facebook")],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <label
+                          key={value}
+                          className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border px-4 ${trafficDestination === value ? "border-wit-blue bg-wit-blue/[0.035]" : "border-wit-ink/8"}`}
+                        >
+                          <input
+                            type="radio"
+                            name="traffic-destination"
+                            checked={trafficDestination === value}
+                            onChange={() => setTrafficDestination(value)}
+                            className="accent-[#1557ff]"
+                          />
+                          <span className="text-sm font-bold text-wit-ink">{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {trafficDestination === "website" ? (
+                      <label className="mt-3 block">
+                        <span className="text-xs font-bold text-wit-gray">
+                          {t("URL del sitio", "Website URL")}
+                        </span>
+                        <input
+                          value={websiteUrl}
+                          onChange={(event) => setWebsiteUrl(event.target.value)}
+                          placeholder="https://"
+                          className="mt-1 h-12 w-full rounded-2xl border border-wit-ink/10 px-3 text-sm"
+                        />
+                      </label>
+                    ) : null}
+                  </fieldset>
+                ) : null}
+                {objective === "interaccion" || objective === "ventas" ? (
+                  <fieldset>
+                    <legend className="text-sm font-extrabold text-wit-ink">
+                      {t(
+                        "¿Por dónde quieres recibir los mensajes?",
+                        "Where do you want to receive the messages?",
+                      )}
+                    </legend>
+                    <div className="mt-3 grid gap-2">
+                      {(
+                        [
+                          ["instagram_direct", t("Instagram", "Instagram")],
+                          ["messenger", t("Messenger", "Messenger")],
+                          ["whatsapp", t("WhatsApp", "WhatsApp")],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <label
+                          key={value}
+                          className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border px-4 ${messagingChannels.includes(value) ? "border-wit-blue bg-wit-blue/[0.035]" : "border-wit-ink/8"}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={messagingChannels.includes(value)}
+                            onChange={() => toggleMessagingChannel(value)}
+                            className="h-4 w-4 accent-wit-blue"
+                          />
+                          <span className="text-sm font-bold text-wit-ink">{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                ) : null}
                 <label className="block">
                   <span className="text-sm font-extrabold text-wit-ink">
                     {t("Presupuesto diario", "Daily budget")}
@@ -709,7 +855,8 @@ export function CampaignCreationSheet({
                     className="mt-2 w-full resize-none rounded-2xl border border-wit-ink/10 p-3 text-sm outline-none focus:border-wit-blue"
                   />
                 </label>
-                {objective === "ventas" ? (
+                {(objective === "interaccion" || objective === "ventas") &&
+                messagingChannels.includes("whatsapp") ? (
                   <div>
                     <span className="text-sm font-extrabold text-wit-ink">
                       {t(
@@ -801,19 +948,6 @@ export function CampaignCreationSheet({
                     )}
                   </div>
                 ) : null}
-                {objective === "trafico" ? (
-                  <label className="block">
-                    <span className="text-sm font-extrabold text-wit-ink">
-                      {t("Sitio web (opcional)", "Website (optional)")}
-                    </span>
-                    <input
-                      value={websiteUrl}
-                      onChange={(event) => setWebsiteUrl(event.target.value)}
-                      placeholder="https://"
-                      className="mt-2 h-12 w-full rounded-2xl border border-wit-ink/10 px-3 text-sm"
-                    />
-                  </label>
-                ) : null}
                 <div className="rounded-2xl bg-wit-mist/35 p-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-wit-gray">{t("Presupuesto diario", "Daily budget")}</span>
@@ -873,13 +1007,21 @@ export function CampaignCreationSheet({
                     t("Inversión estimada", "Estimated investment"),
                     `$${investment.toLocaleString()} MXN`,
                   ],
+                  [
+                    objective === "trafico"
+                      ? t("Destino", "Destination")
+                      : t("Mensajes por", "Messages via"),
+                    destinationSummary,
+                  ],
                   [t("Ubicaciones", "Placements"), platforms],
                   [
                     t("Cuenta publicitaria", "Ad account"),
                     account.accountName || `ID: ${account.accountId}`,
                   ],
                   [t("Público", "Audience"), t("Automático", "Automatic")],
-                  ...(objective === "ventas" && whatsappNumber
+                  ...((objective === "interaccion" || objective === "ventas") &&
+                  messagingChannels.includes("whatsapp") &&
+                  whatsappNumber
                     ? [["WhatsApp", whatsappNumber]]
                     : []),
                 ].map(([label, value]) => (

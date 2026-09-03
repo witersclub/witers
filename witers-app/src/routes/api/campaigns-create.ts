@@ -35,18 +35,39 @@ const schema = z
     radiusKm: z.number().min(5).max(50).optional(),
     interestIds: z.array(z.string().min(1)).max(10).default([]),
     adMessages: z.array(z.string().min(1).max(500)).min(1).max(3),
-    // Required only for "ventas" (drives the wa.me link) — chosen from the
-    // client's own real, connected WhatsApp Business numbers (see
+    // Required only when objective === "trafico" — which surface the ad
+    // sends people to. Meta's own destination_type family for this
+    // objective (see resolveTrafficDestinationType in meta-ads-create).
+    trafficDestination: z
+      .enum(["website", "facebook_page", "instagram_profile", "both_profiles"])
+      .optional(),
+    // Required (non-empty) when objective is "interaccion" or "ventas" —
+    // which inbox(es) the ad opens. Any combination Meta's own
+    // destination_type enum supports (see resolveMessagingDestinationType).
+    messagingChannels: z
+      .array(z.enum(["whatsapp", "messenger", "instagram_direct"]))
+      .max(3)
+      .default([]),
+    // Required only when messagingChannels includes "whatsapp" — chosen
+    // from the client's own real, connected WhatsApp Business numbers (see
     // meta-whatsapp.server.ts). Re-verified against Meta below rather than
     // trusted as-is; optionally saved as brand_profiles.default_whatsapp_number
     // separately, via /api/meta/whatsapp/default.
     whatsappNumber: z.string().min(6).max(40).optional(),
-    // Optional, only meaningful for "trafico" — omitted means the ad
-    // points to the client's Facebook Page ("sus redes") instead.
+    // Optional, only meaningful when trafficDestination === "website" —
+    // omitted means the ad points to the client's Facebook Page instead.
     websiteUrl: z.string().url().max(300).optional(),
   })
   .refine((v) => v.ageMin <= v.ageMax, { message: "rango_edad_invalido" })
-  .refine((v) => v.objective !== "ventas" || Boolean(v.whatsappNumber), {
+  .refine((v) => v.objective !== "trafico" || Boolean(v.trafficDestination), {
+    message: "falta_destino_trafico",
+  })
+  .refine(
+    (v) =>
+      (v.objective !== "interaccion" && v.objective !== "ventas") || v.messagingChannels.length > 0,
+    { message: "falta_canal_mensajeria" },
+  )
+  .refine((v) => !v.messagingChannels.includes("whatsapp") || Boolean(v.whatsappNumber), {
     message: "falta_whatsapp",
   });
 
@@ -144,11 +165,12 @@ export const Route = createFileRoute("/api/campaigns-create")({
         const oauthAccessToken =
           (await getMetaAdOAuthAccessToken(user.id, adAccountId)) ?? undefined;
 
-        // "ventas" needs a real WhatsApp destination — re-verify it against
-        // this session's own connected Meta login server-side rather than
-        // trusting whatever digits the client sent (a stale/foreign/typo'd
-        // number would otherwise silently build an invalid campaign).
-        if (parsed.data.objective === "ventas") {
+        // A WhatsApp-inclusive messaging channel needs a real WhatsApp
+        // destination — re-verify it against this session's own connected
+        // Meta login server-side rather than trusting whatever digits the
+        // client sent (a stale/foreign/typo'd number would otherwise
+        // silently build an invalid campaign).
+        if (parsed.data.messagingChannels.includes("whatsapp")) {
           if (!oauthAccessToken) {
             return json({ ok: false, error: "whatsapp_no_conectado" }, { status: 409 });
           }
@@ -228,6 +250,8 @@ export const Route = createFileRoute("/api/campaigns-create")({
           radiusKm: parsed.data.radiusKm ?? null,
           interestIds: parsed.data.interestIds,
           pageId,
+          trafficDestination: parsed.data.trafficDestination ?? null,
+          messagingChannels: parsed.data.messagingChannels,
           whatsappNumber: parsed.data.whatsappNumber ?? null,
           websiteUrl: parsed.data.websiteUrl ?? null,
         });
