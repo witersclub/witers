@@ -31,6 +31,10 @@ export type BrandProfile = {
   // through the dedicated Meta Ads OAuth flow or set by an admin. Creating
   // ads still requires WITERS's Business Portfolio to have access to it.
   meta_ad_account_id: string | null;
+  // The client's usual WhatsApp destination for "Pautar" — see
+  // meta-whatsapp.server.ts. Pre-selects the picker in the ad wizard; the
+  // client can still choose a different connected number per campaign.
+  default_whatsapp_number: string | null;
 };
 
 export async function getBrandProfile(userId: string): Promise<BrandProfile | null> {
@@ -84,6 +88,7 @@ export async function resolveBrandProfile(
       library_font: null,
       meta_page_id: null,
       meta_ad_account_id: null,
+      default_whatsapp_number: null,
     };
   }
   if (!existing.logo_key && submitted.logoKey) {
@@ -179,6 +184,7 @@ export async function completeOnboarding(
     library_font: data.libraryFont,
     meta_page_id: null,
     meta_ad_account_id: null,
+    default_whatsapp_number: null,
   };
 }
 

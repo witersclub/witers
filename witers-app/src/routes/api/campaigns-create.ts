@@ -6,6 +6,7 @@ import { bindings } from "../../lib/bindings.server";
 import { getBrandProfile } from "../../lib/brand-profile.server";
 import { getMetaAdOAuthAccessToken } from "../../lib/meta-ad-account-connection.server";
 import { createPausedCampaignForRequest } from "../../lib/meta-ads-create.server";
+import { digitsOnly, listMetaWhatsAppNumbers } from "../../lib/meta-whatsapp.server";
 import { db, getSessionUser, json } from "../../lib/witers-auth.server";
 
 const schema = z
@@ -34,9 +35,12 @@ const schema = z
     radiusKm: z.number().min(5).max(50).optional(),
     interestIds: z.array(z.string().min(1)).max(10).default([]),
     adMessages: z.array(z.string().min(1).max(500)).min(1).max(3),
-    // Required only for "ventas" (drives the wa.me link) — the client
-    // types it themselves each time, it's not stored on their profile.
-    whatsappNumber: z.string().min(6).max(20).optional(),
+    // Required only for "ventas" (drives the wa.me link) — chosen from the
+    // client's own real, connected WhatsApp Business numbers (see
+    // meta-whatsapp.server.ts). Re-verified against Meta below rather than
+    // trusted as-is; optionally saved as brand_profiles.default_whatsapp_number
+    // separately, via /api/meta/whatsapp/default.
+    whatsappNumber: z.string().min(6).max(40).optional(),
     // Optional, only meaningful for "trafico" — omitted means the ad
     // points to the client's Facebook Page ("sus redes") instead.
     websiteUrl: z.string().url().max(300).optional(),
@@ -139,6 +143,24 @@ export const Route = createFileRoute("/api/campaigns-create")({
         }
         const oauthAccessToken =
           (await getMetaAdOAuthAccessToken(user.id, adAccountId)) ?? undefined;
+
+        // "ventas" needs a real WhatsApp destination — re-verify it against
+        // this session's own connected Meta login server-side rather than
+        // trusting whatever digits the client sent (a stale/foreign/typo'd
+        // number would otherwise silently build an invalid campaign).
+        if (parsed.data.objective === "ventas") {
+          if (!oauthAccessToken) {
+            return json({ ok: false, error: "whatsapp_no_conectado" }, { status: 409 });
+          }
+          const submittedDigits = digitsOnly(parsed.data.whatsappNumber ?? "");
+          const numbers = await listMetaWhatsAppNumbers(oauthAccessToken);
+          const match =
+            numbers.ok &&
+            numbers.numbers.some((n) => digitsOnly(n.displayNumber) === submittedDigits);
+          if (!match) {
+            return json({ ok: false, error: "whatsapp_no_disponible" }, { status: 409 });
+          }
+        }
 
         const resultRow =
           parsed.data.format === "imagen"

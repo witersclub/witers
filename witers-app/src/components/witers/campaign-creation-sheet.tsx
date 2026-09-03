@@ -30,6 +30,12 @@ type SocialConnections = {
   instagram: { name: string | null } | null;
 };
 type AccountOption = { account_id: string; name: string; currency: string };
+type WhatsAppNumber = {
+  phoneNumberId: string;
+  displayNumber: string;
+  verifiedName: string | null;
+  status: string | null;
+};
 
 const RECOMMENDED_DAILY_MIN = 200;
 const RECOMMENDED_DAILY_MAX = 500;
@@ -62,6 +68,11 @@ export function CampaignCreationSheet({
   const [ageMax, setAgeMax] = useState(65);
   const [message, setMessage] = useState(piece.caption?.trim() || piece.title);
   const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [whatsappNumbers, setWhatsappNumbers] = useState<WhatsAppNumber[]>([]);
+  const [whatsappLoading, setWhatsappLoading] = useState(true);
+  const [whatsappNeedsReconnect, setWhatsappNeedsReconnect] = useState(false);
+  const [whatsappFetchFailed, setWhatsappFetchFailed] = useState(false);
+  const [saveAsDefaultWhatsApp, setSaveAsDefaultWhatsApp] = useState(false);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +130,31 @@ export function CampaignCreationSheet({
       })
       .finally(() => setLoadingAccount(false));
 
+    void fetch("/api/meta/whatsapp/numbers", { credentials: "include" })
+      .then((res) => res.json())
+      .then(
+        (data: {
+          ok?: boolean;
+          numbers?: WhatsAppNumber[];
+          defaultNumber?: string | null;
+          needsReconnect?: boolean;
+        }) => {
+          if (!data.ok) {
+            setWhatsappFetchFailed(true);
+            return;
+          }
+          setWhatsappNumbers(data.numbers ?? []);
+          setWhatsappNeedsReconnect(Boolean(data.needsReconnect));
+          const preselected =
+            (data.defaultNumber &&
+              (data.numbers ?? []).find((n) => n.displayNumber === data.defaultNumber)) ||
+            ((data.numbers ?? []).length === 1 ? data.numbers![0] : null);
+          if (preselected) setWhatsappNumber(preselected.displayNumber);
+        },
+      )
+      .catch(() => setWhatsappFetchFailed(true))
+      .finally(() => setWhatsappLoading(false));
+
     const params = new URLSearchParams(window.location.search);
     const pick = params.get("meta_ads_pick");
     if (pick) {
@@ -172,8 +208,16 @@ export function CampaignCreationSheet({
         );
         return;
       }
-      if (objective === "ventas" && whatsappNumber.replace(/\D/g, "").length < 6) {
-        setError(t("Escribe un número de WhatsApp válido.", "Enter a valid WhatsApp number."));
+      if (
+        objective === "ventas" &&
+        !whatsappNumbers.some((n) => n.displayNumber === whatsappNumber)
+      ) {
+        setError(
+          t(
+            "Elige a qué WhatsApp quieres recibir los mensajes.",
+            "Choose which WhatsApp should receive the messages.",
+          ),
+        );
         return;
       }
       if (!message.trim()) {
@@ -192,6 +236,17 @@ export function CampaignCreationSheet({
     setError(null);
     trackCtaClick("campaign_reviewed");
     try {
+      if (objective === "ventas" && saveAsDefaultWhatsApp && whatsappNumber) {
+        // Best-effort — a failed save here shouldn't block the campaign
+        // itself, since the number was already validated for THIS
+        // campaign server-side inside /api/campaigns-create.
+        await fetch("/api/meta/whatsapp/default", {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ displayNumber: whatsappNumber }),
+        }).catch(() => {});
+      }
       const response = await fetch("/api/campaigns-create", {
         method: "POST",
         credentials: "include",
@@ -241,6 +296,14 @@ export function CampaignCreationSheet({
           tiempo_agotado: t(
             "Meta tardó demasiado en responder. Intenta nuevamente.",
             "Meta took too long to respond. Try again.",
+          ),
+          whatsapp_no_conectado: t(
+            "No encontramos un WhatsApp Business disponible para esta página. Conecta o configura un número antes de continuar.",
+            "We couldn't find a WhatsApp Business number available for this Page. Connect or set one up before continuing.",
+          ),
+          whatsapp_no_disponible: t(
+            "Ese número de WhatsApp ya no está disponible en tu cuenta de Meta. Elige otro.",
+            "That WhatsApp number is no longer available on your Meta account. Choose another one.",
           ),
         };
         setError(
@@ -647,15 +710,96 @@ export function CampaignCreationSheet({
                   />
                 </label>
                 {objective === "ventas" ? (
-                  <label className="block">
-                    <span className="text-sm font-extrabold text-wit-ink">WhatsApp</span>
-                    <input
-                      value={whatsappNumber}
-                      onChange={(event) => setWhatsappNumber(event.target.value)}
-                      placeholder="521..."
-                      className="mt-2 h-12 w-full rounded-2xl border border-wit-ink/10 px-3 text-sm"
-                    />
-                  </label>
+                  <div>
+                    <span className="text-sm font-extrabold text-wit-ink">
+                      {t(
+                        "¿A qué WhatsApp quieres recibir los mensajes?",
+                        "Which WhatsApp should receive the messages?",
+                      )}
+                    </span>
+                    {whatsappLoading ? (
+                      <p className="mt-2 flex items-center gap-2 text-xs text-wit-gray">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        {t(
+                          "Buscando tus números de WhatsApp...",
+                          "Looking up your WhatsApp numbers...",
+                        )}
+                      </p>
+                    ) : whatsappFetchFailed ? (
+                      <p className="mt-2 rounded-2xl border border-dashed border-wit-ink/15 p-3 text-xs text-wit-gray">
+                        {t(
+                          "No pudimos consultar tus números de WhatsApp. Intenta de nuevo más tarde.",
+                          "We couldn't look up your WhatsApp numbers. Try again later.",
+                        )}
+                      </p>
+                    ) : whatsappNeedsReconnect ? (
+                      <div className="mt-2 rounded-2xl border border-dashed border-wit-ink/15 p-3">
+                        <p className="text-xs text-wit-gray">
+                          {t(
+                            "Reconecta tu cuenta de Meta para ver tus números de WhatsApp Business.",
+                            "Reconnect your Meta account to see your WhatsApp Business numbers.",
+                          )}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={connectMeta}
+                          className="mt-2 text-xs font-bold text-wit-blue"
+                        >
+                          {t("Reconectar Meta", "Reconnect Meta")}
+                        </button>
+                      </div>
+                    ) : whatsappNumbers.length === 0 ? (
+                      <p className="mt-2 rounded-2xl border border-dashed border-wit-ink/15 p-3 text-xs text-wit-gray">
+                        {t(
+                          "No encontramos un WhatsApp Business disponible para esta página. Conecta o configura un número en Meta Business Suite antes de continuar.",
+                          "We couldn't find a WhatsApp Business number available for this Page. Connect or set one up in Meta Business Suite before continuing.",
+                        )}
+                      </p>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {whatsappNumbers.map((number) => (
+                          <label
+                            key={number.phoneNumberId}
+                            className={`flex cursor-pointer items-center gap-2.5 rounded-2xl border p-3 text-sm ${
+                              whatsappNumber === number.displayNumber
+                                ? "border-wit-blue bg-wit-blue/[0.04]"
+                                : "border-wit-ink/10"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="whatsapp-number"
+                              checked={whatsappNumber === number.displayNumber}
+                              onChange={() => setWhatsappNumber(number.displayNumber)}
+                              className="h-4 w-4 accent-wit-blue"
+                            />
+                            <span className="min-w-0 flex-1">
+                              <b className="block text-wit-ink">{number.displayNumber}</b>
+                              {number.verifiedName ? (
+                                <span className="block truncate text-xs text-wit-gray">
+                                  {number.verifiedName}
+                                </span>
+                              ) : null}
+                            </span>
+                          </label>
+                        ))}
+                        {whatsappNumbers.length > 1 ? (
+                          <label className="flex items-center gap-2 pt-1 text-xs text-wit-gray">
+                            <input
+                              type="checkbox"
+                              checked={saveAsDefaultWhatsApp}
+                              onChange={(event) => setSaveAsDefaultWhatsApp(event.target.checked)}
+                              className="h-3.5 w-3.5 accent-wit-blue"
+                            />
+                            {t(
+                              "Usar este número por defecto la próxima vez",
+                              "Use this number by default next time",
+                            )}
+                          </label>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
                 ) : null}
                 {objective === "trafico" ? (
                   <label className="block">
@@ -735,6 +879,9 @@ export function CampaignCreationSheet({
                     account.accountName || `ID: ${account.accountId}`,
                   ],
                   [t("Público", "Audience"), t("Automático", "Automatic")],
+                  ...(objective === "ventas" && whatsappNumber
+                    ? [["WhatsApp", whatsappNumber]]
+                    : []),
                 ].map(([label, value]) => (
                   <div key={label} className="flex items-start justify-between gap-4 py-3">
                     <dt className="text-xs font-semibold text-wit-gray">{label}</dt>

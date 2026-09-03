@@ -1,7 +1,10 @@
 import process from "node:process";
 
-const VERSION = "v21.0";
-const GRAPH = `https://graph.facebook.com/${VERSION}`;
+import {
+  META_GRAPH_BASE as GRAPH,
+  META_GRAPH_VERSION as VERSION,
+} from "./meta-graph-version.server";
+
 const AUTH = `https://www.facebook.com/${VERSION}/dialog/oauth`;
 
 function config() {
@@ -21,7 +24,16 @@ export function buildMetaAdAccountAuthUrl(origin: string, state: string): string
   url.searchParams.set("client_id", value.appId);
   url.searchParams.set("redirect_uri", metaAdAccountRedirectUri(origin));
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "ads_read,ads_management,business_management");
+  // whatsapp_business_management is what lets us read the client's own
+  // WhatsApp Business Account(s) and phone numbers (see
+  // meta-whatsapp.server.ts) so "Pautar" can offer a real destination
+  // picker instead of a free-text number. In development mode this works
+  // immediately for the app's own admins/testers; it needs Meta App
+  // Review before it works for every client's own Meta login.
+  url.searchParams.set(
+    "scope",
+    "ads_read,ads_management,business_management,whatsapp_business_management",
+  );
   url.searchParams.set("state", state);
   return url.toString();
 }

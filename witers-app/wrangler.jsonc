@@ -13,7 +13,12 @@
   //      mode, test vs live, of STRIPE_PUBLISHABLE_KEY below, or Elements/PaymentIntents fail)
   //   8. npx wrangler secret put META_PUBLISH_APP_ID      (Meta App for connecting Facebook
   //      publishing and advertising accounts — separate from FACEBOOK_APP_ID, which is only
-  //      "Sign in with Facebook". Register /api/meta/ad-account/callback as a valid OAuth URI)
+  //      "Sign in with Facebook". Register /api/meta/ad-account/callback as a valid OAuth URI.
+  //      As of the WhatsApp destination picker in "Pautar", the ad-account connect flow also
+  //      requests whatsapp_business_management — in Development Mode this app's own
+  //      admins/testers can use it immediately; every other client's login needs Meta App
+  //      Review to grant it for real. Clients who connected before this scope was added must
+  //      reconnect (Step 1 of the "Pautar" wizard) before they see any WhatsApp numbers.)
   //   9. npx wrangler secret put META_PUBLISH_APP_SECRET
   //  10. npx wrangler secret put TOKEN_ENCRYPTION_KEY     (32 bytes hex — `openssl rand -hex 32` —
   //      encrypts the OAuth tokens saved in social_connections; see token-crypto.server.ts)

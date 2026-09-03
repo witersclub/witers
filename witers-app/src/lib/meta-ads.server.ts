@@ -24,8 +24,7 @@
 
 import process from "node:process";
 
-const GRAPH_VERSION = "v21.0";
-const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
+import { META_GRAPH_BASE as GRAPH_BASE } from "./meta-graph-version.server";
 
 type MetaConfig = {
   accessToken: string;

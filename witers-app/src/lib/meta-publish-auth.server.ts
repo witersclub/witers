@@ -8,10 +8,13 @@
 // instagram-login-auth.server.ts, not through a linked Page here. Server-only.
 import process from "node:process";
 
-const GRAPH_VERSION = "v21.0";
+import {
+  META_GRAPH_BASE as GRAPH_BASE,
+  META_GRAPH_VERSION as GRAPH_VERSION,
+} from "./meta-graph-version.server";
+
 const AUTH_ENDPOINT = `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth`;
 const TOKEN_ENDPOINT = `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`;
-const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
 // business_management IS needed here, despite only ever touching Pages the
 // connecting user already manages: /me/accounts only lists Pages owned

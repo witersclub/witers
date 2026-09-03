@@ -141,6 +141,8 @@ import { Route as ApiSocialConnectStartRouteImport } from './routes/api/social/c
 import { Route as ApiSocialConnectPendingRouteImport } from './routes/api/social/connect/pending'
 import { Route as ApiSocialConnectFinalizeRouteImport } from './routes/api/social/connect/finalize'
 import { Route as ApiSocialConnectCallbackRouteImport } from './routes/api/social/connect/callback'
+import { Route as ApiMetaWhatsappNumbersRouteImport } from './routes/api/meta/whatsapp/numbers'
+import { Route as ApiMetaWhatsappDefaultRouteImport } from './routes/api/meta/whatsapp/default'
 import { Route as ApiMetaAdAccountStatusRouteImport } from './routes/api/meta/ad-account/status'
 import { Route as ApiMetaAdAccountStartRouteImport } from './routes/api/meta/ad-account/start'
 import { Route as ApiMetaAdAccountPendingRouteImport } from './routes/api/meta/ad-account/pending'
@@ -842,6 +844,16 @@ const ApiSocialConnectCallbackRoute =
     path: '/api/social/connect/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiMetaWhatsappNumbersRoute = ApiMetaWhatsappNumbersRouteImport.update({
+  id: '/api/meta/whatsapp/numbers',
+  path: '/api/meta/whatsapp/numbers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMetaWhatsappDefaultRoute = ApiMetaWhatsappDefaultRouteImport.update({
+  id: '/api/meta/whatsapp/default',
+  path: '/api/meta/whatsapp/default',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMetaAdAccountStatusRoute = ApiMetaAdAccountStatusRouteImport.update({
   id: '/api/meta/ad-account/status',
   path: '/api/meta/ad-account/status',
@@ -1040,6 +1052,8 @@ export interface FileRoutesByFullPath {
   '/api/meta/ad-account/pending': typeof ApiMetaAdAccountPendingRoute
   '/api/meta/ad-account/start': typeof ApiMetaAdAccountStartRoute
   '/api/meta/ad-account/status': typeof ApiMetaAdAccountStatusRoute
+  '/api/meta/whatsapp/default': typeof ApiMetaWhatsappDefaultRoute
+  '/api/meta/whatsapp/numbers': typeof ApiMetaWhatsappNumbersRoute
   '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
@@ -1185,6 +1199,8 @@ export interface FileRoutesByTo {
   '/api/meta/ad-account/pending': typeof ApiMetaAdAccountPendingRoute
   '/api/meta/ad-account/start': typeof ApiMetaAdAccountStartRoute
   '/api/meta/ad-account/status': typeof ApiMetaAdAccountStatusRoute
+  '/api/meta/whatsapp/default': typeof ApiMetaWhatsappDefaultRoute
+  '/api/meta/whatsapp/numbers': typeof ApiMetaWhatsappNumbersRoute
   '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
@@ -1331,6 +1347,8 @@ export interface FileRoutesById {
   '/api/meta/ad-account/pending': typeof ApiMetaAdAccountPendingRoute
   '/api/meta/ad-account/start': typeof ApiMetaAdAccountStartRoute
   '/api/meta/ad-account/status': typeof ApiMetaAdAccountStatusRoute
+  '/api/meta/whatsapp/default': typeof ApiMetaWhatsappDefaultRoute
+  '/api/meta/whatsapp/numbers': typeof ApiMetaWhatsappNumbersRoute
   '/api/social/connect/callback': typeof ApiSocialConnectCallbackRoute
   '/api/social/connect/finalize': typeof ApiSocialConnectFinalizeRoute
   '/api/social/connect/pending': typeof ApiSocialConnectPendingRoute
@@ -1478,6 +1496,8 @@ export interface FileRouteTypes {
     | '/api/meta/ad-account/pending'
     | '/api/meta/ad-account/start'
     | '/api/meta/ad-account/status'
+    | '/api/meta/whatsapp/default'
+    | '/api/meta/whatsapp/numbers'
     | '/api/social/connect/callback'
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
@@ -1623,6 +1643,8 @@ export interface FileRouteTypes {
     | '/api/meta/ad-account/pending'
     | '/api/meta/ad-account/start'
     | '/api/meta/ad-account/status'
+    | '/api/meta/whatsapp/default'
+    | '/api/meta/whatsapp/numbers'
     | '/api/social/connect/callback'
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
@@ -1768,6 +1790,8 @@ export interface FileRouteTypes {
     | '/api/meta/ad-account/pending'
     | '/api/meta/ad-account/start'
     | '/api/meta/ad-account/status'
+    | '/api/meta/whatsapp/default'
+    | '/api/meta/whatsapp/numbers'
     | '/api/social/connect/callback'
     | '/api/social/connect/finalize'
     | '/api/social/connect/pending'
@@ -1914,6 +1938,8 @@ export interface RootRouteChildren {
   ApiMetaAdAccountPendingRoute: typeof ApiMetaAdAccountPendingRoute
   ApiMetaAdAccountStartRoute: typeof ApiMetaAdAccountStartRoute
   ApiMetaAdAccountStatusRoute: typeof ApiMetaAdAccountStatusRoute
+  ApiMetaWhatsappDefaultRoute: typeof ApiMetaWhatsappDefaultRoute
+  ApiMetaWhatsappNumbersRoute: typeof ApiMetaWhatsappNumbersRoute
   ApiSocialConnectCallbackRoute: typeof ApiSocialConnectCallbackRoute
   ApiSocialConnectFinalizeRoute: typeof ApiSocialConnectFinalizeRoute
   ApiSocialConnectPendingRoute: typeof ApiSocialConnectPendingRoute
@@ -2848,6 +2874,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSocialConnectCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/meta/whatsapp/numbers': {
+      id: '/api/meta/whatsapp/numbers'
+      path: '/api/meta/whatsapp/numbers'
+      fullPath: '/api/meta/whatsapp/numbers'
+      preLoaderRoute: typeof ApiMetaWhatsappNumbersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/meta/whatsapp/default': {
+      id: '/api/meta/whatsapp/default'
+      path: '/api/meta/whatsapp/default'
+      fullPath: '/api/meta/whatsapp/default'
+      preLoaderRoute: typeof ApiMetaWhatsappDefaultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/meta/ad-account/status': {
       id: '/api/meta/ad-account/status'
       path: '/api/meta/ad-account/status'
@@ -3066,6 +3106,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMetaAdAccountPendingRoute: ApiMetaAdAccountPendingRoute,
   ApiMetaAdAccountStartRoute: ApiMetaAdAccountStartRoute,
   ApiMetaAdAccountStatusRoute: ApiMetaAdAccountStatusRoute,
+  ApiMetaWhatsappDefaultRoute: ApiMetaWhatsappDefaultRoute,
+  ApiMetaWhatsappNumbersRoute: ApiMetaWhatsappNumbersRoute,
   ApiSocialConnectCallbackRoute: ApiSocialConnectCallbackRoute,
   ApiSocialConnectFinalizeRoute: ApiSocialConnectFinalizeRoute,
   ApiSocialConnectPendingRoute: ApiSocialConnectPendingRoute,
