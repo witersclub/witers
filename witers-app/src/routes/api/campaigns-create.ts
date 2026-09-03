@@ -60,6 +60,11 @@ const schema = z
     // Optional, only meaningful when trafficDestination === "website" —
     // omitted means the ad points to the client's Facebook Page instead.
     websiteUrl: z.string().url().max(300).optional(),
+    // The one explicit opt-in that turns the campaign on right after
+    // creation — a checkbox on the final review step, unchecked by
+    // default. Omitted/false always means it stays paused, same as
+    // before this option existed.
+    activateImmediately: z.boolean().default(false),
   })
   .refine((v) => v.ageMin <= v.ageMax, { message: "rango_edad_invalido" })
   .refine((v) => v.objective !== "trafico" || Boolean(v.trafficDestination), {
@@ -90,10 +95,12 @@ function describeValidationError(error: z.ZodError): string {
   return `${field}: ${issue.message}`;
 }
 
-// Turns a finished piece into a real (paused) Meta campaign — the "Pauta
-// interactiva" screen in panel.tsx. Never activates anything; the client
-// reviews and turns it on later from Ads Manager (or from Campañas, once
-// that's wired to do more than show status).
+// Turns a finished piece into a real Meta campaign — the "Pauta interactiva"
+// screen in panel.tsx. Always created paused first; it only ends up active
+// when the client explicitly checked "Activar de inmediato" on the review
+// step (activateImmediately) — otherwise they review and turn it on later
+// from Ads Manager (or from Campañas, once that's wired to do more than
+// show status).
 export const Route = createFileRoute("/api/campaigns-create")({
   server: {
     handlers: {
@@ -274,7 +281,8 @@ export const Route = createFileRoute("/api/campaigns-create")({
             ok: true,
             id: existing.id,
             warning: existing.error_message ?? null,
-            complete: existing.status === "paused",
+            complete: existing.status === "paused" || existing.status === "active",
+            activated: existing.status === "active",
           });
         }
 
@@ -301,6 +309,7 @@ export const Route = createFileRoute("/api/campaigns-create")({
           messagingChannels: parsed.data.messagingChannels,
           whatsappNumber: parsed.data.whatsappNumber ?? null,
           websiteUrl: parsed.data.websiteUrl ?? null,
+          activateImmediately: parsed.data.activateImmediately,
         });
 
         if (!result.ok) {
@@ -325,6 +334,11 @@ export const Route = createFileRoute("/api/campaigns-create")({
         // meta-ads-create.server.ts) — they're real, paused, and visible
         // in Ads Manager either way; this just tracks the true state.
         const complete = Boolean(result.adsetId) && result.adIds.length > 0;
+        // "active" only when the client actually asked for it AND every
+        // ACTIVE flip on Meta's side succeeded — result.activated is never
+        // true otherwise (see activateCreatedObjects). Anything short of
+        // that reports honestly as "paused", never optimistically upgraded.
+        const status = !complete ? "partial_creation" : result.activated ? "active" : "paused";
         await db()
           .prepare(
             `UPDATE ad_campaigns
@@ -340,7 +354,7 @@ export const Route = createFileRoute("/api/campaigns-create")({
             // array instead of a single id — nothing reads it back yet,
             // it's kept for bookkeeping/support lookups in Ads Manager.
             JSON.stringify(result.adIds),
-            complete ? "paused" : "partial_creation",
+            status,
             result.warning ?? null,
           )
           .run();
@@ -355,6 +369,7 @@ export const Route = createFileRoute("/api/campaigns-create")({
           // client uses this to tell "fully created, minor caveat" apart
           // from "genuinely incomplete, go check Ads Manager."
           complete,
+          activated: status === "active",
         });
       },
     },

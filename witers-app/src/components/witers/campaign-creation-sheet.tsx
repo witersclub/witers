@@ -110,6 +110,11 @@ export function CampaignCreationSheet({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Unchecked by default — everything is still created paused first
+  // either way; this only decides whether we flip it to ACTIVE right
+  // after, on this one campaign. Never a saved preference.
+  const [activateImmediately, setActivateImmediately] = useState(false);
+  const [activatedResult, setActivatedResult] = useState(false);
   // One idempotency key per opened sheet — a real double-submit (network
   // retry, impatient re-click after a slow response) resends the SAME key,
   // and the server replays that attempt's outcome instead of creating a
@@ -449,12 +454,14 @@ export function CampaignCreationSheet({
             objective === "trafico" && trafficDestination === "website" && websiteUrl.trim()
               ? websiteUrl.trim()
               : undefined,
+          activateImmediately,
         }),
       });
       const data = (await response.json().catch(() => ({}))) as {
         ok?: boolean;
         error?: string;
         message?: string;
+        activated?: boolean;
       };
       if (!response.ok || !data.ok) {
         trackCtaClick("campaign_creation_failed");
@@ -518,8 +525,9 @@ export function CampaignCreationSheet({
         );
         return;
       }
+      setActivatedResult(Boolean(data.activated));
       setSuccess(true);
-      trackCtaClick("campaign_created");
+      trackCtaClick(data.activated ? "campaign_created_active" : "campaign_created");
       onCreated?.();
     } finally {
       setSubmitting(false);
@@ -671,13 +679,23 @@ export function CampaignCreationSheet({
                 <Check className="h-10 w-10" strokeWidth={2.5} />
               </span>
               <h2 id="campaign-flow-title" className="mt-6 text-2xl font-extrabold text-wit-ink">
-                {t("¡Tu campaña está lista para revisión!", "Your campaign is ready for review!")}
+                {activatedResult
+                  ? t("¡Tu campaña ya está activa!", "Your campaign is now active!")
+                  : t(
+                      "¡Tu campaña está lista para revisión!",
+                      "Your campaign is ready for review!",
+                    )}
               </h2>
               <p className="mt-3 max-w-sm text-sm leading-relaxed text-wit-gray">
-                {t(
-                  "La creamos pausada para que puedas verificarla en Meta antes de activarla y comenzar a invertir.",
-                  "We created it paused so you can review it in Meta before activating it and spending.",
-                )}
+                {activatedResult
+                  ? t(
+                      "Se creó y activó en Meta — ya está compitiendo por mostrarse y puede empezar a generar gasto. Revísala en Meta cuando quieras.",
+                      "It was created and activated on Meta — it's already live and can start spending. Review it on Meta whenever you like.",
+                    )
+                  : t(
+                      "La creamos pausada para que puedas verificarla en Meta antes de activarla y comenzar a invertir.",
+                      "We created it paused so you can review it in Meta before activating it and spending.",
+                    )}
               </p>
               <button
                 type="button"
@@ -1393,6 +1411,30 @@ export function CampaignCreationSheet({
                   </div>
                 ))}
               </dl>
+              <label className="mt-4 flex items-start gap-2.5 rounded-2xl border border-wit-ink/10 p-3.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={activateImmediately}
+                  onChange={(event) => setActivateImmediately(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-wit-blue"
+                />
+                <span>
+                  <b className="block text-wit-ink">
+                    {t("Activar de inmediato al crear", "Activate immediately on creation")}
+                  </b>
+                  <span className="mt-0.5 block text-xs leading-relaxed text-wit-gray">
+                    {activateImmediately
+                      ? t(
+                          "La campaña empezará a mostrarse y a gastar en cuanto la crees, sin revisión previa.",
+                          "The campaign will start showing and spending as soon as you create it, with no prior review.",
+                        )
+                      : t(
+                          "Se crea pausada; tú la activas manualmente en Meta cuando la hayas revisado.",
+                          "It's created paused; you activate it manually on Meta once you've reviewed it.",
+                        )}
+                  </span>
+                </span>
+              </label>
             </div>
           )}
           {error ? (

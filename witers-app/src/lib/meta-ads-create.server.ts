@@ -1,6 +1,9 @@
 // Talks to Meta's Marketing API (Graph API) to turn a finished WITERS piece
-// into a real (but paused, never auto-activated) ad campaign — the "Pauta
-// interactiva" screen in panel.tsx. Uses a Business Portfolio System User
+// into a real ad campaign — the "Pauta interactiva" screen in panel.tsx.
+// Everything is always created PAUSED first; it only ends up ACTIVE when
+// the client explicitly checks "Activar de inmediato" on the final review
+// step (input.activateImmediately), never by default. Uses a Business
+// Portfolio System User
 // token (META_ACCESS_TOKEN), not per-client OAuth. Every campaign is
 // created in the ad account explicitly connected to the current brand.
 // The Facebook Page, unlike the ad account, is per-client (each client's
@@ -373,6 +376,11 @@ export type CreatePausedCampaignInput = {
   // Optional, only used when trafficDestination === "website". Null/omitted
   // falls back to their Facebook Page as the destination.
   websiteUrl: string | null;
+  // Explicit, per-request opt-in (a checkbox on the final review step,
+  // unchecked by default) — everything still gets CREATED paused first;
+  // this only decides whether it's switched to ACTIVE right after, once
+  // the campaign/ad set/ad all exist. Never the implicit default.
+  activateImmediately: boolean;
 };
 
 export type CreatePausedCampaignResult =
@@ -387,6 +395,11 @@ export type CreatePausedCampaignResult =
       // couldn't be created — the campaign/ad set still exist and are
       // visible in Ads Manager.
       warning?: string;
+      // True only when activateImmediately was requested AND every
+      // ACTIVE status update actually succeeded. Absent/false always
+      // means it's sitting paused in Ads Manager, same as before this
+      // option existed.
+      activated?: boolean;
     }
   | { ok: false; error: string };
 
@@ -468,6 +481,34 @@ async function uploadAdVideo(
     await new Promise((resolve) => setTimeout(resolve, 2_000));
   }
   return { ok: true, data: { id: videoId, stillProcessing: true } };
+}
+
+// Flips campaign, ad set, and ad to ACTIVE, in that order — called only
+// after all three already exist paused, and only when the client
+// explicitly asked for it (activateImmediately). Stops at the first
+// failure rather than leaving things half-active; whatever activation
+// step failed, the caller reports it as a warning and everything stays
+// visible (and reviewable) in Ads Manager, paused where the flip didn't
+// take.
+async function activateCreatedObjects(
+  campaignId: string,
+  adsetId: string,
+  adId: string,
+  accessToken: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const campaignRes = await graphRequest<{ success?: boolean }>(`/${campaignId}`, accessToken, {
+    status: "ACTIVE",
+  });
+  if (!campaignRes.ok) return { ok: false, error: `campaña: ${campaignRes.error}` };
+  const adsetRes = await graphRequest<{ success?: boolean }>(`/${adsetId}`, accessToken, {
+    status: "ACTIVE",
+  });
+  if (!adsetRes.ok) return { ok: false, error: `conjunto de anuncios: ${adsetRes.error}` };
+  const adRes = await graphRequest<{ success?: boolean }>(`/${adId}`, accessToken, {
+    status: "ACTIVE",
+  });
+  if (!adRes.ok) return { ok: false, error: `anuncio: ${adRes.error}` };
+  return { ok: true };
 }
 
 // Orchestrates campaign → ad set → image upload → one ad per copy variant,
@@ -705,13 +746,31 @@ export async function createPausedCampaignForRequest(
         warning: `${interestNote}${processingNote}La campaña y el conjunto de anuncios se crearon, pero el anuncio de video no se pudo generar: ${videoAd.error}`,
       };
     }
+    let videoActivated = false;
+    let videoActivationNote = "";
+    if (input.activateImmediately) {
+      const activation = await activateCreatedObjects(
+        campaignId,
+        adset.data.id,
+        videoAd.data.id,
+        accessToken,
+      );
+      if (activation.ok) {
+        videoActivated = true;
+      } else {
+        videoActivationNote = `La campaña se creó pausada; no se pudo activar automáticamente (${activation.error}). Actívala manualmente desde Ads Manager cuando quieras. `;
+      }
+    }
     return {
       ok: true,
       campaignId,
       adsetId: adset.data.id,
       adIds: [videoAd.data.id],
+      activated: videoActivated,
       warning:
-        droppedInterests || processingNote ? `${interestNote}${processingNote}`.trim() : undefined,
+        droppedInterests || processingNote || videoActivationNote
+          ? `${interestNote}${processingNote}${videoActivationNote}`.trim()
+          : undefined,
     };
   }
 
@@ -821,12 +880,29 @@ export async function createPausedCampaignForRequest(
     };
   }
 
+  let activated = false;
+  let activationNote = "";
+  if (input.activateImmediately) {
+    const activation = await activateCreatedObjects(
+      campaignId,
+      adset.data.id,
+      ad.data.id,
+      accessToken,
+    );
+    if (activation.ok) {
+      activated = true;
+    } else {
+      activationNote = `La campaña se creó pausada; no se pudo activar automáticamente (${activation.error}). Actívala manualmente desde Ads Manager cuando quieras. `;
+    }
+  }
   return {
     ok: true,
     campaignId,
     adsetId: adset.data.id,
     adIds: [ad.data.id],
-    warning: droppedInterests ? interestNote.trim() : undefined,
+    activated,
+    warning:
+      droppedInterests || activationNote ? `${interestNote}${activationNote}`.trim() : undefined,
   };
 }
 
