@@ -52,7 +52,7 @@ export function CampaignCreationSheet({
   onCreated?: () => void;
 }) {
   const { t } = useLanguage();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [account, setAccount] = useState<AccountStatus>({
     connected: false,
     accountId: null,
@@ -67,6 +67,17 @@ export function CampaignCreationSheet({
   // Preselecting WhatsApp for "ventas" preserves the wizard's previous
   // behavior, where the WhatsApp picker was already shown by default.
   const [messagingChannels, setMessagingChannels] = useState<MessagingChannel[]>(["whatsapp"]);
+  // "Audiencia" step — free-text description, resolved by Wit against
+  // Meta's own real location/interest search (never invented ids).
+  const [audienceDescription, setAudienceDescription] = useState("");
+  const [suggestingAudience, setSuggestingAudience] = useState(false);
+  const [audienceError, setAudienceError] = useState<string | null>(null);
+  const [audienceApplied, setAudienceApplied] = useState(false);
+  const [audienceNotes, setAudienceNotes] = useState<string | null>(null);
+  const [locationKey, setLocationKey] = useState<string | null>(null);
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
+  const [radiusKm, setRadiusKm] = useState(15);
+  const [selectedInterests, setSelectedInterests] = useState<{ id: string; name: string }[]>([]);
   const [dailyBudgetMxn, setDailyBudgetMxn] = useState(300);
   const [durationDays, setDurationDays] = useState(7);
   const [customDuration, setCustomDuration] = useState(false);
@@ -181,6 +192,49 @@ export function CampaignCreationSheet({
     );
   }
 
+  async function suggestAudience() {
+    if (!audienceDescription.trim() || suggestingAudience) return;
+    setSuggestingAudience(true);
+    setAudienceError(null);
+    try {
+      const response = await fetch("/api/meta-audience-suggest", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ description: audienceDescription.trim() }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        location?: { key: string; name: string } | null;
+        ageMin?: number | null;
+        ageMax?: number | null;
+        interests?: { id: string; name: string }[];
+        notes?: string | null;
+      };
+      if (!response.ok || !data.ok) {
+        setAudienceError(
+          t(
+            "No pudimos sugerir una audiencia. Intenta de nuevo.",
+            "We couldn't suggest an audience. Try again.",
+          ),
+        );
+        return;
+      }
+      if (data.location) {
+        setLocationKey(data.location.key);
+        setLocationLabel(data.location.name);
+      }
+      if (typeof data.ageMin === "number") setAgeMin(data.ageMin);
+      if (typeof data.ageMax === "number") setAgeMax(data.ageMax);
+      setSelectedInterests(data.interests ?? []);
+      setAudienceNotes(data.notes ?? null);
+      setAudienceApplied(true);
+      trackCtaClick("audience_suggested");
+    } finally {
+      setSuggestingAudience(false);
+    }
+  }
+
   function connectMeta() {
     sessionStorage.setItem("witers_pending_campaign_piece", piece.requestId);
     const returnTo = `/panel?campaign_entry=${encodeURIComponent(piece.requestId)}&campaign=1`;
@@ -207,17 +261,12 @@ export function CampaignCreationSheet({
     trackCtaClick("ad_account_selected");
   }
 
-  function continueTo(next: 2 | 3) {
+  function continueTo(next: 2 | 3 | 4) {
     setError(null);
     if (next === 2 && !account.connected) return;
     if (next === 3) {
-      if (dailyBudgetMxn < 20 || durationDays < 1 || ageMin > ageMax) {
-        setError(
-          t(
-            "Revisa el presupuesto, duración y rango de edad.",
-            "Review budget, duration and age range.",
-          ),
-        );
+      if (dailyBudgetMxn < 20 || durationDays < 1) {
+        setError(t("Revisa el presupuesto y la duración.", "Review the budget and duration."));
         return;
       }
       if (objective === "trafico" && !trafficDestination) {
@@ -256,6 +305,13 @@ export function CampaignCreationSheet({
       }
       trackCtaClick("campaign_configuration_completed");
     }
+    if (next === 4) {
+      if (ageMin > ageMax) {
+        setError(t("Revisa el rango de edad.", "Review the age range."));
+        return;
+      }
+      trackCtaClick("audience_step_completed");
+    }
     setStep(next);
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -289,7 +345,9 @@ export function CampaignCreationSheet({
           durationDays,
           ageMin,
           ageMax,
-          interestIds: [],
+          locationKey: locationLabel ? (locationKey ?? undefined) : undefined,
+          radiusKm: locationLabel ? radiusKm : undefined,
+          interestIds: selectedInterests.map((interest) => interest.id),
           adMessages: [message.trim()],
           trafficDestination: objective === "trafico" ? trafficDestination : undefined,
           messagingChannels:
@@ -473,7 +531,9 @@ export function CampaignCreationSheet({
           <div className="flex items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => (step > 1 && !success ? setStep((step - 1) as 1 | 2) : requestClose())}
+              onClick={() =>
+                step > 1 && !success ? setStep((step - 1) as 1 | 2 | 3) : requestClose()
+              }
               className="flex h-11 w-11 items-center justify-center rounded-full text-wit-ink hover:bg-wit-mist/50"
               aria-label={step > 1 ? t("Paso anterior", "Previous step") : t("Cerrar", "Close")}
             >
@@ -485,9 +545,9 @@ export function CampaignCreationSheet({
             </button>
             <div
               className="flex flex-1 items-center justify-center gap-2"
-              aria-label={t(`Paso ${step} de 3`, `Step ${step} of 3`)}
+              aria-label={t(`Paso ${step} de 4`, `Step ${step} of 4`)}
             >
-              {[1, 2, 3].map((number) => (
+              {[1, 2, 3, 4].map((number) => (
                 <span
                   key={number}
                   className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-extrabold ${number <= step ? "bg-wit-blue text-white" : "bg-wit-mist/70 text-wit-gray"}`}
@@ -801,48 +861,6 @@ export function CampaignCreationSheet({
                     />
                   ) : null}
                 </fieldset>
-                <div>
-                  <p className="text-sm font-extrabold text-wit-ink">{t("Público", "Audience")}</p>
-                  <div className="mt-2 rounded-2xl border border-wit-blue/20 bg-wit-blue/[0.035] p-4">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-wit-blue" />
-                      <b className="text-sm text-wit-ink">{t("Automático", "Automatic")}</b>
-                      <span className="rounded-full bg-wit-blue/10 px-2 py-1 text-[10px] font-bold text-wit-blue">
-                        {t("Recomendado", "Recommended")}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs leading-relaxed text-wit-gray">
-                      {t(
-                        "Meta optimizará tu audiencia para encontrar personas con mayor probabilidad de realizar la acción.",
-                        "Meta will optimize your audience to find people most likely to take action.",
-                      )}
-                    </p>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <label className="text-xs font-bold text-wit-gray">
-                        {t("Edad mínima", "Min age")}
-                        <input
-                          type="number"
-                          min={13}
-                          max={65}
-                          value={ageMin}
-                          onChange={(event) => setAgeMin(Number(event.target.value))}
-                          className="mt-1 h-10 w-full rounded-xl border border-wit-ink/10 bg-white px-3 text-wit-ink"
-                        />
-                      </label>
-                      <label className="text-xs font-bold text-wit-gray">
-                        {t("Edad máxima", "Max age")}
-                        <input
-                          type="number"
-                          min={13}
-                          max={65}
-                          value={ageMax}
-                          onChange={(event) => setAgeMax(Number(event.target.value))}
-                          className="mt-1 h-10 w-full rounded-xl border border-wit-ink/10 bg-white px-3 text-wit-ink"
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </div>
                 <label className="block">
                   <span className="text-sm font-extrabold text-wit-ink">
                     {t("Texto del anuncio", "Ad copy")}
@@ -968,6 +986,182 @@ export function CampaignCreationSheet({
                 </div>
               </div>
             </div>
+          ) : step === 3 ? (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-wit-blue">
+                {t("Audiencia", "Audience")}
+              </p>
+              <h2 id="campaign-flow-title" className="mt-2 text-2xl font-extrabold text-wit-ink">
+                {t("¿A quién quieres llegar?", "Who do you want to reach?")}
+              </h2>
+              <div className="mt-6 space-y-6">
+                <label className="block">
+                  <span className="text-sm font-extrabold text-wit-ink">
+                    {t("Describe a quién quieres llegar", "Describe who you want to reach")}
+                  </span>
+                  <textarea
+                    value={audienceDescription}
+                    onChange={(event) => setAudienceDescription(event.target.value)}
+                    rows={4}
+                    maxLength={600}
+                    placeholder={t(
+                      "Ej. Dueños y administradores de restaurantes en CDMX, entre 28 y 50 años, interesados en emprendimiento, gastronomía y herramientas para hacer crecer su negocio.",
+                      "E.g. Owners and managers of restaurants in Mexico City, ages 28-50, interested in entrepreneurship, food, and tools to grow their business.",
+                    )}
+                    className="mt-2 w-full resize-none rounded-2xl border border-wit-ink/10 p-3 text-sm outline-none focus:border-wit-blue"
+                  />
+                  <span className="mt-1.5 block text-xs text-wit-gray">
+                    {t(
+                      "Wit utilizará esta información para construir una audiencia compatible con Meta Ads.",
+                      "Wit will use this to build an audience compatible with Meta Ads.",
+                    )}
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void suggestAudience()}
+                  disabled={!audienceDescription.trim() || suggestingAudience}
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-5 text-sm font-bold text-white disabled:opacity-40"
+                >
+                  {suggestingAudience ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  {suggestingAudience
+                    ? t("Wit está pensando...", "Wit is thinking...")
+                    : t("Sugerir audiencia con Wit", "Suggest audience with Wit")}
+                </button>
+                {audienceError ? (
+                  <p className="text-xs text-red-600" role="alert">
+                    {audienceError}
+                  </p>
+                ) : null}
+
+                <div>
+                  <p className="text-sm font-extrabold text-wit-ink">
+                    {audienceApplied
+                      ? t("Audiencia sugerida", "Suggested audience")
+                      : t("Público", "Audience")}
+                  </p>
+                  <div className="mt-2 rounded-2xl border border-wit-blue/20 bg-wit-blue/[0.035] p-4">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-wit-blue" />
+                      <b className="text-sm text-wit-ink">
+                        {audienceApplied
+                          ? t("Sugerida por Wit", "Suggested by Wit")
+                          : t("Automático", "Automatic")}
+                      </b>
+                      {!audienceApplied ? (
+                        <span className="rounded-full bg-wit-blue/10 px-2 py-1 text-[10px] font-bold text-wit-blue">
+                          {t("Recomendado", "Recommended")}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-wit-gray">
+                      {audienceNotes ??
+                        t(
+                          "Meta optimizará tu audiencia para encontrar personas con mayor probabilidad de realizar la acción.",
+                          "Meta will optimize your audience to find people most likely to take action.",
+                        )}
+                    </p>
+
+                    <div className="mt-3">
+                      <span className="text-xs font-bold text-wit-gray">
+                        {t("Ubicación", "Location")}
+                      </span>
+                      {locationLabel ? (
+                        <>
+                          <div className="mt-1 flex items-center justify-between gap-2">
+                            <span className="text-sm font-bold text-wit-ink">{locationLabel}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLocationKey(null);
+                                setLocationLabel(null);
+                              }}
+                              className="text-xs font-bold text-wit-gray hover:text-wit-ink"
+                            >
+                              {t("Quitar", "Remove")}
+                            </button>
+                          </div>
+                          <label className="mt-2 block text-xs font-bold text-wit-gray">
+                            {t(`Radio: ${radiusKm} km`, `Radius: ${radiusKm} km`)}
+                            <input
+                              type="range"
+                              min={5}
+                              max={50}
+                              value={radiusKm}
+                              onChange={(event) => setRadiusKm(Number(event.target.value))}
+                              className="mt-1 block w-full accent-wit-blue"
+                            />
+                          </label>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-sm font-bold text-wit-ink">
+                          {t("Todo México", "All of Mexico")}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <label className="text-xs font-bold text-wit-gray">
+                        {t("Edad mínima", "Min age")}
+                        <input
+                          type="number"
+                          min={13}
+                          max={65}
+                          value={ageMin}
+                          onChange={(event) => setAgeMin(Number(event.target.value))}
+                          className="mt-1 h-10 w-full rounded-xl border border-wit-ink/10 bg-white px-3 text-wit-ink"
+                        />
+                      </label>
+                      <label className="text-xs font-bold text-wit-gray">
+                        {t("Edad máxima", "Max age")}
+                        <input
+                          type="number"
+                          min={13}
+                          max={65}
+                          value={ageMax}
+                          onChange={(event) => setAgeMax(Number(event.target.value))}
+                          className="mt-1 h-10 w-full rounded-xl border border-wit-ink/10 bg-white px-3 text-wit-ink"
+                        />
+                      </label>
+                    </div>
+
+                    {selectedInterests.length ? (
+                      <div className="mt-3">
+                        <span className="text-xs font-bold text-wit-gray">
+                          {t("Intereses", "Interests")}
+                        </span>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {selectedInterests.map((interest) => (
+                            <span
+                              key={interest.id}
+                              className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-bold text-wit-ink ring-1 ring-wit-ink/10"
+                            >
+                              {interest.name}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSelectedInterests((current) =>
+                                    current.filter((i) => i.id !== interest.id),
+                                  )
+                                }
+                                aria-label={t(`Quitar ${interest.name}`, `Remove ${interest.name}`)}
+                                className="text-wit-gray hover:text-wit-ink"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-wit-blue">
@@ -1018,7 +1212,21 @@ export function CampaignCreationSheet({
                     t("Cuenta publicitaria", "Ad account"),
                     account.accountName || `ID: ${account.accountId}`,
                   ],
-                  [t("Público", "Audience"), t("Automático", "Automatic")],
+                  [
+                    t("Público", "Audience"),
+                    [
+                      `${ageMin}-${ageMax}`,
+                      locationLabel ?? t("Todo México", "All of Mexico"),
+                      selectedInterests.length
+                        ? t(
+                            `${selectedInterests.length} intereses`,
+                            `${selectedInterests.length} interests`,
+                          )
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · "),
+                  ],
                   ...((objective === "interaccion" || objective === "ventas") &&
                   messagingChannels.includes("whatsapp") &&
                   whatsappNumber
@@ -1056,6 +1264,15 @@ export function CampaignCreationSheet({
               <button
                 type="button"
                 onClick={() => continueTo(3)}
+                className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-5 font-bold text-white"
+              >
+                {t("Continuar", "Continue")}
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            ) : step === 3 ? (
+              <button
+                type="button"
+                onClick={() => continueTo(4)}
                 className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-5 font-bold text-white"
               >
                 {t("Continuar", "Continue")}
