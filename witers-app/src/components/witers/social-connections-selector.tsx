@@ -20,6 +20,7 @@ export function SocialConnectionsSelector() {
   const [open, setOpen] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pendingPages, setPendingPages] = useState<{ id: string; name: string }[]>([]);
+  const [detailsPlatform, setDetailsPlatform] = useState<Platform | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const { data: connections = EMPTY } = useQuery({
     queryKey: ["social-connections"],
@@ -44,7 +45,8 @@ export function SocialConnectionsSelector() {
   useEffect(() => {
     const url = new URL(window.location.href);
     const pending = url.searchParams.get("social_pick");
-    if (url.searchParams.get("social_connected")) void queryClient.invalidateQueries({ queryKey: ["social-connections"] });
+    if (url.searchParams.get("social_connected"))
+      void queryClient.invalidateQueries({ queryKey: ["social-connections"] });
     if (pending) {
       setPendingId(pending);
       setOpen(true);
@@ -54,13 +56,38 @@ export function SocialConnectionsSelector() {
           if (data.ok) setPendingPages(data.pages ?? []);
         });
     }
-    if (pending || url.searchParams.get("social_connected") || url.searchParams.get("social_error")) {
+    if (
+      pending ||
+      url.searchParams.get("social_connected") ||
+      url.searchParams.get("social_error")
+    ) {
       url.searchParams.delete("social_pick");
       url.searchParams.delete("social_connected");
       url.searchParams.delete("social_error");
       window.history.replaceState({}, "", url.toString());
     }
   }, [queryClient]);
+
+  async function disconnect(platform: Platform) {
+    const label = platform === "instagram" ? "Instagram" : "Facebook";
+    if (
+      !window.confirm(
+        t(
+          `¿Desconectar ${label}? Podrás volver a conectarlo después.`,
+          `Disconnect ${label}? You can reconnect it later.`,
+        ),
+      )
+    ) {
+      return;
+    }
+    const response = await fetch(`/api/social/connections?platform=${platform}`, {
+      method: "DELETE",
+    });
+    if (response.ok) {
+      setDetailsPlatform(null);
+      void queryClient.invalidateQueries({ queryKey: ["social-connections"] });
+    }
+  }
 
   async function choosePage(pageId: string) {
     if (!pendingId) return;
@@ -113,16 +140,31 @@ export function SocialConnectionsSelector() {
           const Icon = row.icon;
           return (
             <span key={row.key} className="relative flex h-5 w-5 items-center justify-center">
-              <Icon className={`h-5 w-5 ${row.connection ? row.iconClass : "text-wit-gray/35 grayscale"}`} strokeWidth={2.3} />
-              <span className={`absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-white ${row.connection ? "bg-emerald-500" : "bg-wit-gray/35"}`} />
+              <Icon
+                className={`h-5 w-5 ${row.connection ? row.iconClass : "text-wit-gray/35 grayscale"}`}
+                strokeWidth={2.3}
+              />
+              <span
+                className={`absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full ring-1 ring-white ${row.connection ? "bg-emerald-500" : "bg-wit-gray/35"}`}
+              />
             </span>
           );
         })}
         {upcoming.map((row) => {
           const Icon = row.icon;
-          return <Icon key={row.label} className="h-5 w-5 text-wit-gray/35 grayscale" strokeWidth={2.3} aria-label={row.label} />;
+          return (
+            <Icon
+              key={row.label}
+              className="h-5 w-5 text-wit-gray/35 grayscale"
+              strokeWidth={2.3}
+              aria-label={row.label}
+            />
+          );
         })}
-        <ChevronDown className={`h-4 w-4 shrink-0 text-wit-blue transition-transform ${open ? "rotate-180" : ""}`} strokeWidth={2.5} />
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-wit-blue transition-transform ${open ? "rotate-180" : ""}`}
+          strokeWidth={2.5}
+        />
       </button>
 
       {open ? (
@@ -133,35 +175,110 @@ export function SocialConnectionsSelector() {
         >
           {pendingId && pendingPages.length > 0 ? (
             <div className="border-b border-wit-ink/[0.07] px-4 py-3">
-              <p className="text-xs font-extrabold text-wit-ink">{t("Elige la página de Facebook", "Choose the Facebook Page")}</p>
+              <p className="text-xs font-extrabold text-wit-ink">
+                {t("Elige la página de Facebook", "Choose the Facebook Page")}
+              </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {pendingPages.map((page) => <button key={page.id} type="button" onClick={() => void choosePage(page.id)} className="min-h-9 rounded-full border border-wit-ink/12 px-3 text-xs font-bold text-wit-blue hover:bg-wit-blue/[0.06]">{page.name}</button>)}
+                {pendingPages.map((page) => (
+                  <button
+                    key={page.id}
+                    type="button"
+                    onClick={() => void choosePage(page.id)}
+                    className="min-h-9 rounded-full border border-wit-ink/12 px-3 text-xs font-bold text-wit-blue hover:bg-wit-blue/[0.06]"
+                  >
+                    {page.name}
+                  </button>
+                ))}
               </div>
             </div>
           ) : null}
           {rows.map((row) => {
             const Icon = row.icon;
             const connected = Boolean(row.connection);
+            const expanded = detailsPlatform === row.key;
             return (
-              <div key={row.key} className="flex min-h-[62px] items-center gap-3 border-b border-wit-ink/[0.07] px-4 py-2.5">
-                <Icon className={`h-6 w-6 shrink-0 ${connected ? row.iconClass : "text-wit-gray/35 grayscale"}`} strokeWidth={2.2} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-extrabold text-wit-ink">{connected ? row.connection?.name || row.label : row.label}</p>
-                  <p className={`mt-0.5 flex items-center gap-1.5 text-xs font-semibold ${connected ? "text-wit-gray" : "text-wit-gray/70"}`}>
-                    <span className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-500" : "bg-wit-gray/45"}`} />
-                    {connected ? t("Conectada", "Connected") : t("No conectada", "Not connected")}
-                  </p>
-                </div>
-                {!connected ? <a href={row.href} role="menuitem" className="rounded-full px-2 py-2 text-xs font-extrabold text-wit-blue hover:bg-wit-blue/[0.06]">{t("Conectar", "Connect")}</a> : null}
+              <div key={row.key} className="border-b border-wit-ink/[0.07]">
+                {connected ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    aria-expanded={expanded}
+                    onClick={() =>
+                      setDetailsPlatform((value) => (value === row.key ? null : row.key))
+                    }
+                    className="flex min-h-[62px] w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-wit-bg/60"
+                  >
+                    <Icon className={`h-6 w-6 shrink-0 ${row.iconClass}`} strokeWidth={2.2} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-extrabold text-wit-ink">
+                        {row.connection?.name || row.label}
+                      </p>
+                      <p className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-wit-gray">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        {t("Conectada", "Connected")}
+                      </p>
+                    </div>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-wit-gray transition-transform ${expanded ? "rotate-180" : ""}`}
+                      strokeWidth={2.3}
+                    />
+                  </button>
+                ) : (
+                  <div className="flex min-h-[62px] items-center gap-3 px-4 py-2.5">
+                    <Icon
+                      className="h-6 w-6 shrink-0 text-wit-gray/35 grayscale"
+                      strokeWidth={2.2}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-extrabold text-wit-ink">{row.label}</p>
+                      <p className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-wit-gray/70">
+                        <span className="h-2 w-2 rounded-full bg-wit-gray/45" />
+                        {t("No conectada", "Not connected")}
+                      </p>
+                    </div>
+                    <a
+                      href={row.href}
+                      role="menuitem"
+                      className="rounded-full px-2 py-2 text-xs font-extrabold text-wit-blue hover:bg-wit-blue/[0.06]"
+                    >
+                      {t("Conectar", "Connect")}
+                    </a>
+                  </div>
+                )}
+                {expanded ? (
+                  <div className="bg-wit-bg/60 px-4 pb-3">
+                    <p className="text-xs leading-relaxed text-wit-gray">
+                      {t(
+                        "Esta cuenta se usará cuando publiques contenido en esta red.",
+                        "This account will be used when you publish content to this network.",
+                      )}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void disconnect(row.key)}
+                      className="mt-2 min-h-9 w-full rounded-full border border-red-200 px-3 text-xs font-bold text-red-600 transition hover:bg-red-50"
+                    >
+                      {t("Desconectar cuenta", "Disconnect account")}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             );
           })}
           {upcoming.map((row, index) => {
             const Icon = row.icon;
             return (
-              <div key={row.label} className={`flex min-h-[62px] items-center gap-3 px-4 py-2.5 ${index ? "" : ""}`}>
+              <div
+                key={row.label}
+                className={`flex min-h-[62px] items-center gap-3 px-4 py-2.5 ${index ? "" : ""}`}
+              >
                 <Icon className="h-6 w-6 shrink-0 text-wit-gray/35 grayscale" strokeWidth={2.2} />
-                <div className="min-w-0 flex-1"><p className="text-sm font-extrabold text-wit-ink">{row.label}</p><p className="mt-0.5 text-xs font-semibold text-wit-gray">{t("Próximamente", "Coming soon")}</p></div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-extrabold text-wit-ink">{row.label}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-wit-gray">
+                    {t("Próximamente", "Coming soon")}
+                  </p>
+                </div>
               </div>
             );
           })}
