@@ -4069,6 +4069,15 @@ export function PlanificacionPanel({
               // literally inside right now, so the highlighted cell always
               // matches where the hand actually is.
               collisionDetection={pointerWithin}
+              // dnd-kit auto-scrolls the page by default while dragging near
+              // a screen edge, and its DragOverlay is known to lose sync
+              // with the pointer when that scroll happens programmatically
+              // (the overlay stays "stuck" at a stale position while the
+              // page moves under it — see clauderic/dnd-kit#463). The whole
+              // month grid already fits on screen during a drag, so there's
+              // nothing to auto-scroll to; turning it off removes an entire
+              // class of "the piece jumped to the wrong spot" bugs.
+              autoScroll={false}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
