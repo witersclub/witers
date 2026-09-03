@@ -13,6 +13,7 @@ import {
   META_GRAPH_BASE as GRAPH_BASE,
   META_GRAPH_VERSION as GRAPH_VERSION,
 } from "./meta-graph-version.server";
+import { digitsOnly } from "./meta-whatsapp.server";
 
 type MetaConfig = {
   accessToken: string;
@@ -209,20 +210,23 @@ export async function suggestMetaInterests(
 export type CampaignObjective = "trafico" | "interaccion" | "ventas";
 
 // Maps our 3 client-facing objectives to Meta's real ODAX objective +
-// optimization goal. "Ventas" deliberately does NOT use Meta's official
-// Click-to-WhatsApp ad type (destination_type: WHATSAPP) — that requires
-// the client to verify their WhatsApp number with Meta first (an OTP sent
-// to their own phone, which we can't do on their behalf). Instead it's a
-// plain link-click campaign pointed at a wa.me link, same practical result
-// (clicking the ad opens a WhatsApp chat) with zero extra setup per client.
+// optimization goal. "Ventas" uses Meta's real Click-to-WhatsApp ad type
+// (destination_type: WHATSAPP, set on the ad set below) — a messaging
+// destination in ODAX, which is why it's OUTCOME_ENGAGEMENT rather than
+// OUTCOME_TRAFFIC even though the client picks "Más mensajes." The ideal
+// optimization_goal for this, CONVERSATIONS, isn't available for numbers
+// hosted on WhatsApp's own Cloud API (the common case today), so this uses
+// IMPRESSIONS instead — the same fallback Meta's own reference payload for
+// this ad type uses.
 function resolveObjective(objective: CampaignObjective): {
   metaObjective: string;
   optimizationGoal: string;
 } {
   switch (objective) {
     case "trafico":
-    case "ventas":
       return { metaObjective: "OUTCOME_TRAFFIC", optimizationGoal: "LINK_CLICKS" };
+    case "ventas":
+      return { metaObjective: "OUTCOME_ENGAGEMENT", optimizationGoal: "IMPRESSIONS" };
     case "interaccion":
       return { metaObjective: "OUTCOME_ENGAGEMENT", optimizationGoal: "POST_ENGAGEMENT" };
   }
@@ -231,13 +235,14 @@ function resolveObjective(objective: CampaignObjective): {
 function resolveDestinationLink(
   objective: CampaignObjective,
   pageId: string,
-  whatsappNumber: string | null,
   websiteUrl: string | null,
 ): string {
-  if (objective === "ventas" && whatsappNumber) {
-    const digits = whatsappNumber.replace(/[^\d]/g, "");
-    return `https://wa.me/${digits}`;
-  }
+  // Real Click-to-WhatsApp ads still need a link_data.link value even
+  // though Meta resolves the actual destination from
+  // promoted_object.whatsapp_phone_number, not from this URL — this exact
+  // placeholder is the one Meta's own Click-to-WhatsApp reference payload
+  // uses in that field.
+  if (objective === "ventas") return "https://api.whatsapp.com/send";
   // "Tráfico" can go to the client's own website when they have one —
   // falls back to their Facebook Page (their "redes") otherwise, same as
   // every other objective.
@@ -451,6 +456,11 @@ export async function createPausedCampaignForRequest(
           }
         : { countries: ["MX"] };
 
+  // Meta's promoted_object.whatsapp_phone_number takes plain digits, not
+  // the phoneNumberId or Meta's spaced/parenthesized display format — same
+  // digit-stripping already used to build the destination for reporting.
+  const whatsappDigits = input.whatsappNumber ? digitsOnly(input.whatsappNumber) : null;
+
   function buildAdsetPayload(includeInterests: boolean) {
     return {
       name: `WITERS — ${input.requestTitle}`,
@@ -464,6 +474,16 @@ export async function createPausedCampaignForRequest(
       // for "interacción" campaigns is what used to fail with "Invalid
       // parameter" on every real attempt.
       ...(objective === "interaccion" ? { promoted_object: { page_id: pageId } } : {}),
+      // Real Click-to-WhatsApp: destination_type tells Meta the ad clicks
+      // into a WhatsApp conversation rather than a link/Page, and
+      // promoted_object carries WHICH Page + WhatsApp number — both fields
+      // are Meta's own documented shape for this ad type, not invented.
+      ...(objective === "ventas"
+        ? {
+            destination_type: "WHATSAPP",
+            promoted_object: { page_id: pageId, whatsapp_phone_number: whatsappDigits },
+          }
+        : {}),
       targeting: {
         // Deliberately left on Meta's automatic placements (Facebook +
         // Instagram + the rest) rather than restricted to Facebook only —
@@ -515,7 +535,8 @@ export async function createPausedCampaignForRequest(
     ? "Quitamos la segmentación por intereses porque uno de los identificadores ya no era válido para Meta — la campaña llegó a todo el público en el rango de edad/ubicación elegido en su lugar. "
     : "";
 
-  const link = resolveDestinationLink(objective, pageId, input.whatsappNumber, input.websiteUrl);
+  const link = resolveDestinationLink(objective, pageId, input.websiteUrl);
+  const whatsappCallToAction = { type: "WHATSAPP_MESSAGE", value: { app_destination: "WHATSAPP" } };
 
   if (input.media.kind === "video") {
     const videoUpload = await uploadAdVideo(adAccountId, accessToken, input.media);
@@ -538,7 +559,8 @@ export async function createPausedCampaignForRequest(
         video_data: {
           video_id: videoUpload.data.id,
           message: input.adMessages[0],
-          call_to_action: { type: "LEARN_MORE", value: { link } },
+          call_to_action:
+            objective === "ventas" ? whatsappCallToAction : { type: "LEARN_MORE", value: { link } },
         },
       },
     });
@@ -601,24 +623,48 @@ export async function createPausedCampaignForRequest(
     };
   }
 
-  // A single ad whose creative carries all copy variants as text options —
-  // Meta's own "plantilla de mensajes" (the same multiple-text-variations
-  // feature Ads Manager offers on one ad), which rotates/tests between them
-  // on its own. Tried first; if this ad account/API version rejects
-  // asset_feed_spec, fall back to one plain ad with just the first variant
-  // rather than failing the whole campaign over it.
-  let creative = await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
-    name: `WITERS — ${input.requestTitle}`,
-    object_story_spec: { page_id: pageId },
-    asset_feed_spec: {
-      images: [{ hash: imageHash }],
-      bodies: input.adMessages.map((text) => ({ text })),
-      link_urls: [{ website_url: link }],
-      call_to_action_types: ["LEARN_MORE"],
-      ad_formats: ["SINGLE_IMAGE"],
-    },
-  });
-  if (!creative.ok) {
+  // "Ventas" goes straight to a single plain link_data creative with the
+  // WhatsApp call-to-action — Meta's asset_feed_spec (the multi-variant
+  // template used below for the other two objectives) pairs
+  // call_to_action_types with a plain link_urls destination, and there's
+  // no verified reference showing it also supports a WhatsApp/app
+  // destination the same way; rather than guess at an unverified
+  // combination, this uses only the exact shape Meta documents for
+  // Click-to-WhatsApp, at the cost of losing the multi-copy-variant
+  // rotation "ventas" ads would otherwise get.
+  let creative =
+    objective === "ventas"
+      ? await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
+          name: `WITERS — ${input.requestTitle}`,
+          object_story_spec: {
+            page_id: pageId,
+            link_data: {
+              image_hash: imageHash,
+              message: input.adMessages[0],
+              link,
+              call_to_action: whatsappCallToAction,
+            },
+          },
+        })
+      : // A single ad whose creative carries all copy variants as text
+        // options — Meta's own "plantilla de mensajes" (the same
+        // multiple-text-variations feature Ads Manager offers on one ad),
+        // which rotates/tests between them on its own. Tried first; if
+        // this ad account/API version rejects asset_feed_spec, fall back
+        // to one plain ad with just the first variant rather than failing
+        // the whole campaign over it.
+        await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
+          name: `WITERS — ${input.requestTitle}`,
+          object_story_spec: { page_id: pageId },
+          asset_feed_spec: {
+            images: [{ hash: imageHash }],
+            bodies: input.adMessages.map((text) => ({ text })),
+            link_urls: [{ website_url: link }],
+            call_to_action_types: ["LEARN_MORE"],
+            ad_formats: ["SINGLE_IMAGE"],
+          },
+        });
+  if (!creative.ok && objective !== "ventas") {
     creative = await graphRequest<{ id: string }>(`/${act}/adcreatives`, accessToken, {
       name: `WITERS — ${input.requestTitle}`,
       object_story_spec: {
