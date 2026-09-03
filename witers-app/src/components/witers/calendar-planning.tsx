@@ -11,6 +11,17 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  TouchSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
   Calendar,
   CalendarClock,
   ChevronDown,
@@ -3292,6 +3303,134 @@ function MonthlyProgrammingSheet({
   );
 }
 
+// CAMBIO 03 — one day cell, draggable (when it holds a piece) AND
+// droppable (always, if it's a valid target) at once — the standard
+// dnd-kit pattern for a "swap two cells" grid. useDraggable/useDroppable
+// must run as real hooks, once per cell, in the same order every render —
+// impossible to do inline inside the grid's .map() callback, which is why
+// this had to become its own component rather than staying inline.
+function CalendarDayCell({
+  cell,
+  entry,
+  isToday,
+  isSelected,
+  isPast,
+  isMoving,
+  onSelect,
+  t,
+}: {
+  cell: { date: string; inMonth: boolean };
+  entry: CalendarEntry | undefined;
+  isToday: boolean;
+  isSelected: boolean;
+  isPast: boolean;
+  isMoving: boolean;
+  onSelect: (entry: CalendarEntry, trigger: HTMLButtonElement) => void;
+  t: (es: string, en: string) => string;
+}) {
+  const draggable = useDraggable({
+    id: entry?.id ?? `empty-${cell.date}`,
+    disabled: !entry,
+    data: { fromDate: cell.date, fromSlot: entry?.slot ?? 1 },
+  });
+  const droppableDisabled = !cell.inMonth || isPast;
+  const droppable = useDroppable({ id: cell.date, disabled: droppableDisabled });
+  const Icon = entry ? FORMAT_ICON[entry.format] : null;
+  const hasThumb = Boolean(entry && entry.status === "lista" && entry.thumbHref);
+  const productionState = entry ? getCalendarProductionState(entry) : null;
+  const canDropHere = droppable.isOver && !droppableDisabled;
+
+  return (
+    <button
+      ref={(node) => {
+        draggable.setNodeRef(node);
+        droppable.setNodeRef(node);
+      }}
+      {...draggable.listeners}
+      {...draggable.attributes}
+      type="button"
+      disabled={!entry}
+      onClick={(event) => {
+        if (!entry || draggable.isDragging) return;
+        onSelect(entry, event.currentTarget);
+      }}
+      aria-label={
+        entry
+          ? t(
+              `${entry.title}, mantén presionado para mover`,
+              `${entry.title}, press and hold to move`,
+            )
+          : undefined
+      }
+      data-production-state={productionState ?? undefined}
+      style={{
+        opacity: draggable.isDragging ? 0.3 : isMoving ? 0.55 : 1,
+        touchAction: entry ? "none" : undefined,
+      }}
+      className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all duration-300 sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${productionState ? `calendar-production-cell calendar-production-cell--${productionState}` : ""} ${
+        canDropHere
+          ? "border-wit-blue bg-wit-blue/[0.06] ring-2 ring-wit-blue ring-offset-1"
+          : isSelected
+            ? "bg-white ring-2 ring-wit-blue ring-offset-1 shadow-[0_6px_18px_rgba(0,71,255,0.14)]"
+            : cell.inMonth
+              ? entry && !hasThumb
+                ? "bg-white hover:border-wit-ink/18"
+                : "border-wit-ink/5 bg-white hover:border-wit-ink/15"
+              : "border-transparent bg-wit-mist/10"
+      } ${!entry ? "cursor-default" : "cursor-grab active:cursor-grabbing"}`}
+    >
+      {hasThumb ? (
+        <>
+          <img
+            src={entry!.thumbHref!}
+            alt={entry!.title}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-black/10" />
+        </>
+      ) : null}
+      <span
+        className={`relative z-10 font-wit-mono text-[8px] sm:text-xs ${
+          hasThumb
+            ? "font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]"
+            : cell.inMonth
+              ? isToday
+                ? "font-bold text-wit-blue"
+                : "text-wit-ink"
+              : "text-wit-gray/40"
+        }`}
+      >
+        {Number(cell.date.slice(8, 10))}
+      </span>
+      {entry && Icon ? (
+        hasThumb ? (
+          <span className="absolute bottom-1 right-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-black/55 text-white sm:h-5 sm:w-5">
+            <Icon className="h-2.5 w-2.5" strokeWidth={2.4} />
+          </span>
+        ) : (
+          <span
+            className={`relative z-10 mt-auto flex flex-col items-start gap-0.5 overflow-hidden rounded-md px-1 py-0.5 text-[8px] font-semibold sm:rounded-lg sm:px-1.5 sm:py-1 ${statusMeta(entry.status, t).badgeClass}`}
+          >
+            <span className="flex items-center gap-1">
+              <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={2.4} />
+              <span className="hidden text-[8px] font-bold uppercase tracking-wide sm:inline">
+                {formatLabel(entry.format, t)}
+              </span>
+            </span>
+            <span className="hidden w-full truncate text-[9px] font-semibold leading-tight sm:inline">
+              {entry.title}
+            </span>
+          </span>
+        )
+      ) : isToday ? (
+        <span className="relative z-10 text-[7px] font-bold uppercase tracking-wide text-wit-blue sm:text-[9px]">
+          {t("Hoy", "Today")}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
 export function PlanificacionPanel({
   streakWeeks,
   homeMobile = false,
@@ -3311,6 +3450,25 @@ export function PlanificacionPanel({
   const [replanning, setReplanning] = useState(false);
   const [monthlyProgrammingOpen, setMonthlyProgrammingOpen] = useState(false);
   const [downloadingPlan, setDownloadingPlan] = useState(false);
+  // CAMBIO 03 — drag & drop state: which piece is mid-move (dims its cell
+  // while the server confirms), the last successful move (drives the
+  // "Deshacer" toast), and the last failed one (drives the inline error).
+  const [movingEntryId, setMovingEntryId] = useState<string | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [undoMove, setUndoMove] = useState<{
+    entryId: string;
+    from: { date: string; slot: number };
+    to: { date: string; slot: number };
+    dateLabel: string;
+  } | null>(null);
+  const [dragError, setDragError] = useState<string | null>(null);
+  const dndSensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    // A touch drag needs to wait for a genuine press-and-hold (not a swipe)
+    // before it takes over — otherwise every attempt to scroll the
+    // calendar on a phone would get read as trying to move a piece.
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+  );
   const qc = useQueryClient();
   // Same query key panel.tsx's own brand-profile fetch uses (see
   // ActivosDeMarca) — react-query shares the cache across both, so this is
@@ -3418,6 +3576,92 @@ export function PlanificacionPanel({
     ? Math.round((monthlyCompletedCount / entries.length) * 100)
     : 0;
   const grid = buildMonthGrid(year, month);
+
+  // CAMBIO 03 — persists a drag (or its undo) through the same endpoint:
+  // /api/calendar-entries-move swaps the two pieces if `to` is already
+  // occupied, or just moves this one if it's landing on an empty day.
+  // Calling it again with `from`/`to` reversed is exactly what undoing a
+  // swap needs — the piece that ended up at `from` (the other half of the
+  // original swap, if there was one) gets swapped right back.
+  async function moveEntry(
+    entryId: string,
+    from: { date: string; slot: number },
+    to: { date: string; slot: number },
+    isUndo = false,
+  ) {
+    if (from.date === to.date && from.slot === to.slot) return;
+    setMovingEntryId(entryId);
+    setDragError(null);
+    try {
+      const res = await fetch("/api/calendar-entries-move", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ entryId, targetDate: to.date, targetSlot: to.slot }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setDragError(
+          data.error === "fecha_pasada"
+            ? t(
+                "No puedes mover contenido a una fecha pasada.",
+                "You can't move content to a past date.",
+              )
+            : data.error === "tiene_publicacion_programada"
+              ? t(
+                  "Esta pieza ya tiene una publicación programada — cancélala antes de moverla.",
+                  "This piece already has a scheduled publish — cancel it before moving it.",
+                )
+              : t(
+                  "No pudimos mover el contenido. Intenta de nuevo.",
+                  "We couldn't move the content. Try again.",
+                ),
+        );
+        window.setTimeout(() => setDragError(null), 4000);
+        return;
+      }
+      await qc.invalidateQueries({ queryKey: ["calendar-entries", year, month] });
+      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
+      if (isUndo) {
+        setUndoMove(null);
+        return;
+      }
+      const dateLabel = new Date(`${to.date}T12:00:00Z`).toLocaleDateString(t("es-MX", "en-US"), {
+        day: "numeric",
+        month: "long",
+        timeZone: "UTC",
+      });
+      setUndoMove({ entryId, from, to, dateLabel });
+      window.setTimeout(
+        () => setUndoMove((current) => (current?.entryId === entryId ? null : current)),
+        6000,
+      );
+    } catch {
+      setDragError(
+        t(
+          "No pudimos mover el contenido. Intenta de nuevo.",
+          "We couldn't move the content. Try again.",
+        ),
+      );
+      window.setTimeout(() => setDragError(null), 4000);
+    } finally {
+      setMovingEntryId(null);
+    }
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const dragData = active.data.current as { fromDate: string; fromSlot: number } | undefined;
+    if (!dragData) return;
+    const targetDate = String(over.id);
+    if (targetDate === dragData.fromDate) return;
+    void moveEntry(
+      String(active.id),
+      { date: dragData.fromDate, slot: dragData.fromSlot },
+      { date: targetDate, slot: 1 },
+    );
+  }
 
   async function downloadPlanningPdf() {
     if (!entries.length || downloadingPlan) return;
@@ -3745,87 +3989,79 @@ export function PlanificacionPanel({
                 </div>
               ))}
             </div>
-            <div className="mt-1 grid grid-cols-7 gap-1 sm:mt-1.5 sm:gap-1.5">
-              {grid.map((cell) => {
-                const entry = entryByDate.get(cell.date);
-                const Icon = entry ? FORMAT_ICON[entry.format] : null;
-                const isToday = cell.date === today;
-                const isSelected = entry && entry.id === selectedId;
-                const hasThumb = Boolean(entry && entry.status === "lista" && entry.thumbHref);
-                const productionState = entry ? getCalendarProductionState(entry) : null;
-                return (
-                  <button
-                    key={cell.date}
-                    type="button"
-                    disabled={!entry}
-                    onClick={(event) => {
-                      if (!entry) return;
-                      detailTriggerRef.current = event.currentTarget;
-                      setSelectedId(entry.id);
-                    }}
-                    data-production-state={productionState ?? undefined}
-                    className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all duration-300 sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${productionState ? `calendar-production-cell calendar-production-cell--${productionState}` : ""} ${
-                      isSelected
-                        ? "bg-white ring-2 ring-wit-blue ring-offset-1 shadow-[0_6px_18px_rgba(0,71,255,0.14)]"
-                        : cell.inMonth
-                          ? entry && !hasThumb
-                            ? "bg-white hover:border-wit-ink/18"
-                            : "border-wit-ink/5 bg-white hover:border-wit-ink/15"
-                          : "border-transparent bg-wit-mist/10"
-                    } ${!entry ? "cursor-default" : "cursor-pointer"}`}
-                  >
-                    {hasThumb ? (
-                      <>
-                        <img
-                          src={entry!.thumbHref!}
-                          alt={entry!.title}
-                          className="absolute inset-0 h-full w-full object-cover"
-                        />
-                        <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-black/10" />
-                      </>
-                    ) : null}
-                    <span
-                      className={`relative z-10 font-wit-mono text-[8px] sm:text-xs ${
-                        hasThumb
-                          ? "font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]"
-                          : cell.inMonth
-                            ? isToday
-                              ? "font-bold text-wit-blue"
-                              : "text-wit-ink"
-                            : "text-wit-gray/40"
-                      }`}
-                    >
-                      {Number(cell.date.slice(8, 10))}
-                    </span>
-                    {entry && Icon ? (
-                      hasThumb ? (
-                        <span className="absolute bottom-1 right-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-black/55 text-white sm:h-5 sm:w-5">
-                          <Icon className="h-2.5 w-2.5" strokeWidth={2.4} />
-                        </span>
-                      ) : (
-                        <span
-                          className={`relative z-10 mt-auto flex flex-col items-start gap-0.5 overflow-hidden rounded-md px-1 py-0.5 text-[8px] font-semibold sm:rounded-lg sm:px-1.5 sm:py-1 ${statusMeta(entry.status, t).badgeClass}`}
-                        >
-                          <span className="flex items-center gap-1">
+            <DndContext
+              sensors={dndSensors}
+              onDragStart={(event) => setActiveDragId(String(event.active.id))}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => setActiveDragId(null)}
+            >
+              <div className="mt-1 grid grid-cols-7 gap-1 sm:mt-1.5 sm:gap-1.5">
+                {grid.map((cell) => {
+                  const entry = entryByDate.get(cell.date);
+                  return (
+                    <CalendarDayCell
+                      key={cell.date}
+                      cell={cell}
+                      entry={entry}
+                      isToday={cell.date === today}
+                      isSelected={Boolean(entry && entry.id === selectedId)}
+                      isPast={cell.date < today}
+                      isMoving={entry?.id === movingEntryId}
+                      onSelect={(selectedEntry, trigger) => {
+                        detailTriggerRef.current = trigger;
+                        setSelectedId(selectedEntry.id);
+                      }}
+                      t={t}
+                    />
+                  );
+                })}
+              </div>
+              {/* The piece follows the pointer/finger directly instead of the
+                  original cell — a lifted, slightly larger, shadowed copy,
+                  per the "levantar ligeramente + sombra suave" spec. */}
+              <DragOverlay dropAnimation={{ duration: 200, easing: "ease-out" }}>
+                {activeDragId
+                  ? (() => {
+                      const dragged = entries.find((e) => e.id === activeDragId);
+                      if (!dragged) return null;
+                      const Icon = FORMAT_ICON[dragged.format];
+                      return (
+                        <div className="flex min-h-[50px] w-16 scale-105 flex-col justify-end rounded-lg border border-wit-blue/30 bg-white p-1 shadow-[0_16px_32px_rgba(0,71,255,0.25)] sm:min-h-[76px] sm:w-24 sm:rounded-xl sm:p-1.5">
+                          <span
+                            className={`flex items-center gap-1 rounded-md px-1 py-0.5 text-[8px] font-semibold sm:rounded-lg sm:px-1.5 sm:py-1 ${statusMeta(dragged.status, t).badgeClass}`}
+                          >
                             <Icon className="h-2.5 w-2.5 shrink-0" strokeWidth={2.4} />
-                            <span className="hidden text-[8px] font-bold uppercase tracking-wide sm:inline">
-                              {formatLabel(entry.format, t)}
-                            </span>
+                            <span className="hidden truncate sm:inline">{dragged.title}</span>
                           </span>
-                          <span className="hidden w-full truncate text-[9px] font-semibold leading-tight sm:inline">
-                            {entry.title}
-                          </span>
-                        </span>
-                      )
-                    ) : isToday ? (
-                      <span className="relative z-10 text-[7px] font-bold uppercase tracking-wide text-wit-blue sm:text-[9px]">
-                        {t("Hoy", "Today")}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
+                        </div>
+                      );
+                    })()
+                  : null}
+              </DragOverlay>
+            </DndContext>
+            {dragError ? (
+              <p role="alert" className="mt-2 text-center text-xs font-semibold text-red-600">
+                {dragError}
+              </p>
+            ) : null}
+            {undoMove ? (
+              <div className="mt-2 flex items-center justify-center gap-2 rounded-full bg-wit-ink px-4 py-2 text-xs font-semibold text-white">
+                <span>
+                  {t(
+                    `Contenido movido al ${undoMove.dateLabel}`,
+                    `Content moved to ${undoMove.dateLabel}`,
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void moveEntry(undoMove.entryId, undoMove.to, undoMove.from, true)}
+                  className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 font-bold hover:bg-white/25"
+                >
+                  <RotateCcw className="h-3 w-3" strokeWidth={2.5} />
+                  {t("Deshacer", "Undo")}
+                </button>
+              </div>
+            ) : null}
             <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-t border-wit-ink/5 pt-3 text-[9px] font-semibold text-wit-gray sm:justify-start sm:text-[10px]">
               {(
                 ["ready-for-design", "in-design", "ready-to-publish"] as CalendarProductionState[]
