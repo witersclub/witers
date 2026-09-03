@@ -7,7 +7,13 @@
 // its 4 slides already structured by Wit at planning time, and video with
 // no uploaded file (the guion becomes the AI-scenes note) — see
 // /api/calendar-entries-request.
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -56,6 +62,7 @@ import { ASPECT_OPTIONS, AspectRatioPicker } from "./lab-pickers";
 import { MicButton } from "./mic-button";
 import { SlideGallery } from "./slide-gallery";
 import { extractBrandDocumentText } from "../../lib/brand-document-text";
+import { buildMonthDates, computeReorderShift } from "../../lib/calendar-reorder";
 import { buildCalendarPlanPdf } from "../../lib/calendar-plan-pdf";
 import { downloadPdf } from "../../lib/campaign-report-pdf";
 import { useLanguage } from "../../lib/i18n";
@@ -3318,6 +3325,7 @@ function CalendarDayCell({
   isPast,
   isMoving,
   isLanded,
+  isDropTarget,
   onSelect,
   t,
 }: {
@@ -3328,6 +3336,11 @@ function CalendarDayCell({
   isPast: boolean;
   isMoving: boolean;
   isLanded: boolean;
+  // The exact cell under the pointer/finger right now — every OTHER cell
+  // already shows its live-shifted content (see previewEntryByDate), so
+  // this is the only extra highlight needed: "here's precisely where it
+  // lands if you let go."
+  isDropTarget: boolean;
   onSelect: (entry: CalendarEntry, trigger: HTMLButtonElement) => void;
   t: (es: string, en: string) => string;
 }) {
@@ -3341,11 +3354,6 @@ function CalendarDayCell({
   const Icon = entry ? FORMAT_ICON[entry.format] : null;
   const hasThumb = Boolean(entry && entry.status === "lista" && entry.thumbHref);
   const productionState = entry ? getCalendarProductionState(entry) : null;
-  const canDropHere = droppable.isOver && !droppableDisabled;
-  // Dropping on an occupied day swaps the two pieces, not just moves this
-  // one — a distinct color (not the plain "move" blue) so the hover state
-  // itself previews which outcome is about to happen.
-  const willSwap = canDropHere && Boolean(entry);
 
   return (
     <button
@@ -3374,11 +3382,9 @@ function CalendarDayCell({
         opacity: draggable.isDragging ? 0.3 : isMoving ? 0.55 : 1,
         touchAction: entry ? "none" : undefined,
       }}
-      className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${canDropHere ? "duration-150 scale-[1.04]" : "duration-300"} ${entry ? "wit-calendar-draggable" : ""} ${isLanded ? "wit-calendar-cell-landed" : ""} ${productionState ? `calendar-production-cell calendar-production-cell--${productionState}` : ""} ${
-        canDropHere
-          ? willSwap
-            ? "border-wit-pink bg-wit-pink/[0.08] ring-2 ring-wit-pink ring-offset-1"
-            : "border-wit-blue bg-wit-blue/[0.06] ring-2 ring-wit-blue ring-offset-1"
+      className={`relative flex min-h-[50px] flex-col overflow-hidden rounded-lg border p-1 text-left transition-all sm:min-h-[76px] sm:rounded-xl sm:p-1.5 ${isDropTarget ? "duration-150 scale-[1.04]" : "duration-300"} ${entry ? "wit-calendar-draggable" : ""} ${isLanded ? "wit-calendar-cell-landed" : ""} ${productionState ? `calendar-production-cell calendar-production-cell--${productionState}` : ""} ${
+        isDropTarget
+          ? "border-wit-blue bg-wit-blue/[0.06] ring-2 ring-wit-blue ring-offset-1"
           : isSelected
             ? "bg-white ring-2 ring-wit-blue ring-offset-1 shadow-[0_6px_18px_rgba(0,71,255,0.14)]"
             : cell.inMonth
@@ -3459,19 +3465,26 @@ export function PlanificacionPanel({
   const [replanning, setReplanning] = useState(false);
   const [monthlyProgrammingOpen, setMonthlyProgrammingOpen] = useState(false);
   const [downloadingPlan, setDownloadingPlan] = useState(false);
-  // CAMBIO 03 — drag & drop state: which piece is mid-move (dims its cell
-  // while the server confirms), the last successful move (drives the
-  // "Deshacer" toast), and the last failed one (drives the inline error).
+  // CAMBIO 03 — Instagram-style "reorder grid" drag state. dragOriginDate
+  // (set on pickup) and hoverDate (set on every cell crossed) are what
+  // drive the LIVE preview below — every render while dragging, everything
+  // between them re-previews its shifted position, the same computation
+  // calendar-entries-move.ts uses to actually persist it on drop, from
+  // calendar-reorder.ts.
   const [movingEntryId, setMovingEntryId] = useState<string | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [dragOriginDate, setDragOriginDate] = useState<string | null>(null);
+  const [hoverDate, setHoverDate] = useState<string | null>(null);
   // Entries to give the "snap into place" pop to on their next render —
-  // both sides of a swap, so the piece that got displaced also visibly
+  // every piece the reorder actually touched, so the whole cascade visibly
   // lands, not just the one that was actively dragged.
   const [landedEntryIds, setLandedEntryIds] = useState<Set<string>>(new Set());
+  // The reorder is its own inverse: shifting the same piece back to
+  // originalDate un-cascades the whole chain exactly, so undo only needs
+  // to remember where the drag started.
   const [undoMove, setUndoMove] = useState<{
     entryId: string;
-    from: { date: string; slot: number };
-    to: { date: string; slot: number };
+    originalDate: string;
     dateLabel: string;
   } | null>(null);
   const [dragError, setDragError] = useState<string | null>(null);
@@ -3528,6 +3541,26 @@ export function PlanificacionPanel({
   const entries = entriesQuery.data?.entries ?? [];
   const entryByDate = new Map<string, CalendarEntry>();
   for (const e of entries) if (!entryByDate.has(e.date)) entryByDate.set(e.date, e);
+
+  // CAMBIO 03 — the live "reorder grid" preview: while dragOriginDate and
+  // hoverDate are both set, this re-maps every entry's date through the
+  // exact same shift calendar-entries-move.ts persists on drop, so what's
+  // rendered while dragging IS the pending result, not just a hover
+  // highlight. shift.get(date) defaults to the date itself (unaffected).
+  const previewEntryByDate = useMemo(() => {
+    if (!dragOriginDate || !hoverDate || dragOriginDate === hoverDate) return entryByDate;
+    const [yearNum, monthNum] = dragOriginDate.split("-").map(Number);
+    const monthDates = buildMonthDates(yearNum, monthNum);
+    const occupied = new Set(entryByDate.keys());
+    const shift = computeReorderShift(monthDates, dragOriginDate, hoverDate, occupied);
+    const preview = new Map<string, CalendarEntry>();
+    for (const [date, entry] of entryByDate) preview.set(shift.get(date) ?? date, entry);
+    return preview;
+    // entryByDate is rebuilt fresh every render from `entries` (not a
+    // stable reference) — depend on `entries` itself instead, or this
+    // would recompute on literally every render regardless of change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries, dragOriginDate, hoverDate]);
 
   useEffect(() => {
     setSelectedId((prev) => (prev && entries.some((entry) => entry.id === prev) ? prev : null));
@@ -3590,31 +3623,25 @@ export function PlanificacionPanel({
     : 0;
   const grid = buildMonthGrid(year, month);
 
-  // CAMBIO 03 — persists a drag (or its undo) through the same endpoint:
-  // /api/calendar-entries-move swaps the two pieces if `to` is already
-  // occupied, or just moves this one if it's landing on an empty day.
-  // Calling it again with `from`/`to` reversed is exactly what undoing a
-  // swap needs — the piece that ended up at `from` (the other half of the
-  // original swap, if there was one) gets swapped right back.
-  async function moveEntry(
-    entryId: string,
-    from: { date: string; slot: number },
-    to: { date: string; slot: number },
-    isUndo = false,
-  ) {
-    if (from.date === to.date && from.slot === to.slot) return;
+  // CAMBIO 03 — persists a reorder (or its undo) through
+  // /api/calendar-entries-move, which shifts everything between the
+  // origin and target by one day (see calendar-reorder.ts) — the same
+  // computation the live preview below already ran while dragging, so the
+  // saved result always matches what was previewed. Undo just drags the
+  // same piece back to where it started; the shift is its own inverse.
+  async function moveEntry(entryId: string, targetDate: string, originalDate?: string) {
     setMovingEntryId(entryId);
     setDragError(null);
     try {
       const res = await fetch("/api/calendar-entries-move", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ entryId, targetDate: to.date, targetSlot: to.slot }),
+        body: JSON.stringify({ entryId, targetDate }),
       });
       const data = (await res.json()) as {
         ok: boolean;
         error?: string;
-        otherEntryId?: string;
+        moved?: { id: string; to: string }[];
       };
       if (!data.ok) {
         setDragError(
@@ -3638,19 +3665,18 @@ export function PlanificacionPanel({
       }
       await qc.invalidateQueries({ queryKey: ["calendar-entries", year, month] });
       if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
-      const landed = data.otherEntryId ? [entryId, data.otherEntryId] : [entryId];
-      setLandedEntryIds(new Set(landed));
+      setLandedEntryIds(new Set((data.moved ?? []).map((m) => m.id)));
       window.setTimeout(() => setLandedEntryIds(new Set()), 420);
-      if (isUndo) {
+      if (!originalDate) {
+        // This call was itself an undo — nothing more to offer.
         setUndoMove(null);
         return;
       }
-      const dateLabel = new Date(`${to.date}T12:00:00Z`).toLocaleDateString(t("es-MX", "en-US"), {
-        day: "numeric",
-        month: "long",
-        timeZone: "UTC",
-      });
-      setUndoMove({ entryId, from, to, dateLabel });
+      const dateLabel = new Date(`${targetDate}T12:00:00Z`).toLocaleDateString(
+        t("es-MX", "en-US"),
+        { day: "numeric", month: "long", timeZone: "UTC" },
+      );
+      setUndoMove({ entryId, originalDate, dateLabel });
       window.setTimeout(
         () => setUndoMove((current) => (current?.entryId === entryId ? null : current)),
         6000,
@@ -3668,19 +3694,42 @@ export function PlanificacionPanel({
     }
   }
 
+  function handleDragStart(event: {
+    active: { id: string | number; data: { current?: unknown } };
+  }) {
+    const data = event.active.data.current as { fromDate: string } | undefined;
+    setActiveDragId(String(event.active.id));
+    setDragOriginDate(data?.fromDate ?? null);
+    setHoverDate(data?.fromDate ?? null);
+  }
+
+  function handleDragOver(event: { over: { id: string | number } | null }) {
+    const nextHoverDate = event.over ? String(event.over.id) : null;
+    setHoverDate((current) => {
+      if (nextHoverDate && nextHoverDate !== current && typeof navigator !== "undefined") {
+        // A small tap each time the piece crosses into a new day — same
+        // felt cue as Instagram's reorder grid, not just a visual change.
+        navigator.vibrate?.(6);
+      }
+      return nextHoverDate ?? dragOriginDate;
+    });
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    const entryId = activeDragId;
+    const originDate = dragOriginDate;
+    const targetDate = hoverDate;
     setActiveDragId(null);
-    const { active, over } = event;
-    if (!over) return;
-    const dragData = active.data.current as { fromDate: string; fromSlot: number } | undefined;
-    if (!dragData) return;
-    const targetDate = String(over.id);
-    if (targetDate === dragData.fromDate) return;
-    void moveEntry(
-      String(active.id),
-      { date: dragData.fromDate, slot: dragData.fromSlot },
-      { date: targetDate, slot: 1 },
-    );
+    setDragOriginDate(null);
+    setHoverDate(null);
+    if (!event.over || !entryId || !originDate || !targetDate || targetDate === originDate) return;
+    void moveEntry(entryId, targetDate, originDate);
+  }
+
+  function handleDragCancel() {
+    setActiveDragId(null);
+    setDragOriginDate(null);
+    setHoverDate(null);
   }
 
   async function downloadPlanningPdf() {
@@ -4020,13 +4069,14 @@ export function PlanificacionPanel({
               // literally inside right now, so the highlighted cell always
               // matches where the hand actually is.
               collisionDetection={pointerWithin}
-              onDragStart={(event) => setActiveDragId(String(event.active.id))}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
-              onDragCancel={() => setActiveDragId(null)}
+              onDragCancel={handleDragCancel}
             >
               <div className="mt-1 grid grid-cols-7 gap-1 sm:mt-1.5 sm:gap-1.5">
                 {grid.map((cell) => {
-                  const entry = entryByDate.get(cell.date);
+                  const entry = previewEntryByDate.get(cell.date);
                   return (
                     <CalendarDayCell
                       key={cell.date}
@@ -4037,6 +4087,7 @@ export function PlanificacionPanel({
                       isPast={cell.date < today}
                       isMoving={entry?.id === movingEntryId}
                       isLanded={Boolean(entry && landedEntryIds.has(entry.id))}
+                      isDropTarget={activeDragId !== null && cell.date === hoverDate}
                       onSelect={(selectedEntry, trigger) => {
                         detailTriggerRef.current = trigger;
                         setSelectedId(selectedEntry.id);
@@ -4084,7 +4135,7 @@ export function PlanificacionPanel({
                 </span>
                 <button
                   type="button"
-                  onClick={() => void moveEntry(undoMove.entryId, undoMove.to, undoMove.from, true)}
+                  onClick={() => void moveEntry(undoMove.entryId, undoMove.originalDate)}
                   className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 font-bold hover:bg-white/25"
                 >
                   <RotateCcw className="h-3 w-3" strokeWidth={2.5} />
