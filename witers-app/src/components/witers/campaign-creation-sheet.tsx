@@ -38,6 +38,18 @@ type WhatsAppNumber = {
 };
 type TrafficDestination = "website" | "facebook_page" | "instagram_profile" | "both_profiles";
 type MessagingChannel = "whatsapp" | "messenger" | "instagram_direct";
+type SavedAudience = {
+  id: string;
+  name: string;
+  description: string;
+  ageMin: number;
+  ageMax: number;
+  locationKey: string | null;
+  locationLabel: string | null;
+  radiusKm: number | null;
+  interests: { id: string; name: string }[];
+  notes: string | null;
+};
 
 const RECOMMENDED_DAILY_MIN = 200;
 const RECOMMENDED_DAILY_MAX = 500;
@@ -78,6 +90,10 @@ export function CampaignCreationSheet({
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [radiusKm, setRadiusKm] = useState(15);
   const [selectedInterests, setSelectedInterests] = useState<{ id: string; name: string }[]>([]);
+  const [savedAudiences, setSavedAudiences] = useState<SavedAudience[]>([]);
+  const [showSaveAudience, setShowSaveAudience] = useState(false);
+  const [saveAudienceName, setSaveAudienceName] = useState("");
+  const [savingAudience, setSavingAudience] = useState(false);
   const [dailyBudgetMxn, setDailyBudgetMxn] = useState(300);
   const [durationDays, setDurationDays] = useState(7);
   const [customDuration, setCustomDuration] = useState(false);
@@ -172,6 +188,13 @@ export function CampaignCreationSheet({
       .catch(() => setWhatsappFetchFailed(true))
       .finally(() => setWhatsappLoading(false));
 
+    void fetch("/api/meta-audience-saved", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data: { ok?: boolean; audiences?: SavedAudience[] }) => {
+        if (data.ok) setSavedAudiences(data.audiences ?? []);
+      })
+      .catch(() => {});
+
     const params = new URLSearchParams(window.location.search);
     const pick = params.get("meta_ads_pick");
     if (pick) {
@@ -232,6 +255,64 @@ export function CampaignCreationSheet({
       trackCtaClick("audience_suggested");
     } finally {
       setSuggestingAudience(false);
+    }
+  }
+
+  function applySavedAudience(audience: SavedAudience) {
+    setAgeMin(audience.ageMin);
+    setAgeMax(audience.ageMax);
+    setLocationKey(audience.locationKey);
+    setLocationLabel(audience.locationLabel);
+    if (audience.radiusKm) setRadiusKm(audience.radiusKm);
+    setSelectedInterests(audience.interests);
+    setAudienceNotes(audience.notes);
+    setAudienceApplied(true);
+    trackCtaClick("audience_reused");
+  }
+
+  async function saveAudience() {
+    if (!saveAudienceName.trim() || savingAudience) return;
+    setSavingAudience(true);
+    try {
+      const response = await fetch("/api/meta-audience-saved", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: saveAudienceName.trim(),
+          description: audienceDescription.trim() || saveAudienceName.trim(),
+          ageMin,
+          ageMax,
+          locationKey,
+          locationLabel,
+          radiusKm: locationLabel ? radiusKm : null,
+          interests: selectedInterests,
+          notes: audienceNotes,
+        }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { ok?: boolean; id?: string };
+      if (response.ok && data.ok && data.id) {
+        setSavedAudiences((current) => [
+          {
+            id: data.id!,
+            name: saveAudienceName.trim(),
+            description: audienceDescription.trim() || saveAudienceName.trim(),
+            ageMin,
+            ageMax,
+            locationKey,
+            locationLabel,
+            radiusKm: locationLabel ? radiusKm : null,
+            interests: selectedInterests,
+            notes: audienceNotes,
+          },
+          ...current,
+        ]);
+        setSaveAudienceName("");
+        setShowSaveAudience(false);
+        trackCtaClick("audience_saved");
+      }
+    } finally {
+      setSavingAudience(false);
     }
   }
 
@@ -505,6 +586,15 @@ export function CampaignCreationSheet({
     objective === "trafico"
       ? (trafficDestination && trafficDestinationLabel[trafficDestination]) || "—"
       : messagingChannels.map((c) => messagingChannelLabel[c]).join(" · ") || "—";
+  // Mirrors the exact call-to-action meta-ads-create.server.ts sends —
+  // WHATSAPP_MESSAGE only when WhatsApp is the sole channel, MESSAGE_PAGE
+  // for every other messaging combination, LEARN_MORE for "trafico".
+  const ctaLabel =
+    objective === "trafico"
+      ? t("Más información", "Learn more")
+      : messagingChannels.length === 1 && messagingChannels[0] === "whatsapp"
+        ? t("Enviar mensaje por WhatsApp", "Send WhatsApp message")
+        : t("Enviar mensaje", "Send message");
   const sheetHeight = sheetRef.current?.getBoundingClientRect().height || 1;
   const dragProgress = mobile ? Math.min(1, Math.max(0, offset / sheetHeight)) : 0;
 
@@ -995,6 +1085,25 @@ export function CampaignCreationSheet({
                 {t("¿A quién quieres llegar?", "Who do you want to reach?")}
               </h2>
               <div className="mt-6 space-y-6">
+                {savedAudiences.length ? (
+                  <div>
+                    <span className="text-sm font-extrabold text-wit-ink">
+                      {t("Audiencias guardadas", "Saved audiences")}
+                    </span>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {savedAudiences.map((audience) => (
+                        <button
+                          key={audience.id}
+                          type="button"
+                          onClick={() => applySavedAudience(audience)}
+                          className="rounded-full border border-wit-ink/10 bg-white px-3 py-1.5 text-xs font-bold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
+                        >
+                          {audience.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <label className="block">
                   <span className="text-sm font-extrabold text-wit-ink">
                     {t("Describe a quién quieres llegar", "Describe who you want to reach")}
@@ -1160,6 +1269,39 @@ export function CampaignCreationSheet({
                     ) : null}
                   </div>
                 </div>
+                {showSaveAudience ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={saveAudienceName}
+                      onChange={(event) => setSaveAudienceName(event.target.value)}
+                      placeholder={t(
+                        "Ej. Dueños de restaurantes CDMX",
+                        "E.g. Restaurant owners CDMX",
+                      )}
+                      className="h-11 min-w-0 flex-1 rounded-xl border border-wit-ink/10 px-3 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void saveAudience()}
+                      disabled={!saveAudienceName.trim() || savingAudience}
+                      className="flex h-11 shrink-0 items-center justify-center rounded-xl bg-wit-blue px-4 text-xs font-bold text-white disabled:opacity-40"
+                    >
+                      {savingAudience ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        t("Guardar", "Save")
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowSaveAudience(true)}
+                    className="text-sm font-bold text-wit-blue"
+                  >
+                    {t("Guardar esta audiencia", "Save this audience")}
+                  </button>
+                )}
               </div>
             </div>
           ) : (
@@ -1232,6 +1374,7 @@ export function CampaignCreationSheet({
                   whatsappNumber
                     ? [["WhatsApp", whatsappNumber]]
                     : []),
+                  [t("CTA", "CTA"), ctaLabel],
                 ].map(([label, value]) => (
                   <div key={label} className="flex items-start justify-between gap-4 py-3">
                     <dt className="text-xs font-semibold text-wit-gray">{label}</dt>

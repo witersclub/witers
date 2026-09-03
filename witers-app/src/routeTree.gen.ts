@@ -46,6 +46,7 @@ import { Route as ApiMetaLocationSearchRouteImport } from './routes/api/meta-loc
 import { Route as ApiMetaInterestSuggestionsRouteImport } from './routes/api/meta-interest-suggestions'
 import { Route as ApiMetaInterestSearchRouteImport } from './routes/api/meta-interest-search'
 import { Route as ApiMetaAudienceSuggestRouteImport } from './routes/api/meta-audience-suggest'
+import { Route as ApiMetaAudienceSavedRouteImport } from './routes/api/meta-audience-saved'
 import { Route as ApiHelpChatRouteImport } from './routes/api/help-chat'
 import { Route as ApiGeocodeRouteImport } from './routes/api/geocode'
 import { Route as ApiGeoPriceRouteImport } from './routes/api/geo-price'
@@ -340,6 +341,11 @@ const ApiMetaInterestSearchRoute = ApiMetaInterestSearchRouteImport.update({
 const ApiMetaAudienceSuggestRoute = ApiMetaAudienceSuggestRouteImport.update({
   id: '/api/meta-audience-suggest',
   path: '/api/meta-audience-suggest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMetaAudienceSavedRoute = ApiMetaAudienceSavedRouteImport.update({
+  id: '/api/meta-audience-saved',
+  path: '/api/meta-audience-saved',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHelpChatRoute = ApiHelpChatRouteImport.update({
@@ -967,6 +973,7 @@ export interface FileRoutesByFullPath {
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/help-chat': typeof ApiHelpChatRoute
+  '/api/meta-audience-saved': typeof ApiMetaAudienceSavedRoute
   '/api/meta-audience-suggest': typeof ApiMetaAudienceSuggestRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
@@ -1115,6 +1122,7 @@ export interface FileRoutesByTo {
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/help-chat': typeof ApiHelpChatRoute
+  '/api/meta-audience-saved': typeof ApiMetaAudienceSavedRoute
   '/api/meta-audience-suggest': typeof ApiMetaAudienceSuggestRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
@@ -1264,6 +1272,7 @@ export interface FileRoutesById {
   '/api/geo-price': typeof ApiGeoPriceRoute
   '/api/geocode': typeof ApiGeocodeRoute
   '/api/help-chat': typeof ApiHelpChatRoute
+  '/api/meta-audience-saved': typeof ApiMetaAudienceSavedRoute
   '/api/meta-audience-suggest': typeof ApiMetaAudienceSuggestRoute
   '/api/meta-interest-search': typeof ApiMetaInterestSearchRoute
   '/api/meta-interest-suggestions': typeof ApiMetaInterestSuggestionsRoute
@@ -1414,6 +1423,7 @@ export interface FileRouteTypes {
     | '/api/geo-price'
     | '/api/geocode'
     | '/api/help-chat'
+    | '/api/meta-audience-saved'
     | '/api/meta-audience-suggest'
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
@@ -1562,6 +1572,7 @@ export interface FileRouteTypes {
     | '/api/geo-price'
     | '/api/geocode'
     | '/api/help-chat'
+    | '/api/meta-audience-saved'
     | '/api/meta-audience-suggest'
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
@@ -1710,6 +1721,7 @@ export interface FileRouteTypes {
     | '/api/geo-price'
     | '/api/geocode'
     | '/api/help-chat'
+    | '/api/meta-audience-saved'
     | '/api/meta-audience-suggest'
     | '/api/meta-interest-search'
     | '/api/meta-interest-suggestions'
@@ -1859,6 +1871,7 @@ export interface RootRouteChildren {
   ApiGeoPriceRoute: typeof ApiGeoPriceRoute
   ApiGeocodeRoute: typeof ApiGeocodeRoute
   ApiHelpChatRoute: typeof ApiHelpChatRoute
+  ApiMetaAudienceSavedRoute: typeof ApiMetaAudienceSavedRoute
   ApiMetaAudienceSuggestRoute: typeof ApiMetaAudienceSuggestRoute
   ApiMetaInterestSearchRoute: typeof ApiMetaInterestSearchRoute
   ApiMetaInterestSuggestionsRoute: typeof ApiMetaInterestSuggestionsRoute
@@ -2220,6 +2233,13 @@ declare module '@tanstack/react-router' {
       path: '/api/meta-audience-suggest'
       fullPath: '/api/meta-audience-suggest'
       preLoaderRoute: typeof ApiMetaAudienceSuggestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/meta-audience-saved': {
+      id: '/api/meta-audience-saved'
+      path: '/api/meta-audience-saved'
+      fullPath: '/api/meta-audience-saved'
+      preLoaderRoute: typeof ApiMetaAudienceSavedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/help-chat': {
@@ -3035,6 +3055,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGeoPriceRoute: ApiGeoPriceRoute,
   ApiGeocodeRoute: ApiGeocodeRoute,
   ApiHelpChatRoute: ApiHelpChatRoute,
+  ApiMetaAudienceSavedRoute: ApiMetaAudienceSavedRoute,
   ApiMetaAudienceSuggestRoute: ApiMetaAudienceSuggestRoute,
   ApiMetaInterestSearchRoute: ApiMetaInterestSearchRoute,
   ApiMetaInterestSuggestionsRoute: ApiMetaInterestSuggestionsRoute,
