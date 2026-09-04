@@ -3848,15 +3848,11 @@ function LogoCard({ fileKey, ink }: { fileKey: string | null; ink: "light" | "da
       ) : null}
       <div className="mt-2 grid grid-cols-2 gap-3">
         {fileKey ? (
-          <div
-            className={`flex items-center justify-center rounded-2xl border ${tone.border} ${tone.surface} p-3`}
-          >
-            <img
-              src={`/api/file?key=${encodeURIComponent(fileKey)}`}
-              alt={t("Logotipo", "Logo")}
-              className="h-full max-h-28 w-full object-contain"
-            />
-          </div>
+          <BrandLogoPreview
+            logoKey={fileKey}
+            alt={t("Logotipo", "Logo")}
+            className={`h-28 rounded-2xl border ${tone.border} ${tone.surface}`}
+          />
         ) : (
           <p
             className={`col-span-2 rounded-2xl border border-dashed ${tone.border} p-4 text-center text-sm ${tone.soft}`}
@@ -4245,6 +4241,34 @@ function BrandAtmosphere({ colors }: { colors: string[] }) {
   );
 }
 
+// CAMBIO 15 — A11/A12: the one shared way to preview a brand logo, used
+// everywhere a logo shows up (the header avatar below, LogoCard's saved
+// version). A logo is designed to be seen whole — never `object-cover`,
+// which crops it to fill the box — so this always renders it at a fixed
+// fraction of its box with `object-contain`, centered, regardless of the
+// logo's own aspect ratio or the box's shape. `className` controls the
+// box itself (size, shape, border, background); this component only ever
+// controls how the image sits inside that box.
+function BrandLogoPreview({
+  logoKey,
+  alt,
+  className = "",
+}: {
+  logoKey: string;
+  alt: string;
+  className?: string;
+}) {
+  return (
+    <div className={`flex items-center justify-center overflow-hidden ${className}`}>
+      <img
+        src={`/api/file?key=${encodeURIComponent(logoKey)}`}
+        alt={alt}
+        className="h-[68%] w-[68%] object-contain"
+      />
+    </div>
+  );
+}
+
 // CAMBIO 07 — Brand Wallet rediseñado: en vez del deck cerrado que había
 // que "abrir" para llegar a la cuadrícula real de siempre, ahora los
 // activos VIVEN como el stack — anclado a la parte inferior, la tarjeta
@@ -4260,10 +4284,10 @@ function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null })
     <div className="mx-auto flex min-h-[calc(100dvh-15rem)] w-full max-w-[900px] flex-col sm:min-h-[calc(100dvh-17rem)]">
       <div className="wit-rise mx-auto max-w-md px-2 text-center">
         {brandProfile?.logo_key ? (
-          <img
-            src={`/api/file?key=${encodeURIComponent(brandProfile.logo_key)}`}
+          <BrandLogoPreview
+            logoKey={brandProfile.logo_key}
             alt={brandProfile.company_name}
-            className="mx-auto h-16 w-16 rounded-full border border-wit-ink/10 object-cover shadow-[0_10px_28px_rgba(5,13,40,0.12)]"
+            className="mx-auto h-16 w-16 rounded-full border border-wit-ink/10 bg-white shadow-[0_10px_28px_rgba(5,13,40,0.12)]"
           />
         ) : (
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-wit-blue/10 text-wit-blue">
@@ -4285,12 +4309,13 @@ function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null })
           </p>
         ) : null}
       </div>
-      {/* CAMBIO 04 (Fase 4.11) — capped instead of the full 900px section
-          width: on desktop, a deck this wide read as a stretched-out
-          mobile module rather than an object with its own size. Centering
-          a wallet-width deck at least keeps the metaphor intact without
-          building a separate side-panel layout this pass. */}
-      <div className="mx-auto mt-auto w-full max-w-md pb-2 pt-4">
+      {/* CAMBIO 15 — A9/A10: on mobile this stays a bottom-anchored,
+          wallet-width deck (max-w-md, mt-auto). Desktop no longer stretches
+          that same narrow deck to fill a huge screen — BrandAssetStack
+          itself switches to an independent, non-overlapping grid at the
+          md breakpoint, so the wrapper here just stops constraining width
+          and top-anchors instead. */}
+      <div className="mx-auto mt-auto w-full max-w-md pb-2 pt-4 md:mt-8 md:max-w-none md:pt-6">
         <BrandAssetStack brandProfile={brandProfile} />
       </div>
     </div>
@@ -4794,6 +4819,11 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
   const qc = useQueryClient();
   const [order, setOrder] = useState<StackAssetId[]>(STACK_ORDER_DEFAULT);
   const [librarySheetOpen, setLibrarySheetOpen] = useState(false);
+  // A9/A10 — the desktop grid's own expansion state, independent of the
+  // mobile stack's `order`/bringToFront: a grid tile doesn't reorder itself
+  // to the "front", it opens a detail panel. Both paradigms read the same
+  // `cards` below — one dataset, two completely different layouts.
+  const [expandedDesktop, setExpandedDesktop] = useState<StackAssetId | null>(null);
 
   // Real brand_assets rows — same endpoint (/api/brand-profile) the old
   // "Mente de marca" card already used, just lifted up so the three
@@ -4951,15 +4981,25 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
 
   const activeId = order[order.length - 1];
   const collapsedCount = order.length - 1;
+  // CAMBIO 15 — A1: real overlap instead of flush seams. Each collapsed
+  // card's own bottom now extends `--wit-stack-overlap` past its peek slot
+  // — invisible, because the next card (higher z-index, same z-order as
+  // `order`) draws over that extra sliver — which is what lets every card
+  // keep all four rounded corners without a seam reading as a gap: the
+  // rounded bottom of card N sits physically hidden under card N+1's top,
+  // the way a real fanned deck overlaps rather than a row of flush tiles.
   const stackVars = {
     "--wit-stack-peek": "clamp(60px, 6.5dvh, 76px)",
     "--wit-stack-active-h": "clamp(220px, 27dvh, 280px)",
+    "--wit-stack-overlap": "16px",
   } as CSSProperties;
 
   return (
     <div>
+      {/* A1 — mobile: the true overlapping stack, one card open at a time,
+          anchored to the bottom. Hidden on desktop, not resized into it. */}
       <div
-        className="wit-wallet-enter relative w-full"
+        className="wit-wallet-enter relative w-full md:hidden"
         style={{
           ...stackVars,
           height: `calc(var(--wit-stack-active-h) + ${collapsedCount} * var(--wit-stack-peek))`,
@@ -4970,29 +5010,17 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
           const isActive = id === activeId;
           const Icon = card.icon;
           const tone = walletTone(card.ink);
-          // CAMBIO 04 (Fase 4.1/4.2) — collapsed cards already sit flush
-          // against each other (top is index*peek, height is exactly
-          // peek, zero gap) but rounding all four corners on every one of
-          // them still read as "a list of separate rounded modules": each
-          // seam had two facing rounded corners exposing a sliver of page
-          // background, which looks exactly like a gap even though there
-          // isn't one. Only the outermost edges of the whole deck are
-          // rounded now — the topmost collapsed card's top, and the
-          // active card's bottom — every seam in between is flush.
-          const roundingClass = isActive
-            ? "rounded-b-[28px]"
-            : index === 0
-              ? "rounded-t-[28px]"
-              : "";
           return (
             <div
               key={id}
-              className={`wit-stack-card absolute inset-x-0 overflow-hidden border ${roundingClass} ${tone.border} shadow-[0_18px_44px_rgba(5,13,40,0.18)]`}
+              className={`wit-stack-card wit-stack-metal absolute inset-x-0 overflow-hidden rounded-[28px] border ${tone.border} shadow-[0_18px_44px_rgba(5,13,40,0.22)]`}
               style={{
                 top: isActive
                   ? `calc(${collapsedCount} * var(--wit-stack-peek))`
                   : `calc(${index} * var(--wit-stack-peek))`,
-                height: isActive ? "var(--wit-stack-active-h)" : "var(--wit-stack-peek)",
+                height: isActive
+                  ? "var(--wit-stack-active-h)"
+                  : "calc(var(--wit-stack-peek) + var(--wit-stack-overlap))",
                 zIndex: index + 1,
                 background: card.accent,
               }}
@@ -5043,6 +5071,94 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
           );
         })}
       </div>
+
+      {/* A9/A10 — desktop: an independent, non-overlapping responsive grid,
+          never the mobile stack stretched wide. Tiles stay flat cards (no
+          stacking/z-index games); opening one expands via a detail panel
+          overlay instead of turning the grid into a wallet. */}
+      <div className="hidden md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3">
+        {STACK_ORDER_DEFAULT.map((id) => {
+          const card = cards[id];
+          const Icon = card.icon;
+          const tone = walletTone(card.ink);
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setExpandedDesktop(id)}
+              aria-haspopup="dialog"
+              className={`wit-stack-metal group flex h-40 flex-col justify-between overflow-hidden rounded-[28px] border p-5 text-left shadow-[0_18px_44px_rgba(5,13,40,0.16)] transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wit-ink ${tone.border}`}
+              style={{ background: card.accent }}
+            >
+              <span
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tone.surface} ${tone.text}`}
+              >
+                <Icon className="h-5 w-5" strokeWidth={2.2} />
+              </span>
+              <span className="min-w-0">
+                <span className={`block truncate text-base font-extrabold ${tone.text}`}>
+                  {card.title}
+                </span>
+                <span className={`mt-0.5 block truncate text-xs font-medium ${tone.soft}`}>
+                  {card.subtitle}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {expandedDesktop
+        ? (() => {
+            const card = cards[expandedDesktop];
+            const Icon = card.icon;
+            const tone = walletTone(card.ink);
+            return (
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="wallet-desktop-panel-title"
+                className="fixed inset-0 z-[90] hidden items-center justify-center bg-wit-ink/25 p-6 backdrop-blur-[2px] md:flex"
+                onClick={(event) => {
+                  if (event.target === event.currentTarget) setExpandedDesktop(null);
+                }}
+              >
+                <div className="wit-rise flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-[30px] bg-white shadow-[0_24px_70px_rgba(5,13,40,0.28)]">
+                  <div
+                    className="wit-stack-metal relative flex shrink-0 items-center gap-3 p-6"
+                    style={{ background: card.accent }}
+                  >
+                    <span
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tone.surface} ${tone.text}`}
+                    >
+                      <Icon className="h-5 w-5" strokeWidth={2.2} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        id="wallet-desktop-panel-title"
+                        className={`text-lg font-extrabold ${tone.text}`}
+                      >
+                        {card.title}
+                      </p>
+                      <p className={`mt-0.5 truncate text-xs font-medium ${tone.soft}`}>
+                        {card.subtitle}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedDesktop(null)}
+                      aria-label={t("Cerrar", "Close")}
+                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${tone.surface} ${tone.text}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto p-6">{card.content}</div>
+                </div>
+              </div>
+            );
+          })()
+        : null}
+
       <BrandLibrarySheet
         open={librarySheetOpen}
         onClose={() => setLibrarySheetOpen(false)}
