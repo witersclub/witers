@@ -21,6 +21,21 @@ const schema = z.object({
     )
     .min(1)
     .max(20),
+  monthLabel: z.string().max(60).optional(),
+  // "adjust" tells Wit it's editing a plan that already exists, and
+  // existingEntries (from the client's own already-loaded calendar) is what
+  // it uses to talk about that plan without re-fetching or re-deriving it.
+  mode: z.enum(["create", "adjust"]).optional(),
+  existingEntries: z
+    .array(
+      z.object({
+        date: z.string(),
+        format: z.enum(["imagen", "video", "carrusel"]),
+        title: z.string().max(200),
+      }),
+    )
+    .max(60)
+    .optional(),
 });
 
 // CAMBIO 02 — "Planificar con Wit": a free-text front door into the guided
@@ -42,7 +57,11 @@ export const Route = createFileRoute("/api/wit/planning-chat")({
         const parsed = schema.safeParse(await request.json().catch(() => null));
         if (!parsed.success) return json({ ok: false, error: "datos_invalidos" }, { status: 400 });
 
-        const result = await runWitPlanningBrief(parsed.data.messages, brand.context);
+        const result = await runWitPlanningBrief(parsed.data.messages, brand.context, {
+          monthLabel: parsed.data.monthLabel ?? "",
+          mode: parsed.data.mode ?? "create",
+          existingEntries: parsed.data.existingEntries ?? [],
+        });
 
         if (!result.ok) return json(result, { status: 502 });
         return json(result);

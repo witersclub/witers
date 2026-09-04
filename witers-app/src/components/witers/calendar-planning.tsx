@@ -34,6 +34,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Eye,
   Facebook,
   FileText,
   Flame,
@@ -42,6 +43,7 @@ import {
   Instagram,
   Loader2,
   Megaphone,
+  MoreHorizontal,
   Music2,
   PenLine,
   RotateCcw,
@@ -103,33 +105,6 @@ type CalendarEntry = CalendarEntryDraft & {
   productionReady: boolean;
 };
 type CalendarProductionState = "ready-for-design" | "in-design" | "ready-to-publish";
-type WitMessage = {
-  role: "user" | "assistant";
-  content: string;
-  // Kept in the transcript sent to the backend (so Wit still "remembers"
-  // what it proposed on a later turn) but not rendered as a chat bubble —
-  // the plan review card below already shows that content nicely, so
-  // showing it again as a wall of text in the thread would be redundant.
-  hidden?: boolean;
-};
-
-// A compact plain-text recap of the proposed plan, injected into the
-// message history right when Wit proposes it (see askWit's "done" branch)
-// so that if the client later says they don't like it, Wit can read back
-// what it already proposed instead of starting from zero. Kept short
-// (date/format/title only, no full briefs) to stay well under the 2000-char
-// per-message cap even for a month full of entries.
-function buildPlanSummaryText(
-  entries: CalendarEntryDraft[],
-  t: (es: string, en: string) => string,
-): string {
-  const lines = entries.map((e) => `${e.date} · ${formatLabel(e.format, t)}: ${e.title}`);
-  const text = t(
-    `Plan propuesto para el mes:\n${lines.join("\n")}`,
-    `Proposed plan for the month:\n${lines.join("\n")}`,
-  );
-  return text.length > 1900 ? `${text.slice(0, 1900)}…` : text;
-}
 
 const FORMAT_ICON: Record<CalendarFormat, typeof ImageIcon> = {
   imagen: ImageIcon,
@@ -262,603 +237,6 @@ function buildMonthGrid(year: number, month: number): { date: string; inMonth: b
     cells.push({ date: isoDate(last), inMonth: false });
   }
   return cells;
-}
-
-/* ---------- wizard (Wit chat) ---------- */
-
-function CalendarWizard({
-  targetYear,
-  targetMonth,
-  monthLabel,
-  onClose,
-  onCreated,
-  initialBrandMindOpen = false,
-}: {
-  targetYear: number;
-  targetMonth: number;
-  monthLabel: string;
-  onClose: () => void;
-  onCreated: () => void;
-  initialBrandMindOpen?: boolean;
-}) {
-  const { t } = useLanguage();
-  const [messages, setMessages] = useState<WitMessage[]>([
-    {
-      role: "assistant",
-      content: t(
-        `¡Hola! Vamos a planificar ${monthLabel}. ¿Con qué frecuencia quieres publicar y de qué temas?`,
-        `Hi! Let's plan ${monthLabel}. How often do you want to post, and about what topics?`,
-      ),
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [typing, setTyping] = useState(false);
-  const [plan, setPlan] = useState<CalendarEntryDraft[] | null>(null);
-  const [chatError, setChatError] = useState<string | null>(null);
-  const [sendError, setSendError] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
-  const [brandMindOpen, setBrandMindOpen] = useState(initialBrandMindOpen);
-  const [brandAssets, setBrandAssets] = useState<
-    { id: string; original_name: string; kind: string; use_in_planning: number }[]
-  >([]);
-  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
-  const [assetError, setAssetError] = useState<string | null>(null);
-  const [assetUploading, setAssetUploading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const composerRef = useRef<HTMLTextAreaElement>(null);
-  const brandAssetFolderInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, typing, plan]);
-
-  useEffect(() => {
-    const el = composerRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-  }, [input]);
-
-  async function loadBrandAssets() {
-    try {
-      const res = await fetch("/api/brand-profile", { credentials: "include" });
-      const data = (await res.json()) as { ok: boolean; assets?: typeof brandAssets };
-      if (!data.ok) return;
-      const assets = data.assets ?? [];
-      setBrandAssets(assets);
-      setSelectedAssetIds(assets.filter((a) => a.use_in_planning === 1).map((a) => a.id));
-    } catch {
-      setAssetError(
-        t("No pudimos cargar tus archivos de marca.", "We couldn't load your brand files."),
-      );
-    }
-  }
-
-  async function uploadBrandAsset(file: File): Promise<"saved" | "reference" | "failed"> {
-    if (file.type.startsWith("video/")) {
-      return "failed";
-    }
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const upload = await fetch("/api/upload-reference", { method: "POST", body: fd });
-      const uploaded = (await upload.json()) as { ok: boolean; key?: string };
-      if (!uploaded.ok || !uploaded.key) throw new Error("upload");
-      const extraction = await extractBrandDocumentText(file);
-      const textContent = extraction.text;
-      const save = await fetch("/api/brand-profile", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          action: "add_asset",
-          key: uploaded.key,
-          originalName: file.name,
-          kind: textContent ? "strategy" : file.type === "application/pdf" ? "manual" : "reference",
-          mimeType: file.type || "application/octet-stream",
-          sizeBytes: file.size,
-          textContent,
-        }),
-      });
-      if (!save.ok) throw new Error("save");
-      return extraction.readable ? "saved" : "reference";
-    } catch {
-      return "failed";
-    }
-  }
-
-  async function uploadBrandAssets(files: Iterable<File>) {
-    const selected = Array.from(files);
-    if (!selected.length || assetUploading) return;
-    setAssetError(null);
-    setAssetUploading(true);
-    let saved = 0;
-    let visualReferences = 0;
-    let failed = 0;
-    try {
-      for (const file of selected) {
-        const result = await uploadBrandAsset(file);
-        if (result === "saved") saved += 1;
-        else if (result === "reference") visualReferences += 1;
-        else failed += 1;
-      }
-      await loadBrandAssets();
-      if (failed) {
-        setAssetError(
-          t(
-            `Se cargaron ${saved + visualReferences} de ${selected.length} archivos. Revisa que cada uno sea compatible y pese máximo 60 MB.`,
-            `${saved + visualReferences} of ${selected.length} files were uploaded. Check that each one is supported and 60 MB or smaller.`,
-          ),
-        );
-      } else if (visualReferences) {
-        setAssetError(
-          t(
-            `Se cargaron ${selected.length} archivos. ${visualReferences} quedan como referencias visuales; Wit lee texto de .txt, .md, .json y .docx.`,
-            `${selected.length} files were uploaded. ${visualReferences} are visual references; Wit reads text from .txt, .md, .json, and .docx.`,
-          ),
-        );
-      }
-    } finally {
-      setAssetUploading(false);
-    }
-  }
-
-  async function askWit(next: WitMessage[]) {
-    setTyping(true);
-    setChatError(null);
-    try {
-      // When the client explicitly asks to fill the whole month, make that
-      // promise executable: a five-day partial answer must never look like
-      // a completed monthly plan.
-      const asksForFullMonth = next.some(
-        (m) =>
-          m.role === "user" &&
-          /(?:todo el mes|mes completo|todos los d[ií]as|diario|entire month|whole month|every day)/i.test(
-            m.content,
-          ),
-      );
-      const daysInTargetMonth = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
-      const res = await fetch("/api/wit/calendar-chat", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          messages: next.map(({ role, content }) => ({ role, content })),
-          year: targetYear,
-          month: targetMonth,
-          brandAssetIds: selectedAssetIds,
-          expectedEntries: asksForFullMonth ? daysInTargetMonth : undefined,
-        }),
-      });
-      const data = (await res.json()) as
-        | { ok: true; kind: "message"; text: string }
-        | { ok: true; kind: "done"; entries: CalendarEntryDraft[] }
-        | { ok: false; error: string };
-      if (!data.ok) {
-        setChatError(
-          data.error === "plan_incompleto"
-            ? t(
-                "Wit no alcanzó a completar todas las piezas pendientes. Tu calendario no se modificó; intenta de nuevo para que continúe el plan.",
-                "Wit didn't finish all pending pieces. Your calendar was not changed; try again so it can continue the plan.",
-              )
-            : data.error === "falta_openai_api_key"
-              ? t(
-                  "Wit no está configurado todavía. Revisa la configuración de IA e intenta de nuevo.",
-                  "Wit isn't configured yet. Check the AI configuration and try again.",
-                )
-              : data.error === "tiempo_agotado"
-                ? t(
-                    "Wit tardó más de lo habitual. Tu calendario no se modificó; inténtalo una vez más.",
-                    "Wit took longer than usual. Your calendar was not changed; try once more.",
-                  )
-                : data.error === "openai_error"
-                  ? t(
-                      "Wit no pudo generar el plan en este momento. Tu calendario no se modificó; inténtalo de nuevo.",
-                      "Wit couldn't generate the plan right now. Your calendar was not changed; try again.",
-                    )
-                  : data.error === "limite_openai"
-                    ? t(
-                        "Wit alcanzó el límite temporal de solicitudes mientras completaba el mes. Reintenta en un momento; tu calendario no se modificó.",
-                        "Wit hit a temporary request limit while completing the month. Try again shortly; your calendar was not changed.",
-                      )
-                    : data.error === "proveedor_openai"
-                      ? t(
-                          "El proveedor de IA no respondió correctamente mientras Wit generaba el plan. Tu calendario no se modificó.",
-                          "The AI provider did not respond correctly while Wit generated the plan. Your calendar was not changed.",
-                        )
-                      : data.error === "configuracion_openai"
-                        ? t(
-                            "La configuración de IA rechazó esta planificación. Registramos el detalle técnico para corregirlo; tu calendario no se modificó.",
-                            "The AI configuration rejected this plan. We recorded the technical detail to fix it; your calendar was not changed.",
-                          )
-                        : t(
-                            "Wit no está disponible en este momento. Intenta de nuevo en un momento.",
-                            "Wit isn't available right now. Try again in a moment.",
-                          ),
-        );
-        return;
-      }
-      if (data.kind === "message") {
-        setMessages((prev) => [...prev, { role: "assistant", content: data.text }]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: buildPlanSummaryText(data.entries, t), hidden: true },
-        ]);
-        setPlan(data.entries);
-      }
-    } catch {
-      setChatError(
-        t(
-          "No pudimos hablar con Wit. Revisa tu conexión e intenta de nuevo.",
-          "We couldn't reach Wit. Check your connection and try again.",
-        ),
-      );
-    } finally {
-      setTyping(false);
-    }
-  }
-
-  function sendText(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed || typing || plan) return;
-    const next = [...messages, { role: "user" as const, content: trimmed }];
-    setMessages(next);
-    setInput("");
-    void askWit(next);
-  }
-
-  // "No me gusta, ajustemos" — reopens the conversation instead of just
-  // discarding the plan. The proposed plan is already in the transcript
-  // (see the hidden summary message above), so Wit can ask what to change
-  // instead of starting the whole conversation over.
-  function rejectPlan() {
-    if (!plan) return;
-    setPlan(null);
-    setSendError(null);
-    const feedback = t(
-      "No me gusta este plan, quiero ajustarlo.",
-      "I don't like this plan, I want to adjust it.",
-    );
-    const next = [...messages, { role: "user" as const, content: feedback }];
-    setMessages(next);
-    void askWit(next);
-  }
-
-  async function confirmPlan() {
-    if (!plan) return;
-    setSendError(null);
-    setSending(true);
-    try {
-      const res = await fetch("/api/calendar-entries", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ entries: plan }),
-      });
-      const data = (await res.json()) as { ok: boolean };
-      if (!data.ok) {
-        setSendError(
-          t(
-            "No pudimos guardar tu plan. Intenta de nuevo.",
-            "We couldn't save your plan. Try again.",
-          ),
-        );
-        return;
-      }
-      onCreated();
-    } catch {
-      setSendError(
-        t(
-          "No pudimos guardar tu plan. Intenta de nuevo.",
-          "We couldn't save your plan. Try again.",
-        ),
-      );
-    } finally {
-      setSending(false);
-    }
-  }
-
-  return (
-    <div className="mx-auto flex h-full w-full max-w-3xl flex-col overflow-hidden px-5 pb-4 pt-4">
-      <div className="relative flex flex-col items-center gap-1.5 pb-1 pt-1">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("Cerrar chat", "Close chat")}
-          className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full text-wit-gray hover:bg-wit-mist/60 hover:text-wit-ink"
-        >
-          <X className="h-4 w-4" strokeWidth={2.4} />
-        </button>
-        <div className="wit-float">
-          <WMark size={26} />
-        </div>
-        <p className="text-sm font-medium text-wit-ink">
-          {t(`Planificando ${monthLabel} con Wit`, `Planning ${monthLabel} with Wit`)}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          setBrandMindOpen(true);
-          void loadBrandAssets();
-        }}
-        className="mb-1 flex w-full items-center justify-between rounded-2xl border border-wit-blue/10 bg-wit-blue/[0.04] px-4 py-3 text-left transition-colors hover:bg-wit-blue/[0.08]"
-      >
-        <span className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-wit-blue shadow-sm">
-            <FileText className="h-4 w-4" />
-          </span>
-          <span>
-            <span className="block text-sm font-bold text-wit-ink">
-              {t("Mente de marca", "Brand mind")}
-            </span>
-            <span className="block text-xs text-wit-gray">
-              {selectedAssetIds.length
-                ? t(
-                    `${selectedAssetIds.length} archivos activos para este plan`,
-                    `${selectedAssetIds.length} files active for this plan`,
-                  )
-                : t(
-                    "Agrega contexto para que Wit conozca tu marca",
-                    "Add context so Wit knows your brand",
-                  )}
-            </span>
-          </span>
-        </span>
-        <ChevronRight className="h-4 w-4 text-wit-blue" />
-      </button>
-
-      <div className="flex-1 overflow-y-auto">
-        <div className="flex flex-col gap-3 py-4">
-          {messages.map((m, i) =>
-            m.hidden ? null : <ChatBubble key={i} role={m.role} text={m.content} />,
-          )}
-          {typing ? <ChatBubble role="assistant" typingDots /> : null}
-          {chatError ? (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-600">
-              {chatError}
-            </p>
-          ) : null}
-          {plan ? (
-            <>
-              <ChatBubble
-                role="assistant"
-                text={t(
-                  "¡Listo! Revisa tu plan del mes antes de guardarlo:",
-                  "Done! Review your month's plan before saving it:",
-                )}
-              />
-              <div className="wit-glass rounded-2xl p-5 shadow-[0_10px_30px_rgba(5,13,40,0.05)]">
-                <div className="max-h-[40vh] space-y-2.5 overflow-y-auto">
-                  {plan.map((entry, i) => {
-                    const Icon = FORMAT_ICON[entry.format];
-                    return (
-                      <div key={i} className="rounded-xl bg-wit-mist/30 px-4 py-3">
-                        <div className="flex items-center gap-2 text-xs font-bold text-wit-blue">
-                          <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
-                          {formatDayLabel(entry.date, t)} · {formatLabel(entry.format, t)}
-                        </div>
-                        <p className="mt-1 text-sm font-semibold text-wit-ink">{entry.title}</p>
-                        {entry.format === "carrusel" && entry.slides?.length ? (
-                          <ol className="mt-1.5 space-y-1">
-                            {entry.slides.map((slide, si) => (
-                              <li key={si} className="text-xs text-wit-gray">
-                                <span className="font-semibold text-wit-ink">
-                                  {si + 1}. {slide.title}
-                                </span>{" "}
-                                — {slide.brief}
-                              </li>
-                            ))}
-                          </ol>
-                        ) : (
-                          <p className="mt-0.5 text-xs text-wit-gray">{entry.brief}</p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <button
-                    type="button"
-                    disabled={sending}
-                    onClick={rejectPlan}
-                    className="flex-1 rounded-full border border-wit-ink/15 px-4 py-3 text-sm font-bold text-wit-ink hover:border-wit-ink/30 disabled:opacity-50"
-                  >
-                    {t("No me gusta, ajustemos", "I don't like it, let's adjust")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={sending}
-                    onClick={confirmPlan}
-                    className="flex-1 rounded-full bg-wit-blue px-4 py-3 text-sm font-bold text-white hover:bg-wit-blue-deep disabled:opacity-50"
-                  >
-                    {sending
-                      ? t("Guardando...", "Saving...")
-                      : t("Confirmar plan del mes", "Confirm month's plan")}
-                  </button>
-                </div>
-                {sendError ? <p className="mt-2 text-sm text-red-600">{sendError}</p> : null}
-              </div>
-            </>
-          ) : null}
-          <div ref={bottomRef} />
-        </div>
-      </div>
-
-      {!plan ? (
-        <div className="shrink-0 border-t border-wit-ink/10 pb-4 pt-3">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              sendText(input);
-            }}
-            className="wit-glass flex items-end gap-2 rounded-3xl p-1.5 pl-4 shadow-[0_10px_30px_rgba(5,13,40,0.05)]"
-          >
-            <textarea
-              ref={composerRef}
-              rows={1}
-              maxLength={2000}
-              aria-label={t("Tu mensaje", "Your message")}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendText(input);
-                }
-              }}
-              disabled={typing}
-              placeholder={t("Escribe tu mensaje...", "Type your message...")}
-              className="max-h-[160px] min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent py-2.5 text-base text-wit-ink outline-none placeholder:text-wit-gray disabled:opacity-50"
-            />
-            <MicButton value={input} onChange={setInput} />
-            <button
-              type="submit"
-              disabled={!input.trim() || typing}
-              aria-label={t("Enviar mensaje", "Send message")}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wit-blue text-white transition-all hover:bg-wit-blue-deep disabled:opacity-40"
-            >
-              <svg
-                width="17"
-                height="17"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M22 2 11 13" />
-                <path d="M22 2 15 22 11 13 2 9 22 2Z" />
-              </svg>
-            </button>
-          </form>
-        </div>
-      ) : null}
-      {brandMindOpen
-        ? createPortal(
-            <div
-              className="fixed inset-0 z-[90] flex items-end bg-wit-ink/20 p-0 backdrop-blur-[2px]"
-              role="dialog"
-              aria-modal="true"
-              aria-label={t("Mente de marca", "Brand mind")}
-            >
-              <div className="w-full rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-3 shadow-2xl md:mx-auto md:mb-8 md:max-w-lg md:rounded-[28px]">
-                <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-wit-ink/15" />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-extrabold text-wit-ink">
-                      {t("Mente de marca", "Brand mind")}
-                    </p>
-                    <p className="mt-0.5 text-sm text-wit-gray">
-                      {t(
-                        "Elige qué archivos debe considerar Wit en este plan.",
-                        "Choose which files Wit should consider for this plan.",
-                      )}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setBrandMindOpen(false)}
-                    aria-label={t("Cerrar", "Close")}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-mist text-wit-ink"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-                <label
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    void uploadBrandAssets(event.dataTransfer.files);
-                  }}
-                  className="mt-5 flex min-h-20 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-wit-blue/35 bg-wit-blue/[0.03] px-4 py-3 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.07]"
-                >
-                  <Upload className="h-4 w-4" />
-                  {t("Cargar archivos o carpeta", "Upload files or a folder")}
-                  <span className="text-[11px] font-medium text-wit-gray">
-                    {assetUploading
-                      ? t("Cargando archivos...", "Uploading files...")
-                      : t(
-                          "Hasta 60 MB por archivo. También puedes soltar una carpeta.",
-                          "Up to 60 MB per file. You can also drop a folder.",
-                        )}
-                  </span>
-                  <input
-                    className="sr-only"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,application/pdf,.doc,.docs,.docx,.md,.markdown,.txt,.text,application/json"
-                    multiple
-                    disabled={assetUploading}
-                    onChange={(e) => void uploadBrandAssets(e.target.files ?? [])}
-                  />
-                </label>
-                <button
-                  type="button"
-                  disabled={assetUploading}
-                  onClick={() => brandAssetFolderInputRef.current?.click()}
-                  className="mt-2 text-xs font-semibold text-wit-blue hover:text-wit-blue-deep disabled:opacity-50"
-                >
-                  {t("Seleccionar una carpeta", "Select a folder")}
-                </button>
-                <input
-                  ref={brandAssetFolderInputRef}
-                  className="sr-only"
-                  type="file"
-                  multiple
-                  {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
-                  disabled={assetUploading}
-                  onChange={(e) => void uploadBrandAssets(e.target.files ?? [])}
-                />
-                <div className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">
-                  {brandAssets.length ? (
-                    brandAssets.map((asset) => (
-                      <label
-                        key={asset.id}
-                        className="flex cursor-pointer items-center gap-3 rounded-2xl border border-wit-ink/8 px-3 py-3"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedAssetIds.includes(asset.id)}
-                          onChange={(e) =>
-                            setSelectedAssetIds((current) =>
-                              e.target.checked
-                                ? [...current, asset.id]
-                                : current.filter((id) => id !== asset.id),
-                            )
-                          }
-                          className="h-4 w-4 accent-[#315BFF]"
-                        />
-                        <FileText className="h-4 w-4 shrink-0 text-wit-blue" />
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-wit-ink">
-                          {asset.original_name}
-                        </span>
-                        <span className="text-xs capitalize text-wit-gray">{asset.kind}</span>
-                      </label>
-                    ))
-                  ) : (
-                    <p className="rounded-2xl bg-wit-mist/50 px-4 py-5 text-center text-sm text-wit-gray">
-                      {t(
-                        "Aún no tienes archivos. Sube tu manual, estrategia o referencias.",
-                        "You don't have files yet. Upload your manual, strategy, or references.",
-                      )}
-                    </p>
-                  )}
-                </div>
-                {assetError ? <p className="mt-3 text-sm text-red-600">{assetError}</p> : null}
-                <button
-                  type="button"
-                  onClick={() => setBrandMindOpen(false)}
-                  className="mt-5 w-full rounded-2xl bg-wit-blue py-3.5 text-sm font-bold text-white"
-                >
-                  {t("Usar en esta planificación", "Use in this plan")}
-                </button>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
-    </div>
-  );
 }
 
 /* ---------- detail panel ---------- */
@@ -3526,7 +2904,12 @@ export function PlanificacionPanel({
 }) {
   const { t } = useLanguage();
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [openBrandMindFromHeader, setOpenBrandMindFromHeader] = useState(false);
+  // Which door the client used into GuidedPlanningSheet — "wit" lands
+  // straight in the conversational chat (the card/header ✨ access point),
+  // "form" opens on the normal step-by-step start. Both feed the exact same
+  // planningDraft; this only decides what the sheet shows first.
+  const [wizardEntryPoint, setWizardEntryPoint] = useState<"form" | "wit">("form");
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -3860,12 +3243,26 @@ export function PlanificacionPanel({
                 </span>
               </div>
             </div>
-            <span
-              aria-hidden="true"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-wit-blue/[0.06] text-wit-blue"
+            <button
+              type="button"
+              onClick={() => {
+                setWizardEntryPoint("wit");
+                setWizardOpen(true);
+              }}
+              aria-label={
+                entries.length
+                  ? t("Ajustar con IA", "Adjust with AI")
+                  : t("Planificar con IA", "Plan with AI")
+              }
+              title={
+                entries.length
+                  ? t("Ajustar con IA", "Adjust with AI")
+                  : t("Planificar con IA", "Plan with AI")
+              }
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-wit-blue/[0.06] text-wit-blue transition-colors hover:bg-wit-blue/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2"
             >
               <Sparkles className="h-[18px] w-[18px]" strokeWidth={2.2} />
-            </span>
+            </button>
           </div>
           <p className="mt-4 max-w-sm text-sm font-medium leading-relaxed text-wit-gray">
             {entries.length
@@ -3899,69 +3296,115 @@ export function PlanificacionPanel({
           </div>
         </section>
       ) : null}
-      <div
-        className={`${homeMobile ? "hidden" : "flex"} flex-col gap-3 md:flex-row md:items-center md:justify-between`}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink sm:text-3xl">
-            {t("Planificación", "Planning")}
-          </h1>
+      <div className={homeMobile ? "hidden" : "block"}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-extrabold tracking-tighter text-wit-ink sm:text-3xl">
+              {t("Planificación", "Planning")}
+            </h1>
+            {entries.length > 0 ? (
+              <p className="mt-0.5 text-sm font-medium text-wit-gray">
+                {t(
+                  "Administra, ajusta y visualiza tu contenido.",
+                  "Manage, adjust, and view your content.",
+                )}
+              </p>
+            ) : null}
+          </div>
           <button
             type="button"
             onClick={() => {
-              setOpenBrandMindFromHeader(true);
+              setWizardEntryPoint("wit");
               setWizardOpen(true);
             }}
-            aria-label={t("Mente de marca", "Brand mind")}
-            title={t("Mente de marca", "Brand mind")}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-wit-blue/[0.06] text-wit-blue transition-colors hover:bg-wit-blue/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 md:hidden"
+            aria-label={
+              entries.length
+                ? t("Ajustar con IA", "Adjust with AI")
+                : t("Planificar con IA", "Plan with AI")
+            }
+            title={
+              entries.length
+                ? t("Ajustar con IA", "Adjust with AI")
+                : t("Planificar con IA", "Plan with AI")
+            }
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wit-blue/[0.06] text-wit-blue transition-colors hover:bg-wit-blue/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2"
           >
             <Sparkles className="h-[18px] w-[18px]" strokeWidth={2.2} />
           </button>
         </div>
-        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+        <div className="mt-4 flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
           {entries.length > 0 ? (
-            <button
-              type="button"
-              onClick={() =>
-                document
-                  .getElementById("calendario-planificacion")
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
-              }
-              className="flex min-h-11 items-center justify-center px-3 py-2 text-sm font-bold text-wit-blue hover:underline"
-            >
-              {t("Ver planificación completa", "View full plan")}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById("calendario-planificacion")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.06]"
+              >
+                <Eye className="h-4 w-4" strokeWidth={2.3} />
+                {t("Ver completa", "View full")}
+              </button>
+              <button
+                type="button"
+                onClick={downloadPlanningPdf}
+                disabled={downloadingPlan}
+                className="flex min-h-11 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.06] disabled:opacity-60"
+              >
+                <Download className="h-4 w-4" strokeWidth={2.3} />
+                {downloadingPlan ? t("Generando...", "Creating...") : t("Descargar", "Download")}
+              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setMoreMenuOpen((open) => !open)}
+                  aria-haspopup="menu"
+                  aria-expanded={moreMenuOpen}
+                  aria-label={t("Más acciones", "More actions")}
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-full px-3 py-2 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.06]"
+                >
+                  <MoreHorizontal className="h-4 w-4" strokeWidth={2.3} />
+                </button>
+                {moreMenuOpen ? (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMoreMenuOpen(false)} />
+                    <div className="absolute left-0 top-full z-20 mt-1 min-w-[190px] overflow-hidden rounded-2xl border border-wit-ink/8 bg-white py-1.5 shadow-[0_12px_32px_rgba(10,30,80,0.14)] md:left-auto md:right-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMoreMenuOpen(false);
+                          setWizardEntryPoint("form");
+                          setWizardOpen(true);
+                        }}
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-semibold text-wit-ink hover:bg-wit-mist/60"
+                      >
+                        <Sparkles className="h-4 w-4 text-wit-blue" strokeWidth={2.2} />
+                        {t("Mente de marca", "Brand mind")}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </div>
           ) : null}
-          {entries.length > 0 ? (
-            <button
-              type="button"
-              onClick={downloadPlanningPdf}
-              disabled={downloadingPlan}
-              className="flex min-h-11 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.06] disabled:opacity-60"
-            >
-              <Download className="h-4 w-4" strokeWidth={2.3} />
-              {downloadingPlan
-                ? t("Generando PDF...", "Creating PDF...")
-                : t("Descargar planificación", "Download plan")}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => {
-              setOpenBrandMindFromHeader(true);
-              setWizardOpen(true);
-            }}
-            className="hidden min-h-11 items-center justify-center gap-2 rounded-full border border-wit-blue/15 bg-wit-blue/[0.05] px-4 py-2.5 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 md:flex"
-          >
-            <Sparkles className="h-4 w-4" strokeWidth={2.2} />
-            {t("Mente de marca", "Brand mind")}
-          </button>
           <button
             type="button"
             disabled={replanning}
-            onClick={() => (entries.length > 0 ? setConfirmingReplan(true) : setWizardOpen(true))}
-            className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-full bg-wit-blue px-5 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] transition-all hover:bg-wit-blue-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 md:min-h-11 md:w-auto"
+            onClick={() => {
+              if (entries.length > 0) {
+                setConfirmingReplan(true);
+                return;
+              }
+              setWizardEntryPoint("form");
+              setWizardOpen(true);
+            }}
+            className={`flex min-h-[54px] items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 md:min-h-11 md:w-auto ${
+              entries.length > 0
+                ? "w-full border border-wit-blue/20 bg-wit-blue/[0.05] text-wit-blue hover:bg-wit-blue/[0.1] md:w-auto"
+                : "w-full bg-wit-blue text-white shadow-[0_4px_14px_rgba(0,71,255,0.18)] hover:bg-wit-blue-deep"
+            }`}
           >
             {entries.length > 0 ? (
               <RotateCcw className="h-[17px] w-[17px]" strokeWidth={2.5} />
@@ -4350,14 +3793,21 @@ export function PlanificacionPanel({
                 targetYear={year}
                 targetMonth={month}
                 monthLabel={monthLabel}
+                mode={entries.length > 0 ? "adjust" : "create"}
+                startWithWitChat={wizardEntryPoint === "wit"}
+                existingEntries={entries.map((entry) => ({
+                  date: entry.date,
+                  format: entry.format,
+                  title: entry.title,
+                }))}
                 onClose={() => {
                   setWizardOpen(false);
-                  setOpenBrandMindFromHeader(false);
+                  setWizardEntryPoint("form");
                 }}
                 onCreated={() => {
                   void qc.invalidateQueries({ queryKey: ["calendar-entries"] });
                   setWizardOpen(false);
-                  setOpenBrandMindFromHeader(false);
+                  setWizardEntryPoint("form");
                 }}
               />
             </>,

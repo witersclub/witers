@@ -5,6 +5,11 @@ import { buildBrandContext } from "../../../lib/brand-context.server";
 import { runWitCalendarChat } from "../../../lib/wit-chat.server";
 import { db, getSessionUser, json } from "../../../lib/witers-auth.server";
 import { getPlan } from "../../../lib/membership-plans";
+import {
+  detectAllowedWeekdaysFromConversation,
+  validatePlanningConstraints,
+  type Weekday,
+} from "../../../lib/planning-constraints.server";
 
 const schema = z.object({
   messages: z
@@ -164,11 +169,27 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
         const context = monthContext({ year, month });
         const occupiedDates = new Set(existingEntries.map((entry) => entry.scheduled_date));
         const suppliedDates = parsed.data.targetDates ?? parsed.data.plannedDates;
-        const requestedDates = suppliedDates
+        // CAMBIO 07 — deterministic reading of "lunes a viernes"-type
+        // constraints straight from the client's own words, independent of
+        // whether the model correctly reflects them. Only applied to dates
+        // WE computed (the full-month fallback below) — dates the client
+        // already picked explicitly through the guided wizard's UI
+        // (suppliedDates) are the more authoritative signal and are never
+        // second-guessed by a text heuristic reading the same conversation.
+        const explicitAllowedWeekdays = detectAllowedWeekdaysFromConversation(parsed.data.messages);
+        const requestedDatesRaw = suppliedDates
           ? [...new Set(suppliedDates)].filter(
               (date) => date >= context.todayDate && date <= context.monthEndDate,
             )
           : datesInRange(context.todayDate, context.monthEndDate);
+        const requestedDates =
+          suppliedDates || !explicitAllowedWeekdays
+            ? requestedDatesRaw
+            : requestedDatesRaw.filter((date) =>
+                explicitAllowedWeekdays.has(
+                  new Date(`${date}T00:00:00.000Z`).getUTCDay() as Weekday,
+                ),
+              );
         const remainingDates = parsed.data.expectedEntries
           ? requestedDates.filter((date) => !occupiedDates.has(date))
           : [];
@@ -266,7 +287,22 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
           if (entries.length !== remainingDates.length) {
             return json({ ok: false, error: "plan_incompleto" }, { status: 502 });
           }
-          return json({ ok: true, kind: "done" as const, entries });
+          // Defense in depth: remainingDates was already weekday-filtered
+          // above (unless the client supplied its own exact dates, which are
+          // trusted as-is), so this should never actually drop anything —
+          // but a validator that's only ever proven never to trigger isn't
+          // proof it can't, and this is the last stop before persistence.
+          const { valid: validatedEntries, violations: droppedEntries } =
+            validatePlanningConstraints(entries, {
+              allowedWeekdays: suppliedDates ? null : explicitAllowedWeekdays,
+            });
+          if (droppedEntries.length) {
+            console.warn(
+              "[calendar-chat] dropped entries outside allowed weekdays (batch path)",
+              droppedEntries.map((entry) => entry.date),
+            );
+          }
+          return json({ ok: true, kind: "done" as const, entries: validatedEntries });
         }
 
         const result = await runWitCalendarChat(parsed.data.messages, brand.context, {
@@ -278,6 +314,19 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
         });
 
         if (!result.ok) return json(result, { status: 502 });
+        if (result.kind === "done" && explicitAllowedWeekdays) {
+          const { valid: validatedEntries, violations: droppedEntries } =
+            validatePlanningConstraints(result.entries, {
+              allowedWeekdays: explicitAllowedWeekdays,
+            });
+          if (droppedEntries.length) {
+            console.warn(
+              "[calendar-chat] dropped entries outside allowed weekdays (free conversation)",
+              droppedEntries.map((entry) => entry.date),
+            );
+          }
+          return json({ ...result, entries: validatedEntries });
+        }
         return json(result);
       },
     },

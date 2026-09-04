@@ -31,9 +31,15 @@ export type PlanningBrief = {
 };
 
 export function WitPlanningChat({
+  monthLabel,
+  mode = "create",
+  existingEntries = [],
   onClose,
   onBriefReady,
 }: {
+  monthLabel: string;
+  mode?: "create" | "adjust";
+  existingEntries?: { date: string; format: "imagen" | "video" | "carrusel"; title: string }[];
   onClose: () => void;
   onBriefReady: (brief: PlanningBrief) => void;
 }) {
@@ -41,10 +47,16 @@ export function WitPlanningChat({
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content: t(
-        "Cuéntame cómo quieres manejar tu contenido este mes.\nPuedes explicármelo con tus propias palabras y yo organizaré la planificación por ti.",
-        "Tell me how you want to handle your content this month.\nYou can explain it in your own words and I'll organize the plan for you.",
-      ),
+      content:
+        mode === "adjust"
+          ? t(
+              `Tu plan de ${monthLabel} ya tiene ${existingEntries.length} piezas. Cuéntame qué quieres ajustar y actualizo tu planificación.`,
+              `Your plan for ${monthLabel} already has ${existingEntries.length} pieces. Tell me what you want to change and I'll update it.`,
+            )
+          : t(
+              `Cuéntame cómo quieres manejar tu contenido de ${monthLabel}.\nPuedes explicármelo con tus propias palabras y yo organizaré la planificación por ti.`,
+              `Tell me how you want to handle your ${monthLabel} content.\nYou can explain it in your own words and I'll organize the plan for you.`,
+            ),
     },
   ]);
   const [input, setInput] = useState("");
@@ -70,7 +82,7 @@ export function WitPlanningChat({
       const res = await fetch("/api/wit/planning-chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages }),
+        body: JSON.stringify({ messages: nextMessages, monthLabel, mode, existingEntries }),
       });
       const data = (await res.json()) as
         | { ok: true; kind: "message"; text: string }
@@ -128,9 +140,12 @@ export function WitPlanningChat({
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-wit-blue/10 text-wit-blue">
             <Sparkles className="h-4 w-4" />
           </span>
-          <h2 id="wit-planning-chat-title" className="text-base font-extrabold text-wit-ink">
-            {t("Planificar con Wit", "Plan with Wit")}
-          </h2>
+          <div className="min-w-0">
+            <h2 id="wit-planning-chat-title" className="text-base font-extrabold text-wit-ink">
+              {t("Planeando con Wit", "Planning with Wit")} ✨
+            </h2>
+            <p className="text-xs font-semibold text-wit-gray">{monthLabel}</p>
+          </div>
           <button
             type="button"
             onClick={onClose}

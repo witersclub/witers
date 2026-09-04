@@ -6,6 +6,8 @@
 
 import process from "node:process";
 
+import { detectAllowedWeekdaysFromConversation, type Weekday } from "./planning-constraints.server";
+
 const OPENAI_TEXT_MODEL = "gpt-4o-mini";
 
 export type WitBrandContext = {
@@ -1341,37 +1343,69 @@ export async function runWitCalendarEntryExpansion(
   }
 }
 
-function buildPlanningBriefSystemPrompt(brand: WitBrandContext): string {
+function buildPlanningBriefSystemPrompt(
+  brand: WitBrandContext,
+  opts: {
+    monthLabel: string;
+    mode: "create" | "adjust";
+    existingEntries: { date: string; format: CalendarFormat; title: string }[];
+  },
+): string {
   const brandLines = [
     `Marca: ${brand.companyName}.`,
     brand.businessType ? `Categoría: ${brand.businessType}.` : "",
     brand.brandMemory ? `Aprendizajes previos de esta marca: ${brand.brandMemory}` : "",
   ].filter(Boolean);
+  const existingPlanLines = opts.existingEntries.length
+    ? "El cliente YA TIENE un plan para este mes — esta conversación es para AJUSTARLO, no para " +
+      "proponer uno nuevo desde cero. Estas son las piezas ya planeadas (no las repitas, no las " +
+      "cuentes como huecos vacíos):\n" +
+      opts.existingEntries
+        .slice(0, 40)
+        .map((e) => `- ${e.date} (${e.format}): ${e.title}`)
+        .join("\n") +
+      "\n\n"
+    : "";
   return (
-    "Eres Wit, el director creativo de IA de WITERS. El cliente te va a contar, con sus propias " +
-    "palabras (una frase, un párrafo o instrucciones largas), cómo quiere manejar su contenido " +
-    "este mes — objetivos, prioridades, frecuencia, formatos, fechas importantes, campañas, " +
-    "restricciones, temas o cualquier instrucción adicional.\n\n" +
+    "Eres Wit, el director creativo de IA de WITERS, el mismo Wit con el que el cliente ya habla " +
+    "para crear piezas — no eres un asistente distinto ni un formulario. Estás conversando con él " +
+    `sobre su planificación de ${opts.monthLabel}. ` +
+    (opts.mode === "adjust"
+      ? "El cliente quiere AJUSTAR el plan que ya tiene."
+      : "El cliente quiere ARMAR su plan del mes.") +
+    " Puede escribirte en una frase, un párrafo o instrucciones largas — objetivos, prioridades, " +
+    "frecuencia, formatos, fechas importantes, campañas, restricciones, temas, o cualquier otra " +
+    "instrucción. Puede también hacerte preguntas o pedirte una recomendación a mitad de la " +
+    "conversación — respóndelas de verdad, con criterio profesional, no las evadas ni las " +
+    "conviertas en otra pregunta.\n\n" +
     "Idioma: responde siempre en el mismo idioma en el que te escribe el cliente.\n\n" +
     brandLines.join("\n") +
     "\n\n" +
-    "Tu único trabajo es interpretar lo que dice y llamar a submit_planning_brief con los campos " +
-    "estructurados — NUNCA generes el plan de contenido en sí ni fechas específicas, eso lo hace " +
-    "otro paso después de que el cliente revise lo que interpretaste.\n\n" +
-    "Sé generoso infiriendo: si el cliente no menciona frecuencia, asume 3 veces por semana " +
-    "(lunes, miércoles y viernes). Si no menciona formatos, deja formats vacío (significa mezcla " +
-    "recomendada). Si menciona una fecha, promoción, lanzamiento, restricción ('no publicar " +
-    "domingos'), campaña o tema, ponlo todo junto y claro en specialInfo, en frases cortas.\n\n" +
-    "Solo tienes permitido hacer UNA pregunta de seguimiento, y solo si el mensaje del cliente es " +
-    "tan vago que ni siquiera puedes inferir un objetivo (ej. un saludo sin contenido) — en ese " +
-    "caso responde con texto normal, sin llamar a la función. Para cualquier otro caso, incluso " +
-    "uno con poca información, haz tu mejor inferencia profesional y llama a submit_planning_brief " +
-    "de inmediato, en el primer turno si es posible. No niegues ni te disculpes por interpretar; " +
-    "el cliente revisa y corrige después.\n\n" +
-    "Si respondes con texto normal (no llamaste a la función), esa respuesta debe ser UNA sola " +
-    "pregunta corta — una o dos frases, nunca más. NUNCA en esa respuesta: propongas piezas, " +
-    "anuncios, campañas, frases publicitarias, listas o ejemplos de contenido — eso no es tu " +
-    "trabajo aquí, ni el cliente lo pidió todavía."
+    existingPlanLines +
+    "CONVERSA DE VERDAD, no interrogues — esto NO es un formulario disfrazado de chat:\n" +
+    "- NUNCA preguntes algo que el cliente ya dijo o que puedas inferir con criterio profesional. " +
+    "Si dijo 'cinco días a la semana, de lunes a viernes', ya sabes la frecuencia Y los días — no " +
+    "vuelvas a preguntar cuáles. Solo pregunta cuando haya una ambigüedad real (ej. 'cinco " +
+    "contenidos' sin decir si es al mes o por semana).\n" +
+    "- Si el cliente pide una recomendación ('¿me recomiendas cómo distribuir los formatos?', 'no sé " +
+    "qué tan seguido publicar', 'recomiéndame'), dale una recomendación concreta y útil en 2-3 " +
+    "frases, basada en su marca y categoría de negocio — no llames a submit_planning_brief todavía " +
+    "si con eso no tienes ya objetivo y frecuencia claros.\n" +
+    "- Cuando ya tengas objetivo(s) y frecuencia/cadencia razonablemente claros, tienes dos caminos: " +
+    "si el cliente te dio todo eso de forma completa y explícita en un solo mensaje, llama a " +
+    "submit_planning_brief directamente, sin pedir confirmación de más (no le hagas perder tiempo). " +
+    "Si en cambio llegaste ahí después de varias preguntas o inferencias tuyas, resume en 1-2 frases " +
+    "de texto lo que armaste y pregunta si genera su plan con eso — solo llama a la función cuando " +
+    "confirme ('sí', 'dale', 'genera', 'perfecto', o equivalente).\n" +
+    "- Si el cliente no menciona frecuencia, asume 3 veces por semana (lunes, miércoles y viernes) y " +
+    "dilo al resumir, no lo asumas en silencio. Si no menciona formatos, deja formats vacío " +
+    "(mezcla recomendada). Cualquier fecha, promoción, lanzamiento, restricción, campaña o tema que " +
+    "mencione va consolidado en specialInfo, en frases cortas y claras.\n\n" +
+    "Cuando SÍ respondas con texto normal (sin llamar a la función), sé breve — 1-3 frases — y NUNCA " +
+    "en esa respuesta propongas piezas, anuncios, frases publicitarias, listas o ejemplos de " +
+    "contenido concreto: eso llega después, cuando ya se genera el plan real.\n\n" +
+    "Reglas de seguridad, nunca las rompas: nunca menciones limitaciones técnicas, que eres una IA, " +
+    "ni te disculpes por no poder hacer algo — mantente siempre en el rol de director creativo."
   );
 }
 
@@ -1431,6 +1465,11 @@ const PLANNING_BRIEF_TOOLS = [
 export async function runWitPlanningBrief(
   history: WitChatMessage[],
   brand: WitBrandContext,
+  opts: {
+    monthLabel: string;
+    mode: "create" | "adjust";
+    existingEntries: { date: string; format: CalendarFormat; title: string }[];
+  },
 ): Promise<WitPlanningChatResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false, error: "falta_openai_api_key" };
@@ -1450,7 +1489,10 @@ export async function runWitPlanningBrief(
         model: OPENAI_TEXT_MODEL,
         temperature: 0.4,
         max_tokens: 900,
-        messages: [{ role: "system", content: buildPlanningBriefSystemPrompt(brand) }, ...history],
+        messages: [
+          { role: "system", content: buildPlanningBriefSystemPrompt(brand, opts) },
+          ...history,
+        ],
         tools: PLANNING_BRIEF_TOOLS,
         tool_choice: "auto",
       }),
@@ -1494,15 +1536,29 @@ export async function runWitPlanningBrief(
       const validFormats = new Set(["imagen", "video", "carrusel"]);
       const formats = (args.formats ?? []).filter((f): f is CalendarFormat => validFormats.has(f));
       const frequencyPerWeek = Math.max(1, Math.min(7, Math.round(args.frequencyPerWeek ?? 3)));
-      // The model's weekdays don't always match its own frequencyPerWeek —
-      // never trust the count blindly: pad with a sane recurring pattern or
-      // trim rather than let the wizard receive a mismatched pair that
-      // would leave its own "días requeridos" check permanently unmet.
-      const weekdayPattern = [1, 3, 5, 0, 2, 4, 6];
-      const weekdaysSet = new Set(
-        (args.weekdays ?? []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6),
+      // CAMBIO 07 — bug real: the model's weekdays don't always match its
+      // own frequencyPerWeek, so this always had to pad. The OLD pattern
+      // ([1,3,5,0,2,4,6]) put Sunday fourth — ahead of Tuesday/Thursday/
+      // Saturday — so a client who explicitly said "lunes a viernes" but
+      // got a model reply with too few weekdays could silently have Sunday
+      // padded back in. Two fixes, not just one: (1) the pattern below now
+      // only ever reaches for a weekend day last, and (2) whenever the
+      // client's own words carry an explicit day constraint, that
+      // constraint — not the model's array, not the pattern — decides
+      // which days are even eligible to pad from or survive in the first
+      // place. See planning-constraints.server.ts.
+      const explicitAllowed = detectAllowedWeekdaysFromConversation(history);
+      const weekdayPattern: Weekday[] = [1, 2, 3, 4, 5, 6, 0];
+      const modelWeekdays = (args.weekdays ?? []).filter(
+        (d): d is Weekday => Number.isInteger(d) && d >= 0 && d <= 6,
       );
-      for (const day of weekdayPattern) {
+      const weekdaysSet = new Set(
+        explicitAllowed ? modelWeekdays.filter((d) => explicitAllowed.has(d)) : modelWeekdays,
+      );
+      const padCandidates = explicitAllowed
+        ? weekdayPattern.filter((d) => explicitAllowed.has(d))
+        : weekdayPattern;
+      for (const day of padCandidates) {
         if (weekdaysSet.size >= frequencyPerWeek) break;
         weekdaysSet.add(day);
       }

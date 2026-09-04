@@ -207,12 +207,23 @@ export function GuidedPlanningSheet({
   targetYear,
   targetMonth,
   monthLabel,
+  mode = "create",
+  startWithWitChat = false,
+  existingEntries = [],
   onClose,
   onCreated,
 }: {
   targetYear: number;
   targetMonth: number;
   monthLabel: string;
+  // "adjust" only changes copy (Ajustar vs Planificar) and what Wit is told
+  // about the month going in — the client already has a plan, so its
+  // wording should never sound like it's proposing a brand-new one.
+  mode?: "create" | "adjust";
+  // Lets the card/header ✨ access points (calendar-planning.tsx) land
+  // straight in the conversational chat instead of the step-by-step start.
+  startWithWitChat?: boolean;
+  existingEntries?: { date: string; format: CalendarFormat; title: string }[];
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -226,7 +237,7 @@ export function GuidedPlanningSheet({
   const [formats, setFormats] = useState<FormatChoice[]>(["recommended"]);
   const [specialInfo, setSpecialInfo] = useState("");
   const [state, setState] = useState<"form" | "generating" | "success" | "error">("form");
-  const [witChatOpen, setWitChatOpen] = useState(false);
+  const [witChatOpen, setWitChatOpen] = useState(startWithWitChat);
   const [entries, setEntries] = useState<CalendarEntryDraft[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(12);
   const [loadingMessage, setLoadingMessage] = useState(0);
@@ -404,16 +415,6 @@ export function GuidedPlanningSheet({
             <span className="ml-1 h-px flex-1 bg-wit-ink/8" />
             <span className="text-xs font-bold text-wit-gray">{Math.min(step + 1, 6)}/6</span>
           </div>
-          {state === "form" ? (
-            <button
-              type="button"
-              onClick={() => setWitChatOpen(true)}
-              className="mt-3 flex items-center gap-1.5 text-xs font-bold text-wit-blue"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {t("Planificar con Wit", "Plan with Wit")}
-            </button>
-          ) : null}
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-5 md:px-8">
           {state === "generating" ? (
@@ -490,9 +491,49 @@ export function GuidedPlanningSheet({
             </div>
           ) : step === 0 ? (
             <div>
+              <button
+                type="button"
+                onClick={() => setWitChatOpen(true)}
+                className="flex w-full items-start gap-3 rounded-2xl border border-wit-blue/25 bg-wit-blue/[0.045] p-4 text-left transition-colors hover:bg-wit-blue/[0.08]"
+              >
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-wit-blue text-white">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <strong className="text-sm text-wit-ink">
+                      {mode === "adjust"
+                        ? t("Ajustar con IA", "Adjust with AI")
+                        : t("Planificar con IA", "Plan with AI")}
+                    </strong>
+                    <span className="rounded-full bg-wit-blue/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-wit-blue">
+                      {t("Recomendado", "Recommended")}
+                    </span>
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-wit-gray">
+                    {mode === "adjust"
+                      ? t(
+                          "Cuéntale a Wit qué quieres cambiar de tu mes y él actualiza tu planificación.",
+                          "Tell Wit what you want to change about your month and it updates your plan.",
+                        )
+                      : t(
+                          "Cuéntale a Wit cómo quieres manejar tu mes y crea tu planificación de forma personalizada.",
+                          "Tell Wit how you want to run your month and it builds your plan for you.",
+                        )}
+                  </span>
+                </span>
+                <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-wit-blue" />
+              </button>
+              <div className="mt-5 flex items-center gap-3">
+                <span className="h-px flex-1 bg-wit-ink/8" />
+                <span className="text-xs font-bold text-wit-gray">
+                  {t("o configura tu mes paso a paso", "or set up your month step by step")}
+                </span>
+                <span className="h-px flex-1 bg-wit-ink/8" />
+              </div>
               <h2
                 id="guided-planning-title"
-                className="text-2xl font-extrabold tracking-tight text-wit-ink"
+                className="mt-5 text-2xl font-extrabold tracking-tight text-wit-ink"
               >
                 {t("¿Qué quieres lograr este mes?", "What do you want to achieve this month?")}
               </h2>
@@ -838,7 +879,13 @@ export function GuidedPlanningSheet({
         ) : null}
       </section>
       {witChatOpen ? (
-        <WitPlanningChat onClose={() => setWitChatOpen(false)} onBriefReady={applyPlanningBrief} />
+        <WitPlanningChat
+          monthLabel={monthLabel}
+          mode={mode}
+          existingEntries={existingEntries}
+          onClose={() => setWitChatOpen(false)}
+          onBriefReady={applyPlanningBrief}
+        />
       ) : null}
     </div>
   );
