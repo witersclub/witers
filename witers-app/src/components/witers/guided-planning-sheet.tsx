@@ -5,6 +5,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  GalleryHorizontal,
   Image as ImageIcon,
   FileText,
   MessageCircle,
@@ -131,6 +132,34 @@ function objectivesCopy(objectives: Objective[], custom: string) {
   return objectives.map((objective) => objectiveLabel(objective, custom)).join(" · ");
 }
 
+// CAMBIO 15 — B4: recovered from the deleted CalendarWizard (git history,
+// commit 66d33e4^) — the day-by-day preview it built existed for exactly
+// this reason: a bare "N reels, N carruseles, N imágenes" tally after
+// auto-saving gives no chance to catch a bad plan before it's already on
+// the calendar. Re-introduced as the "reviewing" state below, between
+// generation and persistence, instead of generate() saving immediately.
+const FORMAT_ICON: Record<CalendarFormat, typeof ImageIcon> = {
+  imagen: ImageIcon,
+  video: Video,
+  carrusel: GalleryHorizontal,
+};
+
+function formatLabel(format: CalendarFormat, t: (es: string, en: string) => string): string {
+  if (format === "video") return t("Video", "Video");
+  if (format === "carrusel") return t("Carrusel", "Carousel");
+  return t("Imagen", "Image");
+}
+
+function formatDayLabel(iso: string, t: (es: string, en: string) => string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return d.toLocaleDateString(t("es-MX", "en-US"), {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
 function formatCopy(formats: FormatChoice[]) {
   if (formats.includes("recommended")) return "Mezcla recomendada por WITERS";
   return formats
@@ -236,11 +265,15 @@ export function GuidedPlanningSheet({
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const [formats, setFormats] = useState<FormatChoice[]>(["recommended"]);
   const [specialInfo, setSpecialInfo] = useState("");
-  const [state, setState] = useState<"form" | "generating" | "success" | "error">("form");
+  const [state, setState] = useState<"form" | "generating" | "reviewing" | "success" | "error">(
+    "form",
+  );
   const [witChatOpen, setWitChatOpen] = useState(startWithWitChat);
   const [entries, setEntries] = useState<CalendarEntryDraft[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(12);
   const [loadingMessage, setLoadingMessage] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const selectedDaysRequired = frequency ? daysPerWeek(frequency, customCount) : 0;
   const dates = useMemo(
     () => getDatesForWeekdays({ year: targetYear, month: targetMonth, weekdays: selectedWeekdays }),
@@ -298,6 +331,11 @@ export function GuidedPlanningSheet({
     setFormats(brief.formats.length ? brief.formats : ["recommended"]);
     setSpecialInfo(brief.specialInfo);
     setWitChatOpen(false);
+    // B7 — always the SAME draft: reopening Wit from the review-preview step
+    // (state "reviewing") to adjust never creates a second one — it just
+    // re-fills this same form state and lands back on the review-of-
+    // settings step, ready to regenerate with the updated answers.
+    setState("form");
     setStep(5);
   }
 
@@ -327,9 +365,12 @@ export function GuidedPlanningSheet({
     setLoadingProgress(14);
     setLoadingMessage(0);
     setState("generating");
-    const chosenFormats = formats.includes("recommended")
-      ? "una mezcla recomendada de reels, carruseles e imágenes"
-      : formatCopy(formats);
+    const explicitFormats = formats.includes("recommended")
+      ? null
+      : (formats.filter((f) => f !== "recommended") as CalendarFormat[]);
+    const chosenFormats = explicitFormats
+      ? formatCopy(formats)
+      : "una mezcla recomendada de reels, carruseles e imágenes";
     const objectiveLabels = objectives.map((objective) =>
       objectiveLabel(objective, otherObjective),
     );
@@ -356,6 +397,12 @@ export function GuidedPlanningSheet({
           month: targetMonth,
           expectedEntries: dates.length,
           targetDates: dates,
+          // CAMBIO 15 — the structured signal, not just the free-text
+          // "Formatos prioritarios" line above: the server assigns one of
+          // these to every date and regenerates any piece that doesn't
+          // honor it, instead of trusting the model to read the prompt line
+          // correctly on its own.
+          ...(explicitFormats?.length ? { formats: explicitFormats } : {}),
         }),
       });
       const data = (await res.json()) as {
@@ -364,21 +411,50 @@ export function GuidedPlanningSheet({
         entries?: CalendarEntryDraft[];
       };
       if (!data.ok || data.kind !== "done" || !data.entries?.length) throw new Error("generation");
-      const save = await fetch("/api/calendar-entries", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ entries: data.entries }),
-      });
-      const saved = (await save.json()) as { ok: boolean };
-      if (!saved.ok) throw new Error("save");
       setEntries(data.entries);
       setLoadingProgress(100);
-      await new Promise((resolve) => window.setTimeout(resolve, 620));
-      setState("success");
-      onCreated();
+      await new Promise((resolve) => window.setTimeout(resolve, 420));
+      // B4 — land on the day-by-day preview instead of saving straight
+      // away: the client reviews the actual pieces (format, title, and the
+      // 4-slide breakdown for any carrusel) before anything is persisted.
+      setState("reviewing");
     } catch {
       setState("error");
     }
+  }
+
+  // The "Crear mi planificación →" action on the review-preview step —
+  // persists exactly the entries the client just reviewed, unchanged.
+  async function confirmPlan() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const save = await fetch("/api/calendar-entries", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ entries }),
+      });
+      const saved = (await save.json()) as { ok: boolean };
+      if (!saved.ok) throw new Error("save");
+      setState("success");
+      onCreated();
+    } catch {
+      setSaveError(
+        t(
+          "No pudimos guardar tu planificación. Intenta de nuevo.",
+          "We couldn't save your plan. Try again.",
+        ),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // The "No me gusta, ajustemos" action — reopens Wit conversationally
+  // instead of a full editor (B6), with the just-generated draft as context
+  // so Wit knows what to adjust rather than starting over.
+  function rejectPlan() {
+    setWitChatOpen(true);
   }
 
   const content = (
@@ -424,6 +500,62 @@ export function GuidedPlanningSheet({
                 message={t(LOADING_MESSAGES[loadingMessage], LOADING_MESSAGES[loadingMessage])}
               />
             </div>
+          ) : state === "reviewing" ? (
+            <div>
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-wit-blue/[0.08] text-wit-blue">
+                <CalendarDays className="h-6 w-6" />
+              </span>
+              <h2
+                id="guided-planning-title"
+                className="mt-5 text-2xl font-extrabold tracking-tight text-wit-ink"
+              >
+                {t("Revisa tu plan", "Review your plan")}
+              </h2>
+              <p className="mt-2 text-sm text-wit-gray">
+                {t(
+                  `${entries.length} piezas para ${monthLabel}. Toca cualquiera para ajustarla con Wit.`,
+                  `${entries.length} pieces for ${monthLabel}. Tap any one to adjust it with Wit.`,
+                )}
+              </p>
+              {/* B4/B5 — the recovered scrollable day-by-day preview: its
+                  own bounded scroll area (not the sheet's) so the action
+                  buttons in the footer below stay reachable regardless of
+                  how many pieces the month has. */}
+              <div className="mt-5 max-h-[46vh] space-y-2.5 overflow-y-auto pb-1">
+                {entries.map((entry, index) => {
+                  const Icon = FORMAT_ICON[entry.format];
+                  return (
+                    <button
+                      key={`${entry.date}-${index}`}
+                      type="button"
+                      onClick={rejectPlan}
+                      className="w-full rounded-xl bg-wit-mist/30 px-4 py-3 text-left transition hover:bg-wit-mist/55"
+                    >
+                      <div className="flex items-center gap-2 text-xs font-bold text-wit-blue">
+                        <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
+                        {formatDayLabel(entry.date, t)} · {formatLabel(entry.format, t)}
+                      </div>
+                      <p className="mt-1 text-sm font-semibold text-wit-ink">{entry.title}</p>
+                      {entry.format === "carrusel" && entry.slides?.length ? (
+                        <ol className="mt-1.5 space-y-1">
+                          {entry.slides.map((slide, slideIndex) => (
+                            <li key={slideIndex} className="text-xs text-wit-gray">
+                              <span className="font-semibold text-wit-ink">
+                                {slideIndex + 1}. {slide.title}
+                              </span>{" "}
+                              — {slide.brief}
+                            </li>
+                          ))}
+                        </ol>
+                      ) : (
+                        <p className="mt-0.5 line-clamp-2 text-xs text-wit-gray">{entry.brief}</p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {saveError ? <p className="mt-3 text-sm text-red-600">{saveError}</p> : null}
+            </div>
           ) : state === "success" ? (
             <div className="flex h-full min-h-[360px] flex-col items-center justify-center text-center">
               <span className="grid h-20 w-20 place-items-center rounded-full bg-emerald-50 text-emerald-600">
@@ -457,7 +589,7 @@ export function GuidedPlanningSheet({
                 onClick={onClose}
                 className="mt-7 flex min-h-14 w-full items-center justify-center gap-2 rounded-[18px] bg-wit-blue px-5 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(0,71,255,0.2)]"
               >
-                {t("Ver planificación", "View plan")} <ChevronRight className="h-4 w-4" />
+                {t("Ver mi planificación →", "View my plan →")}
               </button>
               <button
                 type="button"
@@ -876,13 +1008,37 @@ export function GuidedPlanningSheet({
               )}
             </button>
           </footer>
+        ) : state === "reviewing" ? (
+          <footer className="flex shrink-0 gap-3 border-t border-wit-ink/7 px-6 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 md:px-8 md:pb-5">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={rejectPlan}
+              className="flex-1 rounded-[18px] border border-wit-ink/12 px-4 py-3 text-sm font-bold text-wit-ink disabled:opacity-50"
+            >
+              {t("No me gusta, ajustemos", "I don't like it, let's adjust")}
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void confirmPlan()}
+              className="flex min-h-14 flex-1 items-center justify-center gap-2 rounded-[18px] bg-wit-blue px-5 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(0,71,255,0.18)] disabled:opacity-60"
+            >
+              {saving
+                ? t("Guardando...", "Saving...")
+                : t("Crear mi planificación →", "Create my plan →")}
+            </button>
+          </footer>
         ) : null}
       </section>
       {witChatOpen ? (
         <WitPlanningChat
           monthLabel={monthLabel}
-          mode={mode}
-          existingEntries={existingEntries}
+          // Reopened from the review-preview step ("No me gusta,
+          // ajustemos"): Wit already has a draft to adjust, so it greets
+          // the client as an adjustment, not a fresh plan.
+          mode={state === "reviewing" ? "adjust" : mode}
+          existingEntries={state === "reviewing" ? entries : existingEntries}
           onClose={() => setWitChatOpen(false)}
           onBriefReady={applyPlanningBrief}
         />

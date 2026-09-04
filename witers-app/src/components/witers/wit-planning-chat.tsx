@@ -165,18 +165,14 @@ export function WitPlanningChat({
               <h3 className="mt-5 text-xl font-extrabold text-wit-ink">
                 {t("Esto entendí", "Here's what I understood")}
               </h3>
-              <p className="mt-1 text-sm text-wit-gray">
-                {t(
-                  "Revísalo en el siguiente paso — puedes corregir cualquier cosa antes de generar el plan.",
-                  "Review it in the next step — you can correct anything before generating the plan.",
-                )}
-              </p>
-              <dl className="mt-6 w-full divide-y divide-wit-ink/7 overflow-hidden rounded-2xl border border-wit-ink/7 bg-wit-mist/20 text-left">
-                <div className="flex items-start gap-3 px-4 py-3">
-                  <dt className="w-28 shrink-0 text-xs font-bold text-wit-gray">
-                    {t("Objetivos", "Objectives")}
-                  </dt>
-                  <dd className="text-sm font-bold text-wit-ink">
+              {/* CAMBIO 15 — B3: one compact, scannable card instead of a
+                  table-like dl. The formats line is now always sourced
+                  straight from brief.formats (never re-derived or
+                  re-worded here), so this card and the generated calendar
+                  can never disagree about what was actually requested. */}
+              <div className="mt-6 w-full rounded-2xl border border-wit-ink/7 bg-wit-mist/20 p-4 text-left">
+                <p className="text-sm leading-relaxed text-wit-ink">
+                  <b>
                     {brief.objectives
                       .map((o) =>
                         o === "other"
@@ -184,51 +180,34 @@ export function WitPlanningChat({
                           : objectiveLabels[o],
                       )
                       .join(" · ")}
-                  </dd>
-                </div>
-                <div className="flex items-start gap-3 px-4 py-3">
-                  <dt className="w-28 shrink-0 text-xs font-bold text-wit-gray">
-                    {t("Frecuencia", "Frequency")}
-                  </dt>
-                  <dd className="text-sm font-bold text-wit-ink">
-                    {t(
-                      `${brief.frequencyPerWeek} veces por semana`,
-                      `${brief.frequencyPerWeek} times per week`,
-                    )}
-                  </dd>
-                </div>
-                <div className="flex items-start gap-3 px-4 py-3">
-                  <dt className="w-28 shrink-0 text-xs font-bold text-wit-gray">
-                    {t("Formatos", "Formats")}
-                  </dt>
-                  <dd className="text-sm font-bold text-wit-ink">
-                    {brief.formats.length
-                      ? brief.formats.map((f) => formatLabels[f]).join(" · ")
-                      : t("Mezcla recomendada", "Recommended mix")}
-                  </dd>
-                </div>
+                  </b>
+                  {" — "}
+                  {t(
+                    `${brief.frequencyPerWeek} veces por semana`,
+                    `${brief.frequencyPerWeek} times per week`,
+                  )}
+                  {" · "}
+                  {brief.formats.length
+                    ? brief.formats.map((f) => formatLabels[f]).join(" · ")
+                    : t("Mezcla recomendada", "Recommended mix")}
+                </p>
                 {brief.specialInfo ? (
-                  <div className="flex items-start gap-3 px-4 py-3">
-                    <dt className="w-28 shrink-0 text-xs font-bold text-wit-gray">
-                      {t("Notas", "Notes")}
-                    </dt>
-                    <dd className="text-sm text-wit-ink">{brief.specialInfo}</dd>
-                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-wit-gray">{brief.specialInfo}</p>
                 ) : null}
-              </dl>
+              </div>
               <button
                 type="button"
                 onClick={() => onBriefReady(brief)}
                 className="mt-7 flex min-h-14 w-full items-center justify-center gap-2 rounded-[18px] bg-wit-blue px-5 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(0,71,255,0.2)]"
               >
-                {t("Usar esta información →", "Use this information →")}
+                {t("Ver mi planificación →", "View my plan →")}
               </button>
               <button
                 type="button"
                 onClick={() => setBrief(null)}
                 className="mt-3 min-h-11 text-sm font-bold text-wit-blue"
               >
-                {t("Seguir platicando", "Keep chatting")}
+                {t("Seguir platicando con Wit", "Keep chatting with Wit")}
               </button>
             </div>
           ) : (

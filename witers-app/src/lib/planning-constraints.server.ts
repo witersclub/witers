@@ -176,3 +176,78 @@ export function validatePlanningConstraints<T extends { date: string }>(
   }
   return { valid, violations };
 }
+
+// CAMBIO 15 — the same class of bug as CAMBIO 07, but for formats instead of
+// weekdays: a client could confirm "carrusel" as part of the plan (shown
+// back in "Esto entendí") and still get a generated month with zero
+// carousels, because format compliance was only ever a soft line in a free-
+// text prompt ("Formatos prioritarios: ...") with nothing downstream
+// checking the model actually honored it. Kept independent of
+// CalendarFormat in wit-chat.server.ts (same "plain client-side type" split
+// already used for PlanningBrief/CalendarEntryDraft across this codebase)
+// to avoid a server-to-server circular import between the two modules.
+export type CalendarFormat = "imagen" | "video" | "carrusel";
+
+const FORMAT_PATTERNS: Record<CalendarFormat, RegExp> = {
+  imagen: /\bimágenes?\b|\bimagenes?\b|\bfotos?\b|\bimages?\b|\bphotos?\b/i,
+  video: /\bvideos?\b|\breels?\b/i,
+  carrusel: /\bcarruseles?\b|\bcarousels?\b/i,
+};
+
+// Reads explicit format mentions straight out of the client's own words —
+// independent of whatever a model's structured extraction claims. Returns
+// null when the client's text carries no format-level signal at all
+// (meaning: no explicit constraint — the caller should offer/keep the
+// recommended strategic mix, never silently narrow it).
+export function detectExplicitFormatsFromConversation(
+  messages: { role: "user" | "assistant"; content: string }[],
+): Set<CalendarFormat> | null {
+  const userText = messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join("\n");
+  if (!userText.trim()) return null;
+  const found = new Set<CalendarFormat>();
+  for (const format of Object.keys(FORMAT_PATTERNS) as CalendarFormat[]) {
+    if (FORMAT_PATTERNS[format].test(userText)) found.add(format);
+  }
+  return found.size ? found : null;
+}
+
+// Once formats are a hard constraint (the client picked/confirmed specific
+// formats, not "mezcla recomendada"), every one of them must actually land
+// on the calendar — round-robin assignment guarantees that deterministically
+// instead of leaving it to a generator's free-text interpretation of
+// "prioritize these formats", which is exactly what let a confirmed format
+// silently disappear from a generated month.
+export function assignFormatsToDates(
+  dates: string[],
+  formats: CalendarFormat[],
+): Record<string, CalendarFormat> {
+  const map: Record<string, CalendarFormat> = {};
+  if (!formats.length) return map;
+  dates.forEach((date, index) => {
+    map[date] = formats[index % formats.length];
+  });
+  return map;
+}
+
+// The format counterpart of validatePlanningConstraints: given a required
+// date→format assignment (or null — no hard format constraint), splits
+// generated entries into those that honored their assigned format and those
+// that didn't. A violation must be regenerated for that date, never
+// persisted as-is with the wrong format.
+export function validatePlanningFormats<T extends { date: string; format: CalendarFormat }>(
+  entries: T[],
+  formatByDate: Record<string, CalendarFormat> | null,
+): { valid: T[]; violations: T[] } {
+  if (!formatByDate) return { valid: entries, violations: [] };
+  const valid: T[] = [];
+  const violations: T[] = [];
+  for (const entry of entries) {
+    const required = formatByDate[entry.date];
+    if (!required || entry.format === required) valid.push(entry);
+    else violations.push(entry);
+  }
+  return { valid, violations };
+}

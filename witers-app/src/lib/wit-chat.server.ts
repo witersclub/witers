@@ -6,7 +6,11 @@
 
 import process from "node:process";
 
-import { detectAllowedWeekdaysFromConversation, type Weekday } from "./planning-constraints.server";
+import {
+  detectAllowedWeekdaysFromConversation,
+  detectExplicitFormatsFromConversation,
+  type Weekday,
+} from "./planning-constraints.server";
 
 const OPENAI_TEXT_MODEL = "gpt-4o-mini";
 
@@ -381,6 +385,12 @@ function buildCalendarSystemPrompt(
     expectedEntries?: number;
     exactDates?: string[];
     maxPostsPerDay?: 1 | 2;
+    // CAMBIO 15 — when the client confirmed specific formats (not "mezcla
+    // recomendada"), this is the exact, already-decided format for each
+    // exactDates entry. Turns format compliance from a soft prompt
+    // preference into the same kind of hard, code-checked requirement dates
+    // already have — see validatePlanningFormats in calendar-chat.ts.
+    formatByDate?: Record<string, "imagen" | "video" | "carrusel">;
   },
 ): string {
   const brandLines = [
@@ -515,6 +525,16 @@ function buildCalendarSystemPrompt(
       : "") +
     (opts.exactDates?.length
       ? `Las fechas objetivo fueron seleccionadas por el usuario y son autoritativas: ${opts.exactDates.join(", ")}. Debes crear exactamente una pieza por cada slot de esa lista. No agregues, elimines, reordenes ni infieras fechas; el código asignará las fechas objetivo a los slots en ese orden.\n\n`
+      : "") +
+    (opts.formatByDate
+      ? "El formato de cada pieza YA FUE DECIDIDO por el cliente y es obligatorio — no lo " +
+        "cambies, no lo reinterpretes, no lo sustituyas por otro formato aunque te parezca mejor " +
+        "para el tema: usa exactamente este formato para cada fecha, en el mismo orden de la " +
+        "lista de fechas de arriba:\n" +
+        opts
+          .exactDates!.map((date) => `- ${date}: formato obligatorio "${opts.formatByDate![date]}"`)
+          .join("\n") +
+        "\n\n"
       : "") +
     "Si en algún momento ves en la conversación un mensaje tuyo que empieza con 'Plan propuesto " +
     "para el mes:' seguido de una lista de fechas, ya le habías propuesto un plan al cliente antes " +
@@ -1094,6 +1114,7 @@ export async function runWitCalendarChat(
     expectedEntries?: number;
     exactDates?: string[];
     maxPostsPerDay?: 1 | 2;
+    formatByDate?: Record<string, "imagen" | "video" | "carrusel">;
     // A partially formed carousel/video must not discard the valid dates
     // around it. The route retries only the missing exact dates afterwards.
     allowPartial?: boolean;
@@ -1534,7 +1555,25 @@ export async function runWitPlanningBrief(
       );
       if (!objectives.length) return { ok: false, error: "respuesta_invalida" };
       const validFormats = new Set(["imagen", "video", "carrusel"]);
-      const formats = (args.formats ?? []).filter((f): f is CalendarFormat => validFormats.has(f));
+      const modelFormats = (args.formats ?? []).filter((f): f is CalendarFormat =>
+        validFormats.has(f),
+      );
+      // CAMBIO 15 — same gap as CAMBIO 07's weekdays: the model's formats
+      // array is a separate structured guess, generated independently of
+      // whatever plain-text summary it may have said elsewhere in the same
+      // conversation. Left unchecked, this is exactly what let "Esto
+      // entendí" show a format the client never actually asked for (or
+      // silently drop one they did). When the client's own words carry an
+      // explicit format signal, that signal — not the model's array —
+      // decides what formats are real; the model's array is trusted as-is
+      // only when the client's text names no format at all (mezcla
+      // recomendada, or an ambiguous mention the model reasonably read).
+      const explicitFormats = detectExplicitFormatsFromConversation(history);
+      const formats = explicitFormats
+        ? modelFormats.filter((f) => explicitFormats.has(f)).length
+          ? modelFormats.filter((f) => explicitFormats.has(f))
+          : [...explicitFormats]
+        : modelFormats;
       const frequencyPerWeek = Math.max(1, Math.min(7, Math.round(args.frequencyPerWeek ?? 3)));
       // CAMBIO 07 — bug real: the model's weekdays don't always match its
       // own frequencyPerWeek, so this always had to pad. The OLD pattern

@@ -6,8 +6,12 @@ import { runWitCalendarChat } from "../../../lib/wit-chat.server";
 import { db, getSessionUser, json } from "../../../lib/witers-auth.server";
 import { getPlan } from "../../../lib/membership-plans";
 import {
+  assignFormatsToDates,
   detectAllowedWeekdaysFromConversation,
+  detectExplicitFormatsFromConversation,
   validatePlanningConstraints,
+  validatePlanningFormats,
+  type CalendarFormat,
   type Weekday,
 } from "../../../lib/planning-constraints.server";
 
@@ -41,6 +45,16 @@ const schema = z.object({
     .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
     .min(1)
     .max(60)
+    .optional(),
+  // CAMBIO 15 — the confirmed structured formats from the reviewed brief /
+  // step-by-step form (never "recommended" — that's represented by omitting
+  // this field entirely). This is the single source of truth for what
+  // formats the generated month must contain; the free-text prompt in
+  // `messages` is no longer trusted alone to convey it.
+  formats: z
+    .array(z.enum(["imagen", "video", "carrusel"]))
+    .min(1)
+    .max(3)
     .optional(),
 });
 
@@ -193,6 +207,22 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
         const remainingDates = parsed.data.expectedEntries
           ? requestedDates.filter((date) => !occupiedDates.has(date))
           : [];
+        // CAMBIO 15 — the structured `formats` field (from the reviewed
+        // brief/form) is the authoritative signal when present; a raw-text
+        // heuristic over the conversation is only a fallback for callers
+        // that never send it. Either way, once we have an explicit format
+        // list it becomes a hard, per-date assignment — never just a prompt
+        // suggestion — so a confirmed format can't silently vanish from the
+        // generated month.
+        const explicitFormats: CalendarFormat[] | null = parsed.data.formats?.length
+          ? parsed.data.formats
+          : (() => {
+              const detected = detectExplicitFormatsFromConversation(parsed.data.messages);
+              return detected ? [...detected] : null;
+            })();
+        const formatByDateFull = explicitFormats
+          ? assignFormatsToDates(remainingDates, explicitFormats)
+          : null;
         const remainingExpectedEntries = parsed.data.expectedEntries
           ? remainingDates.length
           : undefined;
@@ -234,12 +264,20 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
               >();
               let missingDates = exactDates;
               for (let attempt = 0; attempt < 4 && missingDates.length; attempt += 1) {
+                const formatByDate = formatByDateFull
+                  ? Object.fromEntries(
+                      missingDates
+                        .filter((date) => formatByDateFull[date])
+                        .map((date) => [date, formatByDateFull[date]]),
+                    )
+                  : undefined;
                 const result = await runWitCalendarChat(parsed.data.messages, brand.context, {
                   ...context,
                   existingEntries: knownEntries,
                   expectedEntries: missingDates.length,
                   exactDates: missingDates,
                   maxPostsPerDay: plan.planningSlotsPerDay,
+                  formatByDate,
                   allowPartial: true,
                 });
                 if (!result.ok) {
@@ -256,6 +294,18 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
                   continue;
                 }
                 for (const entry of result.entries) collected.set(entry.date, entry);
+                // CAMBIO 15 — an entry that used the wrong format for its
+                // date is not a valid result, exactly like a missing date
+                // isn't: drop it back into missingDates so the next attempt
+                // regenerates it with the format requirement reinforced,
+                // instead of silently accepting a mismatch.
+                if (formatByDateFull) {
+                  const { violations } = validatePlanningFormats(
+                    [...collected.values()],
+                    formatByDateFull,
+                  );
+                  for (const violation of violations) collected.delete(violation.date);
+                }
                 missingDates = exactDates.filter((date) => !collected.has(date));
                 if (!missingDates.length) {
                   return {
@@ -300,6 +350,22 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
             console.warn(
               "[calendar-chat] dropped entries outside allowed weekdays (batch path)",
               droppedEntries.map((entry) => entry.date),
+            );
+          }
+          // Defense in depth: the per-batch retry loop above already
+          // regenerates any date that came back with the wrong format, so
+          // this should never actually find a violation — but it's the last
+          // stop before persistence, and only ever logs (never drops): a
+          // format mismatch this late means a hole in the month, which is
+          // strictly worse than a piece whose format doesn't quite match.
+          const { violations: formatMismatches } = validatePlanningFormats(
+            validatedEntries,
+            formatByDateFull,
+          );
+          if (formatMismatches.length) {
+            console.warn(
+              "[calendar-chat] entries kept a mismatched format after retries (batch path)",
+              formatMismatches.map((entry) => ({ date: entry.date, format: entry.format })),
             );
           }
           return json({ ok: true, kind: "done" as const, entries: validatedEntries });
