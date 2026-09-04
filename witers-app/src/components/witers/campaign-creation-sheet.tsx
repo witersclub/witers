@@ -1,55 +1,49 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
-import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Facebook,
-  Instagram,
-  Link2,
-  Loader2,
-  Megaphone,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { Facebook, Instagram, Link2, Loader2, Megaphone } from "lucide-react";
 
 import { useLanguage } from "../../lib/i18n";
 import { trackCtaClick } from "../../lib/track-click";
+import { AdsAudienceStep } from "./ads-wizard/ads-audience-step";
+import { AdsBudgetStep } from "./ads-wizard/ads-budget-step";
+import { AdsCreationProgress } from "./ads-wizard/ads-creation-progress";
+import { AdsCreativeStep } from "./ads-wizard/ads-creative-step";
+import { AdsDestinationStep } from "./ads-wizard/ads-destination-step";
+import { AdsDurationStep } from "./ads-wizard/ads-duration-step";
+import { AdsObjectiveStep } from "./ads-wizard/ads-objective-step";
+import { AdsPreparationStep } from "./ads-wizard/ads-preparation-step";
+import { AdsReviewStep } from "./ads-wizard/ads-review-step";
+import { AdsWizardHeader } from "./ads-wizard/ads-wizard-header";
+import type {
+  AccountOption,
+  AccountStatus,
+  AudienceMode,
+  BrandLite,
+  CampaignPiece,
+  MessagingChannel,
+  Objective,
+  SavedAudience,
+  SocialConnections,
+  TrafficDestination,
+  WhatsAppNumber,
+  WizardStepId,
+} from "./ads-wizard/types";
 
-export type CampaignPiece = {
-  requestId: string;
-  title: string;
-  caption: string | null;
-  previewUrl: string | null;
-  format: "imagen" | "video" | "carrusel";
-};
+export type { CampaignPiece } from "./ads-wizard/types";
 
-type AccountStatus = { connected: boolean; accountId: string | null; accountName: string | null };
-type SocialConnections = {
-  facebook: { name: string | null } | null;
-  instagram: { name: string | null } | null;
-};
-type AccountOption = { account_id: string; name: string; currency: string };
-type WhatsAppNumber = {
-  phoneNumberId: string;
-  displayNumber: string;
-  verifiedName: string | null;
-  status: string | null;
-};
-type TrafficDestination = "website" | "facebook_page" | "instagram_profile" | "both_profiles";
-type MessagingChannel = "whatsapp" | "messenger" | "instagram_direct";
-type SavedAudience = {
-  id: string;
-  name: string;
-  description: string;
-  ageMin: number;
-  ageMax: number;
-  locationKey: string | null;
-  locationLabel: string | null;
-  radiusKm: number | null;
-  interests: { id: string; name: string }[];
-  notes: string | null;
-};
+// The wizard's own navigable order — "preparacion" is skipped at runtime
+// (never removed from here) when the ad account is already connected;
+// "creando" is reached only from publishCampaign(), never via Continue.
+const STEP_FLOW: WizardStepId[] = [
+  "preparacion",
+  "objetivo",
+  "destino",
+  "presupuesto",
+  "duracion",
+  "audiencia",
+  "creativo",
+  "revision",
+];
 
 const RECOMMENDED_DAILY_MIN = 200;
 const RECOMMENDED_DAILY_MAX = 500;
@@ -64,7 +58,8 @@ export function CampaignCreationSheet({
   onCreated?: () => void;
 }) {
   const { t } = useLanguage();
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<WizardStepId>("preparacion");
+  const skipCheckedRef = useRef(false);
   const [account, setAccount] = useState<AccountStatus>({
     connected: false,
     accountId: null,
@@ -74,13 +69,11 @@ export function CampaignCreationSheet({
   const [loadingAccount, setLoadingAccount] = useState(true);
   const [pendingAccounts, setPendingAccounts] = useState<AccountOption[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [objective, setObjective] = useState<"ventas" | "trafico" | "interaccion">("ventas");
+  const [brand, setBrand] = useState<BrandLite>({ companyName: null, logoUrl: null });
+  const [objective, setObjective] = useState<Objective>("ventas");
   const [trafficDestination, setTrafficDestination] = useState<TrafficDestination | null>(null);
-  // Preselecting WhatsApp for "ventas" preserves the wizard's previous
-  // behavior, where the WhatsApp picker was already shown by default.
   const [messagingChannels, setMessagingChannels] = useState<MessagingChannel[]>(["whatsapp"]);
-  // "Audiencia" step — free-text description, resolved by Wit against
-  // Meta's own real location/interest search (never invented ids).
+  const [audienceMode, setAudienceMode] = useState<AudienceMode>(null);
   const [audienceDescription, setAudienceDescription] = useState("");
   const [suggestingAudience, setSuggestingAudience] = useState(false);
   const [audienceError, setAudienceError] = useState<string | null>(null);
@@ -96,7 +89,6 @@ export function CampaignCreationSheet({
   const [savingAudience, setSavingAudience] = useState(false);
   const [dailyBudgetMxn, setDailyBudgetMxn] = useState(300);
   const [durationDays, setDurationDays] = useState(7);
-  const [customDuration, setCustomDuration] = useState(false);
   const [ageMin, setAgeMin] = useState(18);
   const [ageMax, setAgeMax] = useState(65);
   const [message, setMessage] = useState(piece.caption?.trim() || piece.title);
@@ -107,19 +99,12 @@ export function CampaignCreationSheet({
   const [whatsappFetchFailed, setWhatsappFetchFailed] = useState(false);
   const [saveAsDefaultWhatsApp, setSaveAsDefaultWhatsApp] = useState(false);
   const [websiteUrl, setWebsiteUrl] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [creationStatus, setCreationStatus] = useState<"creating" | "success" | "error">(
+    "creating",
+  );
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  // Unchecked by default — everything is still created paused first
-  // either way; this only decides whether we flip it to ACTIVE right
-  // after, on this one campaign. Never a saved preference.
   const [activateImmediately, setActivateImmediately] = useState(false);
   const [activatedResult, setActivatedResult] = useState(false);
-  // One idempotency key per opened sheet — a real double-submit (network
-  // retry, impatient re-click after a slow response) resends the SAME key,
-  // and the server replays that attempt's outcome instead of creating a
-  // second Meta campaign. A fresh "Pautar" open (new mount) always gets a
-  // new key, same as it should.
   const idempotencyKeyRef = useRef(crypto.randomUUID());
   const sheetRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -142,7 +127,7 @@ export function CampaignCreationSheet({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !submitting) requestClose();
+      if (event.key === "Escape" && creationStatus !== "creating") requestClose();
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => {
@@ -151,7 +136,8 @@ export function CampaignCreationSheet({
       window.removeEventListener("keydown", closeOnEscape);
       if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
     };
-  }, [onClose, submitting]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!mobile) return;
@@ -206,6 +192,27 @@ export function CampaignCreationSheet({
       })
       .catch(() => {});
 
+    // Only used for the ad preview's identity row (Paso 6) — same
+    // endpoint every other brand-profile read in the app already uses.
+    void fetch("/api/brand-profile", { credentials: "include" })
+      .then((res) => res.json())
+      .then(
+        (data: {
+          ok?: boolean;
+          profile?: { company_name?: string | null; logo_key?: string | null } | null;
+        }) => {
+          if (data.ok && data.profile) {
+            setBrand({
+              companyName: data.profile.company_name ?? null,
+              logoUrl: data.profile.logo_key
+                ? `/api/file?key=${encodeURIComponent(data.profile.logo_key)}`
+                : null,
+            });
+          }
+        },
+      )
+      .catch(() => {});
+
     const params = new URLSearchParams(window.location.search);
     const pick = params.get("meta_ads_pick");
     if (pick) {
@@ -219,6 +226,18 @@ export function CampaignCreationSheet({
         });
     }
   }, []);
+
+  // Paso 0 auto-skip — "Si la cuenta ya está preparada, este paso debe
+  // poder saltarse automáticamente." The ad account connection is the
+  // one real hard requirement every later step depends on (same gate the
+  // old wizard's step 1 used); Facebook/Instagram/WhatsApp are still
+  // shown on this screen for anyone who *does* land on it, but were
+  // never a hard gate before either.
+  useEffect(() => {
+    if (loadingAccount || skipCheckedRef.current) return;
+    skipCheckedRef.current = true;
+    if (account.connected && step === "preparacion") setStep("objetivo");
+  }, [loadingAccount, account.connected, step]);
 
   function toggleMessagingChannel(channel: MessagingChannel) {
     setMessagingChannels((current) =>
@@ -333,6 +352,16 @@ export function CampaignCreationSheet({
     window.location.assign(`/api/meta/ad-account/start?return_to=${encodeURIComponent(returnTo)}`);
   }
 
+  // Instagram Direct/Messenger destinations and IG/FB traffic depend on
+  // social_connections (a different OAuth than the ads account — see
+  // /api/social/connect/start's own comment). Real, functional, but a
+  // full-page redirect: unlike connectMeta() above, this callback has no
+  // return_to support, so the wizard doesn't resume its exact step after
+  // — a known gap, not a fabricated success.
+  function connectSocial() {
+    window.location.assign("/api/social/connect/start");
+  }
+
   async function chooseAccount(option: AccountOption) {
     if (!pendingId) return;
     const response = await fetch("/api/meta/ad-account/finalize", {
@@ -353,71 +382,88 @@ export function CampaignCreationSheet({
     trackCtaClick("ad_account_selected");
   }
 
-  function continueTo(next: 2 | 3 | 4) {
+  const flowIndex = STEP_FLOW.indexOf(step);
+  const hasProgress = flowIndex > STEP_FLOW.indexOf("objetivo");
+
+  function goTo(next: WizardStepId) {
     setError(null);
-    if (next === 2 && !account.connected) return;
-    if (next === 3) {
-      if (dailyBudgetMxn < 20 || durationDays < 1) {
-        setError(t("Revisa el presupuesto y la duración.", "Review the budget and duration."));
-        return;
-      }
-      if (objective === "trafico" && !trafficDestination) {
-        setError(t("Elige a dónde quieres llevar a las personas.", "Choose where to send people."));
-        return;
-      }
-      if (objective === "trafico" && trafficDestination === "website" && !websiteUrl.trim()) {
-        setError(t("Escribe la URL de tu sitio web.", "Enter your website URL."));
-        return;
-      }
-      if ((objective === "interaccion" || objective === "ventas") && !messagingChannels.length) {
-        setError(
-          t(
-            "Elige por dónde quieres recibir los mensajes.",
-            "Choose where you want to receive the messages.",
-          ),
-        );
-        return;
-      }
-      if (
-        (objective === "interaccion" || objective === "ventas") &&
-        messagingChannels.includes("whatsapp") &&
-        !whatsappNumbers.some((n) => n.displayNumber === whatsappNumber)
-      ) {
-        setError(
-          t(
-            "Elige a qué WhatsApp quieres recibir los mensajes.",
-            "Choose which WhatsApp should receive the messages.",
-          ),
-        );
-        return;
-      }
-      if (!message.trim()) {
-        setError(t("Escribe el texto del anuncio.", "Enter the ad copy."));
-        return;
-      }
-      trackCtaClick("campaign_configuration_completed");
-    }
-    if (next === 4) {
-      if (ageMin > ageMax) {
-        setError(t("Revisa el rango de edad.", "Review the age range."));
-        return;
-      }
-      trackCtaClick("audience_step_completed");
-    }
     setStep(next);
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function validateStep(current: WizardStepId): string | null {
+    if (current === "destino") {
+      if (objective === "trafico") {
+        if (!trafficDestination) {
+          return t("Elige a dónde quieres llevar a las personas.", "Choose where to send people.");
+        }
+        if (trafficDestination === "website" && !websiteUrl.trim()) {
+          return t("Escribe la URL de tu sitio web.", "Enter your website URL.");
+        }
+      }
+      if (objective === "ventas") {
+        if (!messagingChannels.length) {
+          return t(
+            "Elige por dónde quieres recibir los mensajes.",
+            "Choose where you want to receive the messages.",
+          );
+        }
+        if (
+          messagingChannels.includes("whatsapp") &&
+          !whatsappNumbers.some((n) => n.displayNumber === whatsappNumber)
+        ) {
+          return t(
+            "Elige a qué WhatsApp quieres recibir los mensajes.",
+            "Choose which WhatsApp should receive the messages.",
+          );
+        }
+      }
+    }
+    if (current === "presupuesto" && dailyBudgetMxn < 20) {
+      return t("Revisa tu presupuesto diario.", "Review your daily budget.");
+    }
+    if (current === "duracion" && durationDays < 1) {
+      return t("Revisa la duración de tu campaña.", "Review your campaign's duration.");
+    }
+    if (current === "audiencia" && ageMin > ageMax) {
+      return t("Revisa el rango de edad.", "Review the age range.");
+    }
+    if (current === "creativo" && !message.trim()) {
+      return t("Escribe el texto del anuncio.", "Enter the ad copy.");
+    }
+    return null;
+  }
+
+  function continueFrom(current: WizardStepId) {
+    const problem = validateStep(current);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    const index = STEP_FLOW.indexOf(current);
+    const next = STEP_FLOW[index + 1];
+    if (!next) return;
+    if (current === "destino") trackCtaClick("campaign_configuration_completed");
+    if (current === "audiencia") trackCtaClick("audience_step_completed");
+    goTo(next);
+  }
+
+  function goBack() {
+    const index = STEP_FLOW.indexOf(step);
+    // Never step back into "preparacion" once the account was already
+    // connected at mount — there's nothing to review there.
+    const prev = STEP_FLOW[Math.max(index - 1, account.connected ? 1 : 0)];
+    goTo(prev);
+  }
+
   async function publishCampaign() {
-    if (submitting) return;
-    setSubmitting(true);
+    if (creationStatus === "creating" && step === "creando") return;
     setError(null);
+    setStep("creando");
+    setCreationStatus("creating");
     trackCtaClick("campaign_reviewed");
     try {
       if (objective === "ventas" && saveAsDefaultWhatsApp && whatsappNumber) {
-        // Best-effort — a failed save here shouldn't block the campaign
-        // itself, since the number was already validated for THIS
-        // campaign server-side inside /api/campaigns-create.
         await fetch("/api/meta/whatsapp/default", {
           method: "POST",
           credentials: "include",
@@ -443,11 +489,9 @@ export function CampaignCreationSheet({
           interestIds: selectedInterests.map((interest) => interest.id),
           adMessages: [message.trim()],
           trafficDestination: objective === "trafico" ? trafficDestination : undefined,
-          messagingChannels:
-            objective === "interaccion" || objective === "ventas" ? messagingChannels : [],
+          messagingChannels: objective === "ventas" ? messagingChannels : [],
           whatsappNumber:
-            (objective === "interaccion" || objective === "ventas") &&
-            messagingChannels.includes("whatsapp")
+            objective === "ventas" && messagingChannels.includes("whatsapp")
               ? whatsappNumber.trim()
               : undefined,
           websiteUrl:
@@ -523,19 +567,26 @@ export function CampaignCreationSheet({
               "Meta couldn't create the campaign. Check the account permissions and payment method.",
             ),
         );
+        setCreationStatus("error");
         return;
       }
       setActivatedResult(Boolean(data.activated));
-      setSuccess(true);
+      setCreationStatus("success");
       trackCtaClick(data.activated ? "campaign_created_active" : "campaign_created");
       onCreated?.();
-    } finally {
-      setSubmitting(false);
+    } catch {
+      setError(
+        t(
+          "No pudimos conectar con el servidor. Revisa tu conexión e intenta de nuevo.",
+          "We couldn't reach the server. Check your connection and try again.",
+        ),
+      );
+      setCreationStatus("error");
     }
   }
 
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!mobile || event.button !== 0 || submitting) return;
+    if (!mobile || event.button !== 0 || step === "creando") return;
     pointerRef.current = {
       id: event.pointerId,
       startY: event.clientY,
@@ -569,7 +620,20 @@ export function CampaignCreationSheet({
   }
 
   function requestClose() {
-    if (submitting || closing) return;
+    if (step === "creando" && creationStatus === "creating") return;
+    if (closing) return;
+    // "Cerrar accidentalmente el wizard debe manejarse de forma segura"
+    // — once real decisions exist (past Paso 1), confirm before throwing
+    // them away instead of silently discarding.
+    if (hasProgress && creationStatus !== "success" && step !== "creando") {
+      const ok = window.confirm(
+        t(
+          "¿Cerrar sin terminar? Perderás la configuración de esta campaña.",
+          "Close without finishing? You'll lose this campaign's setup.",
+        ),
+      );
+      if (!ok) return;
+    }
     if (!mobile) {
       onClose();
       return;
@@ -579,13 +643,8 @@ export function CampaignCreationSheet({
     closeTimerRef.current = window.setTimeout(onClose, 300);
   }
 
-  const investment = dailyBudgetMxn * durationDays;
   const objectiveLabel =
-    objective === "ventas"
-      ? t("Más mensajes", "More messages")
-      : objective === "trafico"
-        ? t("Más visitas", "More visits")
-        : t("Más interacción", "More engagement");
+    objective === "ventas" ? t("Mensajes", "Messages") : t("Clientes", "Customers");
   const platforms =
     [social.instagram ? "Instagram" : null, social.facebook ? "Facebook" : null]
       .filter(Boolean)
@@ -594,28 +653,52 @@ export function CampaignCreationSheet({
     website: t("Sitio web", "Website"),
     facebook_page: t("Página de Facebook", "Facebook Page"),
     instagram_profile: t("Perfil de Instagram", "Instagram profile"),
-    both_profiles: t("Instagram y Facebook", "Instagram and Facebook"),
   };
   const messagingChannelLabel: Record<MessagingChannel, string> = {
     whatsapp: "WhatsApp",
     messenger: "Messenger",
     instagram_direct: "Instagram",
   };
-  const destinationSummary =
+  const destinationLabel =
     objective === "trafico"
       ? (trafficDestination && trafficDestinationLabel[trafficDestination]) || "—"
       : messagingChannels.map((c) => messagingChannelLabel[c]).join(" · ") || "—";
-  // Mirrors the exact call-to-action meta-ads-create.server.ts sends —
-  // WHATSAPP_MESSAGE only when WhatsApp is the sole channel, MESSAGE_PAGE
-  // for every other messaging combination, LEARN_MORE for "trafico".
+  const destinationSub =
+    objective === "trafico"
+      ? trafficDestination === "website" && websiteUrl
+        ? websiteUrl
+        : null
+      : messagingChannels.includes("whatsapp") && whatsappNumber
+        ? whatsappNumber
+        : null;
   const ctaLabel =
     objective === "trafico"
       ? t("Más información", "Learn more")
       : messagingChannels.length === 1 && messagingChannels[0] === "whatsapp"
         ? t("Enviar mensaje por WhatsApp", "Send WhatsApp message")
         : t("Enviar mensaje", "Send message");
+  const audienceLabel =
+    [
+      locationLabel ?? t("Todo México", "All of Mexico"),
+      `${ageMin}-${ageMax}`,
+      selectedInterests.length
+        ? t(`${selectedInterests.length} intereses`, `${selectedInterests.length} interests`)
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || t("Todo México", "All of Mexico");
+  const audienceSummary =
+    [
+      locationLabel,
+      `${ageMin}-${ageMax} años`,
+      selectedInterests.length ? selectedInterests.map((i) => i.name).join(", ") : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || null;
+
   const sheetHeight = sheetRef.current?.getBoundingClientRect().height || 1;
   const dragProgress = mobile ? Math.min(1, Math.max(0, offset / sheetHeight)) : 0;
+  const canGoBack = STEP_FLOW.indexOf(step) > (account.connected ? 1 : 0) && step !== "creando";
 
   return createPortal(
     <div
@@ -635,108 +718,51 @@ export function CampaignCreationSheet({
         className={`absolute inset-x-0 bottom-0 flex max-h-[96dvh] min-h-[82dvh] flex-col overflow-hidden rounded-t-[28px] bg-white shadow-2xl md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:min-h-0 md:w-[min(560px,46vw)] md:rounded-none ${dragging ? "transition-none" : "transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:duration-0"} ${closing ? "will-change-transform" : ""}`}
         style={mobile ? { transform: `translate3d(0,${offset}px,0)` } : undefined}
       >
-        <div className="relative shrink-0 border-b border-wit-ink/5 px-5 pb-4 pt-[calc(1.1rem+env(safe-area-inset-top))] md:px-7 md:pt-6">
-          <span className="absolute left-1/2 top-[calc(.45rem+env(safe-area-inset-top))] h-1.5 w-11 -translate-x-1/2 rounded-full bg-wit-ink/15 md:hidden" />
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() =>
-                step > 1 && !success ? setStep((step - 1) as 1 | 2 | 3) : requestClose()
-              }
-              className="flex h-11 w-11 items-center justify-center rounded-full text-wit-ink hover:bg-wit-mist/50"
-              aria-label={step > 1 ? t("Paso anterior", "Previous step") : t("Cerrar", "Close")}
-            >
-              {step > 1 && !success ? (
-                <ChevronLeft className="h-5 w-5" />
-              ) : (
-                <X className="h-5 w-5" />
-              )}
-            </button>
-            <div
-              className="flex flex-1 items-center justify-center gap-2"
-              aria-label={t(`Paso ${step} de 4`, `Step ${step} of 4`)}
-            >
-              {[1, 2, 3, 4].map((number) => (
-                <span
-                  key={number}
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-extrabold ${number <= step ? "bg-wit-blue text-white" : "bg-wit-mist/70 text-wit-gray"}`}
-                >
-                  {number < step ? <Check className="h-3.5 w-3.5" /> : number}
-                </span>
-              ))}
-            </div>
-            <span className="h-11 w-11" />
-          </div>
-        </div>
+        {step === "creando" ? null : (
+          <AdsWizardHeader
+            step={step}
+            onBack={goBack}
+            onClose={requestClose}
+            canGoBack={canGoBack}
+          />
+        )}
 
         <div
           ref={scrollRef}
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6 md:px-7"
         >
-          {success ? (
-            <div className="flex min-h-[62dvh] flex-col items-center justify-center text-center">
-              <span className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                <Check className="h-10 w-10" strokeWidth={2.5} />
-              </span>
-              <h2 id="campaign-flow-title" className="mt-6 text-2xl font-extrabold text-wit-ink">
-                {activatedResult
-                  ? t("¡Tu campaña ya está activa!", "Your campaign is now active!")
-                  : t(
-                      "¡Tu campaña está lista para revisión!",
-                      "Your campaign is ready for review!",
-                    )}
-              </h2>
-              <p className="mt-3 max-w-sm text-sm leading-relaxed text-wit-gray">
-                {activatedResult
-                  ? t(
-                      "Se creó y activó en Meta — ya está compitiendo por mostrarse y puede empezar a generar gasto. Revísala en Meta cuando quieras.",
-                      "It was created and activated on Meta — it's already live and can start spending. Review it on Meta whenever you like.",
-                    )
-                  : t(
-                      "La creamos pausada para que puedas verificarla en Meta antes de activarla y comenzar a invertir.",
-                      "We created it paused so you can review it in Meta before activating it and spending.",
-                    )}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  trackCtaClick("campaign_viewed");
-                  onClose();
-                  window.dispatchEvent(new CustomEvent("witers-open-campaigns"));
-                }}
-                className="mt-8 min-h-12 w-full rounded-2xl bg-wit-blue px-5 font-bold text-white"
-              >
-                {t("Ver mis campañas", "View my campaigns")}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSuccess(false);
-                  setStep(1);
-                }}
-                className="mt-3 min-h-11 text-sm font-bold text-wit-blue"
-              >
-                {t("Crear otra campaña", "Create another campaign")}
-              </button>
-            </div>
-          ) : step === 1 ? (
+          {step === "creando" ? (
+            <AdsCreationProgress
+              status={creationStatus}
+              errorMessage={error}
+              activated={activatedResult}
+              onViewCampaign={() => {
+                trackCtaClick("campaign_viewed");
+                onClose();
+                window.dispatchEvent(new CustomEvent("witers-open-campaigns"));
+              }}
+              onDone={onClose}
+              onRetry={() => {
+                setError(null);
+                setStep("revision");
+              }}
+            />
+          ) : step === "preparacion" ? (
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-wit-blue">
-                {t("Cuenta", "Account")}
-              </p>
-              <h2 id="campaign-flow-title" className="mt-2 text-2xl font-extrabold text-wit-ink">
-                {t("Conecta tu cuenta publicitaria", "Connect your ad account")}
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-wit-gray">
-                {t(
-                  "Selecciona la cuenta que quieres utilizar para promocionar esta pieza.",
-                  "Select the account you want to use to promote this piece.",
-                )}
-              </p>
-              {loadingAccount ? (
-                <div className="mt-7 h-28 animate-pulse rounded-2xl bg-wit-mist/50" />
-              ) : pendingAccounts.length ? (
-                <div className="mt-7 space-y-2">
+              <AdsPreparationStep
+                loadingAccount={loadingAccount}
+                account={account}
+                social={social}
+                whatsappLoading={whatsappLoading}
+                whatsappFetchFailed={whatsappFetchFailed}
+                whatsappCount={whatsappNumbers.length}
+                onConnectMeta={connectMeta}
+              />
+              {pendingAccounts.length ? (
+                <div className="mt-5 space-y-2">
+                  <p className="text-sm font-extrabold text-wit-ink">
+                    {t("Elige tu cuenta publicitaria", "Choose your ad account")}
+                  </p>
                   {pendingAccounts.map((option) => (
                     <button
                       key={option.account_id}
@@ -752,31 +778,16 @@ export function CampaignCreationSheet({
                     </button>
                   ))}
                 </div>
-              ) : account.connected ? (
-                <div className="mt-7 rounded-2xl border border-wit-blue/20 bg-wit-blue/[0.035] p-4">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-wit-blue shadow-sm">
-                      <Megaphone className="h-5 w-5" />
-                    </span>
-                    <span className="min-w-0">
-                      <b className="block truncate text-sm text-wit-ink">
-                        {account.accountName || t("Cuenta publicitaria de Meta", "Meta ad account")}
-                      </b>
-                      <span className="text-xs text-wit-gray">ID: {account.accountId}</span>
-                    </span>
-                    <Check className="ml-auto h-5 w-5 text-emerald-600" />
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-7 rounded-2xl border border-wit-ink/8 p-5 text-center">
+              ) : !loadingAccount && !account.connected ? (
+                <div className="mt-5 rounded-2xl border border-wit-ink/8 p-5 text-center">
                   <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-wit-blue/8 text-wit-blue">
                     <Link2 className="h-5 w-5" />
                   </span>
                   <b className="mt-3 block text-base text-wit-ink">Meta Ads</b>
                   <p className="mt-1 text-sm text-wit-gray">
                     {t(
-                      "Conecta Facebook e Instagram para crear y administrar tus campañas.",
-                      "Connect Facebook and Instagram to create and manage campaigns.",
+                      "Conecta tu cuenta publicitaria para poder crear campañas.",
+                      "Connect your ad account to start creating campaigns.",
                     )}
                   </p>
                   <button
@@ -787,7 +798,7 @@ export function CampaignCreationSheet({
                     {t("Conectar Meta", "Connect Meta")}
                   </button>
                 </div>
-              )}
+              ) : null}
               {(social.instagram || social.facebook) && (
                 <div className="mt-5 flex flex-wrap gap-2">
                   {social.instagram ? (
@@ -804,692 +815,135 @@ export function CampaignCreationSheet({
                 </div>
               )}
             </div>
-          ) : step === 2 ? (
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-wit-blue">
-                {t("Campaña", "Campaign")}
-              </p>
-              <h2 id="campaign-flow-title" className="mt-2 text-2xl font-extrabold text-wit-ink">
-                {t("Nueva campaña", "New campaign")}
-              </h2>
-              <div className="mt-6 space-y-6">
-                <fieldset>
-                  <legend className="text-sm font-extrabold text-wit-ink">
-                    {t("¿Qué quieres conseguir?", "What do you want to achieve?")}
-                  </legend>
-                  <div className="mt-3 grid gap-2">
-                    {(
-                      [
-                        ["ventas", t("Más mensajes", "More messages")],
-                        ["trafico", t("Más visitas", "More visits")],
-                        ["interaccion", t("Más interacción", "More engagement")],
-                      ] as const
-                    ).map(([value, label]) => (
-                      <label
-                        key={value}
-                        className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border px-4 ${objective === value ? "border-wit-blue bg-wit-blue/[0.035]" : "border-wit-ink/8"}`}
-                      >
-                        <input
-                          type="radio"
-                          name="objective"
-                          checked={objective === value}
-                          onChange={() => setObjective(value)}
-                          className="accent-[#1557ff]"
-                        />
-                        <span className="text-sm font-bold text-wit-ink">{label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-                {objective === "trafico" ? (
-                  <fieldset>
-                    <legend className="text-sm font-extrabold text-wit-ink">
-                      {t(
-                        "¿A dónde quieres llevar a las personas?",
-                        "Where do you want to send people?",
-                      )}
-                    </legend>
-                    <div className="mt-3 grid gap-2">
-                      {(
-                        [
-                          ["website", t("Sitio web", "Website")],
-                          ["instagram_profile", t("Perfil de Instagram", "Instagram profile")],
-                          ["facebook_page", t("Página de Facebook", "Facebook Page")],
-                          ["both_profiles", t("Instagram y Facebook", "Instagram and Facebook")],
-                        ] as const
-                      ).map(([value, label]) => (
-                        <label
-                          key={value}
-                          className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border px-4 ${trafficDestination === value ? "border-wit-blue bg-wit-blue/[0.035]" : "border-wit-ink/8"}`}
-                        >
-                          <input
-                            type="radio"
-                            name="traffic-destination"
-                            checked={trafficDestination === value}
-                            onChange={() => setTrafficDestination(value)}
-                            className="accent-[#1557ff]"
-                          />
-                          <span className="text-sm font-bold text-wit-ink">{label}</span>
-                        </label>
-                      ))}
-                    </div>
-                    {trafficDestination === "website" ? (
-                      <label className="mt-3 block">
-                        <span className="text-xs font-bold text-wit-gray">
-                          {t("URL del sitio", "Website URL")}
-                        </span>
-                        <input
-                          value={websiteUrl}
-                          onChange={(event) => setWebsiteUrl(event.target.value)}
-                          placeholder="https://"
-                          className="mt-1 h-12 w-full rounded-2xl border border-wit-ink/10 px-3 text-sm"
-                        />
-                      </label>
-                    ) : null}
-                  </fieldset>
-                ) : null}
-                {objective === "interaccion" || objective === "ventas" ? (
-                  <fieldset>
-                    <legend className="text-sm font-extrabold text-wit-ink">
-                      {t(
-                        "¿Por dónde quieres recibir los mensajes?",
-                        "Where do you want to receive the messages?",
-                      )}
-                    </legend>
-                    <div className="mt-3 grid gap-2">
-                      {(
-                        [
-                          ["instagram_direct", t("Instagram", "Instagram")],
-                          ["messenger", t("Messenger", "Messenger")],
-                          ["whatsapp", t("WhatsApp", "WhatsApp")],
-                        ] as const
-                      ).map(([value, label]) => (
-                        <label
-                          key={value}
-                          className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border px-4 ${messagingChannels.includes(value) ? "border-wit-blue bg-wit-blue/[0.035]" : "border-wit-ink/8"}`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={messagingChannels.includes(value)}
-                            onChange={() => toggleMessagingChannel(value)}
-                            className="h-4 w-4 accent-wit-blue"
-                          />
-                          <span className="text-sm font-bold text-wit-ink">{label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                ) : null}
-                <label className="block">
-                  <span className="text-sm font-extrabold text-wit-ink">
-                    {t("Presupuesto diario", "Daily budget")}
-                  </span>
-                  <div className="mt-2 flex h-13 items-center rounded-2xl border border-wit-ink/10 px-4">
-                    <span className="font-bold text-wit-gray">$</span>
-                    <input
-                      type="number"
-                      min={20}
-                      value={dailyBudgetMxn}
-                      onChange={(event) => setDailyBudgetMxn(Number(event.target.value))}
-                      className="min-w-0 flex-1 border-0 px-2 text-base font-bold text-wit-ink outline-none"
-                    />
-                    <span className="text-xs font-bold text-wit-gray">MXN</span>
-                  </div>
-                  <span className="mt-1.5 block text-xs text-wit-gray">
-                    {t(
-                      `Recomendado: $${RECOMMENDED_DAILY_MIN} – $${RECOMMENDED_DAILY_MAX} MXN`,
-                      `Recommended: $${RECOMMENDED_DAILY_MIN} – $${RECOMMENDED_DAILY_MAX} MXN`,
-                    )}
-                  </span>
-                </label>
-                <fieldset>
-                  <legend className="text-sm font-extrabold text-wit-ink">
-                    {t("Duración", "Duration")}
-                  </legend>
-                  <div className="mt-2 grid grid-cols-4 gap-2">
-                    {[3, 7, 14].map((days) => (
-                      <button
-                        key={days}
-                        type="button"
-                        onClick={() => {
-                          setDurationDays(days);
-                          setCustomDuration(false);
-                        }}
-                        className={`min-h-11 rounded-xl text-xs font-bold ${!customDuration && durationDays === days ? "bg-wit-blue text-white" : "bg-wit-mist/50 text-wit-ink"}`}
-                      >
-                        {days} {t("días", "days")}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setCustomDuration(true)}
-                      className={`min-h-11 rounded-xl text-xs font-bold ${customDuration ? "bg-wit-blue text-white" : "bg-wit-mist/50 text-wit-ink"}`}
-                    >
-                      {t("Otra", "Other")}
-                    </button>
-                  </div>
-                  {customDuration ? (
-                    <input
-                      type="number"
-                      min={1}
-                      max={90}
-                      value={durationDays}
-                      onChange={(event) => setDurationDays(Number(event.target.value))}
-                      className="mt-2 h-12 w-full rounded-xl border border-wit-ink/10 px-3 text-sm"
-                      aria-label={t("Número de días", "Number of days")}
-                    />
-                  ) : null}
-                </fieldset>
-                <label className="block">
-                  <span className="text-sm font-extrabold text-wit-ink">
-                    {t("Texto del anuncio", "Ad copy")}
-                  </span>
-                  <textarea
-                    value={message}
-                    onChange={(event) => setMessage(event.target.value)}
-                    rows={4}
-                    maxLength={500}
-                    className="mt-2 w-full resize-none rounded-2xl border border-wit-ink/10 p-3 text-sm outline-none focus:border-wit-blue"
-                  />
-                </label>
-                {(objective === "interaccion" || objective === "ventas") &&
-                messagingChannels.includes("whatsapp") ? (
-                  <div>
-                    <span className="text-sm font-extrabold text-wit-ink">
-                      {t(
-                        "¿A qué WhatsApp quieres recibir los mensajes?",
-                        "Which WhatsApp should receive the messages?",
-                      )}
-                    </span>
-                    {whatsappLoading ? (
-                      <p className="mt-2 flex items-center gap-2 text-xs text-wit-gray">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        {t(
-                          "Buscando tus números de WhatsApp...",
-                          "Looking up your WhatsApp numbers...",
-                        )}
-                      </p>
-                    ) : whatsappFetchFailed ? (
-                      <p className="mt-2 rounded-2xl border border-dashed border-wit-ink/15 p-3 text-xs text-wit-gray">
-                        {t(
-                          "No pudimos consultar tus números de WhatsApp. Intenta de nuevo más tarde.",
-                          "We couldn't look up your WhatsApp numbers. Try again later.",
-                        )}
-                      </p>
-                    ) : whatsappNeedsReconnect ? (
-                      <div className="mt-2 rounded-2xl border border-dashed border-wit-ink/15 p-3">
-                        <p className="text-xs text-wit-gray">
-                          {t(
-                            "Reconecta tu cuenta de Meta para ver tus números de WhatsApp Business.",
-                            "Reconnect your Meta account to see your WhatsApp Business numbers.",
-                          )}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={connectMeta}
-                          className="mt-2 text-xs font-bold text-wit-blue"
-                        >
-                          {t("Reconectar Meta", "Reconnect Meta")}
-                        </button>
-                      </div>
-                    ) : whatsappNumbers.length === 0 ? (
-                      <p className="mt-2 rounded-2xl border border-dashed border-wit-ink/15 p-3 text-xs text-wit-gray">
-                        {t(
-                          "No encontramos un WhatsApp Business disponible para esta página. Conecta o configura un número en Meta Business Suite antes de continuar.",
-                          "We couldn't find a WhatsApp Business number available for this Page. Connect or set one up in Meta Business Suite before continuing.",
-                        )}
-                      </p>
-                    ) : (
-                      <div className="mt-2 space-y-2">
-                        {whatsappNumbers.map((number) => (
-                          <label
-                            key={number.phoneNumberId}
-                            className={`flex cursor-pointer items-center gap-2.5 rounded-2xl border p-3 text-sm ${
-                              whatsappNumber === number.displayNumber
-                                ? "border-wit-blue bg-wit-blue/[0.04]"
-                                : "border-wit-ink/10"
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="whatsapp-number"
-                              checked={whatsappNumber === number.displayNumber}
-                              onChange={() => setWhatsappNumber(number.displayNumber)}
-                              className="h-4 w-4 accent-wit-blue"
-                            />
-                            <span className="min-w-0 flex-1">
-                              <b className="block text-wit-ink">{number.displayNumber}</b>
-                              {number.verifiedName ? (
-                                <span className="block truncate text-xs text-wit-gray">
-                                  {number.verifiedName}
-                                </span>
-                              ) : null}
-                            </span>
-                          </label>
-                        ))}
-                        {whatsappNumbers.length > 1 ? (
-                          <label className="flex items-center gap-2 pt-1 text-xs text-wit-gray">
-                            <input
-                              type="checkbox"
-                              checked={saveAsDefaultWhatsApp}
-                              onChange={(event) => setSaveAsDefaultWhatsApp(event.target.checked)}
-                              className="h-3.5 w-3.5 accent-wit-blue"
-                            />
-                            {t(
-                              "Usar este número por defecto la próxima vez",
-                              "Use this number by default next time",
-                            )}
-                          </label>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-                ) : null}
-                <div className="rounded-2xl bg-wit-mist/35 p-4 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-wit-gray">{t("Presupuesto diario", "Daily budget")}</span>
-                    <b className="text-wit-ink">${dailyBudgetMxn.toLocaleString()} MXN</b>
-                  </div>
-                  <div className="mt-2 flex justify-between">
-                    <span className="text-wit-gray">{t("Duración", "Duration")}</span>
-                    <b className="text-wit-ink">
-                      {durationDays} {t("días", "days")}
-                    </b>
-                  </div>
-                  <div className="mt-3 flex justify-between border-t border-wit-ink/8 pt-3">
-                    <span className="font-bold text-wit-ink">
-                      {t("Inversión estimada", "Estimated investment")}
-                    </span>
-                    <b className="text-wit-blue">${investment.toLocaleString()} MXN</b>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : step === 3 ? (
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-wit-blue">
-                {t("Audiencia", "Audience")}
-              </p>
-              <h2 id="campaign-flow-title" className="mt-2 text-2xl font-extrabold text-wit-ink">
-                {t("¿A quién quieres llegar?", "Who do you want to reach?")}
-              </h2>
-              <div className="mt-6 space-y-6">
-                {savedAudiences.length ? (
-                  <div>
-                    <span className="text-sm font-extrabold text-wit-ink">
-                      {t("Audiencias guardadas", "Saved audiences")}
-                    </span>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {savedAudiences.map((audience) => (
-                        <button
-                          key={audience.id}
-                          type="button"
-                          onClick={() => applySavedAudience(audience)}
-                          className="rounded-full border border-wit-ink/10 bg-white px-3 py-1.5 text-xs font-bold text-wit-ink hover:border-wit-blue hover:text-wit-blue"
-                        >
-                          {audience.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                <label className="block">
-                  <span className="text-sm font-extrabold text-wit-ink">
-                    {t("Describe a quién quieres llegar", "Describe who you want to reach")}
-                  </span>
-                  <textarea
-                    value={audienceDescription}
-                    onChange={(event) => setAudienceDescription(event.target.value)}
-                    rows={4}
-                    maxLength={600}
-                    placeholder={t(
-                      "Ej. Dueños y administradores de restaurantes en CDMX, entre 28 y 50 años, interesados en emprendimiento, gastronomía y herramientas para hacer crecer su negocio.",
-                      "E.g. Owners and managers of restaurants in Mexico City, ages 28-50, interested in entrepreneurship, food, and tools to grow their business.",
-                    )}
-                    className="mt-2 w-full resize-none rounded-2xl border border-wit-ink/10 p-3 text-sm outline-none focus:border-wit-blue"
-                  />
-                  <span className="mt-1.5 block text-xs text-wit-gray">
-                    {t(
-                      "Wit utilizará esta información para construir una audiencia compatible con Meta Ads.",
-                      "Wit will use this to build an audience compatible with Meta Ads.",
-                    )}
-                  </span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => void suggestAudience()}
-                  disabled={!audienceDescription.trim() || suggestingAudience}
-                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-5 text-sm font-bold text-white disabled:opacity-40"
-                >
-                  {suggestingAudience ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-4 w-4" />
-                  )}
-                  {suggestingAudience
-                    ? t("Wit está pensando...", "Wit is thinking...")
-                    : t("Sugerir audiencia con Wit", "Suggest audience with Wit")}
-                </button>
-                {audienceError ? (
-                  <p className="text-xs text-red-600" role="alert">
-                    {audienceError}
-                  </p>
-                ) : null}
-
-                <div>
-                  <p className="text-sm font-extrabold text-wit-ink">
-                    {audienceApplied
-                      ? t("Audiencia sugerida", "Suggested audience")
-                      : t("Público", "Audience")}
-                  </p>
-                  <div className="mt-2 rounded-2xl border border-wit-blue/20 bg-wit-blue/[0.035] p-4">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-wit-blue" />
-                      <b className="text-sm text-wit-ink">
-                        {audienceApplied
-                          ? t("Sugerida por Wit", "Suggested by Wit")
-                          : t("Automático", "Automatic")}
-                      </b>
-                      {!audienceApplied ? (
-                        <span className="rounded-full bg-wit-blue/10 px-2 py-1 text-[10px] font-bold text-wit-blue">
-                          {t("Recomendado", "Recommended")}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-2 text-xs leading-relaxed text-wit-gray">
-                      {audienceNotes ??
-                        t(
-                          "Meta optimizará tu audiencia para encontrar personas con mayor probabilidad de realizar la acción.",
-                          "Meta will optimize your audience to find people most likely to take action.",
-                        )}
-                    </p>
-
-                    <div className="mt-3">
-                      <span className="text-xs font-bold text-wit-gray">
-                        {t("Ubicación", "Location")}
-                      </span>
-                      {locationLabel ? (
-                        <>
-                          <div className="mt-1 flex items-center justify-between gap-2">
-                            <span className="text-sm font-bold text-wit-ink">{locationLabel}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setLocationKey(null);
-                                setLocationLabel(null);
-                              }}
-                              className="text-xs font-bold text-wit-gray hover:text-wit-ink"
-                            >
-                              {t("Quitar", "Remove")}
-                            </button>
-                          </div>
-                          <label className="mt-2 block text-xs font-bold text-wit-gray">
-                            {t(`Radio: ${radiusKm} km`, `Radius: ${radiusKm} km`)}
-                            <input
-                              type="range"
-                              min={5}
-                              max={50}
-                              value={radiusKm}
-                              onChange={(event) => setRadiusKm(Number(event.target.value))}
-                              className="mt-1 block w-full accent-wit-blue"
-                            />
-                          </label>
-                        </>
-                      ) : (
-                        <p className="mt-1 text-sm font-bold text-wit-ink">
-                          {t("Todo México", "All of Mexico")}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <label className="text-xs font-bold text-wit-gray">
-                        {t("Edad mínima", "Min age")}
-                        <input
-                          type="number"
-                          min={13}
-                          max={65}
-                          value={ageMin}
-                          onChange={(event) => setAgeMin(Number(event.target.value))}
-                          className="mt-1 h-10 w-full rounded-xl border border-wit-ink/10 bg-white px-3 text-wit-ink"
-                        />
-                      </label>
-                      <label className="text-xs font-bold text-wit-gray">
-                        {t("Edad máxima", "Max age")}
-                        <input
-                          type="number"
-                          min={13}
-                          max={65}
-                          value={ageMax}
-                          onChange={(event) => setAgeMax(Number(event.target.value))}
-                          className="mt-1 h-10 w-full rounded-xl border border-wit-ink/10 bg-white px-3 text-wit-ink"
-                        />
-                      </label>
-                    </div>
-
-                    {selectedInterests.length ? (
-                      <div className="mt-3">
-                        <span className="text-xs font-bold text-wit-gray">
-                          {t("Intereses", "Interests")}
-                        </span>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {selectedInterests.map((interest) => (
-                            <span
-                              key={interest.id}
-                              className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-bold text-wit-ink ring-1 ring-wit-ink/10"
-                            >
-                              {interest.name}
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setSelectedInterests((current) =>
-                                    current.filter((i) => i.id !== interest.id),
-                                  )
-                                }
-                                aria-label={t(`Quitar ${interest.name}`, `Remove ${interest.name}`)}
-                                className="text-wit-gray hover:text-wit-ink"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-                {showSaveAudience ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      value={saveAudienceName}
-                      onChange={(event) => setSaveAudienceName(event.target.value)}
-                      placeholder={t(
-                        "Ej. Dueños de restaurantes CDMX",
-                        "E.g. Restaurant owners CDMX",
-                      )}
-                      className="h-11 min-w-0 flex-1 rounded-xl border border-wit-ink/10 px-3 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void saveAudience()}
-                      disabled={!saveAudienceName.trim() || savingAudience}
-                      className="flex h-11 shrink-0 items-center justify-center rounded-xl bg-wit-blue px-4 text-xs font-bold text-white disabled:opacity-40"
-                    >
-                      {savingAudience ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        t("Guardar", "Save")
-                      )}
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowSaveAudience(true)}
-                    className="text-sm font-bold text-wit-blue"
-                  >
-                    {t("Guardar esta audiencia", "Save this audience")}
-                  </button>
-                )}
-              </div>
-            </div>
+          ) : step === "objetivo" ? (
+            <AdsObjectiveStep objective={objective} onSelect={setObjective} />
+          ) : step === "destino" ? (
+            <AdsDestinationStep
+              objective={objective}
+              trafficDestination={trafficDestination}
+              onSelectTrafficDestination={setTrafficDestination}
+              websiteUrl={websiteUrl}
+              onWebsiteUrlChange={setWebsiteUrl}
+              messagingChannels={messagingChannels}
+              onToggleMessagingChannel={toggleMessagingChannel}
+              social={social}
+              whatsappNumber={whatsappNumber}
+              onWhatsappNumberChange={setWhatsappNumber}
+              whatsappNumbers={whatsappNumbers}
+              whatsappLoading={whatsappLoading}
+              whatsappFetchFailed={whatsappFetchFailed}
+              whatsappNeedsReconnect={whatsappNeedsReconnect}
+              onConnectMeta={connectMeta}
+              onConnectSocial={connectSocial}
+            />
+          ) : step === "presupuesto" ? (
+            <AdsBudgetStep dailyBudgetMxn={dailyBudgetMxn} onChange={setDailyBudgetMxn} />
+          ) : step === "duracion" ? (
+            <AdsDurationStep
+              durationDays={durationDays}
+              onChange={setDurationDays}
+              dailyBudgetMxn={dailyBudgetMxn}
+            />
+          ) : step === "audiencia" ? (
+            <AdsAudienceStep
+              audienceMode={audienceMode}
+              onSetAudienceMode={setAudienceMode}
+              audienceDescription={audienceDescription}
+              onAudienceDescriptionChange={setAudienceDescription}
+              onSuggestAudience={() => void suggestAudience()}
+              suggestingAudience={suggestingAudience}
+              audienceError={audienceError}
+              audienceApplied={audienceApplied}
+              audienceNotes={audienceNotes}
+              locationKey={locationKey}
+              locationLabel={locationLabel}
+              onSetLocation={(key, label) => {
+                setLocationKey(key);
+                setLocationLabel(label);
+              }}
+              radiusKm={radiusKm}
+              onRadiusChange={setRadiusKm}
+              ageMin={ageMin}
+              ageMax={ageMax}
+              onAgeMinChange={setAgeMin}
+              onAgeMaxChange={setAgeMax}
+              selectedInterests={selectedInterests}
+              onAddInterest={(interest) =>
+                setSelectedInterests((current) =>
+                  current.some((i) => i.id === interest.id) ? current : [...current, interest],
+                )
+              }
+              onRemoveInterest={(id) =>
+                setSelectedInterests((current) => current.filter((i) => i.id !== id))
+              }
+              savedAudiences={savedAudiences}
+              onApplySavedAudience={applySavedAudience}
+              showSaveAudience={showSaveAudience}
+              onShowSaveAudience={() => setShowSaveAudience(true)}
+              saveAudienceName={saveAudienceName}
+              onSaveAudienceNameChange={setSaveAudienceName}
+              onSaveAudience={() => void saveAudience()}
+              savingAudience={savingAudience}
+            />
+          ) : step === "creativo" ? (
+            <AdsCreativeStep
+              piece={piece}
+              brand={brand}
+              objective={objective}
+              message={message}
+              onMessageChange={setMessage}
+              ctaLabel={ctaLabel}
+              audienceSummary={audienceSummary}
+            />
           ) : (
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-wit-blue">
-                {t("Revisar", "Review")}
-              </p>
-              <h2 id="campaign-flow-title" className="mt-2 text-2xl font-extrabold text-wit-ink">
-                {t("Revisar y publicar", "Review and publish")}
-              </h2>
-              <div className="mt-6 flex gap-4 rounded-2xl border border-wit-ink/8 p-4">
-                {piece.previewUrl ? (
-                  <img
-                    src={piece.previewUrl}
-                    alt=""
-                    className="h-20 w-20 rounded-xl object-cover"
-                  />
-                ) : (
-                  <span className="flex h-20 w-20 items-center justify-center rounded-xl bg-wit-mist/50">
-                    <Megaphone className="h-6 w-6 text-wit-blue" />
-                  </span>
-                )}
-                <div className="min-w-0">
-                  <b className="block text-sm text-wit-ink">{piece.title}</b>
-                  <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-wit-gray">
-                    {message}
-                  </p>
-                </div>
-              </div>
-              <dl className="mt-5 divide-y divide-wit-ink/7 rounded-2xl bg-wit-mist/25 px-4">
-                {[
-                  [t("Objetivo", "Objective"), objectiveLabel],
-                  [
-                    t("Presupuesto diario", "Daily budget"),
-                    `$${dailyBudgetMxn.toLocaleString()} MXN`,
-                  ],
-                  [t("Duración", "Duration"), `${durationDays} ${t("días", "days")}`],
-                  [
-                    t("Inversión estimada", "Estimated investment"),
-                    `$${investment.toLocaleString()} MXN`,
-                  ],
-                  [
-                    objective === "trafico"
-                      ? t("Destino", "Destination")
-                      : t("Mensajes por", "Messages via"),
-                    destinationSummary,
-                  ],
-                  [t("Ubicaciones", "Placements"), platforms],
-                  [
-                    t("Cuenta publicitaria", "Ad account"),
-                    account.accountName || `ID: ${account.accountId}`,
-                  ],
-                  [
-                    t("Público", "Audience"),
-                    [
-                      `${ageMin}-${ageMax}`,
-                      locationLabel ?? t("Todo México", "All of Mexico"),
-                      selectedInterests.length
-                        ? t(
-                            `${selectedInterests.length} intereses`,
-                            `${selectedInterests.length} interests`,
-                          )
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · "),
-                  ],
-                  ...((objective === "interaccion" || objective === "ventas") &&
-                  messagingChannels.includes("whatsapp") &&
-                  whatsappNumber
-                    ? [["WhatsApp", whatsappNumber]]
-                    : []),
-                  [t("CTA", "CTA"), ctaLabel],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex items-start justify-between gap-4 py-3">
-                    <dt className="text-xs font-semibold text-wit-gray">{label}</dt>
-                    <dd className="text-right text-xs font-extrabold text-wit-ink">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-              <label className="mt-4 flex items-start gap-2.5 rounded-2xl border border-wit-ink/10 p-3.5 text-sm">
-                <input
-                  type="checkbox"
-                  checked={activateImmediately}
-                  onChange={(event) => setActivateImmediately(event.target.checked)}
-                  className="mt-0.5 h-4 w-4 accent-wit-blue"
-                />
-                <span>
-                  <b className="block text-wit-ink">
-                    {t("Activar de inmediato al crear", "Activate immediately on creation")}
-                  </b>
-                  <span className="mt-0.5 block text-xs leading-relaxed text-wit-gray">
-                    {activateImmediately
-                      ? t(
-                          "La campaña empezará a mostrarse y a gastar en cuanto la crees, sin revisión previa.",
-                          "The campaign will start showing and spending as soon as you create it, with no prior review.",
-                        )
-                      : t(
-                          "Se crea pausada; tú la activas manualmente en Meta cuando la hayas revisado.",
-                          "It's created paused; you activate it manually on Meta once you've reviewed it.",
-                        )}
-                  </span>
-                </span>
-              </label>
-            </div>
+            <AdsReviewStep
+              piece={piece}
+              objectiveLabel={objectiveLabel}
+              destinationLabel={destinationLabel}
+              destinationSub={destinationSub}
+              audienceLabel={audienceLabel}
+              dailyBudgetMxn={dailyBudgetMxn}
+              durationDays={durationDays}
+              message={message}
+              activateImmediately={activateImmediately}
+              onActivateImmediatelyChange={setActivateImmediately}
+              onEditStep={goTo}
+            />
           )}
-          {error ? (
+          {error && step !== "creando" ? (
             <p className="mt-5 rounded-2xl bg-red-50 p-3 text-sm text-red-700" role="alert">
               {error}
             </p>
           ) : null}
         </div>
 
-        {!success ? (
+        {step !== "creando" ? (
           <div className="shrink-0 border-t border-wit-ink/6 bg-white px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 md:px-7">
-            {step === 1 ? (
+            {step === "preparacion" ? (
               <button
                 type="button"
-                onClick={() => continueTo(2)}
+                onClick={() => continueFrom("preparacion")}
                 disabled={!account.connected || loadingAccount}
                 className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-5 font-bold text-white disabled:opacity-35"
               >
                 {t("Continuar", "Continue")}
-                <ChevronRight className="h-4 w-4" />
               </button>
-            ) : step === 2 ? (
+            ) : step === "revision" ? (
               <button
                 type="button"
-                onClick={() => continueTo(3)}
+                onClick={() => void publishCampaign()}
                 className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-5 font-bold text-white"
               >
-                {t("Continuar", "Continue")}
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            ) : step === 3 ? (
-              <button
-                type="button"
-                onClick={() => continueTo(4)}
-                className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-5 font-bold text-white"
-              >
-                {t("Continuar", "Continue")}
-                <ChevronRight className="h-4 w-4" />
+                <Megaphone className="h-5 w-5" />
+                {t("Crear campaña", "Create campaign")}
               </button>
             ) : (
               <button
                 type="button"
-                onClick={() => void publishCampaign()}
-                disabled={submitting}
-                className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-5 font-bold text-white disabled:opacity-50"
+                onClick={() => continueFrom(step)}
+                className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-5 font-bold text-white"
               >
-                {submitting ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Megaphone className="h-5 w-5" />
-                )}
-                {submitting
-                  ? t("Creando campaña...", "Creating campaign...")
-                  : t("Publicar campaña", "Publish campaign")}{" "}
-                {!submitting ? <ChevronRight className="h-4 w-4" /> : null}
+                {t("Continuar", "Continue")}
               </button>
             )}
           </div>
