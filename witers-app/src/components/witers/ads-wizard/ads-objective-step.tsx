@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Megaphone, MessageCircle, ShoppingCart, Sparkles } from "lucide-react";
+import { Check, Megaphone, MessageCircle, ShoppingBag, Sparkles } from "lucide-react";
 
 import { useLanguage } from "../../../lib/i18n";
 import type { Objective } from "./types";
@@ -12,43 +12,62 @@ type ObjectiveCard = {
   available: boolean;
 };
 
-// "interaccion" is real as a stored value but has no distinct backend
-// behavior today (see types.ts) — offered here only as a disabled
-// "Próximamente" card so the 3-option layout from the reference mockup
-// stays intact without pretending a reach/awareness campaign type
-// exists yet.
+// CAMBIO 03 — WITERS Ads Resolver: the human-facing intent this card
+// stands for, and what it actually configures on Meta's side today (see
+// resolveObjective in meta-ads-create.server.ts, the single place that
+// turns Objective into a real Meta objective + optimization goal — this
+// list intentionally doesn't duplicate that logic, only documents it):
+//
+//   Objective value | UI intent      | Meta objective
+//   ----------------|----------------|---------------------------------
+//   "ventas"        | Más mensajes   | OUTCOME_ENGAGEMENT (messaging)
+//   "trafico"       | Más visibilidad| OUTCOME_TRAFFIC
+//   "interaccion"   | Más ventas     | none yet — see `available: false`
+//
+// "trafico" already had a complete, working OUTCOME_TRAFFIC
+// implementation — it was only ever mislabeled as "Conseguir más
+// clientes" and buried as a second option, never actually marked
+// unavailable. Fase 3.5 asked to audit exactly this: it wasn't
+// "Próximamente" for a real reason, so it's enabled here under its
+// correct name instead of staying hidden behind confusing copy.
+// "interaccion" is the one still marked unavailable, and for a REAL
+// reason this time: Meta's Sales objective needs a Pixel/Conversions API
+// event and a promoted object this codebase has no configuration UI or
+// storage for. Renaming it to "Más ventas" without that would silently
+// promise a distinct sales-optimized campaign type that doesn't exist —
+// it stays a disabled "Próximamente" card instead of faking support.
 function useObjectiveCards(): ObjectiveCard[] {
   const { t } = useLanguage();
   return [
     {
       value: "ventas",
       icon: MessageCircle,
-      title: t("Recibir más mensajes", "Get more messages"),
+      title: t("Más mensajes", "More messages"),
       description: t(
-        "Habla con personas interesadas por WhatsApp, Instagram o Messenger.",
-        "Talk to interested people over WhatsApp, Instagram, or Messenger.",
-      ),
-      available: true,
-    },
-    {
-      value: "trafico",
-      icon: ShoppingCart,
-      title: t("Conseguir más clientes", "Get more customers"),
-      description: t(
-        "Lleva personas a tu negocio digital para generar oportunidades o ventas.",
-        "Send people to your digital storefront to generate leads or sales.",
+        "Recibe consultas de personas interesadas por WhatsApp, Instagram o Messenger.",
+        "Get inquiries from interested people over WhatsApp, Instagram, or Messenger.",
       ),
       available: true,
     },
     {
       value: "interaccion",
-      icon: Megaphone,
-      title: t("Llegar a más personas", "Reach more people"),
+      icon: ShoppingBag,
+      title: t("Más ventas", "More sales"),
       description: t(
-        "Haz que más personas descubran tu negocio e interactúen con tu contenido.",
-        "Get more people to discover your business and engage with your content.",
+        "Promociona tus productos o servicios para generar oportunidades de venta.",
+        "Promote your products or services to generate sales opportunities.",
       ),
       available: false,
+    },
+    {
+      value: "trafico",
+      icon: Megaphone,
+      title: t("Más visibilidad", "More visibility"),
+      description: t(
+        "Lleva más personas a tu negocio, perfil o sitio web.",
+        "Bring more people to your business, profile, or website.",
+      ),
+      available: true,
     },
   ];
 }
@@ -64,10 +83,11 @@ export function AdsObjectiveStep({
   const cards = useObjectiveCards();
   const [showRecommendation, setShowRecommendation] = useState(false);
   // A static default, not a live Wit/AI call — building a real
-  // recommendation model for this one decision is out of scope for this
-  // iteration. "Recibir más mensajes" is offered because it's already
-  // this wizard's own long-standing default objective and WITERS'
-  // clients most common real use case, not something inferred per-piece.
+  // recommendation model for this one decision (reading the piece, copy,
+  // CTA, Mente de marca, etc.) is out of scope for this iteration.
+  // "Más mensajes" is offered because it's already this wizard's own
+  // long-standing default objective and WITERS' clients' most common
+  // real use case, not something inferred per-piece.
   const recommended = cards.find((c) => c.value === "ventas")!;
 
   return (
@@ -79,10 +99,7 @@ export function AdsObjectiveStep({
         {t("¿Qué quieres conseguir?", "What do you want to achieve?")}
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-wit-gray">
-        {t(
-          "¿Qué quieres que pase después de que alguien vea este anuncio?",
-          "What do you want to happen after someone sees this ad?",
-        )}
+        {t("Elige el objetivo principal de tu anuncio.", "Choose the main objective for your ad.")}
       </p>
 
       <div className="mt-6 grid gap-3">
@@ -141,7 +158,7 @@ export function AdsObjectiveStep({
           className="mt-5 flex items-center gap-1.5 text-sm font-bold text-wit-blue"
         >
           <Sparkles className="h-4 w-4" />
-          {t("¿No sabes cuál elegir?", "Not sure which to pick?")}
+          {t("Recomiéndame un objetivo", "Recommend an objective for me")}
         </button>
       ) : (
         <div className="mt-5 rounded-2xl border border-wit-blue/20 bg-wit-blue/[0.035] p-4">

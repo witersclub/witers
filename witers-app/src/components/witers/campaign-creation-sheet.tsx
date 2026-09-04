@@ -941,7 +941,14 @@ export function CampaignCreationSheet({
               <button
                 type="button"
                 onClick={() => continueFrom(step)}
-                className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-5 font-bold text-white"
+                // CAMBIO 02 (Fase 2.7) — the presupuesto step is the one
+                // place a client can type their way into an invalid value
+                // (every other step only offers pre-validated choices), so
+                // it's the one place Continuar needs to react to that
+                // before the click, not just after — reusing the same
+                // real minimum (20) validateStep already enforces.
+                disabled={step === "presupuesto" && dailyBudgetMxn < 20}
+                className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-wit-blue px-5 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {t("Continuar", "Continue")}
               </button>

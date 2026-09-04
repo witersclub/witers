@@ -4285,7 +4285,12 @@ function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null })
           </p>
         ) : null}
       </div>
-      <div className="mt-auto pb-2 pt-4">
+      {/* CAMBIO 04 (Fase 4.11) — capped instead of the full 900px section
+          width: on desktop, a deck this wide read as a stretched-out
+          mobile module rather than an object with its own size. Centering
+          a wallet-width deck at least keeps the metaphor intact without
+          building a separate side-panel layout this pass. */}
+      <div className="mx-auto mt-auto w-full max-w-md pb-2 pt-4">
         <BrandAssetStack brandProfile={brandProfile} />
       </div>
     </div>
@@ -4511,12 +4516,17 @@ function BrandLibrarySheet({
   );
 }
 
-// "Tono de voz" — the real data behind it is brand_assets rows with
-// kind === "strategy": text-extracted documents (manual, guidelines,
-// personality notes) Wit already reads for tone/context. There's no
-// separate stored "tone of voice" field in the schema — this is the
-// closest real bucket, so the label stays "Tono de voz" but the content
-// underneath is exactly what was already in "Mente de marca" for this kind.
+// CAMBIO 04 (Fase 4.6/4.7) — renamed from "Tono de voz" (and, before that,
+// "Mente de marca") to "Contexto para IA". The real data behind it hasn't
+// moved: still brand_assets rows with kind === "strategy", the same
+// text-extracted documents (manual, guidelines, personality notes) Wit
+// already reads — this is a renaming/presentation change, not a new
+// bucket or a data migration. Approved copy, used verbatim: title
+// "Contexto para IA", subtitle "Archivos e información importante de tu
+// marca" (replaces any per-brand dynamic count — the subtitle's job here
+// is telling the client what to put in, not reporting how much is
+// already there), and inside the expanded card, the longer explanation
+// + "+ Agregar archivos" CTA.
 function StrategyCardContent({
   items,
   onOpenLibrary,
@@ -4530,6 +4540,12 @@ function StrategyCardContent({
   const tone = walletTone(ink);
   return (
     <div>
+      <p className={`mb-3 text-xs leading-relaxed ${tone.soft}`}>
+        {t(
+          "Agrega archivos con información importante sobre tu marca, negocio, productos, servicios, audiencia y estrategia.",
+          "Add files with important information about your brand, business, products, services, audience, and strategy.",
+        )}
+      </p>
       {items.length ? (
         <ul className="space-y-2">
           {items.slice(0, 4).map((a) => (
@@ -4546,7 +4562,10 @@ function StrategyCardContent({
         <p
           className={`rounded-2xl border border-dashed ${tone.border} p-4 text-center text-sm ${tone.soft}`}
         >
-          {t("Todavía no tienes tono de voz guardado.", "You don't have a saved brand voice yet.")}
+          {t(
+            "Todavía no agregaste contexto para tu marca.",
+            "You haven't added context for your brand yet.",
+          )}
         </p>
       )}
       {items.length > 4 ? (
@@ -4559,9 +4578,7 @@ function StrategyCardContent({
         onClick={onOpenLibrary}
         className={`mt-4 rounded-full ${tone.ctaBg} px-4 py-2 text-xs font-bold ${tone.ctaText} hover:brightness-95`}
       >
-        {items.length
-          ? t("Ver y agregar archivos", "View and add files")
-          : t("Agregar tono de voz", "Add brand voice")}
+        + {t("Agregar archivos", "Add files")}
       </button>
     </div>
   );
@@ -4882,10 +4899,11 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
       ),
     },
     tono: {
-      title: t("Tono de voz", "Brand voice"),
-      subtitle: strategyAssets.length
-        ? t(`${strategyAssets.length} documentos`, `${strategyAssets.length} documents`)
-        : t("Personalidad y comunicación", "Personality and communication"),
+      title: t("Contexto para IA", "Context for AI"),
+      subtitle: t(
+        "Archivos e información importante de tu marca",
+        "Files and important information about your brand",
+      ),
       icon: MessageCircle,
       accent: accents.tono.background,
       ink: accents.tono.ink,
@@ -4952,10 +4970,24 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
           const isActive = id === activeId;
           const Icon = card.icon;
           const tone = walletTone(card.ink);
+          // CAMBIO 04 (Fase 4.1/4.2) — collapsed cards already sit flush
+          // against each other (top is index*peek, height is exactly
+          // peek, zero gap) but rounding all four corners on every one of
+          // them still read as "a list of separate rounded modules": each
+          // seam had two facing rounded corners exposing a sliver of page
+          // background, which looks exactly like a gap even though there
+          // isn't one. Only the outermost edges of the whole deck are
+          // rounded now — the topmost collapsed card's top, and the
+          // active card's bottom — every seam in between is flush.
+          const roundingClass = isActive
+            ? "rounded-b-[28px]"
+            : index === 0
+              ? "rounded-t-[28px]"
+              : "";
           return (
             <div
               key={id}
-              className={`wit-stack-card absolute inset-x-0 overflow-hidden rounded-[28px] border ${tone.border} shadow-[0_18px_44px_rgba(5,13,40,0.18)]`}
+              className={`wit-stack-card absolute inset-x-0 overflow-hidden border ${roundingClass} ${tone.border} shadow-[0_18px_44px_rgba(5,13,40,0.18)]`}
               style={{
                 top: isActive
                   ? `calc(${collapsedCount} * var(--wit-stack-peek))`

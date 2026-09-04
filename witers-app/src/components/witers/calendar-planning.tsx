@@ -30,10 +30,12 @@ import {
 import {
   Calendar,
   CalendarClock,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
+  ExternalLink,
   Eye,
   Facebook,
   FileText,
@@ -265,6 +267,12 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
   const [generatingCaption, setGeneratingCaption] = useState(false);
   const [captionError, setCaptionError] = useState<string | null>(null);
   const [captionCopied, setCaptionCopied] = useState(false);
+  // CAMBIO 01 (Fase 1.6) — the caption used to always render in full,
+  // sometimes pushing everything below it (including Publicar) several
+  // screens down. Collapsed to ~3 lines by default; "Ver completo" expands
+  // it in place rather than opening a separate sheet, since it's already
+  // inside the one scroll container the rest of Detalle uses.
+  const [captionExpanded, setCaptionExpanded] = useState(false);
   const [editingCaption, setEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState(entry.caption ?? "");
   const [savingCaption, setSavingCaption] = useState(false);
@@ -336,6 +344,7 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
     setCaptionText(entry.caption);
     setCaptionError(null);
     setCaptionCopied(false);
+    setCaptionExpanded(false);
     setEditingCaption(false);
     setCaptionDraft(entry.caption ?? "");
     const params = new URLSearchParams(window.location.search);
@@ -959,9 +968,20 @@ function EntryDetail({ entry, onClose }: { entry: CalendarEntry; onClose: () => 
                   </>
                 ) : captionText ? (
                   <>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-wit-ink">
+                    <p
+                      className={`mt-2 whitespace-pre-wrap text-sm leading-relaxed text-wit-ink ${captionExpanded ? "" : "line-clamp-3"}`}
+                    >
                       {captionText}
                     </p>
+                    {!captionExpanded ? (
+                      <button
+                        type="button"
+                        onClick={() => setCaptionExpanded(true)}
+                        className="mt-1 text-xs font-bold text-wit-blue hover:underline"
+                      >
+                        {t("Ver completo", "See full text")} →
+                      </button>
+                    ) : null}
                     <div className="mt-3 flex gap-2">
                       <button
                         type="button"
@@ -1586,49 +1606,97 @@ function ConnectionsStrip({ className = "" }: { className?: string }) {
 // Botón "Publicar" junto al copy sugerido — solo aparece para piezas ya
 // "lista". Videos se envían a Meta y continúan procesándose en segundo plano;
 // imágenes y carruseles se publican durante la misma solicitud.
+// CAMBIO 01 — normal-flow (not `sticky`) so it can never detach from the
+// document and float over earlier content while scrolling: see
+// PublishSection below for why the previous `sticky bottom-0` version did.
 function PublishSection({ entry }: { entry: CalendarEntry }) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<SocialPlatform>>(new Set());
+  const [intent, setIntent] = useState<"schedule" | "now" | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [publishNotice, setPublishNotice] = useState<string | null>(null);
-  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleValue, setScheduleValue] = useState("");
   const [scheduling, setScheduling] = useState(false);
+  // "Cambiar programación" on the compact scheduled view reopens the picker
+  // instead of only offering to cancel — a client changing their mind about
+  // the date shouldn't have to cancel and start over.
+  const [reopenPicker, setReopenPicker] = useState(false);
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
   const { data: connections = EMPTY_CONNECTIONS } = useQuery({
     queryKey: ["social-connections"],
     queryFn: fetchConnections,
   });
-  const videoPublicationsQuery = useQuery({
-    queryKey: ["calendar-entry-video-publications", entry.id],
-    enabled: entry.status === "lista" && entry.format === "video",
+  // Same GET already used for video's processing status — it also returns
+  // `publications`, the history of immediate (non-scheduled) publishes for
+  // image/carousel, which nothing in this component read before. Without
+  // it, a piece published "ahora" had no way to know it already succeeded
+  // and kept showing the same picker as an unpublished piece.
+  const publicationsQuery = useQuery({
+    queryKey: ["calendar-entry-publications", entry.id],
+    enabled: entry.status === "lista",
     queryFn: async () => {
       const res = await fetch(
         `/api/calendar-entries-publish?entryId=${encodeURIComponent(entry.id)}`,
       );
       const data = (await res.json()) as {
         ok: boolean;
+        publications?: {
+          platform: SocialPlatform;
+          status: "success" | "error";
+          external_post_id: string | null;
+          error: string | null;
+          published_at: string;
+        }[];
         videoPublications?: {
           platform: SocialPlatform;
           status: "processing" | "success" | "error";
+          external_post_id: string | null;
           error: string | null;
           created_at: string;
         }[];
       };
-      return data.ok ? (data.videoPublications ?? []) : [];
+      return data.ok
+        ? { publications: data.publications ?? [], videoPublications: data.videoPublications ?? [] }
+        : { publications: [], videoPublications: [] };
     },
     refetchInterval: (query) =>
-      query.state.data?.some((publication) => publication.status === "processing") ? 10_000 : false,
+      query.state.data?.videoPublications.some((p) => p.status === "processing") ? 10_000 : false,
   });
+  const videoPublicationsData = publicationsQuery.data?.videoPublications ?? [];
+  const imagePublicationsData = publicationsQuery.data?.publications ?? [];
 
   if (entry.status !== "lista") return null;
 
   const connectedPlatforms = (["instagram", "facebook"] as SocialPlatform[]).filter(
     (p) => connections[p],
   );
+
+  function platformLabel(platform: SocialPlatform): string {
+    return platform === "instagram" ? "Instagram" : "Facebook";
+  }
+
+  // The single source of truth for "is this piece already spoken for" is
+  // entry.publicationStatus (scheduled/published/partial — from the
+  // scheduling flow, calendar-schedule.server.ts) UNIONED with the
+  // immediate-publish history above, because /api/calendar-entries-publish
+  // (the "Publicar ahora" endpoint) intentionally never touches
+  // calendar_entries — it only ever writes to calendar_entry_publications.
+  // Without also reading that table here, an immediately-published
+  // image/carousel piece had no record of it at the entry level at all.
+  const immediateSuccesses =
+    entry.format === "video"
+      ? videoPublicationsData.filter((p) => p.status === "success" || p.status === "processing")
+      : imagePublicationsData.filter((p) => p.status === "success");
+  const isScheduled = entry.publicationStatus === "scheduled" && !reopenPicker;
+  const isPublished =
+    !reopenPicker &&
+    (entry.publicationStatus === "published" ||
+      entry.publicationStatus === "partial" ||
+      immediateSuccesses.length > 0);
+  const showPicker = !isScheduled && !isPublished;
 
   function toggle(platform: SocialPlatform) {
     setSelected((prev) => {
@@ -1637,10 +1705,6 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
       else next.add(platform);
       return next;
     });
-  }
-
-  function platformLabel(platform: SocialPlatform): string {
-    return platform === "instagram" ? "Instagram" : "Facebook";
   }
 
   async function publish() {
@@ -1690,11 +1754,9 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
             ),
       );
       setPublishNotice(lines.join(" · "));
-      if (entry.format === "video") {
-        void queryClient.invalidateQueries({
-          queryKey: ["calendar-entry-video-publications", entry.id],
-        });
-      }
+      void queryClient.invalidateQueries({
+        queryKey: ["calendar-entry-publications", entry.id],
+      });
       // Un error trae el motivo real de Meta, útil para diagnosticar — se
       // queda visible más tiempo que una confirmación simple de éxito.
       const hasError = Object.values(data.results).some((r) => !r.ok);
@@ -1731,7 +1793,8 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (!data.ok) throw new Error(data.error);
-      setScheduleOpen(false);
+      setReopenPicker(false);
+      setIntent(null);
       setPublishNotice(t("Publicación programada", "Post scheduled"));
       void queryClient.invalidateQueries({ queryKey: ["calendar-entries"] });
     } catch {
@@ -1752,6 +1815,17 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
     if (res.ok) void queryClient.invalidateQueries({ queryKey: ["calendar-entries"] });
   }
 
+  // The Facebook Graph API documents `{post-id}` (the same value returned
+  // as `external_post_id`, formatted `{page-id}_{story-id}`) as resolving
+  // directly at facebook.com/{post-id} — reliable enough to link. Instagram
+  // media ids don't carry that guarantee without an extra permalink lookup
+  // this pipeline never fetches, so no link is invented for it: the
+  // platform still shows in the summary, just without a broken "Ver
+  // publicación" link riding on it.
+  const facebookPermalink = imagePublicationsData.find(
+    (p) => p.platform === "facebook" && p.status === "success" && p.external_post_id,
+  )?.external_post_id;
+
   return (
     <div className="mt-3.5 rounded-2xl border border-wit-ink/5 bg-wit-mist/30 p-3.5">
       <p className="text-xs font-bold uppercase tracking-wider text-wit-gray">
@@ -1765,9 +1839,9 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
               "Meta processes the video before publishing it. You can leave this screen: WITERS continues the process.",
             )}
           </p>
-          {videoPublicationsQuery.data?.[0] ? (
+          {videoPublicationsData[0] ? (
             <div className="mt-2 space-y-1 text-xs font-semibold text-wit-gray">
-              {videoPublicationsQuery.data.slice(0, 2).map((publication) => {
+              {videoPublicationsData.slice(0, 2).map((publication) => {
                 const platform = platformLabel(publication.platform as SocialPlatform);
                 return (
                   <p key={`${publication.platform}-${publication.created_at}`}>
@@ -1799,44 +1873,112 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
             "Connect Instagram or Facebook above the calendar to publish straight from here.",
           )}
         </p>
+      ) : isScheduled ? (
+        // CAMBIO 01 (Fase 1.11) — a scheduled piece never shows the same
+        // picker as an unpublished one again; it shows what's already
+        // decided, with a way back into the picker if that changes.
+        <div className="mt-3 flex items-start gap-3 rounded-xl border border-violet-100 bg-violet-50/60 p-3">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700">
+            <CalendarClock className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-extrabold text-violet-700">{t("Programada", "Scheduled")}</p>
+            <p className="mt-0.5 text-xs font-semibold text-wit-gray">
+              {(entry.publicationPlatforms ?? []).map(platformLabel).join(" · ")}
+              {entry.scheduledForUtc ? (
+                <>
+                  {" · "}
+                  {new Intl.DateTimeFormat(t("es-MX", "en-US"), {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                    timeZone: entry.publicationTimezone ?? undefined,
+                  }).format(new Date(`${entry.scheduledForUtc.replace(" ", "T")}Z`))}
+                </>
+              ) : null}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelected(new Set(entry.publicationPlatforms ?? []));
+                  setIntent("schedule");
+                  setReopenPicker(true);
+                }}
+                className="text-xs font-bold text-violet-700 hover:underline"
+              >
+                {t("Cambiar programación", "Change schedule")} →
+              </button>
+              <button
+                type="button"
+                onClick={cancelSchedule}
+                className="text-xs font-bold text-red-600 hover:underline"
+              >
+                {t("Cancelar", "Cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : isPublished ? (
+        // CAMBIO 01 (Fase 1.11) — same idea for an already-published piece.
+        <div className="mt-3 flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <Check className="h-4 w-4" strokeWidth={2.6} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-extrabold text-emerald-700">{t("Publicada", "Published")}</p>
+            <p className="mt-0.5 text-xs font-semibold text-wit-gray">
+              {(entry.publicationPlatforms?.length
+                ? entry.publicationPlatforms
+                : immediateSuccesses.map((p) => p.platform)
+              )
+                .map(platformLabel)
+                .join(" · ")}
+            </p>
+            {facebookPermalink ? (
+              <a
+                href={`https://www.facebook.com/${facebookPermalink}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline"
+              >
+                {t("Ver publicación", "View post")} <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : null}
+          </div>
+        </div>
       ) : (
         <>
           <p className="mt-3 text-sm font-bold text-wit-ink">
-            {t("¿Dónde quieres publicar?", "Where do you want to publish?")}
+            {t("¿Qué quieres hacer con esta pieza?", "What do you want to do with this piece?")}
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {(["instagram", "facebook"] as SocialPlatform[]).map((platform) => {
-              const connected = Boolean(connections[platform]);
-              return (
-                <label
-                  key={platform}
-                  className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold ${connected ? "text-wit-ink" : "cursor-not-allowed bg-wit-mist/35 text-wit-gray"} ${selected.has(platform) ? "border-wit-blue bg-wit-blue/5" : "border-wit-ink/12 bg-white"}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.has(platform)}
-                    onChange={() => toggle(platform)}
-                    disabled={!connected}
-                    className="h-4 w-4 rounded border-wit-ink/25"
-                  />
-                  <span>{platform === "instagram" ? "Instagram" : "Facebook"}</span>
-                  <span className="max-w-24 truncate text-xs font-medium text-wit-gray">
-                    {connections[platform]?.name ?? t("No conectada", "Not connected")}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-          {entry.publicationStatus === "scheduled" ? (
+          {/* CAMBIO 01 (Fase 1.7/1.8) — two compact toggle buttons decide
+              what comes next, instead of two giant always-visible CTAs
+              competing for attention; the actual action button below is
+              ONE, contextual, and lives in the normal document flow (never
+              `sticky`) so it can't detach and overlap earlier content while
+              scrolling — see the note on the component itself. */}
+          <div className="mt-2 grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={cancelSchedule}
-              className="mt-3 text-xs font-bold text-red-600 hover:underline"
+              onClick={() => setIntent("schedule")}
+              aria-pressed={intent === "schedule"}
+              className={`flex min-h-12 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-bold transition-colors ${intent === "schedule" ? "border-wit-blue bg-wit-blue/5 text-wit-blue" : "border-wit-ink/12 bg-white text-wit-ink"}`}
             >
-              {t("Cancelar programación", "Cancel schedule")}
+              <CalendarClock className="h-4 w-4" />
+              {t("Programar", "Schedule")}
             </button>
-          ) : null}
-          {scheduleOpen ? (
+            <button
+              type="button"
+              onClick={() => setIntent("now")}
+              aria-pressed={intent === "now"}
+              className={`flex min-h-12 items-center justify-center gap-1.5 rounded-xl border px-3 text-sm font-bold transition-colors ${intent === "now" ? "border-wit-blue bg-wit-blue/5 text-wit-blue" : "border-wit-ink/12 bg-white text-wit-ink"}`}
+            >
+              <Send className="h-4 w-4" />
+              {t("Publicar ahora", "Publish now")}
+            </button>
+          </div>
+
+          {intent === "schedule" ? (
             <div className="mt-3 rounded-2xl border border-wit-blue/15 bg-white p-3">
               <label className="text-xs font-bold text-wit-ink" htmlFor={`schedule-${entry.id}`}>
                 {t("Fecha y hora", "Date and time")}
@@ -1852,47 +1994,68 @@ function PublishSection({ entry }: { entry: CalendarEntry }) {
               <p className="mt-2 text-xs text-wit-gray">
                 {t(`Zona horaria: ${timezone}`, `Time zone: ${timezone}`)}
               </p>
-              <p className="mt-1 text-xs font-medium text-wit-gray">
-                {Array.from(selected).map(platformLabel).join(" · ")}
-              </p>
-              <button
-                type="button"
-                onClick={schedule}
-                disabled={scheduling || !scheduleValue || selected.size === 0}
-                className="mt-3 min-h-11 rounded-full bg-wit-blue px-4 text-xs font-bold text-white disabled:opacity-50"
-              >
-                {scheduling
-                  ? t("Programando...", "Scheduling...")
-                  : t("Confirmar programación", "Confirm schedule")}
-              </button>
             </div>
           ) : null}
-          <div className="sticky bottom-0 z-10 -mx-3.5 mt-4 flex flex-col gap-2 border-t border-wit-ink/8 bg-white/95 px-3.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:flex-row">
-            <button
-              type="button"
-              disabled={selected.size === 0 || publishing || scheduling}
-              onClick={() => setScheduleOpen((value) => !value)}
-              className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-full border border-wit-blue bg-white px-4 text-sm font-bold text-wit-blue shadow-sm transition-colors hover:bg-wit-blue/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue disabled:opacity-50"
-            >
-              <CalendarClock className="h-4 w-4" />
-              {t("Programar", "Schedule")}
-            </button>
-            <button
-              type="button"
-              disabled={selected.size === 0 || publishing || scheduling}
-              onClick={publish}
-              className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-wit-pink via-[#775cff] to-wit-blue px-4 text-sm font-bold text-white shadow-[0_8px_20px_rgba(119,92,255,0.22)] transition-transform hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-50"
-            >
-              {publishing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              {publishing
-                ? t("Publicando...", "Publishing...")
-                : t("Publicar ahora", "Publish now")}
-            </button>
-          </div>
+
+          {intent ? (
+            <>
+              <p className="mt-3 text-sm font-bold text-wit-ink">
+                {t("Publicar en", "Publish to")}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(["instagram", "facebook"] as SocialPlatform[]).map((platform) => {
+                  const connected = Boolean(connections[platform]);
+                  return (
+                    <label
+                      key={platform}
+                      className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold ${connected ? "text-wit-ink" : "cursor-not-allowed bg-wit-mist/35 text-wit-gray"} ${selected.has(platform) ? "border-wit-blue bg-wit-blue/5" : "border-wit-ink/12 bg-white"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected.has(platform)}
+                        onChange={() => toggle(platform)}
+                        disabled={!connected}
+                        className="h-4 w-4 rounded border-wit-ink/25"
+                      />
+                      <span>{platform === "instagram" ? "Instagram" : "Facebook"}</span>
+                      <span className="max-w-24 truncate text-xs font-medium text-wit-gray">
+                        {connections[platform]?.name ?? t("No conectada", "Not connected")}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                disabled={
+                  selected.size === 0 ||
+                  publishing ||
+                  scheduling ||
+                  (intent === "schedule" && !scheduleValue)
+                }
+                onClick={intent === "schedule" ? schedule : publish}
+                className="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-wit-pink via-[#775cff] to-wit-blue px-4 text-sm font-bold text-white shadow-[0_8px_20px_rgba(119,92,255,0.22)] transition-transform hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wit-blue focus-visible:ring-offset-2 active:scale-[0.98] disabled:opacity-50"
+              >
+                {publishing || scheduling ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : intent === "schedule" ? (
+                  <CalendarClock className="h-4 w-4" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {scheduling
+                  ? t("Programando...", "Scheduling...")
+                  : publishing
+                    ? t("Publicando...", "Publishing...")
+                    : intent === "schedule"
+                      ? t("Programar publicación", "Schedule post")
+                      : t("Publicar ahora", "Publish now")}
+                {publishing || scheduling ? null : " →"}
+              </button>
+            </>
+          ) : null}
+
           {publishError ? <p className="mt-2 text-xs text-red-600">{publishError}</p> : null}
           {publishNotice ? (
             <p className="mt-2 text-xs font-semibold text-wit-gray">{publishNotice}</p>
