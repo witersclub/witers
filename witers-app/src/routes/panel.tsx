@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
   type PointerEvent as ReactPointerEvent,
 } from "react";
@@ -35,6 +36,7 @@ import {
   Image as ImageIcon,
   Images,
   Laptop,
+  Layers,
   Link2,
   Loader2,
   Lock,
@@ -42,6 +44,7 @@ import {
   Magnet,
   MapPin,
   Megaphone,
+  MessageCircle,
   Palette,
   PawPrint,
   Pencil,
@@ -55,6 +58,7 @@ import {
   Smartphone,
   Sparkles,
   Target,
+  Type as TypeIcon,
   User,
   Users,
   UtensilsCrossed,
@@ -3697,17 +3701,17 @@ function BrandAssetCard({
   }
 
   return (
-    <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-      <p className="text-lg font-bold text-wit-ink">{title}</p>
-      <p className="mt-1 text-sm text-wit-gray">{description}</p>
+    <div>
+      <p className="text-sm font-bold text-white">{title}</p>
+      <p className="mt-0.5 text-xs text-white/70">{description}</p>
 
       {fileKey ? (
-        <div className="mt-5 flex items-center gap-4 rounded-2xl border border-wit-ink/10 p-4">
+        <div className="mt-3 flex items-center gap-4 rounded-2xl border border-white/25 bg-white/10 p-4">
           {isPdf ? (
-            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-wit-blue/10 text-wit-blue">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
               <svg
-                width="24"
-                height="24"
+                width="22"
+                height="22"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -3723,11 +3727,11 @@ function BrandAssetCard({
             <img
               src={`/api/file?key=${encodeURIComponent(fileKey)}`}
               alt={title}
-              className="h-16 w-16 shrink-0 rounded-xl border border-wit-ink/10 object-cover"
+              className="h-14 w-14 shrink-0 rounded-xl border border-white/25 object-cover"
             />
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-wit-ink">
+            <p className="truncate text-sm font-semibold text-white">
               {t("Archivo guardado", "File saved")}
             </p>
             <button
@@ -3741,14 +3745,14 @@ function BrandAssetCard({
                   setDownloading(false);
                 }
               }}
-              className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep disabled:opacity-60"
+              className="text-xs font-semibold text-white/90 underline decoration-white/40 underline-offset-2 hover:text-white disabled:opacity-60"
             >
               {downloading ? t("Descargando...", "Downloading...") : t("Descargar", "Download")}
             </button>
           </div>
         </div>
       ) : (
-        <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
+        <p className="mt-3 rounded-2xl border border-dashed border-white/30 p-3.5 text-center text-xs text-white/70">
           {t(
             `Aún no tienes ${title.toLowerCase()} guardado.`,
             `You don't have a saved ${title.toLowerCase()} yet.`,
@@ -3756,7 +3760,7 @@ function BrandAssetCard({
         </p>
       )}
 
-      <label className="mt-4 block">
+      <label className="mt-3 block">
         <span className="sr-only">
           {fileKey
             ? t(`Reemplazar ${title.toLowerCase()}`, `Replace ${title.toLowerCase()}`)
@@ -3767,16 +3771,14 @@ function BrandAssetCard({
           accept={accept}
           disabled={uploading}
           onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
-          className="block w-full text-xs text-wit-gray file:mr-3 file:rounded-full file:border-0 file:bg-wit-blue file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-wit-blue-deep disabled:opacity-50"
+          className="block w-full text-xs text-white/80 file:mr-3 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-xs file:font-bold file:text-wit-ink hover:file:brightness-95 disabled:opacity-50"
         />
       </label>
-      <p className="mt-1.5 text-[11px] text-wit-gray">{acceptHint}</p>
+      <p className="mt-1.5 text-[11px] text-white/60">{acceptHint}</p>
       {uploading ? (
-        <p className="mt-2 text-xs font-semibold text-wit-blue">
-          {t("Subiendo...", "Uploading...")}
-        </p>
+        <p className="mt-2 text-xs font-semibold text-white">{t("Subiendo...", "Uploading...")}</p>
       ) : null}
-      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs text-red-100">{error}</p> : null}
     </div>
   );
 }
@@ -3825,24 +3827,16 @@ function LogoCard({ fileKey }: { fileKey: string | null }) {
   }
 
   return (
-    <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-      <p className="text-lg font-bold text-wit-ink">{t("Logotipo", "Logo")}</p>
-      <p className="mt-1 text-sm text-wit-gray">
-        {t(
-          "El logotipo que usamos en cada pieza que creamos para ti.",
-          "The logo we use on every piece we create for you.",
-        )}
-      </p>
-
+    <div>
       {fileKey ? (
-        <div className="mt-5 flex items-center gap-4 rounded-2xl border border-wit-ink/10 p-4">
+        <div className="flex items-center gap-4 rounded-2xl border border-white/25 bg-white/10 p-4">
           <img
             src={`/api/file?key=${encodeURIComponent(fileKey)}`}
             alt={t("Logotipo", "Logo")}
-            className="h-16 w-16 shrink-0 rounded-xl border border-wit-ink/10 object-cover"
+            className="h-16 w-16 shrink-0 rounded-xl border border-white/25 bg-white object-contain p-1.5"
           />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-wit-ink">
+            <p className="truncate text-sm font-semibold text-white">
               {t("Archivo guardado", "File saved")}
             </p>
             <button
@@ -3856,14 +3850,14 @@ function LogoCard({ fileKey }: { fileKey: string | null }) {
                   setDownloading(false);
                 }
               }}
-              className="text-xs font-semibold text-wit-blue hover:text-wit-blue-deep disabled:opacity-60"
+              className="text-xs font-semibold text-white/90 underline decoration-white/40 underline-offset-2 hover:text-white disabled:opacity-60"
             >
               {downloading ? t("Descargando...", "Downloading...") : t("Descargar", "Download")}
             </button>
           </div>
         </div>
       ) : (
-        <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
+        <p className="rounded-2xl border border-dashed border-white/30 p-4 text-center text-sm text-white/75">
           {t("Aún no tienes logotipo guardado.", "You don't have a saved logo yet.")}
         </p>
       )}
@@ -3877,18 +3871,18 @@ function LogoCard({ fileKey }: { fileKey: string | null }) {
           accept="image/png,image/jpeg,image/webp"
           disabled={uploading}
           onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
-          className="block w-full text-xs text-wit-gray file:mr-3 file:rounded-full file:border-0 file:bg-wit-blue file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-wit-blue-deep disabled:opacity-50"
+          className="block w-full text-xs text-white/80 file:mr-3 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-xs file:font-bold file:text-wit-ink hover:file:brightness-95 disabled:opacity-50"
         />
       </label>
-      <p className="mt-1.5 text-[11px] text-wit-gray">
+      <p className="mt-1.5 text-[11px] text-white/65">
         {t("PNG, JPG o WebP, máx. 8 MB", "PNG, JPG, or WebP, max. 8 MB")}
       </p>
       {uploading ? (
-        <p className="mt-2 text-xs font-semibold text-wit-blue">
+        <p className="mt-2 text-xs font-semibold text-white">
           {t("Actualizando...", "Updating...")}
         </p>
       ) : null}
-      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs text-red-100">{error}</p> : null}
     </div>
   );
 }
@@ -3936,17 +3930,9 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
   }
 
   return (
-    <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-      <p className="text-lg font-bold text-wit-ink">{t("Colores de marca", "Brand colors")}</p>
-      <p className="mt-1 text-sm text-wit-gray">
-        {t(
-          "Los colores que usamos en cada pieza que creamos para ti.",
-          "The colors we use on every piece we create for you.",
-        )}
-      </p>
-
+    <div>
       {editing ? (
-        <div className="mt-5">
+        <div className="rounded-2xl bg-white/95 p-4">
           <ColorsPicker initialColors={colorList} onPick={(v) => void save(v)} />
           <button
             type="button"
@@ -3957,37 +3943,44 @@ function BrandColorsCard({ brandProfile }: { brandProfile: BrandProfile | null }
           </button>
         </div>
       ) : colorList.length ? (
-        <div className="mt-5 flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           {colorList.map((c) => (
             <span
               key={c}
               title={c}
-              className="h-9 w-9 rounded-full border-2 border-white shadow-[0_2px_8px_rgba(5,13,40,0.15)]"
+              className="h-10 w-10 rounded-full border-2 border-white/70 shadow-[0_2px_8px_rgba(5,13,40,0.25)]"
               style={{ backgroundColor: c }}
             />
           ))}
         </div>
       ) : (
-        <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
+        <p className="rounded-2xl border border-dashed border-white/30 p-4 text-center text-sm text-white/75">
           {t("Aún no tienes colores de marca guardados.", "You don't have saved brand colors yet.")}
         </p>
       )}
 
       {!editing ? (
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="mt-4 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
-        >
-          {colorList.length
-            ? t("Editar colores", "Edit colors")
-            : t("Elegir colores", "Choose colors")}
-        </button>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {colorList.length ? (
+            <p className="text-xs font-medium text-white/75">
+              {colorList.map((c) => c.toUpperCase()).join(" · ")}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="rounded-full bg-white px-4 py-2 text-xs font-bold text-wit-ink hover:brightness-95"
+          >
+            {colorList.length
+              ? t("Editar colores", "Edit colors")
+              : t("Elegir colores", "Choose colors")}
+          </button>
+        </div>
       ) : null}
       {saving ? (
-        <p className="mt-2 text-xs font-semibold text-wit-blue">{t("Guardando...", "Saving...")}</p>
+        <p className="mt-2 text-xs font-semibold text-wit-ink">{t("Guardando...", "Saving...")}</p>
       ) : null}
-      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs text-red-100">{error}</p> : null}
     </div>
   );
 }
@@ -4046,19 +4039,9 @@ function BrandFontCard({ brandProfile }: { brandProfile: BrandProfile | null }) 
   }
 
   return (
-    <div className="wit-glass rounded-3xl p-7 shadow-[0_20px_60px_rgba(5,13,40,0.07)]">
-      <p className="text-lg font-bold text-wit-ink">
-        {t("Tipografía de marca", "Brand typography")}
-      </p>
-      <p className="mt-1 text-sm text-wit-gray">
-        {t(
-          "La tipografía que usamos en cada pieza que creamos para ti.",
-          "The typeface we use on every piece we create for you.",
-        )}
-      </p>
-
+    <div>
       {editing ? (
-        <div className="mt-5">
+        <div className="rounded-2xl bg-white/95 p-4">
           <FontChoicePicker onPick={(v) => void save(v)} previewText={previewText} />
           <button
             type="button"
@@ -4069,23 +4052,23 @@ function BrandFontCard({ brandProfile }: { brandProfile: BrandProfile | null }) 
           </button>
         </div>
       ) : libraryFont ? (
-        <div className="mt-5 rounded-2xl border border-wit-ink/10 p-4">
+        <div className="rounded-2xl border border-white/25 bg-white/10 p-4">
           <p
-            className="truncate text-2xl font-bold text-wit-ink"
+            className="truncate text-2xl font-bold text-white"
             style={{ fontFamily: `"${libraryFont}", sans-serif` }}
           >
             {previewText}
           </p>
-          <p className="mt-2 text-xs font-semibold text-wit-blue">{libraryFont}</p>
+          <p className="mt-2 text-xs font-semibold text-white/75">{libraryFont}</p>
         </div>
       ) : fontKeys.length > 0 ? (
-        <div className="mt-5 rounded-2xl border border-wit-ink/10 p-4">
+        <div className="rounded-2xl border border-white/25 bg-white/10 p-4">
           <CustomFontPreview fontKeys={fontKeys} previewText={previewText} />
           <ul className="mt-3 flex flex-wrap gap-1.5">
             {fontKeys.map((k) => (
               <li
                 key={k}
-                className="rounded-full bg-wit-mist/60 px-2.5 py-1 text-[10px] font-semibold text-wit-gray"
+                className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white/85"
               >
                 {k.split("/").pop()}
               </li>
@@ -4093,7 +4076,7 @@ function BrandFontCard({ brandProfile }: { brandProfile: BrandProfile | null }) 
           </ul>
         </div>
       ) : (
-        <p className="mt-5 rounded-2xl border border-dashed border-wit-ink/15 p-4 text-center text-sm text-wit-gray">
+        <p className="rounded-2xl border border-dashed border-white/30 p-4 text-center text-sm text-white/75">
           {t("Aún no tienes tipografía guardada.", "You don't have a saved font yet.")}
         </p>
       )}
@@ -4102,7 +4085,7 @@ function BrandFontCard({ brandProfile }: { brandProfile: BrandProfile | null }) 
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="mt-4 rounded-full bg-wit-blue px-4 py-2 text-xs font-bold text-white hover:bg-wit-blue-deep"
+          className="mt-4 rounded-full bg-white px-4 py-2 text-xs font-bold text-wit-ink hover:brightness-95"
         >
           {hasFont
             ? t("Editar tipografía", "Edit typography")
@@ -4110,9 +4093,9 @@ function BrandFontCard({ brandProfile }: { brandProfile: BrandProfile | null }) 
         </button>
       ) : null}
       {saving ? (
-        <p className="mt-2 text-xs font-semibold text-wit-blue">{t("Guardando...", "Saving...")}</p>
+        <p className="mt-2 text-xs font-semibold text-white">{t("Guardando...", "Saving...")}</p>
       ) : null}
-      {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs text-red-100">{error}</p> : null}
     </div>
   );
 }
@@ -4161,194 +4144,59 @@ function BrandAtmosphere({ colors }: { colors: string[] }) {
   );
 }
 
-// CAMBIO 05 — "Brand Wallet." Closed by default: a real stacked deck of
-// passes (BrandWalletStack), each just a sliver of the one behind it, tap
-// to fan it open. Fanning it open reveals exactly the grid this component
-// always rendered — every upload/edit card below (BrandMindCard,
-// BrandColorsCard, LogoCard, BrandFontCard, the manual's BrandAssetCard)
-// is completely untouched, same components, same endpoints, same state.
-// Only the presentation in FRONT of that grid is new, so there's zero risk
-// to the actual asset-management logic — worst case the deck itself looks
-// wrong, and the proven grid underneath still works exactly as it did.
+// CAMBIO 07 — Brand Wallet rediseñado: en vez del deck cerrado que había
+// que "abrir" para llegar a la cuadrícula real de siempre, ahora los
+// activos VIVEN como el stack — anclado a la parte inferior, la tarjeta
+// activa muestra contenido real y expandido, las demás sólo su cabecera
+// detrás. Tocar una tarjeta trasera la trae al frente (reordena el stack,
+// no navega a otra pantalla). Todo el contenido de cada tarjeta activa
+// sigue siendo exactamente BrandColorsCard/LogoCard/BrandFontCard/
+// BrandAssetCard/la biblioteca de "Mente de marca" — mismos endpoints,
+// mismo estado, sólo el marco visual alrededor cambió.
 function ActivosDeMarca({ brandProfile }: { brandProfile: BrandProfile | null }) {
   const { t } = useLanguage();
-  const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-
-  function refresh() {
-    void qc.invalidateQueries({ queryKey: ["brand-profile"] });
-  }
-
-  if (!open) {
-    return <BrandWalletStack brandProfile={brandProfile} onOpen={() => setOpen(true)} />;
-  }
-
   return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen(false)}
-        className="mb-5 flex items-center gap-1.5 text-sm font-bold text-wit-gray hover:text-wit-ink"
-      >
-        <ChevronUp className="h-4 w-4" strokeWidth={2.5} />
-        {t("Ver menos", "Show less")}
-      </button>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <BrandMindCard />
-        <BrandColorsCard brandProfile={brandProfile} />
-        <LogoCard fileKey={brandProfile?.logo_key ?? null} />
-        <BrandFontCard brandProfile={brandProfile} />
-        <BrandAssetCard
-          title={t("Manual de marca", "Brand manual")}
-          description={t(
-            "Tus lineamientos de marca — colores, tipografías, uso del logo.",
-            "Your brand guidelines — colors, fonts, logo usage.",
+    <div className="mx-auto flex min-h-[calc(100dvh-15rem)] w-full max-w-[900px] flex-col sm:min-h-[calc(100dvh-17rem)]">
+      <div className="wit-rise mx-auto max-w-md px-2 text-center">
+        <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
+          <Wallet className="h-5 w-5" strokeWidth={2.2} />
+        </span>
+        <h1 className="mt-3 text-2xl font-extrabold text-wit-ink">
+          {t("Activos de tu marca", "Your brand assets")}
+        </h1>
+        <p className="mt-1.5 text-sm leading-relaxed text-wit-gray">
+          {t(
+            "Todo lo que define tu marca, organizado y siempre disponible.",
+            "Everything that defines your brand, organized and always available.",
           )}
-          fileKey={brandProfile?.brand_manual_key ?? null}
-          isPdf={true}
-          onUploaded={refresh}
-          uploadEndpoint="/api/brand-profile-manual"
-          accept="application/pdf"
-          acceptHint={t("PDF, máx. 15 MB", "PDF, max. 15 MB")}
-        />
+        </p>
+      </div>
+      <div className="mt-auto pb-2 pt-4">
+        <BrandAssetStack brandProfile={brandProfile} />
       </div>
     </div>
   );
 }
 
-// The closed wallet: five passes stacked with only a sliver of each one
-// peeking out above the next, real brand data on the front pass (not a
-// mockup) so it reads as "this is actually your brand," not decoration.
-// Tapping anywhere fans it open into ActivosDeMarca's real grid above.
-function BrandWalletStack({
-  brandProfile,
-  onOpen,
-}: {
-  brandProfile: BrandProfile | null;
-  onOpen: () => void;
-}) {
+type BrandAssetRow = {
+  id: string;
+  original_name: string;
+  kind: string;
+  mime_type: string;
+  r2_key: string;
+  use_in_planning: number;
+};
+
+// Shared by every "library" card (Tono de voz / Referencias / Otros
+// activos) — same upload behavior as the old BrandMindCard, just no
+// longer tied to one card's own local state, so all three can show a real
+// (filtered) preview of the same underlying list without duplicating the
+// fetch/upload logic three times.
+function useBrandLibraryUpload(onChanged: () => void) {
   const { t } = useLanguage();
-  const colors = (brandProfile?.brand_colors ?? "")
-    .split(",")
-    .map((c) => c.trim())
-    .filter(Boolean);
-  const accent = colors[0] ?? "#0047FF";
-  const accent2 = colors[1] ?? colors[0] ?? "#6B8CFF";
-
-  // Back to front — the last one renders on top, fully visible and the
-  // one carrying the tap affordance; earlier ones each show only a strip
-  // above it (see the `top`/`zIndex` math below).
-  const passes: { id: string; title: string; subtitle: string; icon: LucideIcon }[] = [
-    {
-      id: "mente",
-      title: t("Mente de marca", "Brand mind"),
-      subtitle: t("Manual, estrategia y referencias", "Manual, strategy, and references"),
-      icon: Sparkles,
-    },
-    {
-      id: "manual",
-      title: t("Manual de marca", "Brand manual"),
-      subtitle: brandProfile?.brand_manual_key
-        ? t("Guardado", "Saved")
-        : t("Sin manual aún", "No manual yet"),
-      icon: FileText,
-    },
-    {
-      id: "tipografia",
-      title: t("Tipografía", "Typography"),
-      subtitle:
-        brandProfile?.library_font ||
-        (brandProfile?.font_keys
-          ? t("Tipografía personalizada", "Custom typography")
-          : t("Sin tipografía aún", "No typography yet")),
-      icon: FileText,
-    },
-    {
-      id: "colores",
-      title: t("Colores de marca", "Brand colors"),
-      subtitle: colors.length
-        ? t(`${colors.length} colores guardados`, `${colors.length} colors saved`)
-        : t("Sin colores aún", "No colors yet"),
-      icon: Palette,
-    },
-    {
-      id: "logo",
-      title: t("Logotipo", "Logo"),
-      subtitle: brandProfile?.logo_key
-        ? t("Guardado", "Saved")
-        : t("Sin logotipo aún", "No logo yet"),
-      icon: ImageIcon,
-    },
-  ];
-  const peek = 16;
-  const cardHeight = 92;
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="wit-wallet-enter group mx-auto block w-full max-w-sm text-left"
-      aria-label={t("Ver tus tarjetas de marca", "View your brand cards")}
-    >
-      <div className="relative" style={{ height: cardHeight + peek * (passes.length - 1) }}>
-        {passes.map((pass, index) => {
-          const isFront = index === passes.length - 1;
-          const Icon = pass.icon;
-          return (
-            <div
-              key={pass.id}
-              aria-hidden={isFront ? undefined : true}
-              className="absolute inset-x-0 flex items-center gap-3 overflow-hidden rounded-3xl p-4 shadow-[0_14px_36px_rgba(5,13,40,0.16)] transition-transform duration-200 group-hover:-translate-y-0.5"
-              style={{
-                top: index * peek,
-                height: cardHeight,
-                zIndex: index,
-                background: `linear-gradient(135deg, ${accent}, ${accent2})`,
-              }}
-            >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-sm">
-                <Icon className="h-5 w-5" strokeWidth={2.2} />
-              </span>
-              {isFront ? (
-                <div className="min-w-0">
-                  <p className="truncate text-base font-extrabold text-white">{pass.title}</p>
-                  <p className="mt-0.5 truncate text-xs font-medium text-white/80">
-                    {pass.subtitle}
-                  </p>
-                </div>
-              ) : null}
-              {isFront ? (
-                <span className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-white">
-                  <Wallet className="h-4 w-4" strokeWidth={2.2} />
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-      <p className="mt-4 text-center text-sm font-bold text-wit-blue">
-        {t("Toca para ver tus tarjetas de marca", "Tap to see your brand cards")}
-      </p>
-    </button>
-  );
-}
-
-function BrandMindCard() {
-  const { t } = useLanguage();
-  const qc = useQueryClient();
-  const folderInputRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [assets, setAssets] = useState<
-    { id: string; original_name: string; kind: string; use_in_planning: number }[]
-  >([]);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
-    const res = await fetch("/api/brand-profile", { credentials: "include" });
-    const data = (await res.json()) as { ok: boolean; assets?: typeof assets };
-    if (data.ok) setAssets(data.assets ?? []);
-  }
   async function add(file: File): Promise<"saved" | "reference" | "failed"> {
     try {
       if (file.type.startsWith("video/")) {
@@ -4400,8 +4248,7 @@ function BrandMindCard() {
         else if (result === "reference") visualReferences += 1;
         else failed += 1;
       }
-      await load();
-      void qc.invalidateQueries({ queryKey: ["brand-profile"] });
+      onChanged();
       if (failed) {
         setError(
           t(
@@ -4421,131 +4268,549 @@ function BrandMindCard() {
       setUploading(false);
     }
   }
+
+  return { uploading, error, addFiles };
+}
+
+// The full-library bottom sheet — identical UX to the old BrandMindCard's
+// modal (same dropzone, same folder picker, same "Hasta 60 MB..." copy),
+// now reusable from any of the three library cards below instead of
+// being reachable from only one. Always shows every uploaded asset
+// regardless of which card opened it — filtering only happens in each
+// card's own compact preview, never in what this sheet lists, so nothing
+// a client uploaded becomes harder to find than before.
+function BrandLibrarySheet({
+  open,
+  onClose,
+  assets,
+  uploading,
+  error,
+  onAddFiles,
+}: {
+  open: boolean;
+  onClose: () => void;
+  assets: BrandAssetRow[];
+  uploading: boolean;
+  error: string | null;
+  onAddFiles: (files: Iterable<File>) => void;
+}) {
+  const { t } = useLanguage();
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  if (!open) return null;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[80] flex items-end bg-wit-ink/25 p-0 backdrop-blur-[2px]"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="w-full rounded-t-[30px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-3 md:mx-auto md:mb-8 md:max-w-xl md:rounded-[30px]">
+        <div className="mx-auto h-1.5 w-10 rounded-full bg-wit-ink/15" />
+        <div className="mt-4 flex items-start justify-between">
+          <div>
+            <h2 className="text-xl font-extrabold text-wit-ink">
+              {t("Biblioteca de marca", "Brand library")}
+            </h2>
+            <p className="mt-1 text-sm text-wit-gray">
+              {t(
+                "Archivos que Wit puede usar al planificar y crear.",
+                "Files Wit can use while planning and creating.",
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-wit-mist p-2 text-wit-ink"
+            aria-label={t("Cerrar", "Close")}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <label
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault();
+            onAddFiles(event.dataTransfer.files);
+          }}
+          className="mt-5 flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-wit-blue/35 bg-wit-blue/[0.03] py-4 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.07]"
+        >
+          <Plus className="h-4 w-4" />
+          {t("Cargar archivos o carpeta", "Upload files or a folder")}
+          <span className="text-[11px] font-medium text-wit-gray">
+            {uploading
+              ? t("Cargando archivos...", "Uploading files...")
+              : t(
+                  "Hasta 60 MB por archivo. También puedes soltar una carpeta.",
+                  "Up to 60 MB per file. You can also drop a folder.",
+                )}
+          </span>
+          <input
+            type="file"
+            className="sr-only"
+            accept="image/png,image/jpeg,image/webp,application/pdf,.doc,.docs,.docx,.md,.markdown,.txt,.text,application/json,video/mp4,video/quicktime,video/webm,video/x-m4v"
+            multiple
+            disabled={uploading}
+            onChange={(e) => onAddFiles(e.target.files ?? [])}
+          />
+        </label>
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => folderInputRef.current?.click()}
+          className="mt-2 text-xs font-semibold text-wit-blue hover:text-wit-blue-deep disabled:opacity-50"
+        >
+          {t("Seleccionar una carpeta", "Select a folder")}
+        </button>
+        <input
+          ref={folderInputRef}
+          type="file"
+          className="sr-only"
+          multiple
+          {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
+          disabled={uploading}
+          onChange={(e) => onAddFiles(e.target.files ?? [])}
+        />
+        <div className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">
+          {assets.length ? (
+            assets.map((asset) => (
+              <div
+                key={asset.id}
+                className="flex items-center gap-3 rounded-2xl border border-wit-ink/10 px-4 py-3"
+              >
+                <FileText className="h-4 w-4 text-wit-blue" />
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-wit-ink">
+                  {asset.original_name}
+                </span>
+                <span className="text-xs capitalize text-wit-gray">{asset.kind}</span>
+              </div>
+            ))
+          ) : (
+            <p className="rounded-2xl bg-wit-mist/50 p-5 text-center text-sm text-wit-gray">
+              {t("Aún no has cargado archivos.", "You haven't uploaded files yet.")}
+            </p>
+          )}
+        </div>
+        {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// "Tono de voz" — the real data behind it is brand_assets rows with
+// kind === "strategy": text-extracted documents (manual, guidelines,
+// personality notes) Wit already reads for tone/context. There's no
+// separate stored "tone of voice" field in the schema — this is the
+// closest real bucket, so the label stays "Tono de voz" but the content
+// underneath is exactly what was already in "Mente de marca" for this kind.
+function StrategyCardContent({
+  items,
+  onOpenLibrary,
+}: {
+  items: BrandAssetRow[];
+  onOpenLibrary: () => void;
+}) {
+  const { t } = useLanguage();
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => {
-          setOpen(true);
-          void load();
-        }}
-        className="wit-glass flex min-h-56 flex-col items-start rounded-3xl p-7 text-left shadow-[0_20px_60px_rgba(5,13,40,0.07)] transition-transform hover:-translate-y-0.5"
-      >
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-wit-blue/10 text-wit-blue">
-          <Sparkles className="h-6 w-6" />
-        </span>
-        <p className="mt-5 text-lg font-bold text-wit-ink">{t("Mente de marca", "Brand mind")}</p>
-        <p className="mt-1 text-sm leading-relaxed text-wit-gray">
+    <div>
+      {items.length ? (
+        <ul className="space-y-2">
+          {items.slice(0, 4).map((a) => (
+            <li
+              key={a.id}
+              className="flex items-center gap-2.5 rounded-2xl border border-white/25 bg-white/10 px-3.5 py-2.5 text-sm font-semibold text-white"
+            >
+              <FileText className="h-4 w-4 shrink-0 text-white/80" />
+              <span className="min-w-0 flex-1 truncate">{a.original_name}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="rounded-2xl border border-dashed border-white/30 p-4 text-center text-sm text-white/75">
           {t(
-            "Tu manual, estrategia y referencias para que Wit cree con el contexto correcto.",
-            "Your manual, strategy, and references so Wit creates with the right context.",
+            "Aún no has cargado tu estrategia o tono de marca.",
+            "You haven't uploaded your brand strategy or voice yet.",
           )}
         </p>
-        <span className="mt-auto pt-5 text-sm font-bold text-wit-blue">
-          {t("Abrir biblioteca", "Open library")} <ChevronRight className="inline h-4 w-4" />
-        </span>
+      )}
+      {items.length > 4 ? (
+        <p className="mt-2 text-xs text-white/60">
+          {t(`+${items.length - 4} más`, `+${items.length - 4} more`)}
+        </p>
+      ) : null}
+      <button
+        type="button"
+        onClick={onOpenLibrary}
+        className="mt-4 rounded-full bg-white px-4 py-2 text-xs font-bold text-wit-ink hover:brightness-95"
+      >
+        {items.length
+          ? t("Ver y agregar archivos", "View and add files")
+          : t("Agregar archivos", "Add files")}
       </button>
-      {open
-        ? createPortal(
+    </div>
+  );
+}
+
+// "Referencias visuales" — kind === "reference" rows, an exact real match
+// for the mockup's own name. Images get a real thumbnail (r2_key already
+// comes back from getBrandAssets, just unused by the old UI); anything
+// else (a PDF/doc that couldn't be read as text) falls back to a plain
+// file icon instead of guessing at a preview that doesn't exist.
+function ReferenceCardContent({
+  items,
+  onOpenLibrary,
+}: {
+  items: BrandAssetRow[];
+  onOpenLibrary: () => void;
+}) {
+  const { t } = useLanguage();
+  return (
+    <div>
+      {items.length ? (
+        <div className="flex flex-wrap gap-2">
+          {items.slice(0, 6).map((a) =>
+            a.mime_type.startsWith("image/") ? (
+              <img
+                key={a.id}
+                src={`/api/file?key=${encodeURIComponent(a.r2_key)}`}
+                alt={a.original_name}
+                loading="lazy"
+                className="h-16 w-16 rounded-xl border border-white/25 object-cover"
+              />
+            ) : (
+              <span
+                key={a.id}
+                className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/25 bg-white/10 text-white"
+                title={a.original_name}
+              >
+                <FileText className="h-5 w-5" />
+              </span>
+            ),
+          )}
+        </div>
+      ) : (
+        <p className="rounded-2xl border border-dashed border-white/30 p-4 text-center text-sm text-white/75">
+          {t(
+            "Aún no has cargado referencias visuales.",
+            "You haven't uploaded visual references yet.",
+          )}
+        </p>
+      )}
+      {items.length > 6 ? (
+        <p className="mt-2 text-xs text-white/60">
+          {t(`+${items.length - 6} más`, `+${items.length - 6} more`)}
+        </p>
+      ) : null}
+      <button
+        type="button"
+        onClick={onOpenLibrary}
+        className="mt-4 rounded-full bg-white px-4 py-2 text-xs font-bold text-wit-ink hover:brightness-95"
+      >
+        {items.length
+          ? t("Ver y agregar referencias", "View and add references")
+          : t("Agregar referencias", "Add references")}
+      </button>
+    </div>
+  );
+}
+
+// "Otros activos" — the mockup's own catch-all name, so it's the natural
+// home for everything that isn't Logo/Tipografías/Colores/Tono/
+// Referencias: the single dedicated "Manual de marca" PDF (its own real
+// field, brand_profile.brand_manual_key — same BrandAssetCard/endpoint as
+// before) plus any brand_assets rows of kind manual/product/video.
+function OtherAssetsCardContent({
+  brandProfile,
+  items,
+  onOpenLibrary,
+  onManualUploaded,
+}: {
+  brandProfile: BrandProfile | null;
+  items: BrandAssetRow[];
+  onOpenLibrary: () => void;
+  onManualUploaded: () => void;
+}) {
+  const { t } = useLanguage();
+  return (
+    <div className="space-y-3.5">
+      <BrandAssetCard
+        title={t("Manual de marca", "Brand manual")}
+        description={t("Lineamientos completos de marca (PDF).", "Full brand guidelines (PDF).")}
+        fileKey={brandProfile?.brand_manual_key ?? null}
+        isPdf={true}
+        onUploaded={onManualUploaded}
+        uploadEndpoint="/api/brand-profile-manual"
+        accept="application/pdf"
+        acceptHint={t("PDF, máx. 15 MB", "PDF, max. 15 MB")}
+      />
+      <div>
+        <p className="text-sm font-bold text-white">{t("Otros archivos", "Other files")}</p>
+        {items.length ? (
+          <ul className="mt-2 space-y-2">
+            {items.slice(0, 3).map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center gap-2.5 rounded-2xl border border-white/25 bg-white/10 px-3.5 py-2.5 text-sm font-semibold text-white"
+              >
+                <Layers className="h-4 w-4 shrink-0 text-white/80" />
+                <span className="min-w-0 flex-1 truncate">{a.original_name}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 rounded-2xl border border-dashed border-white/30 p-4 text-center text-xs text-white/70">
+            {t("Sin otros archivos aún.", "No other files yet.")}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={onOpenLibrary}
+          className="mt-3 rounded-full bg-white px-4 py-2 text-xs font-bold text-wit-ink hover:brightness-95"
+        >
+          {t("Ver biblioteca completa", "View full library")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// The 6 real assets, back-to-front (furthest-behind first, active/front
+// last) — mirrors the reference mockup's own bottom-to-top order, with
+// Logotipo as the default frontmost card. Tapping any collapsed card
+// moves it to the end of `order` (front); the rest keep their relative
+// order and simply shift, same as pulling one card to the front of a
+// physical deck. Every card's height/position is driven purely by its
+// rank in `order`, recomputed on every render — no per-card animation
+// state to keep in sync by hand.
+type StackAssetId = "otros" | "referencias" | "tono" | "colores" | "tipografia" | "logo";
+const STACK_ORDER_DEFAULT: StackAssetId[] = [
+  "otros",
+  "referencias",
+  "tono",
+  "colores",
+  "tipografia",
+  "logo",
+];
+
+function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }) {
+  const { t } = useLanguage();
+  const qc = useQueryClient();
+  const [order, setOrder] = useState<StackAssetId[]>(STACK_ORDER_DEFAULT);
+  const [librarySheetOpen, setLibrarySheetOpen] = useState(false);
+
+  // Real brand_assets rows — same endpoint (/api/brand-profile) the old
+  // "Mente de marca" card already used, just lifted up so the three
+  // library cards below and the shared sheet all read the same list
+  // instead of each doing their own fetch.
+  const assetsQuery = useQuery({
+    queryKey: ["brand-assets"],
+    queryFn: async () => {
+      const res = await fetch("/api/brand-profile", { credentials: "include" });
+      const data = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        assets?: BrandAssetRow[];
+      } | null;
+      return data?.ok ? (data.assets ?? []) : [];
+    },
+  });
+  const assets = assetsQuery.data ?? [];
+  const strategyAssets = assets.filter((a) => a.kind === "strategy");
+  const referenceAssets = assets.filter((a) => a.kind === "reference");
+  const otherAssets = assets.filter((a) => a.kind !== "strategy" && a.kind !== "reference");
+
+  function refreshAssets() {
+    void qc.invalidateQueries({ queryKey: ["brand-assets"] });
+  }
+  function refreshProfile() {
+    void qc.invalidateQueries({ queryKey: ["brand-profile"] });
+  }
+  const {
+    uploading,
+    error: uploadError,
+    addFiles,
+  } = useBrandLibraryUpload(() => {
+    refreshAssets();
+    refreshProfile();
+  });
+
+  function bringToFront(id: StackAssetId) {
+    setOrder((prev) =>
+      prev[prev.length - 1] === id ? prev : [...prev.filter((x) => x !== id), id],
+    );
+  }
+
+  const colors = (brandProfile?.brand_colors ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  const fontKeys = (brandProfile?.font_keys ?? "")
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+  const otherCount = otherAssets.length + (brandProfile?.brand_manual_key ? 1 : 0);
+
+  // Every accent below is a WITERS token (or a color-mix() tint of one) —
+  // no new hex colors introduced, just enough differentiation per asset
+  // type to tell the cards apart at a glance, same idea as the mockup's
+  // "each asset gets a soft color" without inventing a second palette.
+  const openLibrary = () => setLibrarySheetOpen(true);
+  const cards: Record<
+    StackAssetId,
+    { title: string; subtitle: string; icon: LucideIcon; accent: string; content: ReactNode }
+  > = {
+    otros: {
+      title: t("Otros activos", "Other assets"),
+      subtitle: otherCount
+        ? t(`${otherCount} archivos`, `${otherCount} files`)
+        : t("Manual y otros archivos", "Manual and other files"),
+      icon: Layers,
+      accent: "linear-gradient(135deg, var(--color-wit-gray), var(--color-wit-navy))",
+      content: (
+        <OtherAssetsCardContent
+          brandProfile={brandProfile}
+          items={otherAssets}
+          onOpenLibrary={openLibrary}
+          onManualUploaded={refreshProfile}
+        />
+      ),
+    },
+    referencias: {
+      title: t("Referencias visuales", "Visual references"),
+      subtitle: referenceAssets.length
+        ? t(`${referenceAssets.length} guardadas`, `${referenceAssets.length} saved`)
+        : t("Moodboard e inspiración", "Moodboard and inspiration"),
+      icon: Images,
+      accent:
+        "linear-gradient(135deg, var(--color-wit-navy-soft), color-mix(in srgb, var(--color-wit-navy-soft) 55%, white))",
+      content: <ReferenceCardContent items={referenceAssets} onOpenLibrary={openLibrary} />,
+    },
+    tono: {
+      title: t("Tono de voz", "Brand voice"),
+      subtitle: strategyAssets.length
+        ? t(`${strategyAssets.length} documentos`, `${strategyAssets.length} documents`)
+        : t("Estrategia y personalidad", "Strategy and personality"),
+      icon: MessageCircle,
+      accent:
+        "linear-gradient(135deg, var(--color-wit-pink), color-mix(in srgb, var(--color-wit-pink) 65%, white))",
+      content: <StrategyCardContent items={strategyAssets} onOpenLibrary={openLibrary} />,
+    },
+    colores: {
+      title: t("Colores", "Colors"),
+      subtitle: colors.length
+        ? t(`${colors.length} colores guardados`, `${colors.length} colors saved`)
+        : t("Paleta principal", "Main palette"),
+      icon: Palette,
+      accent:
+        "linear-gradient(135deg, color-mix(in srgb, var(--color-wit-blue) 55%, white), var(--color-wit-mist))",
+      content: <BrandColorsCard brandProfile={brandProfile} />,
+    },
+    tipografia: {
+      title: t("Tipografías", "Typography"),
+      subtitle:
+        brandProfile?.library_font ||
+        (fontKeys.length
+          ? t("Tipografía personalizada", "Custom typography")
+          : t("Aa · Título y texto", "Aa · Title and body")),
+      icon: TypeIcon,
+      accent:
+        "linear-gradient(135deg, var(--color-wit-navy), color-mix(in srgb, var(--color-wit-pink) 55%, var(--color-wit-navy)))",
+      content: <BrandFontCard brandProfile={brandProfile} />,
+    },
+    logo: {
+      title: t("Logotipo", "Logo"),
+      subtitle: brandProfile?.logo_key
+        ? t("Versiones y usos", "Versions and usage")
+        : t("Sube tu logotipo", "Upload your logo"),
+      icon: ImageIcon,
+      accent: "linear-gradient(135deg, var(--color-wit-blue), var(--color-wit-blue-deep))",
+      content: <LogoCard fileKey={brandProfile?.logo_key ?? null} />,
+    },
+  };
+
+  const activeId = order[order.length - 1];
+  const collapsedCount = order.length - 1;
+  const stackVars = {
+    "--wit-stack-peek": "clamp(60px, 6.5dvh, 76px)",
+    "--wit-stack-active-h": "clamp(220px, 27dvh, 280px)",
+  } as CSSProperties;
+
+  return (
+    <div>
+      <div
+        className="wit-wallet-enter relative w-full"
+        style={{
+          ...stackVars,
+          height: `calc(var(--wit-stack-active-h) + ${collapsedCount} * var(--wit-stack-peek))`,
+        }}
+      >
+        {order.map((id, index) => {
+          const card = cards[id];
+          const isActive = id === activeId;
+          const Icon = card.icon;
+          return (
             <div
-              className="fixed inset-0 z-[80] flex items-end bg-wit-ink/25 p-0 backdrop-blur-[2px]"
-              role="dialog"
-              aria-modal="true"
+              key={id}
+              className="wit-stack-card absolute inset-x-0 overflow-hidden rounded-[28px] border border-white/15 shadow-[0_18px_44px_rgba(5,13,40,0.18)]"
+              style={{
+                top: isActive
+                  ? `calc(${collapsedCount} * var(--wit-stack-peek))`
+                  : `calc(${index} * var(--wit-stack-peek))`,
+                height: isActive ? "var(--wit-stack-active-h)" : "var(--wit-stack-peek)",
+                zIndex: index + 1,
+                background: card.accent,
+              }}
             >
-              <div className="w-full rounded-t-[30px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+24px)] pt-3 md:mx-auto md:mb-8 md:max-w-xl md:rounded-[30px]">
-                <div className="mx-auto h-1.5 w-10 rounded-full bg-wit-ink/15" />
-                <div className="mt-4 flex items-start justify-between">
-                  <div>
-                    <h2 className="text-xl font-extrabold text-wit-ink">
-                      {t("Mente de marca", "Brand mind")}
-                    </h2>
-                    <p className="mt-1 text-sm text-wit-gray">
-                      {t(
-                        "Archivos que Wit puede usar al planificar y crear.",
-                        "Files Wit can use while planning and creating.",
-                      )}
-                    </p>
+              {isActive ? (
+                <div className="flex h-full flex-col p-5 sm:p-6">
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-white">
+                      <Icon className="h-5 w-5" strokeWidth={2.2} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-lg font-extrabold text-white">{card.title}</p>
+                      <p className="mt-0.5 truncate text-xs font-medium text-white/75">
+                        {card.subtitle}
+                      </p>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setOpen(false)}
-                    className="rounded-full bg-wit-mist p-2 text-wit-ink"
-                    aria-label={t("Cerrar", "Close")}
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
+                  <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-14 pr-0.5 sm:pb-0">
+                    {card.content}
+                  </div>
                 </div>
-                <label
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    void addFiles(event.dataTransfer.files);
-                  }}
-                  className="mt-5 flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-wit-blue/35 bg-wit-blue/[0.03] py-4 text-sm font-bold text-wit-blue transition-colors hover:bg-wit-blue/[0.07]"
-                >
-                  <Plus className="h-4 w-4" />
-                  {t("Cargar archivos o carpeta", "Upload files or a folder")}
-                  <span className="text-[11px] font-medium text-wit-gray">
-                    {uploading
-                      ? t("Cargando archivos...", "Uploading files...")
-                      : t(
-                          "Hasta 60 MB por archivo. También puedes soltar una carpeta.",
-                          "Up to 60 MB per file. You can also drop a folder.",
-                        )}
-                  </span>
-                  <input
-                    type="file"
-                    className="sr-only"
-                    accept="image/png,image/jpeg,image/webp,application/pdf,.doc,.docs,.docx,.md,.markdown,.txt,.text,application/json,video/mp4,video/quicktime,video/webm,video/x-m4v"
-                    multiple
-                    disabled={uploading}
-                    onChange={(e) => void addFiles(e.target.files ?? [])}
-                  />
-                </label>
+              ) : (
                 <button
                   type="button"
-                  disabled={uploading}
-                  onClick={() => folderInputRef.current?.click()}
-                  className="mt-2 text-xs font-semibold text-wit-blue hover:text-wit-blue-deep disabled:opacity-50"
+                  onClick={() => bringToFront(id)}
+                  aria-expanded={false}
+                  aria-label={t(`Abrir ${card.title}`, `Open ${card.title}`)}
+                  className="flex h-full w-full items-center gap-3 px-5 text-left transition-transform active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wit-ink sm:px-6"
                 >
-                  {t("Seleccionar una carpeta", "Select a folder")}
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white">
+                    <Icon className="h-4 w-4" strokeWidth={2.2} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-extrabold text-white">
+                      {card.title}
+                    </span>
+                    <span className="block truncate text-[11px] font-medium text-white/70">
+                      {card.subtitle}
+                    </span>
+                  </span>
                 </button>
-                <input
-                  ref={folderInputRef}
-                  type="file"
-                  className="sr-only"
-                  multiple
-                  {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
-                  disabled={uploading}
-                  onChange={(e) => void addFiles(e.target.files ?? [])}
-                />
-                <div className="mt-4 max-h-[45dvh] space-y-2 overflow-y-auto">
-                  {assets.length ? (
-                    assets.map((asset) => (
-                      <div
-                        key={asset.id}
-                        className="flex items-center gap-3 rounded-2xl border border-wit-ink/10 px-4 py-3"
-                      >
-                        <FileText className="h-4 w-4 text-wit-blue" />
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-wit-ink">
-                          {asset.original_name}
-                        </span>
-                        <span className="text-xs capitalize text-wit-gray">{asset.kind}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="rounded-2xl bg-wit-mist/50 p-5 text-center text-sm text-wit-gray">
-                      {t("Aún no has cargado archivos.", "You haven't uploaded files yet.")}
-                    </p>
-                  )}
-                </div>
-                {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
-    </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <BrandLibrarySheet
+        open={librarySheetOpen}
+        onClose={() => setLibrarySheetOpen(false)}
+        assets={assets}
+        uploading={uploading}
+        error={uploadError}
+        onAddFiles={addFiles}
+      />
+    </div>
   );
 }
 

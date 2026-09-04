@@ -573,8 +573,8 @@
   animation-delay: 0.26s;
 }
 
-/* Brand Wallet's closed deck: the whole stack rises up from off-screen,
-   like pulling a card out from the bottom of the frame — a much bigger
+/* Brand Wallet: the whole stack rises up from off-screen on first mount,
+   like pulling a deck out from the bottom of the frame — a much bigger
    throw than .wit-rise's subtle 26px settle, on purpose. */
 @keyframes wit-wallet-enter {
   from {
@@ -588,6 +588,21 @@
 }
 .wit-wallet-enter {
   animation: wit-wallet-enter 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Brand Wallet's individual asset cards — each one is absolutely
+   positioned and repositioned/resized (top + height) whenever the active
+   card changes, so the collapsed ones re-stack and the tapped one grows
+   into place instead of an instant display:none/block swap. transform/
+   opacity would be cheaper, but a real overlapping deck needs actual
+   height + position changes between "just a header peeking out" and
+   "fully expanded" — scoped to ~6 elements for ~450ms on tap, not a
+   continuous/looping animation. */
+.wit-stack-card {
+  transition:
+    top 450ms cubic-bezier(0.22, 0.8, 0.25, 1),
+    height 450ms cubic-bezier(0.22, 0.8, 0.25, 1),
+    box-shadow 450ms cubic-bezier(0.22, 0.8, 0.25, 1);
 }
 
 /* Animated story in the public landing hero: idea → creation → publishing. */
@@ -945,6 +960,11 @@
     animation: none;
   }
   .wit-navlink::after {
+    transition: none;
+  }
+  /* The stack still visually swaps which card is active/expanded — just
+     without the sliding/growing reorder motion in between. */
+  .wit-stack-card {
     transition: none;
   }
 }
