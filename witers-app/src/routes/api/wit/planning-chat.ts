@@ -10,7 +10,13 @@ const schema = z.object({
     .array(
       z.object({
         role: z.enum(["user", "assistant"]),
-        content: z.string().max(2000),
+        // Generous headroom over what either side should normally send —
+        // runWitPlanningBrief now caps its own text replies well under
+        // this, but a wider ceiling here is a second line of defense
+        // rather than the only thing standing between a slightly-too-long
+        // message and the whole conversation breaking with a generic
+        // "Wit no está disponible" error.
+        content: z.string().max(4000),
       }),
     )
     .min(1)

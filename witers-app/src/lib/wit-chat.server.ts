@@ -1367,7 +1367,11 @@ function buildPlanningBriefSystemPrompt(brand: WitBrandContext): string {
     "caso responde con texto normal, sin llamar a la función. Para cualquier otro caso, incluso " +
     "uno con poca información, haz tu mejor inferencia profesional y llama a submit_planning_brief " +
     "de inmediato, en el primer turno si es posible. No niegues ni te disculpes por interpretar; " +
-    "el cliente revisa y corrige después."
+    "el cliente revisa y corrige después.\n\n" +
+    "Si respondes con texto normal (no llamaste a la función), esa respuesta debe ser UNA sola " +
+    "pregunta corta — una o dos frases, nunca más. NUNCA en esa respuesta: propongas piezas, " +
+    "anuncios, campañas, frases publicitarias, listas o ejemplos de contenido — eso no es tu " +
+    "trabajo aquí, ni el cliente lo pidió todavía."
   );
 }
 
@@ -1520,7 +1524,22 @@ export async function runWitPlanningBrief(
     }
   }
 
-  const text = message.content?.trim();
+  let text = message.content?.trim();
   if (!text) return { ok: false, error: "sin_resultado" };
+  // The system prompt asks for one short clarifying question when the
+  // model doesn't call submit_planning_brief — but a real conversation
+  // showed it ignoring that and writing out a full unsolicited campaign
+  // pitch instead (ad copy, slogans, a list of pieces). That's not just
+  // off-brief: the client's *next* message resends this whole history,
+  // and /api/wit/planning-chat's schema caps each message at a few
+  // thousand characters — a long enough reply there broke the entire
+  // conversation with a generic "Wit no está disponible" error. Capping
+  // it here guarantees that class of failure can't recur regardless of
+  // whether the prompt tweak above holds up over time.
+  const MAX_MESSAGE_TEXT = 480;
+  if (text.length > MAX_MESSAGE_TEXT) {
+    console.info("[wit-chat] planning brief text reply ran long, truncating", text.length);
+    text = `${text.slice(0, MAX_MESSAGE_TEXT).trimEnd()}…`;
+  }
   return { ok: true, kind: "message", text };
 }
