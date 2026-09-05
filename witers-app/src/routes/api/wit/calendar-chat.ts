@@ -251,17 +251,30 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
               // often when a carousel omits one of its four slides). Keep
               // every valid date and ask only for the missing ones, never
               // discard a whole monthly plan because one item was malformed.
-              const collected = new Map<
-                string,
-                {
-                  date: string;
-                  title: string;
-                  format: "imagen" | "video" | "carrusel";
-                  brief: string;
-                  slot?: number;
-                  slides?: { title: string; brief: string }[];
-                }
-              >();
+              type BatchEntry = {
+                date: string;
+                title: string;
+                format: "imagen" | "video" | "carrusel";
+                brief: string;
+                slot?: number;
+                slides?: { title: string; brief: string }[];
+              };
+              const collected = new Map<string, BatchEntry>();
+              // CAMBIO 15 (ronda 3) — a real failure reported by a client
+              // ("llegó al final y salió un error" on a plain monthly
+              // request, no unusual format ask) traced back to this retry
+              // loop: enforcing formatByDate strictly could exhaust all 4
+              // attempts and fail the ENTIRE month over one stubborn
+              // date/format pairing — trading a silent wrong-format bug for
+              // a loud total-failure bug is not an improvement. `lastAttempt`
+              // keeps the most recent structurally-valid entry per date
+              // regardless of format compliance, so if retries run out we
+              // can still deliver a complete plan (occasionally with one
+              // piece's format not perfectly matching, logged below) instead
+              // of failing the whole request. Only a date that NEVER
+              // produced any valid entry across every attempt is a real
+              // "plan_incompleto".
+              const lastAttempt = new Map<string, BatchEntry>();
               let missingDates = exactDates;
               for (let attempt = 0; attempt < 4 && missingDates.length; attempt += 1) {
                 const formatByDate = formatByDateFull
@@ -293,12 +306,15 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
                   if (attempt < 3) await wait(450 * (attempt + 1));
                   continue;
                 }
-                for (const entry of result.entries) collected.set(entry.date, entry);
-                // CAMBIO 15 — an entry that used the wrong format for its
-                // date is not a valid result, exactly like a missing date
-                // isn't: drop it back into missingDates so the next attempt
-                // regenerates it with the format requirement reinforced,
-                // instead of silently accepting a mismatch.
+                for (const entry of result.entries) {
+                  lastAttempt.set(entry.date, entry);
+                  collected.set(entry.date, entry);
+                }
+                // An entry that used the wrong format for its date doesn't
+                // satisfy the format requirement — drop it back into
+                // missingDates so the next attempt regenerates it with the
+                // requirement reinforced (it stays available in
+                // `lastAttempt` as a fallback if every retry fails).
                 if (formatByDateFull) {
                   const { violations } = validatePlanningFormats(
                     [...collected.values()],
@@ -316,14 +332,25 @@ export const Route = createFileRoute("/api/wit/calendar-chat")({
                 }
                 if (attempt < 3) await wait(450 * (attempt + 1));
               }
-              if (missingDates.length) {
+              const neverProduced = missingDates.filter((date) => !lastAttempt.has(date));
+              if (neverProduced.length) {
                 console.warn("[calendar-chat] batch remained incomplete", {
                   expected: exactDates,
-                  missing: missingDates,
+                  missing: neverProduced,
                 });
                 return { ok: false as const, error: "plan_incompleto" };
               }
-              return { ok: false as const, error: "plan_incompleto" };
+              if (missingDates.length) {
+                console.warn(
+                  "[calendar-chat] format retries exhausted — used the best available entry instead of failing the whole plan",
+                  missingDates,
+                );
+              }
+              return {
+                ok: true as const,
+                kind: "done" as const,
+                entries: exactDates.map((date) => collected.get(date) ?? lastAttempt.get(date)!),
+              };
             },
           );
           const failure = results.find((result) => !result.ok);
