@@ -4241,6 +4241,22 @@ function BrandAtmosphere({ colors }: { colors: string[] }) {
   );
 }
 
+// CAMBIO 15 (ronda 2) — the "Contexto para IA" card's own small motif: a
+// loose cluster of sparkle glyphs (not a single icon) so the card reads as
+// "AI" at a glance even collapsed, matching its Sparkles header icon above.
+function AiSparkleAccent() {
+  return (
+    <span className="relative flex h-6 w-9 shrink-0 items-center justify-center" aria-hidden="true">
+      <Sparkles className="absolute left-0 top-0.5 h-3 w-3 opacity-60" strokeWidth={2.4} />
+      <Sparkles className="absolute left-3.5 top-1.5 h-4 w-4 opacity-95" strokeWidth={2.4} />
+      <Sparkles
+        className="absolute left-[1.65rem] top-0 h-2.5 w-2.5 opacity-50"
+        strokeWidth={2.4}
+      />
+    </span>
+  );
+}
+
 // CAMBIO 15 — A11/A12: the one shared way to preview a brand logo, used
 // everywhere a logo shows up (the header avatar below, LogoCard's saved
 // version). A logo is designed to be seen whole — never `object-cover`,
@@ -4775,11 +4791,16 @@ function buildWalletAccents(brandColors: string[]): Record<StackAssetId, WalletA
   // Otros activos), lighter-but-still-solid tones for the middle cards,
   // so six cards built from as few as one saved color still read as
   // distinct without ever leaving that color's actual hue.
+  // CAMBIO 15 (ronda 2) — less dilution toward white than before: the
+  // reference direction the client pointed to reads as rich, saturated
+  // jewel tones (deep reds, teals, blues), not pastel. Same hues, same
+  // "toward" direction (so the ink/contrast math below is untouched),
+  // just less mixed-in white.
   const specs: Record<StackAssetId, { hex: string; mix: number; toward: "white" | "black" }> = {
     otros: { hex: at(0), mix: 60, toward: "black" },
-    referencias: { hex: at(1), mix: 55, toward: "white" },
-    colores: { hex: at(2), mix: 45, toward: "white" },
-    tono: { hex: at(1), mix: 30, toward: "white" },
+    referencias: { hex: at(1), mix: 30, toward: "white" },
+    colores: { hex: at(2), mix: 22, toward: "white" },
+    tono: { hex: at(1), mix: 15, toward: "white" },
     tipografia: { hex: at(3), mix: 40, toward: "black" },
     logo: { hex: at(0), mix: 25, toward: "black" },
   };
@@ -4891,6 +4912,12 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
       icon: LucideIcon;
       accent: string;
       ink: "light" | "dark";
+      // A small, optional hint of the card's own real content, shown
+      // trailing its header in both the collapsed mobile row and the
+      // desktop tile — Colores' actual swatches, Logotipo's actual
+      // thumbnail, Contexto para IA's sparkle motif — instead of every
+      // card reading identically until opened.
+      preview?: ReactNode;
       content: ReactNode;
     }
   > = {
@@ -4934,9 +4961,13 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
         "Archivos e información importante de tu marca",
         "Files and important information about your brand",
       ),
-      icon: MessageCircle,
+      // CAMBIO 15 (ronda 2) — Sparkles instead of MessageCircle: this card
+      // is where Wit reads brand context, so its own icon should read as
+      // "AI", not "chat".
+      icon: Sparkles,
       accent: accents.tono.background,
       ink: accents.tono.ink,
+      preview: <AiSparkleAccent />,
       content: (
         <StrategyCardContent
           items={strategyAssets}
@@ -4953,6 +4984,17 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
       icon: Palette,
       accent: accents.colores.background,
       ink: accents.colores.ink,
+      preview: colors.length ? (
+        <span className="flex shrink-0 -space-x-1.5">
+          {colors.slice(0, 3).map((c, i) => (
+            <span
+              key={i}
+              className="h-5 w-5 rounded-full border-2 border-white/70 shadow-sm"
+              style={{ backgroundColor: c }}
+            />
+          ))}
+        </span>
+      ) : null,
       content: <BrandColorsCard brandProfile={brandProfile} ink={accents.colores.ink} />,
     },
     tipografia: {
@@ -4975,6 +5017,13 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
       icon: ImageIcon,
       accent: accents.logo.background,
       ink: accents.logo.ink,
+      preview: brandProfile?.logo_key ? (
+        <BrandLogoPreview
+          logoKey={brandProfile.logo_key}
+          alt={t("Logotipo", "Logo")}
+          className="h-9 w-9 shrink-0 rounded-lg bg-white/90"
+        />
+      ) : null,
       content: <LogoCard fileKey={brandProfile?.logo_key ?? null} ink={accents.logo.ink} />,
     },
   };
@@ -5033,12 +5082,13 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
                     >
                       <Icon className="h-5 w-5" strokeWidth={2.2} />
                     </span>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className={`truncate text-lg font-extrabold ${tone.text}`}>{card.title}</p>
                       <p className={`mt-0.5 truncate text-xs font-medium ${tone.soft}`}>
                         {card.subtitle}
                       </p>
                     </div>
+                    {card.preview ? <span className="ml-2 shrink-0">{card.preview}</span> : null}
                   </div>
                   <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-14 pr-0.5 sm:pb-0">
                     {card.content}
@@ -5065,6 +5115,7 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
                       {card.subtitle}
                     </span>
                   </span>
+                  {card.preview ? <span className="shrink-0">{card.preview}</span> : null}
                 </button>
               )}
             </div>
@@ -5090,11 +5141,14 @@ function BrandAssetStack({ brandProfile }: { brandProfile: BrandProfile | null }
               className={`wit-stack-metal group flex h-40 flex-col justify-between overflow-hidden rounded-[28px] border p-5 text-left shadow-[0_18px_44px_rgba(5,13,40,0.16)] transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wit-ink ${tone.border}`}
               style={{ background: card.accent }}
             >
-              <span
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tone.surface} ${tone.text}`}
-              >
-                <Icon className="h-5 w-5" strokeWidth={2.2} />
-              </span>
+              <div className="flex items-start justify-between">
+                <span
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tone.surface} ${tone.text}`}
+                >
+                  <Icon className="h-5 w-5" strokeWidth={2.2} />
+                </span>
+                {card.preview}
+              </div>
               <span className="min-w-0">
                 <span className={`block truncate text-base font-extrabold ${tone.text}`}>
                   {card.title}
